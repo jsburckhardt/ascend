@@ -1,2 +1,4 @@
 .trees
 .trees/
+node_modules
+node_modules/

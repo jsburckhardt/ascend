@@ -45,6 +45,7 @@ You MUST update the GitHub issue body after PR creation to mark satisfied criter
 You MUST use the embedded PR template in the PR_TEMPLATE constant and populate it with acceptance criteria status, changes summary, ADR/core-component references, and `Closes #<ISSUE_NUMBER>`.
 You MUST assert the final PR body contains `Closes #<ISSUE_NUMBER>` before running `gh pr create`.
 You MUST use the GitHub CLI (gh pr create) to create a pull request.
+You MUST NOT assign the pull request to Copilot or request a review from Copilot; do not pass Copilot to `--assignee` or `--reviewer` on `gh pr create` or any follow-up `gh pr edit`.
 You MUST stop and instruct the user to authenticate if the gh CLI is not authenticated.
 You MUST summarize what was done, reference the GitHub issue with "Closes #<number>" in the PR body, and list all ADRs and core-components.
 You MUST write a summary.md to project/issues/<ISSUE_NUMBER>/verify/summary.md after PR creation using the write-summary process.

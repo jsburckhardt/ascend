@@ -22,9 +22,9 @@ Applies to:
 
 - The `./harness` executable and everything under `.harness/` (`contract.yml`,
   `evidence/`, `friction.jsonl`, `README.md`).
-- The harness-consuming agents that must route through the harness: the `ship` orchestrator
-  and the `rpiv-research`, `rpiv-planner`, `rpiv-implementer`, and `rpiv-verifier` pipeline
-  agents. `AGENTS.md` and non-consuming agents do not run the harness and carry no rule.
+- The RPIV stage agents that run deterministic tasks through the harness:
+  `rpiv-research`, `rpiv-planner`, `rpiv-implementer`, and `rpiv-verifier`. The `ship`
+  orchestrator, `AGENTS.md`, and non-stage agents do not run the harness and carry no rule.
 - Every skill or tool that consumes harness verdicts or JSON output (e.g.
   `pr-review-complement`).
 - `.github/soft-factory/verification.yml` where it references the harness.
@@ -89,25 +89,25 @@ editing `contract.yml` data).
   contract data alone, with NO change to `./harness`.
 - **R9 — KEY_QUESTION rule.** Every friction record MUST answer verbatim:
   **"What did the agent have to infer that the harness should have proved?"**
-- **R10 — Idempotent agent-surface updates.** Only the harness-consuming agents — the `ship`
-  orchestrator and the `rpiv-research`, `rpiv-planner`, `rpiv-implementer`, and `rpiv-verifier`
-  pipeline agents — carry the harness-usage rule, and each such surface MUST contain exactly one
-  harness-usage block delimited by `<!-- HARNESS:BEGIN -->` / `<!-- HARNESS:END -->`.
-  `AGENTS.md` and non-consuming agents MUST NOT carry the block.
+- **R10 — Idempotent agent-surface updates.** Only the RPIV stage agents — `rpiv-research`,
+  `rpiv-planner`, `rpiv-implementer`, and `rpiv-verifier` — carry the harness-usage rule, and
+  each such surface MUST contain exactly one harness-usage block delimited by
+  `<!-- HARNESS:BEGIN -->` / `<!-- HARNESS:END -->`.
+  The `ship` orchestrator, `AGENTS.md`, and non-stage agents MUST NOT carry the block.
   The block MUST live inside the surface's `<instructions>` section (immediately before its
   `</instructions>` tag) as one MUST/MAY directive per line, never as trailing prose after a
   closing section tag, so it conforms to the APS document flow.
   Re-running the update MUST replace only the content between the markers, MUST NOT
   duplicate the block, and MUST NOT alter any content outside the markers or change the
   agent's existing behaviour.
-- **R11 — Consuming agents prefer the harness, scoped to their role.** The harness-consuming
-  agents (the `ship` orchestrator and the `rpiv-*` pipeline agents) MUST use `./harness` as the
-  first-choice surface for supported verbs, and each agent's block MUST name only the verbs
-  relevant to its role — research/plan use read-only verbs (`orient`/`doctor`/`status`) and MUST
-  NOT run execution verbs; implement runs `lint`/`test`/`build`/`boot`/`verify`/`clean`; verify
-  runs the `verify` gate. Agents MAY bypass to a direct command only when the contract
-  lacks the verb or the harness reports `unknown`/`degraded` — and MUST log that gap via
-  `./harness friction add`.
+- **R11 — Stages prefer the harness, scoped to their role.** Only the RPIV **stage** agents run
+  the harness (the `ship` orchestrator does not; it dispatches stages and each stage runs the
+  harness itself). Each stage MUST use `./harness` as the first-choice surface for supported
+  verbs, and each stage's block MUST name only the verbs relevant to its role — research/plan
+  use read-only verbs (`orient`/`doctor`/`status`) and MUST NOT run execution verbs; implement
+  runs `lint`/`test`/`build`/`boot`/`verify`/`clean`; verify runs the `verify` gate. A stage MAY
+  bypass to a direct command only when the contract lacks the verb or the harness reports
+  `unknown`/`degraded` — and MUST log that gap via `./harness friction add`.
 - **R12 — Dependency-light, portable, POSIX-only.** The harness MUST run as a portable POSIX
   shell script adding no new runtime dependency, and MUST use only POSIX-specified
   `sh`/`sed`/`awk`/`printf` constructs. It MUST NOT rely on GNU-only extensions; in
@@ -317,8 +317,8 @@ How is compliance with this component verified?
 - [x] Code review checklist — reviewers confirm: every verb returns one of the four verdicts
   in both human (terminal `Verdict:` line) and `--json` form; exit-code contract honoured;
   wrapped commands and aggregate members come only from `contract.yml` (no hard-coded wiring);
-  friction entries answer the KEY_QUESTION verbatim; each consuming agent surface has exactly one
-  marker-delimited harness block and non-consumers have none; no reimplemented/faked commands.
+  friction entries answer the KEY_QUESTION verbatim; each RPIV stage agent has exactly one
+  marker-delimited harness block and ship/non-stage agents have none; no reimplemented/faked commands.
 - [x] Test coverage requirements — every task in 02-task-breakdown.md that touches the
   contract, verdicts, JSON, evidence, friction, or agent surfaces carries explicit test
   coverage in 03-test-plan.md.

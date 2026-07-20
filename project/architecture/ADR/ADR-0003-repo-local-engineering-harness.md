@@ -17,9 +17,9 @@ command ran and what its result was, and no structured place to record the gap b
 
 Issue #4 runs the `harness-cli-it` agent to close that gap by generating a repo-local
 engineering harness CLI (`./harness`). This is **not** mere tooling plumbing: the harness
-is mandated to become **the supported operating surface for the execution pipeline**, and to
-add a harness-usage rule to **only the consuming agents** (the `ship` orchestrator and the
-`rpiv-*` pipeline agents that run deterministic tasks) so those agents MUST prefer
+is mandated to become **the supported operating surface for the RPIV stages**, and to
+add a harness-usage rule to **only the stage agents** (the `rpiv-research`, `rpiv-planner`,
+`rpiv-implementer`, and `rpiv-verifier` agents that run deterministic tasks) so those stages MUST prefer
 `./harness` over calling wrapped commands directly. It also introduces a durable
 behavioural contract (`.harness/contract.yml`), a verdict model
 (`pass`/`fail`/`degraded`/`unknown`), an evidence store (`.harness/evidence/`), and a
@@ -134,12 +134,13 @@ mandatory, first-choice operating surface for humans and agents. Specifically:
     checkout tooling (the devcontainer does not guarantee Node at container-build time, and
     `just` exists as a feature but there is no `justfile`).
 
-12. **Agent-surface updates.** Only the harness-consuming agents — the `ship` orchestrator
-    and the `rpiv-research`, `rpiv-planner`, `rpiv-implementer`, and `rpiv-verifier` pipeline
-    agents (5 files) — are updated **idempotently** using a marker-delimited harness-usage
-    block placed inside each agent's `<instructions>` section, requiring harness usage while
-    **preserving each agent's existing behaviour**. `AGENTS.md` and non-consuming agents are
-    left untouched: they do not run the harness, so they carry no harness-usage rule.
+12. **Agent-surface updates.** Only the RPIV stage agents — `rpiv-research`, `rpiv-planner`,
+    `rpiv-implementer`, and `rpiv-verifier` (4 files) — are updated **idempotently** using a
+    marker-delimited harness-usage block placed inside each agent's `<instructions>` section,
+    requiring harness usage while **preserving each agent's existing behaviour**. The `ship`
+    orchestrator, `AGENTS.md`, and non-stage agents are left untouched: they do not run the
+    harness (ship dispatches stages, and each stage runs the harness itself), so they carry
+    no harness-usage rule.
 
 13. **Verification wiring.** Create `.github/soft-factory/verification.yml` declaring
     `./harness verify` as the canonical verification gate, so the Verify stage is

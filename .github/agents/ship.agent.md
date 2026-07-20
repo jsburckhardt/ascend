@@ -51,11 +51,6 @@ You MUST track progress using the todo tool throughout execution.
 You MUST summarize each stage result before dispatching the next stage.
 You SHOULD provide the next stage agent with context from all prior stage outputs.
 You MAY retry a failed stage once before stopping with an error report.
-<!-- HARNESS:BEGIN -->
-You MUST treat ./harness as the deterministic task surface for the pipeline and ensure each dispatched stage runs its checks through it rather than ad hoc shell.
-You MAY run ./harness orient or ./harness status to confirm pipeline state, and MUST leave full verification to the rpiv-verifier stage's ./harness verify.
-You MUST record any deterministic task the harness could not provide via ./harness friction add using the harness KEY_QUESTION.
-<!-- HARNESS:END -->
 </instructions>
 
 <constants>

@@ -252,13 +252,13 @@ vc=1; for v in help orient doctor lint test build boot verify status clean frict
 # ===========================================================================
 # TEST-12: the harness block is scoped to the consuming agents only
 # ===========================================================================
-# The harness exposes deterministic tasks for the execution pipeline, so only
-# the consuming agents (ship + rpiv-*) carry the usage rule. Assert each
-# consumer has exactly one block and every non-consumer (incl. AGENTS.md) none.
+# The harness exposes deterministic tasks for the RPIV stages, so only the stage
+# agents (rpiv-*) carry the usage rule. Assert each stage has exactly one block
+# and every non-stage agent (incl. ship and AGENTS.md) none.
 t12=1; cons=0; noncons_bad=0
 is_consumer() {
 	case "$1" in
-		ship|rpiv-research|rpiv-planner|rpiv-implementer|rpiv-verifier) return 0;;
+		rpiv-research|rpiv-planner|rpiv-implementer|rpiv-verifier) return 0;;
 		*) return 1;;
 	esac
 }
@@ -273,7 +273,7 @@ for f in "$REPO"/.github/agents/*.agent.md; do
 	fi
 done
 { [ "$(grep -c '<!-- HARNESS:BEGIN -->' "$REPO/AGENTS.md")" = "0" ]; } || { t12=0; printf '  (t12 AGENTS.md has block)\n'; }
-{ [ "$t12" = "1" ] && [ "$cons" = "5" ]; } && ok "TEST-12 harness block on $cons consuming agents only; none on non-consumers or AGENTS.md" || no "TEST-12 harness block scoping (t12=$t12 consumers=$cons noncons_bad=$noncons_bad)"
+{ [ "$t12" = "1" ] && [ "$cons" = "4" ]; } && ok "TEST-12 harness block on $cons rpiv stage agents only; none on ship, non-consumers, or AGENTS.md" || no "TEST-12 harness block scoping (t12=$t12 stages=$cons noncons_bad=$noncons_bad)"
 
 # ===========================================================================
 # TEST-13: agent-surface marker update is idempotent + behaviour-preserving (F-09)
@@ -290,7 +290,7 @@ APPLY="$SUITE_DIR/apply-marker.sh"
 outside_markers() { awk '/<!-- HARNESS:BEGIN -->/{p=1} !p{print} /<!-- HARNESS:END -->/{p=0}' "$1"; }
 t13=1; t13n=0
 [ -f "$APPLY" ] || { t13=0; printf '  (t13 helper missing: %s)\n' "$APPLY"; }
-for base in ship rpiv-research rpiv-planner rpiv-implementer rpiv-verifier; do
+for base in rpiv-research rpiv-planner rpiv-implementer rpiv-verifier; do
 	f="$REPO/.github/agents/$base.agent.md"
 	[ -e "$f" ] || { t13=0; printf '  (t13 consumer missing: %s)\n' "$f"; continue; }
 	t13n=$((t13n + 1))
@@ -311,7 +311,7 @@ for base in ship rpiv-research rpiv-planner rpiv-implementer rpiv-verifier; do
 	outside_markers "$f" > "$wdir/o0"; outside_markers "$r1" > "$wdir/o1"
 	diff "$wdir/o0" "$wdir/o1" >/dev/null 2>&1 || { t13=0; printf '  (t13 outside-markers changed: %s)\n' "$f"; }
 done
-{ [ "$t13" = "1" ] && [ "$t13n" -ge 5 ]; } && ok "TEST-13 marker update idempotent: $t13n consuming surfaces byte-identical on rerun, no duplication, outside-markers preserved" || no "TEST-13 idempotency (t13=$t13 surfaces=$t13n)"
+{ [ "$t13" = "1" ] && [ "$t13n" -ge 4 ]; } && ok "TEST-13 marker update idempotent: $t13n stage surfaces byte-identical on rerun, no duplication, outside-markers preserved" || no "TEST-13 idempotency (t13=$t13 surfaces=$t13n)"
 
 # ===========================================================================
 # TEST-14: issue acceptance criteria end-to-end
@@ -621,8 +621,8 @@ nverd=$(printf '%s\n' "$out28" | grep -c '^Verdict:')
 extract_block() { awk '/<!-- HARNESS:BEGIN -->/{f=1;next} /<!-- HARNESS:END -->/{f=0} f' "$1"; }
 AGD="$REPO/.github/agents"
 t29=1
-uniq_n=$(for a in ship rpiv-research rpiv-planner rpiv-implementer rpiv-verifier; do extract_block "$AGD/$a.agent.md" | cksum; done | sort -u | wc -l)
-[ "$uniq_n" -ge 4 ] || { t29=0; printf '  (t29 blocks not distinct: %s unique)\n' "$uniq_n"; }
+uniq_n=$(for a in rpiv-research rpiv-planner rpiv-implementer rpiv-verifier; do extract_block "$AGD/$a.agent.md" | cksum; done | sort -u | wc -l)
+[ "$uniq_n" -ge 3 ] || { t29=0; printf '  (t29 blocks not distinct: %s unique)\n' "$uniq_n"; }
 extract_block "$AGD/rpiv-implementer.agent.md" | grep -q 'lint, test, build' || { t29=0; printf '  (t29 implementer missing execution verbs)\n'; }
 extract_block "$AGD/rpiv-verifier.agent.md" | grep -q 'harness verify as the canonical verification gate' || { t29=0; printf '  (t29 verifier missing verify gate)\n'; }
 for ro in rpiv-research rpiv-planner; do

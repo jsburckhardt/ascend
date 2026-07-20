@@ -38,7 +38,7 @@ Short, actionable statements derived from ADRs and core-components. More than on
 | 14 | Implement the harness as a dependency-light, portable POSIX shell script | ADR-0003 | 2026-07-20 |
 | 15 | Wrap `npm run typecheck` under the harness `verify` verb only, not `lint` or `build` | ADR-0003 | 2026-07-20 |
 | 16 | Create `.github/soft-factory/verification.yml` running `./harness verify` as the canonical gate | ADR-0003 | 2026-07-20 |
-| 17 | Add the harness-usage rule only to the consuming agents (`ship` + `rpiv-*`); leave `AGENTS.md` and non-consuming agents unchanged | ADR-0003 | 2026-07-20 |
+| 17 | Add the harness-usage rule only to the RPIV stage agents (`rpiv-research`/`rpiv-planner`/`rpiv-implementer`/`rpiv-verifier`); the `ship` orchestrator, `AGENTS.md`, and non-stage agents run no harness | ADR-0003 | 2026-07-20 |
 | 18 | Return exactly one verdict — pass, fail, degraded, or unknown — from every harness verb | CORE-COMPONENT-0003 | 2026-07-20 |
 | 19 | Exit non-zero only on `fail`; exit 0 for pass, degraded, and unknown | CORE-COMPONENT-0003 | 2026-07-20 |
 | 20 | Record every honest capability gap as a friction entry answering the KEY_QUESTION verbatim | CORE-COMPONENT-0003 | 2026-07-20 |

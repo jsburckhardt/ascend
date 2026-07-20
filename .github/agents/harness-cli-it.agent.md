@@ -58,13 +58,10 @@ AGENT_FILE_PATTERN: ".github/agents/*.agent.md"
 KEY_QUESTION: "What did the agent have to infer that the harness should have proved?"
 
 HARNESS_CONSUMERS: YAML<<
-# The execution pipeline that runs deterministic harness tasks. Only these
-# agents receive the harness usage rule, and each block is scoped to the verbs
-# relevant to that agent's role -- never the full verb set.
-- file: .github/agents/ship.agent.md
-  role: orchestrator
-  verbs: [orient, status]
-  note: dispatches stages through the harness; defers full verification to rpiv-verifier
+# The RPIV stage agents that run deterministic harness tasks. Only these stages
+# receive the harness usage rule, and each block is scoped to the verbs relevant
+# to that stage's role -- never the full verb set. The ship orchestrator does NOT
+# run the harness; it dispatches stages and each stage runs the harness itself.
 - file: .github/agents/rpiv-research.agent.md
   role: research
   verbs: [orient, doctor]
@@ -97,7 +94,6 @@ REQUIRED_OUTPUTS: YAML<<
 - .harness/evidence/
 - .harness/friction.jsonl
 - .harness/README.md
-- .github/agents/ship.agent.md
 - .github/agents/rpiv-research.agent.md
 - .github/agents/rpiv-planner.agent.md
 - .github/agents/rpiv-implementer.agent.md

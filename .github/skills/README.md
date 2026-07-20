@@ -12,7 +12,7 @@ This directory contains Skill entrypoints for users who prefer Skills over repo-
 | `.github/agents/harness-cli-it.agent.md` | `.github/skills/harness-cli-it/SKILL.md` | `harness-cli-it` | Available | Existing Skill retained and mapped to its Agent workflow. |
 | `.github/agents/rpiv-implementer.agent.md` | `.github/skills/rpiv-implementer/SKILL.md` | `rpiv-implementer` | Available | Implements planned tasks and records implementation notes. |
 | `.github/agents/issue-generator.agent.md` | `.github/skills/issue-generator/SKILL.md` | `issue-generator` | Available | Creates problem-focused issues with structured acceptance criteria. |
-| `.github/agents/rpiv.agent.md` | `.github/skills/rpiv/SKILL.md` | `rpiv` | Available | Coordinates the full RPIV pipeline. |
+| `.github/agents/ship.agent.md` | `.github/skills/rpiv/SKILL.md` | `ship` | Available | Ships an issue end-to-end: runs the RPIV pipeline, then reviews, routes the verdict, and finalizes the PR. |
 | `.github/agents/onboard-repo.agent.md` | `.github/skills/onboard-repo/SKILL.md` | `onboard-repo` | Available | Introduces Soft Factory into an existing repository. |
 | `.github/agents/rpiv-planner.agent.md` | `.github/skills/rpiv-planner/SKILL.md` | `rpiv-planner` | Available | Produces action, task, and test plans. |
 | `.github/agents/rpiv-research.agent.md` | `.github/skills/rpiv-research/SKILL.md` | `rpiv-research` | Available | Produces issue research briefs. |

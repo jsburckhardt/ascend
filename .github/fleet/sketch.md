@@ -6,7 +6,7 @@ Maintained by the `fleet-orchestrator` agent. Single source of orchestration tru
 - **Feature:** #2 Prototype 0 — Baseline and Spike Repository
 - **Base branch:** `main`
 - **Worktrees:** `.trees/<issue>`
-- **Dispatch:** `OTEL_RESOURCE_ATTRIBUTES="issue.id=<n>,project.name=ascend" copilot --yolo --agent rpiv -p "work on issue <n>"`
+- **Dispatch:** `OTEL_RESOURCE_ATTRIBUTES="issue.id=<n>,project.name=ascend" copilot --yolo --agent ship -p "work on issue <n>"`
 
 ## States
 

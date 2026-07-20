@@ -439,3 +439,22 @@ SET TEST_PLAN_COMPLETE := true (from "Agent Inference")
 <input>
 USER_INPUT is a GitHub issue number and reference to its research brief to plan — including architecture decisions, task breakdown, and test plan.
 </input>
+
+<!-- HARNESS:BEGIN -->
+## Engineering Harness Usage
+
+Once `./harness` and `.harness/contract.yml` exist, this agent MUST use `./harness` as the
+first-choice operating surface for supported commands, per ADR-0003 and CORE-COMPONENT-0003:
+
+- Prefer `./harness orient`, `./harness doctor`, `./harness boot`, `./harness lint`,
+  `./harness test`, `./harness build`, `./harness verify`, `./harness status`, and
+  `./harness clean` over the direct wrapped commands.
+- Call a direct project command only when the harness contract lacks the needed verb or the
+  harness reports `unknown` or `degraded`.
+- When bypassing the harness due to missing proof, record the gap with
+  `./harness friction add "<note>"`, answering: "What did the agent have to infer that the
+  harness should have proved?"
+
+See `.harness/README.md` and `.harness/contract.yml`. This note is additive and does not
+change the agent's existing behavior.
+<!-- HARNESS:END -->

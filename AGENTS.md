@@ -14,7 +14,33 @@ You MUST inspect existing repo code and documentation before proposing new work.
 You MUST NOT skip any stage in the pipeline.
 You MUST update the APS version badge in README.md and the APS_BADGE constant when the APS skill is upgraded.
 You MUST mark a PR review comment as resolved via the GitHub API after fixing the issue it raised.
+You MUST use ./harness as the first-choice operating surface for supported commands once ./harness and .harness/contract.yml exist, and record friction with `./harness friction add` when bypassing it due to missing proof.
 </instructions>
+
+<!-- HARNESS:BEGIN -->
+## Engineering Harness
+
+The repository provides a repo-local engineering harness at `./harness` — the **single
+documented operating surface** for humans and agents. It wraps existing project commands
+(it never reimplements them), returns a `pass | fail | degraded | unknown` verdict, records
+evidence under `.harness/evidence/`, and records inference gaps in `.harness/friction.jsonl`.
+Adopted by ADR-0003; contract defined by CORE-COMPONENT-0003 and `.harness/contract.yml`.
+
+Once `./harness` and `.harness/contract.yml` exist, humans and agents MUST prefer the
+harness over the direct wrapped commands:
+
+- Use `./harness orient`, `./harness doctor`, `./harness boot`, `./harness lint`,
+  `./harness test`, `./harness build`, `./harness verify`, `./harness status`, and
+  `./harness clean` instead of calling the underlying commands directly.
+- Call a direct project command only when the contract lacks the verb or the harness reports
+  `unknown` or `degraded`.
+- When bypassing the harness due to missing proof, record it with
+  `./harness friction add "<note>"`, answering: *"What did the agent have to infer that the
+  harness should have proved?"*
+
+See `.harness/README.md` for the full verb list and supported workflows.
+<!-- HARNESS:END -->
+
 
 <constants>
 APS_BADGE: "[![APS version](https://img.shields.io/badge/APS-v1.2.2-blue?logo=github)](https://github.com/chris-buckley/agnostic-prompt-standard/releases/tag/v1.2.2)"

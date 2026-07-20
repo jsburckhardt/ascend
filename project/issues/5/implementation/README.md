@@ -1,5 +1,13 @@
 # Implementation Notes: Issue #5 — Add local development and validation commands
 
+> **Revision: REVIEW CYCLE 2 — resolves major review finding F-02
+> (mode-driven dispatch).** The interactive/handoff category (ADR-0004 /
+> CORE-COMPONENT-0003 R17) is now enforced by making the contract `mode`
+> attribute **authoritative** for handler selection, instead of keying on
+> hard-coded verb names. Architecture (ADR-0004, R17, DECISION-LOG) was already
+> correct and is unchanged; this cycle only makes the code + tests honor it. See
+> the **F-02 fix** section below.
+>
 > **Revision: REVIEW CYCLE 1 — resolves blocking review finding F-01.** This
 > supersedes the earlier data-only implementation. The dev command is now made
 > **genuinely invokable through the harness** via a new interactive/handoff verb
@@ -15,6 +23,66 @@ harness as the single operating surface), **CORE-COMPONENT-0003** (harness contr
 — R2/R3 verdict/exit-code, R4/R9 friction, R5 evidence, R8 data-driven verbs, R12
 POSIX-only, R16 durable suite, **R17 interactive/handoff verbs** — amended), and
 **CORE-COMPONENT-0002** (commit standards).
+
+## The F-02 fix (REVIEW CYCLE 2): contract `mode` is now authoritative
+
+Review finding F-02 (major, high confidence) held that `mode` was *descriptive*
+rather than the behavior selector promised by ADR-0004 / R17: dispatch keyed on
+hard-coded verb **names** (`lint|test|build|boot -> verb_capability`,
+`dev -> verb_exec`), `verb_exec` defaulted a *missing* mode to `exec`, and
+`verb_orient` hard-coded `dev_mode: exec`. Consequently, if issue #6 set
+`boot.mode: exec`, boot would still use the run-to-completion handler and could
+**hang**; and removing/relaxing `dev.mode` would not select capability behavior —
+both violating R17. The architecture was already correct; only the code and tests
+did not honor it.
+
+The fix makes the contract `mode` DATA the single source of truth for handler
+selection (data-driven, R8), defined once in a small `dispatch_verb` helper:
+
+1. **Mode-driven dispatch (`dispatch_verb`).** The capability/handoff verb family
+   (`lint`, `test`, `build`, `boot`, `dev`) now routes through one helper that
+   reads the verb's `mode` via `get_mode` and selects the handler by DATA:
+   - `mode == exec` → `verb_exec` (interactive/handoff);
+   - `mode` absent/empty or `mode == capability` → `verb_capability`
+     (run-to-completion, the default — so every pre-existing verb is unchanged);
+   - any other/unsupported `mode` → a usage error printed to stderr, **exit 2**
+     (never a silent handler pick).
+   `main()`'s special handlers (`help`, `orient`, `doctor`, `verify`, `status`,
+   `clean`, `friction`) are untouched and keep their exact behavior.
+2. **`verb_exec`.** Removed the "default missing mode to `exec`" fallback. Because
+   dispatch guarantees `mode == exec` before routing here, the descriptor's `mode`
+   is derived from the real `get_mode` value (it will be `exec`) — no fabrication.
+   The `--print`/`--json` non-exec introspection, the unmapped→`unknown`+friction
+   honesty, and the `exec sh -c "$maps_to"` handoff are unchanged.
+3. **`verb_orient`.** The `dev_mode` JSON field (and the human `dev execs` line's
+   `mode:` note) are now derived from `get_mode dev` rather than the literal
+   `exec`, so orient reflects contract data.
+
+Everything else is preserved: existing verbs/verdicts, the `verify` aggregate
+(R6), the exit-code contract (R3), the `--json` schema, evidence, friction, `boot`
+staying `unknown` (no mode → capability → unknown), `verify` staying
+degraded/exit-0, and the real `./harness dev` handoff + `dev --print`/`dev --json`.
+
+**New regression coverage — TEST-31 (mode-switch, hermetic).** Using isolated
+scratch contracts via `HARNESS_CONTRACT` (+ `HARNESS_FRICTION`/`HARNESS_EVIDENCE_DIR`)
+mapped to fast, non-blocking commands (`true`), so no tracked file is mutated and
+nothing hangs:
+- **Positive:** a scratch contract with `boot.mode: exec` + `maps_to: "true"` →
+  `./harness boot --print` resolves `true`, exit 0, **no** `Verdict:` line, no
+  hang; `./harness boot --json` is a verdict-FREE handoff descriptor
+  (`mode: exec`, `maps_to`, `interactive: true`, no `verdict`); bare
+  `./harness boot` hands off via `exec` (runs `true`, exit 0, no verdict) —
+  proving `boot` switched to the handoff path purely from data.
+- **Default/negative:** a scratch contract where `dev` has **no** `mode` (and one
+  with explicit `mode: capability`) + `maps_to: "true"` → `./harness dev` goes
+  through the run-to-completion capability path and emits **exactly one**
+  `Verdict:` line (proving absent/`capability` selects capability).
+- **Unsupported:** a scratch contract with `mode: bogus` → `./harness boot`
+  **exit 2** (usage error), no `Verdict:` line.
+- **Regression inside TEST-31:** the REAL contract still routes by data —
+  `dev --print` → `npm run dev` (exec handoff), `boot` (no mode) → `unknown`
+  exit 0. Existing TEST-20 (dev excluded from run-to-completion) and TEST-30 stay
+  green; suite count 37 → **38 PASS**.
 
 ## The F-01 fix in one paragraph
 
@@ -45,12 +113,12 @@ runtime; `node_modules/` stays gitignored, so the change set is unaffected.
 
 | File | Task | Change |
 |------|------|--------|
-| `harness` (script) | T1 | Added the `mode: exec` interactive/handoff verb path: a `get_mode` contract reader; a generic `verb_exec` handler (unmapped → `unknown`+friction, `--json`/`--print` non-exec introspection, else `cd "$ROOT" && exec sh -c "$maps_to"`); a `dev)` dispatch case; a `dev` line in `verb_help` (+ handoff note); the resolved dev command surfaced in `verb_orient` (human + `--json`). POSIX-only; every existing verb byte-for-byte behaviorally unchanged. |
+| `harness` (script) | T1 | Added the `mode: exec` interactive/handoff verb path: a `get_mode` contract reader; a generic `verb_exec` handler (unmapped → `unknown`+friction, `--json`/`--print` non-exec introspection, else `cd "$ROOT" && exec sh -c "$maps_to"`); a `dev)` dispatch case; a `dev` line in `verb_help` (+ handoff note); the resolved dev command surfaced in `verb_orient` (human + `--json`). POSIX-only; every existing verb byte-for-byte behaviorally unchanged. **REVIEW CYCLE 2 (F-02):** added a `dispatch_verb` helper that selects the handler for the `lint/test/build/boot/dev` family from `get_mode` DATA (`exec`→`verb_exec`, absent/`capability`→`verb_capability`, other→exit 2); removed `verb_exec`'s "default missing mode to exec" fallback; derived `verb_orient`'s `dev_mode` from `get_mode dev` instead of a literal. |
 | `.harness/contract.yml` | T2 | Added the `dev` verb as DATA: `maps_to: "npm run dev"`, `mode: exec`, `json: true`, description. Documented `mode` semantics in the header comment. `boot.maps_to` stays `null`; `verify.maps_to` stays `"npm run typecheck"`. |
 | `README.md` | T4 | Reworked "Start the local development environment" to document **`./harness dev`** as the harness-invocable dev command (execs `npm run dev`; interactive handoff, no verdict; `--print`/`--json` introspection). Removed the prior "run `npm run dev` directly instead of the harness" framing; the `boot` note now defers only **app-serve + health** to #6. Validation section unchanged. |
 | `.harness/README.md` | T5 | Added `dev` to the verb table (interactive handoff; n/a — no verdict); added an "Interactive/handoff verbs (`mode: exec`, R17)" section; noted the `--json` descriptor is verdict-exempt; updated the Issue #5 status so the dev inner loop is invokable via `./harness dev` and `boot` (app-serve) stays #6. All TEST-11 tokens preserved. |
 | `.harness/friction.jsonl` | T6 | Appended one `dev` entry via `./harness friction add` recording that the interactive-process gap (entries #8/#14) is now handled by the `mode: exec` handoff (`./harness dev`), with `boot` app-serve still deferred to #6. Append-only. |
-| `tests/harness/run.sh` | T7 | TEST-01/02/11 updated for the 13th verb (`dev`) + `dev.maps_to`/`dev.mode` assertions; TEST-20 keeps `dev` OUT of the run-to-completion loop and adds a `dev --print` no-hang assertion; TEST-30 rewritten to positively prove AC3; added optional timeout-guarded exec probe **TEST-30b**. |
+| `tests/harness/run.sh` | T7 | TEST-01/02/11 updated for the 13th verb (`dev`) + `dev.maps_to`/`dev.mode` assertions; TEST-20 keeps `dev` OUT of the run-to-completion loop and adds a `dev --print` no-hang assertion; TEST-30 rewritten to positively prove AC3; added optional timeout-guarded exec probe **TEST-30b**. **REVIEW CYCLE 2 (F-02):** added **TEST-31** proving contract `mode` is authoritative via isolated scratch contracts — `boot.mode: exec`→handoff (`--print`/`--json`/bare exec, no hang), `dev` absent/`capability`→one `Verdict:` line, `mode: bogus`→exit 2, and the real contract still routing dev(exec)/boot(unknown). |
 
 `package.json` (T3) already defined `"dev": "tsc --noEmit --watch"` and
 `"typecheck": "tsc --noEmit"` — **confirmed unchanged**, no dependency added, no
@@ -245,12 +313,47 @@ non-empty `suggested_closure`.
 PASS  TEST-20 exactly one Verdict: line per human verb (help/friction list = pass; dev handoff excluded, --print no hang)
 PASS  TEST-30 #5 dev invokable via ./harness dev (print='npm run dev'); verify=degraded non-fail exit 0; boot null; no drift
 PASS  TEST-30b guarded exec probe: ./harness dev started the watch, killed by timeout (exit 124)
+PASS  TEST-31 contract mode authoritative: exec->handoff, absent/capability->run-to-completion, unsupported->exit 2 (real dev exec / boot unknown intact)
 -------------------------------------------------------
-Totals: PASS=37 FAIL=0 SKIP=0
+Totals: PASS=38 FAIL=0 SKIP=0
 Verdict: pass
 ```
 The suite **completed and returned** (exit 0) — it did **not** hang, confirming the
-interactive `dev` verb is never exec'd to completion by the enumeration.
+interactive `dev` verb is never exec'd to completion by the enumeration and that
+the new mode-switch cases (`boot.mode: exec`, `dev` no-mode, `mode: bogus`) all use
+fast, non-blocking commands.
+
+---
+
+## Task T8 (REVIEW CYCLE 2): make contract `mode` authoritative (F-02)
+
+- **Status:** Done
+- **Files Changed:** `harness`, `tests/harness/run.sh`
+- **Tests Passed:** TEST-31 (new) + all existing (TEST-01..30b) — 38 checks
+- **Tests Failed:** 0
+
+### Changes Summary
+- **`dispatch_verb` (new helper)** — routes the `lint/test/build/boot/dev`
+  capability/handoff family by reading `get_mode`: `exec`→`verb_exec`,
+  absent/empty or `capability`→`verb_capability`, any other value→usage error
+  (stderr, exit 2). Selection is defined once and driven by contract DATA, so
+  `mode` is now authoritative (R8/R17). Special handlers (help/orient/doctor/
+  verify/status/clean/friction) are untouched.
+- **`verb_exec`** — removed `[ -n "$_mode" ] || _mode="exec"`; the descriptor's
+  `mode` is derived from the real `get_mode` value (dispatch guarantees `exec`).
+- **`verb_orient`** — `dev_mode` JSON field and the human `dev execs` line's
+  `mode:` note now derive from `get_mode dev` (no hard-coded `exec` literal).
+
+### Test Results
+- Positive: `boot.mode: exec` (scratch) → `boot --print` resolves `true` exit 0 no
+  verdict; `boot --json` verdict-free handoff descriptor; bare `boot` execs `true`
+  exit 0 no verdict — **no hang**.
+- Default/negative: `dev` with no `mode` and with `mode: capability` (scratch) →
+  exactly one `Verdict:` line, exit 0.
+- Unsupported: `mode: bogus` (scratch) → exit 2, no verdict.
+- Regression: real `dev --print` → `npm run dev` (exec); real `boot` (no mode) →
+  `unknown` exit 0; `verify` → degraded exit 0; `orient --json` `dev_mode` = `exec`
+  via `get_mode`; `sh -n harness` clean.
 
 ---
 
@@ -264,7 +367,7 @@ interactive `dev` verb is never exec'd to completion by the enumeration.
 | 4. Dev json | `./harness dev --json` | valid JSON descriptor (`mode:"exec"`, `maps_to:"npm run dev"`, `interactive:true`, **no `verdict`**), exit 0, no watch |
 | 5. Discoverability | `./harness help` / `./harness orient` | both list `dev` (handoff) |
 | 6. Guarded handoff | `timeout 3 ./harness dev` | starts `tsc --noEmit --watch`, killed by timeout (exit 124); **no leftover process tree** |
-| 7. Durable suite | `sh tests/harness/run.sh` | **`Verdict: pass`** — `PASS=37 FAIL=0 SKIP=0`; **completes without hanging** |
+| 7. Durable suite | `sh tests/harness/run.sh` | **`Verdict: pass`** — `PASS=38 FAIL=0 SKIP=0`; **completes without hanging** |
 | 8. Working tree | `git status` | only intended files changed; `node_modules/` and `.harness/evidence/*` gitignored; no `/tmp` scratch left |
 
 ### Acceptance criteria (issue) — status

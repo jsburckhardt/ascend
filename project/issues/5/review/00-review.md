@@ -7,44 +7,42 @@
 - **Feature Branch:** feat/5-dev-validation-commands
 - **Reviewer Model:** GPT-5.6 Sol
 - **Verdict:** REQUEST_CHANGES
-- **Blocking Findings:** 1
+- **Blocking Findings:** 0
 
 ## Repository Understanding
-Ascend is a greenfield TypeScript and Node.js workflow orchestrator. ADR-0002 keeps the Prototype-0 baseline minimal and prohibits speculative frameworks. ADR-0003 and CORE-COMPONENT-0003 establish `./harness` as the first-choice operating surface: existing project commands are wrapped rather than reimplemented, command wiring is declared in `.harness/contract.yml`, and `verify` aggregates contract-declared checks under the four-verdict exit-code model.
+Ascend is a greenfield Node.js 22 and TypeScript workflow orchestrator. ADR-0002 keeps Prototype 0 minimal. ADR-0003 and CORE-COMPONENT-0003 make `./harness` the first-choice operating surface, require command mappings to remain in contract data, and define deterministic verdict, exit-code, JSON, evidence, and friction behavior. ADR-0004 and CORE-COMPONENT-0003 R17 add a second behavior category for long-running commands: contract-declared `mode: exec` process handoff.
 
 ## Scope of Change
-The implementation adds `npm run dev` as a TypeScript watch loop, documents development and validation commands, appends friction records, and adds TEST-30 to the harness regression suite. The harness executable, contract, lockfile, TypeScript configuration, and application source remain unchanged. The branch also adds the issue Research, Plan, Implementation, and Verify artifacts.
+The full `main...HEAD` changeset adds `npm run dev`, a contract-declared `dev` verb, process-handoff support in `harness`, documentation, friction closure, ADR-0004 and R17, and regression coverage. It preserves `boot.maps_to: null`, `verify.maps_to: "npm run typecheck"`, the verify aggregate, dependencies, lockfile, TypeScript configuration, and application source. The branch also contains the complete issue RPIV artifacts and the prior Cycle 1 report.
 
 ## Acceptance Criteria Assessment
 | Criterion | Status | Evidence |
 |-----------|--------|----------|
-| A documented command starts the local development environment | Met | `package.json:10-13` defines `npm run dev`; `README.md:60-68` documents its watch behavior. |
-| A documented validation command runs and passes on the baseline codebase | Met | `README.md:75-90` documents both forms. Local corroboration found `npm run typecheck` successful and `./harness verify` non-failing with exit 0 under the documented degraded baseline semantics. |
-| The commands are wrapped/invokable through the harness CLI | **Unmet** | Validation is invokable as `./harness verify`, but `.harness/contract.yml:43-50` leaves `boot.maps_to` null and `README.md:70-73` explicitly requires direct `npm run dev`; no harness CLI invocation starts the development command. |
-| Both commands are documented in the README | Met | `README.md:53-90` documents development and validation. |
+| A documented command starts the local development environment | Met | `package.json:10-12` defines the watch script; `README.md:60-76` documents `./harness dev`; `harness:627-679` performs the process handoff. The guarded suite probe confirms the watch starts and is bounded by a timeout. |
+| A documented validation command runs and passes on the baseline codebase | Met | `README.md:83-98` documents validation. Local corroboration found `npm run typecheck` successful and `./harness verify` degraded with exit 0, the accepted non-blocking baseline state. |
+| The commands are wrapped/invokable through the harness CLI | Met | `.harness/contract.yml:55-63` maps dev to `npm run dev` with `mode: exec` and verify to `npm run typecheck`; `harness:627-679` genuinely executes the dev mapping through the CLI. Cycle 1 F-01 is resolved. |
+| Both commands are documented in the README | Met | `README.md:53-98` documents `./harness dev`, its backing command and handoff semantics, plus `./harness verify` and the validation baseline. |
 
 ## Architecture Conformance
-- The dependency-free TypeScript watch command conforms to ADR-0002 and introduces no speculative framework or build pipeline.
-- Validation remains data-driven through `verify.maps_to`, and no drift was introduced in the harness executable or contract implementation.
-- The development command is not exposed by the mandatory harness operating surface. Documentation of a direct-command fallback is honest, but it does not satisfy AC3 or the ADR-0003 / CORE-COMPONENT-0003 R1 expectation that an existing backing command be wrapped. A naive foreground mapping would hang, so this conflict requires a Plan-level resolution rather than treating documentation as invocation.
-- Friction records are valid JSON Lines, contain the verbatim KEY_QUESTION and required fields, and preserve all six base lines unchanged before eight appended records.
-- All three feature commits use Conventional Commit subjects and include `Co-authored-by` trailers. Cryptographic signatures are present; signer trust could not be established locally because no signer allowlist is configured. CORE-COMPONENT-0002 does not mandate signing.
+- The new watch command wraps the existing TypeScript toolchain and adds no dependency or speculative framework, conforming to ADR-0002.
+- `dev.maps_to`, `boot.maps_to`, and `verify.maps_to` remain contract data. The current `dev` mapping performs a real POSIX `exec sh -c "$maps_to"` handoff, emits no verdict/evidence, propagates the wrapped process status, and exposes non-exec `--print` and `--json` forms. CLI arguments are parsed and rejected rather than interpolated; only the trusted contract command is interpreted by `sh -c`. No command-injection path from user-provided CLI arguments was found.
+- Unmapped handoff behavior is honest: null/native/empty mappings produce `unknown`, exit 0, friction, and no exec. Existing boot, verify, verdict, JSON, evidence, and friction behavior remains intact.
+- ADR-0004, R17, and DECISION-LOG decisions 38 through 46 are present. The ADR and core-component templates have no branch diff, so templates were not edited in place.
+- The implementation does not, however, make the new `mode` attribute authoritative; see F-02.
 
 ## Test Coverage Assessment
-`npm run typecheck`, the isolated `./harness verify` gate, and `sh tests/harness/run.sh` completed successfully; the durable suite reported all 36 checks passing. TEST-30 does not execute `npm run dev` and therefore cannot hang on the watch process. Its static assertions correctly lock the script value, documentation, friction markers, and existing validation mapping.
+`sh tests/harness/run.sh` completed without hanging and reported 37 passes, 0 failures, 0 skips, and terminal `Verdict: pass`. TEST-20 excludes bare `dev` and uses non-exec introspection. TEST-30 proves the current mapping, JSON descriptor, unmapped behavior, docs, boot deferral, and unchanged validation. TEST-30b is hard-bounded and confirmed the watch starts.
 
-TEST-30 does not cover AC3. At `tests/harness/run.sh:675-692` it instead requires `boot.maps_to` to remain null and checks only `verify`; thus it can pass while the development command remains impossible to invoke through the CLI.
-
-No additional correctness, security, or error-handling defects were found in the changed implementation surface.
+Direct corroboration also found `./harness dev --print` successful with only the resolved command and no verdict, `./harness dev --json` valid and verdict-free, `./harness verify` degraded with exit 0, and `npm run typecheck` successful. Shell syntax checks passed and the tracked working tree remained clean. The missing regression is mode-driven handler selection: tests assert that the current dev tuple says `exec`, but do not prove that changing `mode` changes behavior.
 
 ## Findings
 | ID | Severity | Location | Finding | Recommendation |
 |----|----------|----------|---------|----------------|
-| F-01 | blocking | `package.json:10-13`; `.harness/contract.yml:43-50`; `README.md:60-73`; `tests/harness/run.sh:637-696` | **Confidence: high.** AC3 is unmet: `npm run dev` exists only as a direct command, while `./harness boot` remains unmapped and returns `unknown`. Merely mentioning the direct command in harness documentation does not make it invokable through the harness CLI. TEST-30 codifies the gap rather than testing the criterion. | Return to Plan to resolve long-running dev semantics against the harness contract. Either deliver a non-hanging harness CLI path that actually starts the development environment and add an integration assertion for it, recording any required ADR/core-component change, or explicitly amend the issue acceptance criterion before claiming delivery. Do not map the foreground watch into the current run-to-completion handler without solving the hang. |
+| F-02 | major | `harness:491-498`, `harness:627-640`, `harness:976-982`; `tests/harness/run.sh:678-704` | **Confidence: high.** `mode` is descriptive rather than the behavior selector promised by ADR-0004 and R17. Dispatch sends `lint/test/build/boot` unconditionally to `verb_capability` and `dev` unconditionally to `verb_exec`; `verb_exec` even defaults a missing mode to `exec`, while R17 says absent or `capability` must select run-to-completion behavior. Orient also hard-codes `dev_mode: exec`. Consequently, setting `boot.mode: exec` in issue #6 would still use the run-to-completion handler and could hang, while removing or changing `dev.mode` would not select capability behavior. Current tests only lock the present values and cannot detect this contract violation. | Read `mode` before selecting the command handler. Route `exec` to the handoff path and absent/`capability` to the capability path, reject unsupported modes, and derive orient output from `get_mode`. Add isolated tests proving `boot` switches to handoff with `mode: exec` and `dev` switches to capability behavior when mode is absent or `capability`, while preserving the current dev and verify behavior. |
 
 ## Verdict Rationale
-**REQUEST_CHANGES.** One acceptance criterion is demonstrably unmet, which requires this verdict even though validation, documentation, friction integrity, commit standards, and the existing regression suite otherwise pass.
+**REQUEST_CHANGES.** Cycle 1 F-01 is genuinely resolved and all issue acceptance criteria are met. The current dev handoff is correct, bounded in tests, and does not expose a new input-injection path. However, the implementation does not enforce the central data-driven selector introduced by ADR-0004 and R17. That major architecture/logic defect would make the documented reusable handoff category fail for `boot`, the specifically anticipated next consumer.
 
 ## Suggested Follow-ups
-- Resolve F-01 at the Plan stage because the current single-verdict handler conflicts with a long-running watch process.
-- Update TEST-30 and the Verify summary so AC3 is proven by an actual harness CLI capability rather than by documentation and an `unknown` verdict.
+- Make contract `mode` authoritative and add mode-switch regression cases.
+- Re-run the same four corroboration commands, preserving current dev introspection, verify aggregation, and no-hang behavior.

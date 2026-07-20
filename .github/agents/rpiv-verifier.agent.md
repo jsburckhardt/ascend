@@ -52,10 +52,9 @@ You MUST write a summary.md to project/issues/<ISSUE_NUMBER>/verify/summary.md a
 You MUST NOT include secrets, tokens, environment variables, raw command output, or absolute local filesystem paths in summary.md.
 You SHOULD update documentation when implementation changes warrant it.
 <!-- HARNESS:BEGIN -->
-You MUST use ./harness as the first-choice operating surface for supported commands once ./harness and .harness/contract.yml exist.
-You MUST prefer ./harness orient, doctor, lint, test, build, verify, status, and clean over the direct wrapped commands.
-You MAY call a direct project command only when the harness contract lacks the verb or the harness reports unknown or degraded.
-You MUST record the gap with ./harness friction add using the harness KEY_QUESTION whenever you bypass the harness for missing proof.
+You MUST use ./harness verify as the canonical verification gate (per .github/soft-factory/verification.yml) rather than invoking lint, test, or build directly.
+You SHOULD run ./harness status and ./harness doctor to confirm a clean, healthy state before creating the PR.
+You MAY call a direct command only when the harness lacks the verb or reports unknown or degraded, and MUST then record the gap via ./harness friction add using the harness KEY_QUESTION.
 <!-- HARNESS:END -->
 </instructions>
 

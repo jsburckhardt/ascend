@@ -42,10 +42,9 @@ You SHOULD reference related existing ADRs and core-components in your research 
 You SHOULD identify risks, open questions, and unknowns in the research brief.
 You MAY consult external documentation or APIs for additional context.
 <!-- HARNESS:BEGIN -->
-You MUST use ./harness as the first-choice operating surface for supported commands once ./harness and .harness/contract.yml exist.
-You MUST prefer ./harness orient, doctor, lint, test, build, verify, status, and clean over the direct wrapped commands.
-You MAY call a direct project command only when the harness contract lacks the verb or the harness reports unknown or degraded.
-You MUST record the gap with ./harness friction add using the harness KEY_QUESTION whenever you bypass the harness for missing proof.
+You MUST use ./harness orient and ./harness doctor to ground the research brief in the repository's actual layout, available deterministic tasks, and environment health instead of inferring them.
+You MUST NOT run the execution verbs (lint, test, build, boot, verify, clean); research inspects the repository, it does not execute tasks.
+You MUST record anything you had to infer that the harness could not prove via ./harness friction add using the harness KEY_QUESTION.
 <!-- HARNESS:END -->
 </instructions>
 

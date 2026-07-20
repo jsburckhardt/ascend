@@ -52,10 +52,9 @@ You MUST summarize each stage result before dispatching the next stage.
 You SHOULD provide the next stage agent with context from all prior stage outputs.
 You MAY retry a failed stage once before stopping with an error report.
 <!-- HARNESS:BEGIN -->
-You MUST use ./harness as the first-choice operating surface for supported commands once ./harness and .harness/contract.yml exist.
-You MUST prefer ./harness orient, doctor, lint, test, build, verify, status, and clean over the direct wrapped commands.
-You MAY call a direct project command only when the harness contract lacks the verb or the harness reports unknown or degraded.
-You MUST record the gap with ./harness friction add using the harness KEY_QUESTION whenever you bypass the harness for missing proof.
+You MUST treat ./harness as the deterministic task surface for the pipeline and ensure each dispatched stage runs its checks through it rather than ad hoc shell.
+You MAY run ./harness orient or ./harness status to confirm pipeline state, and MUST leave full verification to the rpiv-verifier stage's ./harness verify.
+You MUST record any deterministic task the harness could not provide via ./harness friction add using the harness KEY_QUESTION.
 <!-- HARNESS:END -->
 </instructions>
 

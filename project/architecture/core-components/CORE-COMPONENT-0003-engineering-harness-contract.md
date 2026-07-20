@@ -100,9 +100,12 @@ editing `contract.yml` data).
   Re-running the update MUST replace only the content between the markers, MUST NOT
   duplicate the block, and MUST NOT alter any content outside the markers or change the
   agent's existing behaviour.
-- **R11 — Consuming agents prefer the harness.** The harness-consuming agents (the `ship`
-  orchestrator and the `rpiv-*` pipeline agents) MUST use `./harness` as the first-choice
-  surface for supported verbs and MAY bypass to a direct command only when the contract
+- **R11 — Consuming agents prefer the harness, scoped to their role.** The harness-consuming
+  agents (the `ship` orchestrator and the `rpiv-*` pipeline agents) MUST use `./harness` as the
+  first-choice surface for supported verbs, and each agent's block MUST name only the verbs
+  relevant to its role — research/plan use read-only verbs (`orient`/`doctor`/`status`) and MUST
+  NOT run execution verbs; implement runs `lint`/`test`/`build`/`boot`/`verify`/`clean`; verify
+  runs the `verify` gate. Agents MAY bypass to a direct command only when the contract
   lacks the verb or the harness reports `unknown`/`degraded` — and MUST log that gap via
   `./harness friction add`.
 - **R12 — Dependency-light, portable, POSIX-only.** The harness MUST run as a portable POSIX

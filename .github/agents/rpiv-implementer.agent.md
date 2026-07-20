@@ -35,10 +35,9 @@ You SHOULD make the smallest possible changes to achieve each task.
 You SHOULD commit frequently with descriptive messages referencing task IDs.
 You MAY refactor existing code when required by a task.
 <!-- HARNESS:BEGIN -->
-You MUST use ./harness as the first-choice operating surface for supported commands once ./harness and .harness/contract.yml exist.
-You MUST prefer ./harness orient, doctor, lint, test, build, verify, status, and clean over the direct wrapped commands.
-You MAY call a direct project command only when the harness contract lacks the verb or the harness reports unknown or degraded.
-You MUST record the gap with ./harness friction add using the harness KEY_QUESTION whenever you bypass the harness for missing proof.
+You MUST run deterministic checks through ./harness — lint, test, build, and boot as applicable — instead of calling the wrapped commands directly.
+You MUST use ./harness verify to self-check the implementation against the aggregate gate before handing off, and MAY use ./harness clean to reset build or test state.
+You MAY call a direct command only when the harness lacks the verb or reports unknown or degraded, and MUST then record the gap via ./harness friction add using the harness KEY_QUESTION.
 <!-- HARNESS:END -->
 </instructions>
 

@@ -40,6 +40,7 @@ You MUST update only the harness-consuming agent definitions listed in HARNESS_C
 You MUST NOT inject harness usage rules into AGENTS.md or into non-consuming agent definitions.
 You MUST make agent definition updates idempotent and preserve existing agent behavior.
 You MUST inject the harness rules as one-directive-per-line MUST/MAY entries inside each consuming surface's <instructions> block, delimited by the HARNESS markers, and never as trailing prose after a closing section tag.
+You MUST scope each consuming agent's harness block to the verbs relevant to its role in HARNESS_CONSUMERS, never the full verb set, and forbid execution verbs (lint, test, build, boot, verify, clean) for the read-only research and plan roles.
 You MUST run ./harness verify before claiming completion.
 You SHOULD keep the harness implementation dependency-light.
 You SHOULD prefer portable shell or existing repo runtime tooling.
@@ -58,20 +59,36 @@ KEY_QUESTION: "What did the agent have to infer that the harness should have pro
 
 HARNESS_CONSUMERS: YAML<<
 # The execution pipeline that runs deterministic harness tasks. Only these
-# agents receive the harness usage rule; other agents do not run the harness.
-- .github/agents/ship.agent.md
-- .github/agents/rpiv-research.agent.md
-- .github/agents/rpiv-planner.agent.md
-- .github/agents/rpiv-implementer.agent.md
-- .github/agents/rpiv-verifier.agent.md
+# agents receive the harness usage rule, and each block is scoped to the verbs
+# relevant to that agent's role -- never the full verb set.
+- file: .github/agents/ship.agent.md
+  role: orchestrator
+  verbs: [orient, status]
+  note: dispatches stages through the harness; defers full verification to rpiv-verifier
+- file: .github/agents/rpiv-research.agent.md
+  role: research
+  verbs: [orient, doctor]
+  note: read-only understanding; MUST NOT run execution verbs
+- file: .github/agents/rpiv-planner.agent.md
+  role: plan
+  verbs: [orient, status]
+  note: plan against the real contract verbs; MUST NOT run execution verbs
+- file: .github/agents/rpiv-implementer.agent.md
+  role: implement
+  verbs: [lint, test, build, boot, verify, clean]
+  note: runs deterministic checks and self-verifies through the harness
+- file: .github/agents/rpiv-verifier.agent.md
+  role: verify
+  verbs: [verify, status, doctor]
+  note: verify is the canonical gate before the PR
 >>
 
 AGENT_HARNESS_RULES: TEXT<<
-Injected as one directive per line inside the target surface's <instructions> block, immediately before its </instructions> tag, delimited by the HARNESS markers so re-runs replace in place:
-- You MUST use ./harness as the first-choice operating surface for supported commands once ./harness and .harness/contract.yml exist.
-- You MUST prefer ./harness orient, doctor, lint, test, build, verify, status, and clean over the direct wrapped commands.
-- You MAY call a direct project command only when the harness contract lacks the verb or the harness reports unknown or degraded.
-- You MUST record the gap with ./harness friction add using the harness KEY_QUESTION whenever you bypass the harness for missing proof.
+Render harness directives per consuming agent, scoped to that agent's role and the verbs listed for it in HARNESS_CONSUMERS -- never the full verb set. Inject as one MUST/MAY directive per line inside the agent's <instructions> block, immediately before </instructions>, delimited by the HARNESS markers so re-runs replace in place. Each block MUST:
+- name only the harness verbs relevant to the agent's role;
+- require ./harness over the wrapped commands for those verbs;
+- for read-only roles (research, plan) forbid the execution verbs (lint, test, build, boot, verify, clean);
+- require recording harness gaps via ./harness friction add using the KEY_QUESTION.
 >>
 
 REQUIRED_OUTPUTS: YAML<<
@@ -242,18 +259,18 @@ CAPTURE CHMOD_OUTPUT from `execute/runInTerminal`
 SET HARNESS_READY := true (from "Agent Inference" using CHMOD_OUTPUT)
 </process>
 
-<process id="write-agent-definitions" name="Require harness usage in the consuming agent definitions">
-SET AGENT_FILES := HARNESS_CONSUMERS (from "Agent Inference")
-SET AGENT_INSTRUCTION_TEXT := <INSTRUCTIONS> (from "Agent Inference" using AGENT_HARNESS_RULES, CONTRACT_PATH, HARNESS_PATH, KEY_QUESTION)
-IF AGENT_FILES is empty:
+<process id="write-agent-definitions" name="Require role-scoped harness usage in the consuming agent definitions">
+SET CONSUMERS := HARNESS_CONSUMERS (from "Agent Inference")
+IF CONSUMERS is empty:
   SET FRICTION_ENTRIES := FRICTION_ENTRIES + ["No harness-consuming agent definitions found in HARNESS_CONSUMERS"] (from "Agent Inference")
 ELSE:
-  FOREACH agent IN AGENT_FILES:
-    USE `read/readFile` where: filePath=agent
+  FOREACH consumer IN CONSUMERS:
+    SET AGENT_INSTRUCTION_TEXT := <INSTRUCTIONS> (from "Agent Inference" using AGENT_HARNESS_RULES, CONTRACT_PATH, HARNESS_PATH, KEY_QUESTION, consumer)
+    USE `read/readFile` where: filePath=consumer.file
     CAPTURE AGENT_CONTENT from `read/readFile`
-    SET UPDATED_AGENT_CONTENT := <MERGED> (from "Agent Inference" using AGENT_CONTENT, AGENT_INSTRUCTION_TEXT, agent)
-    USE `edit/editFiles` where: filePath=agent
-    SET UPDATED_AGENT_FILES := UPDATED_AGENT_FILES + [agent] (from "Agent Inference")
+    SET UPDATED_AGENT_CONTENT := <MERGED> (from "Agent Inference" using AGENT_CONTENT, AGENT_INSTRUCTION_TEXT, consumer)
+    USE `edit/editFiles` where: filePath=consumer.file
+    SET UPDATED_AGENT_FILES := UPDATED_AGENT_FILES + [consumer.file] (from "Agent Inference")
 SET AGENT_UPDATE_SUMMARY := <SUMMARY> (from "Agent Inference" using HARNESS_CONSUMERS, UPDATED_AGENT_FILES)
 </process>
 

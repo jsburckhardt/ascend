@@ -51,10 +51,10 @@ You SHOULD order tasks by dependency so blocked tasks appear after their depende
 You SHOULD estimate relative complexity for each task.
 You MAY split large tasks into smaller subtasks for clarity.
 <!-- HARNESS:BEGIN -->
-You MUST use ./harness as the first-choice operating surface for supported commands once ./harness and .harness/contract.yml exist.
-You MUST prefer ./harness orient, doctor, lint, test, build, verify, status, and clean over the direct wrapped commands.
-You MAY call a direct project command only when the harness contract lacks the verb or the harness reports unknown or degraded.
-You MUST record the gap with ./harness friction add using the harness KEY_QUESTION whenever you bypass the harness for missing proof.
+You MUST use ./harness orient to enumerate the deterministic verbs the harness exposes so the action plan and test plan reference real harness commands rather than invented ones.
+You SHOULD consult ./harness status to scope tasks against the current repository state.
+You MUST NOT run the execution verbs (lint, test, build, boot, verify, clean); planning does not execute tasks.
+You MUST record any harness capability gap you had to infer via ./harness friction add using the harness KEY_QUESTION.
 <!-- HARNESS:END -->
 </instructions>
 

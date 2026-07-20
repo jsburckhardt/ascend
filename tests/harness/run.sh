@@ -613,6 +613,25 @@ nverd=$(printf '%s\n' "$out28" | grep -c '^Verdict:')
 [ "$t28" = "1" ] && ok "TEST-28 failing verify: last line exactly 'Verdict: fail', exit 1, one Verdict line" || no "TEST-28 terminal verdict on failure (last='$last28' exit=$code28 verds=$nverd)"
 
 # ===========================================================================
+# TEST-29: consuming agents carry role-scoped, non-identical harness blocks
+# ===========================================================================
+# Guards against stamping one generic block into every agent: each consumer's
+# block names only the verbs relevant to its role, so the blocks must differ and
+# the read-only roles (research/plan) must forbid execution verbs.
+extract_block() { awk '/<!-- HARNESS:BEGIN -->/{f=1;next} /<!-- HARNESS:END -->/{f=0} f' "$1"; }
+AGD="$REPO/.github/agents"
+t29=1
+uniq_n=$(for a in ship rpiv-research rpiv-planner rpiv-implementer rpiv-verifier; do extract_block "$AGD/$a.agent.md" | cksum; done | sort -u | wc -l)
+[ "$uniq_n" -ge 4 ] || { t29=0; printf '  (t29 blocks not distinct: %s unique)\n' "$uniq_n"; }
+extract_block "$AGD/rpiv-implementer.agent.md" | grep -q 'lint, test, build' || { t29=0; printf '  (t29 implementer missing execution verbs)\n'; }
+extract_block "$AGD/rpiv-verifier.agent.md" | grep -q 'harness verify as the canonical verification gate' || { t29=0; printf '  (t29 verifier missing verify gate)\n'; }
+for ro in rpiv-research rpiv-planner; do
+	extract_block "$AGD/$ro.agent.md" | grep -q 'MUST NOT run the execution verbs' || { t29=0; printf '  (t29 %s does not forbid execution verbs)\n' "$ro"; }
+	extract_block "$AGD/$ro.agent.md" | grep -Eq 'MUST run ./harness (lint|test|build)' && { t29=0; printf '  (t29 %s instructs an execution verb)\n' "$ro"; }
+done
+[ "$t29" = "1" ] && ok "TEST-29 consuming agents carry role-scoped, distinct harness blocks ($uniq_n distinct)" || no "TEST-29 role-scoped blocks (t29=$t29 distinct=$uniq_n)"
+
+# ===========================================================================
 # Summary
 # ===========================================================================
 printf -- '-------------------------------------------------------\n'

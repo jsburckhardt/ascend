@@ -763,6 +763,101 @@ else
 fi
 
 # ===========================================================================
+# TEST-31: contract `mode` is AUTHORITATIVE -- mode-driven dispatch (F-02 / R17)
+# ===========================================================================
+# Proves the harness selects the verb handler from the contract `mode` DATA, not
+# from hard-coded verb names: `mode: exec` -> interactive/handoff path, absent or
+# `mode: capability` -> run-to-completion capability path, and any unsupported
+# `mode` -> usage error (exit 2, not a silent handler pick). Everything runs
+# against ISOLATED scratch contracts (HARNESS_CONTRACT) mapped to FAST, non-
+# blocking commands (`true`), so nothing hangs and no tracked file is mutated.
+t31=1
+
+# (A) Positive: `boot` with `mode: exec` switches to the HANDOFF path even though
+#     boot is NOT `dev` -- proving selection is data-driven, not name-driven. Uses
+#     maps_to `true` (returns instantly; never blocks a run-to-completion).
+ce="$WORK/c31.boot-exec.yml"
+cat > "$ce" <<'YML'
+version: 1
+entrypoint: ./harness
+verbs:
+  boot:
+    maps_to: "true"
+    mode: exec
+YML
+# boot --print resolves the mapped command, exit 0, NO Verdict line, no hang.
+bpr=$(HARNESS_CONTRACT="$ce" HARNESS_FRICTION="$(new_friction)" HARNESS_EVIDENCE_DIR="$(new_evdir)" "$H" boot --print 2>/dev/null); bprc=$?
+{ [ "$bpr" = "true" ] && [ "$bprc" = "0" ]; } || { t31=0; printf '  (TEST-31A boot --print="%s" exit=%s want "true"/0)\n' "$bpr" "$bprc"; }
+[ "$(printf '%s\n' "$bpr" | grep -c '^Verdict:')" = "0" ] || { t31=0; printf '  (TEST-31A boot --print emitted a Verdict line)\n'; }
+# boot --json is a verdict-FREE handoff descriptor (mode exec, maps_to, interactive).
+bj=$(HARNESS_CONTRACT="$ce" HARNESS_FRICTION="$(new_friction)" HARNESS_EVIDENCE_DIR="$(new_evdir)" "$H" boot --json 2>/dev/null); bjc=$?
+[ "$bjc" = "0" ] || { t31=0; printf '  (TEST-31A boot --json exit=%s)\n' "$bjc"; }
+printf '%s' "$bj" | grep -q '"mode": "exec"' || t31=0
+printf '%s' "$bj" | grep -q '"maps_to": "true"' || t31=0
+printf '%s' "$bj" | grep -q '"interactive": true' || t31=0
+printf '%s' "$bj" | grep -q '"verdict"' && { t31=0; printf '  (TEST-31A boot --json unexpectedly carries a verdict key)\n'; }
+if [ -n "$NODE" ]; then printf '%s' "$bj" | json_valid || { t31=0; printf '  (TEST-31A boot --json not valid JSON)\n'; }; fi
+# bare `./harness boot` now HANDS OFF via exec (runs `true` -> exit 0), emitting
+# NO Verdict line (handoff is verdict-exempt). Bounded: `true` returns instantly,
+# so this cannot hang -- proving boot no longer uses the run-to-completion handler.
+bexo=$(HARNESS_CONTRACT="$ce" HARNESS_FRICTION="$(new_friction)" HARNESS_EVIDENCE_DIR="$(new_evdir)" "$H" boot 2>/dev/null); bexc=$?
+[ "$bexc" = "0" ] || { t31=0; printf '  (TEST-31A boot handoff exit=%s want 0)\n' "$bexc"; }
+[ "$(printf '%s\n' "$bexo" | grep -c '^Verdict:')" = "0" ] || { t31=0; printf '  (TEST-31A boot handoff emitted a Verdict line)\n'; }
+
+# (B) Default/negative: `dev` with NO `mode` -> run-to-completion CAPABILITY path,
+#     exactly one Verdict line (proving absent mode selects capability, NOT exec).
+cnm="$WORK/c31.dev-nomode.yml"
+cat > "$cnm" <<'YML'
+version: 1
+entrypoint: ./harness
+verbs:
+  dev:
+    maps_to: "true"
+YML
+dnmo=$(HARNESS_CONTRACT="$cnm" HARNESS_FRICTION="$(new_friction)" HARNESS_EVIDENCE_DIR="$(new_evdir)" "$H" dev 2>/dev/null); dnmc=$?
+[ "$(printf '%s\n' "$dnmo" | grep -c '^Verdict:')" = "1" ] || { t31=0; printf '  (TEST-31B dev(no mode) Verdict count=%s want 1)\n' "$(printf '%s\n' "$dnmo" | grep -c '^Verdict:')"; }
+[ "$dnmc" = "0" ] || { t31=0; printf '  (TEST-31B dev(no mode) exit=%s want 0)\n' "$dnmc"; }
+printf '%s\n' "$dnmo" | grep -q '^Verdict: pass' || { t31=0; printf '  (TEST-31B dev(no mode) verdict=%s want pass)\n' "$(printf '%s\n' "$dnmo" | grep '^Verdict:')"; }
+
+# (B2) `dev` with explicit `mode: capability` -> same run-to-completion behavior.
+ccap="$WORK/c31.dev-cap.yml"
+cat > "$ccap" <<'YML'
+version: 1
+entrypoint: ./harness
+verbs:
+  dev:
+    maps_to: "true"
+    mode: capability
+YML
+dco=$(HARNESS_CONTRACT="$ccap" HARNESS_FRICTION="$(new_friction)" HARNESS_EVIDENCE_DIR="$(new_evdir)" "$H" dev 2>/dev/null); dcc=$?
+[ "$(printf '%s\n' "$dco" | grep -c '^Verdict:')" = "1" ] || { t31=0; printf '  (TEST-31B2 dev(mode:capability) Verdict count!=1)\n'; }
+[ "$dcc" = "0" ] || { t31=0; printf '  (TEST-31B2 dev(mode:capability) exit=%s want 0)\n' "$dcc"; }
+
+# (C) Unsupported mode -> USAGE ERROR (exit 2), NOT a silent handler pick.
+cbo="$WORK/c31.bogus.yml"
+cat > "$cbo" <<'YML'
+version: 1
+entrypoint: ./harness
+verbs:
+  boot:
+    maps_to: "true"
+    mode: bogus
+YML
+bgo=$(HARNESS_CONTRACT="$cbo" HARNESS_FRICTION="$(new_friction)" HARNESS_EVIDENCE_DIR="$(new_evdir)" "$H" boot 2>/dev/null); bgc=$?
+[ "$bgc" = "2" ] || { t31=0; printf '  (TEST-31C boot(mode:bogus) exit=%s want 2)\n' "$bgc"; }
+[ "$(printf '%s\n' "$bgo" | grep -c '^Verdict:')" = "0" ] || { t31=0; printf '  (TEST-31C bogus mode emitted a Verdict line)\n'; }
+
+# (D) Regression: the REAL contract still routes by data -- dev(mode:exec) is the
+#     handoff (verdict-free --print), boot(no mode) stays run-to-completion unknown.
+rdp=$("$H" dev --print 2>/dev/null); rdpc=$?
+{ [ "$rdp" = "npm run dev" ] && [ "$rdpc" = "0" ]; } || { t31=0; printf '  (TEST-31D real dev --print="%s" exit=%s)\n' "$rdp" "$rdpc"; }
+rbo=$(HARNESS_FRICTION="$(new_friction)" HARNESS_EVIDENCE_DIR="$(new_evdir)" "$H" boot 2>/dev/null); rboc=$?
+printf '%s\n' "$rbo" | grep -q '^Verdict: unknown' || { t31=0; printf '  (TEST-31D real boot verdict=%s want unknown)\n' "$(printf '%s\n' "$rbo" | grep '^Verdict:')"; }
+[ "$rboc" = "0" ] || { t31=0; printf '  (TEST-31D real boot exit=%s want 0)\n' "$rboc"; }
+
+[ "$t31" = "1" ] && ok "TEST-31 contract mode authoritative: exec->handoff, absent/capability->run-to-completion, unsupported->exit 2 (real dev exec / boot unknown intact)" || no "TEST-31 mode-driven dispatch (t31=$t31)"
+
+# ===========================================================================
 # Summary
 # ===========================================================================
 printf -- '-------------------------------------------------------\n'

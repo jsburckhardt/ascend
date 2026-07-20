@@ -38,12 +38,6 @@ You MUST place all code samples inside fenced code blocks in the Appendix sectio
 You MUST cite every external claim with a source URL from the Exa results.
 You MUST redact secrets and personal data from findings and from the final report.
 You MUST NOT fabricate sources, findings, or citations.
-<!-- HARNESS:BEGIN -->
-You MUST use ./harness as the first-choice operating surface for supported commands once ./harness and .harness/contract.yml exist.
-You MUST prefer ./harness orient, doctor, lint, test, build, verify, status, and clean over the direct wrapped commands.
-You MAY call a direct project command only when the harness contract lacks the verb or the harness reports unknown or degraded.
-You MUST record the gap with ./harness friction add using the harness KEY_QUESTION whenever you bypass the harness for missing proof.
-<!-- HARNESS:END -->
 </instructions>
 
 <constants>

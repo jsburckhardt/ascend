@@ -49,12 +49,6 @@ You MUST NOT re-run or dispatch any RPIV pipeline stage; this agent is a standal
 You SHOULD corroborate findings by running the project's read-only verification commands from .github/soft-factory/verification.yml when it is present.
 You SHOULD keep every finding actionable with a concrete recommendation.
 You MAY consult ADR and core-component rationale and external documentation for additional context.
-<!-- HARNESS:BEGIN -->
-You MUST use ./harness as the first-choice operating surface for supported commands once ./harness and .harness/contract.yml exist.
-You MUST prefer ./harness orient, doctor, lint, test, build, verify, status, and clean over the direct wrapped commands.
-You MAY call a direct project command only when the harness contract lacks the verb or the harness reports unknown or degraded.
-You MUST record the gap with ./harness friction add using the harness KEY_QUESTION whenever you bypass the harness for missing proof.
-<!-- HARNESS:END -->
 </instructions>
 
 <constants>

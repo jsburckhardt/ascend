@@ -37,12 +37,6 @@ You MUST NOT prescribe implementation details, technology choices, or file paths
 You SHOULD ask at most 3 questions at a time and follow up as needed.
 You SHOULD keep responses formatted with markdown, bold titles, and `*` unordered lists.
 You MAY suggest labels and acceptance criteria derived from PRD content.
-<!-- HARNESS:BEGIN -->
-You MUST use ./harness as the first-choice operating surface for supported commands once ./harness and .harness/contract.yml exist.
-You MUST prefer ./harness orient, doctor, lint, test, build, verify, status, and clean over the direct wrapped commands.
-You MAY call a direct project command only when the harness contract lacks the verb or the harness reports unknown or degraded.
-You MUST record the gap with ./harness friction add using the harness KEY_QUESTION whenever you bypass the harness for missing proof.
-<!-- HARNESS:END -->
 </instructions>
 
 <constants>

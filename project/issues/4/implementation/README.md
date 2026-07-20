@@ -305,3 +305,124 @@ shows no leftover scratch/evidence/contract/stub files.
 non-GNU portability proof uses dash + mawk (both non-GNU) instead of busybox.
 No ADR/CC deviation was required; all work stayed within the reconciled
 ADR-0003 §5–§7 / CORE-COMPONENT-0003 R2/R6/R8/R12/R14/R15/R16 boundaries.
+
+## Review Cycle 2 remediation (F-02R, F-06…F-09 + README)
+
+> **Review Cycle 2 (2026-07-20).** Independent re-review returned REQUEST_CHANGES
+> (0 blocking; F-02R + F-06/F-07/F-08 major, F-09 minor). All are **CODE/TEST**
+> fixes — the accepted architecture (ADR-0003 / CORE-COMPONENT-0003) is unchanged,
+> so no return to Plan and no ADR/CC decision-text edits. Every already-resolved
+> cycle-1 behavior (data-driven dispatch, Node range, evidence reliability, POSIX
+> escaping, one marker block per surface, VCS policy, wrapped typecheck under
+> `verify` only) is preserved. The regression suite now runs **34 tests green**
+> (`PASS=34 FAIL=0 SKIP=0`) under both `sh` and `dash`, exits non-zero on any
+> failure, and leaves the tree clean.
+
+### F-02R — terminal `Verdict:` line on a failing `verify` (R2/R7)
+
+`verb_verify`'s human path printed `Verdict: <value>` **and then** the captured
+typecheck diagnostic, so the verdict was not the terminal line. Fixed by moving
+the `--- typecheck output ---` diagnostic block to print **before** the single
+`Verdict: %s` line. The last line of every human verb (pass or fail) is now
+exactly `Verdict: <value>`.
+
+- **File:** `harness` (`verb_verify` output block).
+- **Evidence:** forcing a failing typecheck (temp contract, data-only) → human
+  output ends with `LAST=[Verdict: fail]`, exit 1; real diagnostic
+  (`error TS9999: forced failure`) prints above it.
+- **Regression test:** **TEST-28** asserts last line == `Verdict: fail`, exit 1,
+  exactly one `^Verdict:` line.
+
+### F-06 — double execution of aggregate members in human `verify`
+
+Human `verify` resolved each member once to aggregate and **again** to render,
+running any mapped member command twice. Fixed by resolving each member **exactly
+once** in a single loop that caches the verdict, the JSON `checks[]` fragment, and
+the human-rendered row (`$_rows`); the human output reuses `$_rows` instead of a
+second `resolve_member` pass.
+
+- **File:** `harness` (`verb_verify` aggregate loop + output block).
+- **Evidence:** temp contract mapping `lint` to a counter-incrementing command →
+  member invoked **1×** for both human and `--json` verify.
+- **Regression test:** **TEST-26** (counter file; asserts count == 1 in both forms).
+
+### F-07 — empty/missing friction log produced invalid JSON
+
+`grep -c . file` printed `0` **and exited 1**, so `|| echo 0` appended a **second**
+`0`, embedding a raw newline in the numeric JSON field (`"count": 0\n0`). Replaced
+with a single `friction_count()` helper (`awk 'NF{n++} END{print n+0}'` guarded by
+a file-existence check) that prints **exactly one integer** for missing, empty, and
+populated logs — including a final record with no trailing newline. `friction list`
+no longer creates the log as a read side effect.
+
+- **File:** `harness` (`friction_count`, `verb_status`, `friction_list`).
+- **Evidence:** `status --json` and `friction list --json` are valid JSON with
+  `count`/`friction_entries` = `0` (missing), `0` (empty), `6` (populated seed),
+  `2` (no-trailing-newline fixture).
+- **Regression test:** **TEST-27** (missing/empty/populated × `status`/`friction
+  list` × JSON+human; asserts valid JSON + correct count; asserts the missing log
+  is not created).
+
+### F-08 — POSIX portability of the suite + real non-GNU enforcement (R16)
+
+`tests/harness/run.sh` used non-POSIX constructs and TEST-24 could pass on GNU awk
+without ever exercising a non-GNU userland. Fixes:
+
+- `mktemp -d` → PID-based scratch dir `${TMPDIR:-/tmp}/harness-suite.$$` created
+  with `umask 077` + `mkdir`, trap-cleaned.
+- `sha256sum … | cut` → `cksum < file` (TEST-18 harness-unchanged check).
+- `grep -o … | sed` → POSIX `sed -n 's/…/\1/p'` (TEST-23 no-node fallback).
+- Removed `awk -Wversion` and `head -c` (TEST-24).
+- **TEST-24 now REQUIRES a real non-GNU awk:** it locates `mawk`/`busybox awk`/a
+  non-GNU default `awk`, forces it onto `PATH` via an `awk` shim, runs the
+  friction/verify escaping path under `dash`, asserts the harness actually
+  resolved `awk` to the shim, and validates JSON + control-char/newline/tab
+  round-trip. If **no** non-GNU userland exists it emits a **visible SKIP** (never
+  a silent GNU pass). In this sandbox it runs on forced `/usr/bin/mawk` under
+  `dash`.
+
+The suite stays POSIX-portable (verified with `sh -n`, and green under both `sh`
+and `dash`), exits non-zero on any failure, and leaves the tree clean.
+
+### F-09 — real idempotency proof for the agent-surface updater (R10)
+
+TEST-13 only checked marker ordering. The marker-update operation is now a small
+committed POSIX-awk helper, **`tests/harness/apply-marker.sh`**, which replaces the
+content between `<!-- HARNESS:BEGIN/END -->` with a supplied block (or appends if
+absent) and never duplicates it. TEST-13 runs it **twice** on an isolated copy of
+each of the **17** surfaces (output to scratch; tracked files never mutated) and
+asserts: (a) the second run is byte-identical to the first (`cksum`); (b)
+re-applying on the committed state is a no-op (`cksum` == original) with exactly one
+BEGIN/END pair (no duplication); (c) content **outside** the markers is preserved
+verbatim.
+
+- **New file:** `tests/harness/apply-marker.sh` (committed helper; `sh -n` clean).
+- **Regression test:** **TEST-13** (strengthened; 17 surfaces).
+
+### F-follow-up — `.harness/README.md` semantics
+
+Updated the `verify` aggregation policy to the tightened ordered total function
+(any `fail` → `fail`; all `pass` → `pass`; all `unknown` → `unknown`; otherwise
+`degraded`) and documented persistence-failure ⇒ `fail` and the diagnostics-before-
+terminal-verdict rule. The `fail` verdict-table row now notes the required-record
+persistence-failure case (R14).
+
+### Cycle-2 validation evidence
+
+| Check | Result |
+|-------|--------|
+| Failing `verify` human output last line | `Verdict: fail` (diagnostics above), exit 1 (F-02R) |
+| `verify` runs each mapped member once | human=1, json=1 (TEST-26, F-06) |
+| `status`/`friction list` `--json` count | valid JSON, `0`/`0`/`6` for missing/empty/populated (TEST-27, F-07) |
+| Suite under `sh` and `dash` | `PASS=34 FAIL=0 SKIP=0`, exit 0 |
+| TEST-24 non-GNU | forced `/usr/bin/mawk` under `dash`, JSON valid + round-trip (F-08) |
+| TEST-13 idempotency | 17 surfaces byte-identical on rerun, outside-markers preserved (F-09) |
+| Suite is a real gate | reintroducing F-02R → TEST-28 fails, suite exit 1 |
+| Baseline `verify --json` | `degraded`, exit 0, `doctor` present in `checks[]` |
+| `npm run typecheck` | exit 0 |
+| 17 marker blocks, unchanged | ✅ one each; `AGENTS.md`/`.github/agents/*` no diff |
+| VCS policy | evidence git-ignored + `.gitkeep` kept; contract/README/friction tracked |
+| Tree clean | only `harness`, `.harness/README.md`, `tests/harness/run.sh` modified + `tests/harness/apply-marker.sh` new |
+
+No ADR/CC deviation was required; all cycle-2 work is CODE/TEST-level within the
+CORE-COMPONENT-0003 R2/R6/R7/R12/R14/R15/R16 boundaries.

@@ -29,7 +29,7 @@ Every verb returns exactly one verdict:
 | Verdict | Meaning | Exit code |
 |---------|---------|-----------|
 | `pass` | The wrapped command ran and succeeded. | `0` |
-| `fail` | The wrapped command ran and **failed**. | `1` (non-zero) |
+| `fail` | The wrapped command ran and **failed**, OR a required record (evidence/friction) could not be persisted (R14). | `1` (non-zero) |
 | `degraded` | The capability is partially available/proven (e.g. an aggregate whose sub-checks include `unknown`). | `0` |
 | `unknown` | No backing command exists to prove the capability — it is **not faked**. | `0` |
 
@@ -62,11 +62,25 @@ surface.
 
 ### `verify` aggregation policy
 
-`verify` aggregates its checks: overall `fail` if any wrapped check fails; else
-`degraded` if any required capability is `unknown`/`degraded`; else `pass`. In
-the Issue #4 baseline `verify` returns **`degraded`** (typecheck passes; `test`,
-`lint`, and `build` are `unknown`). Every run writes a timestamped evidence
-record under `.harness/evidence/`.
+`verify` derives its overall verdict from its member checks (its own wrapped
+`typecheck` plus every verb in `verify.aggregate`: `lint`, `test`, `build`,
+`doctor`) using one fixed, ordered total function (CORE-COMPONENT-0003 R6),
+evaluated in this order:
+
+1. **any member `fail` → `fail`** (exit 1);
+2. else **every member `pass` → `pass`**;
+3. else **every member `unknown` → `unknown`**;
+4. otherwise (a mix of `pass`/`degraded`/`unknown` with no `fail`) **→ `degraded`**.
+
+`doctor` only emits `pass`/`degraded`, so it can move the aggregate toward
+`degraded` but never `fail`. In the Issue #4 baseline `verify` returns
+**`degraded`** (typecheck `pass`; `lint`/`test`/`build` `unknown`; `doctor`
+`pass`). Every run writes a timestamped evidence record under
+`.harness/evidence/`. If that **required evidence record cannot be persisted**,
+`verify` returns **`fail`** and exits non-zero — it never masks a persistence
+failure as `pass`/`degraded`/`unknown` (R14). On a failure path the human output
+prints any diagnostics **before** the single terminal `Verdict: <value>` line, so
+the last line of output is always exactly the verdict.
 
 ## `--json` contract
 

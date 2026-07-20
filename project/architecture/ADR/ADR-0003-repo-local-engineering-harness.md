@@ -74,27 +74,45 @@ mandatory, first-choice operating surface for humans and agents. Specifically:
    | Verb | Backing today | Initial verdict | Friction recorded |
    |------|---------------|-----------------|-------------------|
    | `help` / `orient` / `status` | repo metadata / contract / last evidence | `pass` | no |
-   | `doctor` | Node vs `.nvmrc`/`engines`, `node_modules` presence | `pass` or `degraded` | only if degraded |
-   | `verify` | `npm run typecheck` (+ `doctor`) | `degraded` | yes |
+   | `doctor` | Node major vs `.nvmrc`/`engines` (exactly `22`), `node_modules` presence | `pass` or `degraded` | only if degraded |
+   | `verify` | `npm run typecheck` + `verify.aggregate` (`lint`,`test`,`build`,`doctor`) | `degraded` | yes |
    | `lint` | none (no ESLint/Prettier) | `unknown` | yes |
    | `test` | none (no runner/script/files) | `unknown` | yes |
    | `build` | none (`tsc` is `noEmit`; nothing emits) | `unknown` | yes |
    | `boot` | none (no dev/serve app; `npm install` is setup) | `unknown` | yes |
-   | `clean` | none (no clean script) | `degraded` (harness-owned artifacts only) | yes |
+   | `clean` | `clean.maps_to` (native today; wraps a clean command when mapped) | `degraded` (harness-owned artifacts only) | yes |
    | `friction add` / `friction list` | harness-native | `pass` | no |
 
    `npm run typecheck` is wrapped **only** by `verify`; it is deliberately **not** aliased
    under `lint` or `build`, to avoid misrepresenting a typecheck as a linter or a build.
 
-6. **`verify` verdict policy.** `verify` aggregates its checks: overall `fail` if any
-   wrapped command fails; else `degraded` if any required capability is `unknown`/`degraded`;
-   else `pass`. In the Issue #4 state `verify` returns `degraded` (typecheck passes; test,
-   lint, and build are `unknown`). `verify` MUST write an evidence file under
-   `.harness/evidence/` on every run.
+   `clean` reads `clean.maps_to`: today it is `native` (prune only harness-owned evidence →
+   `degraded`); when a real clean command is added it is wired by setting `clean.maps_to` in
+   the contract, with no harness code change (CORE-COMPONENT-0003 R8). `doctor` validates the
+   **full** supported Node range (exactly major `22`, per `engines` `>=22 <23` and `.nvmrc`):
+   both below-range (`<22`) and above-range (`>=23`) report `degraded`, not `pass`
+   (CORE-COMPONENT-0003 R15).
 
-7. **Evidence.** Evidence for runs is written under `.harness/evidence/` as timestamped
-   records. Evidence run output is **git-ignored** (ephemeral, noisy); the directory is kept
-   under version control via a committed `.gitkeep`.
+6. **`verify` verdict policy (data-driven, deterministic).** `verify` derives its overall
+   verdict by iterating the contract-declared member checks — its own `maps_to` (surfaced as
+   the `typecheck` check) plus every verb listed in `verify.aggregate`
+   (`lint`, `test`, `build`, `doctor`) — resolving each member from `.harness/contract.yml` at
+   runtime, never from a hard-coded list. The overall verdict is a fixed total function of the
+   member verdicts, evaluated in order: (1) any member `fail` ⇒ `fail`; (2) else all members
+   `pass` ⇒ `pass`; (3) else all members `unknown` ⇒ `unknown`; (4) else ⇒ `degraded`.
+   `doctor` participates in the aggregate and, because it only emits `pass`/`degraded`, can
+   push the aggregate to `degraded` but never `fail`. In the Issue #4 state `verify` is
+   `degraded` (typecheck `pass`; lint/test/build `unknown`); once #5 populates their `maps_to`
+   and they pass, the SAME rule yields `pass` with no code change. `verify` MUST write a
+   collision-safe evidence file atomically under `.harness/evidence/` on every run, and MUST
+   return `fail` if that required evidence cannot be persisted (CORE-COMPONENT-0003 R5, R6,
+   R14).
+
+7. **Evidence.** Evidence for runs is written under `.harness/evidence/` as timestamped,
+   collision-safe records (unique even within the same second) using atomic writes (temp file
+   + rename). A required evidence write that fails yields a `fail` verdict
+   (CORE-COMPONENT-0003 R14). Evidence run output is **git-ignored** (ephemeral, noisy); the
+   directory is kept under version control via a committed `.gitkeep`.
 
 8. **Friction log.** `.harness/friction.jsonl` is a committed, append-only JSON Lines log.
    Every inference the agent must make (e.g. "no test command exists") is recorded as a

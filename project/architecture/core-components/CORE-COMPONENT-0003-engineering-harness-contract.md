@@ -38,12 +38,16 @@ editing `contract.yml` data).
 
 - **R1 — Wrap, never reimplement.** A verb MUST wrap an existing project command when one
   exists and MUST NOT reimplement it or introduce a new build system (per ADR-0002).
-- **R2 — Single verdict.** Every verb MUST return exactly one verdict:
-  `pass` | `fail` | `degraded` | `unknown`.
+- **R2 — Single verdict (human and JSON).** Every verb MUST return exactly one overall
+  verdict: `pass` | `fail` | `degraded` | `unknown`. This applies to BOTH output forms and
+  admits NO exemption: the `--json` response carries it in the `verdict` key, and the
+  human/default form MUST print exactly one terminal `Verdict: <value>` line. `help` and
+  `friction list` are NOT exempt — each MUST print `Verdict: pass`.
   - `pass` — the wrapped command ran and succeeded.
-  - `fail` — the wrapped command ran and failed.
+  - `fail` — the wrapped command ran and failed, OR a required record could not be persisted
+    (R14).
   - `degraded` — the capability is partially available or partially proven (e.g. an
-    aggregate whose sub-checks include `unknown`).
+    aggregate whose members include `unknown`).
   - `unknown` — no backing command exists to prove the capability; it is not faked.
 - **R3 — Exit-code contract.** `fail` MUST exit non-zero (1). `pass`, `degraded`, and
   `unknown` MUST exit 0. A not-yet-present capability MUST NOT read as a failure; only a
@@ -53,14 +57,35 @@ editing `contract.yml` data).
   the KEY_QUESTION.
 - **R5 — `verify` writes evidence.** `verify` MUST write a timestamped evidence record under
   `.harness/evidence/` on every run and reference that path in its output.
-- **R6 — `verify` aggregation policy.** `verify`'s overall verdict is `fail` if any wrapped
-  check fails; else `degraded` if any required capability is `unknown`/`degraded`; else
-  `pass`.
+- **R6 — `verify` aggregation is data-driven and deterministic.** `verify` MUST derive its
+  overall verdict by iterating the contract-declared member checks — its own `maps_to`
+  (surfaced as the `typecheck` check) plus every verb listed in `verify.aggregate`
+  (`lint`, `test`, `build`, `doctor`) — resolving each member's verdict from contract data
+  at runtime. It MUST NOT hard-code the member list or the per-member verdicts. The overall
+  verdict is a fixed total function of the member verdicts, evaluated in this order:
+  1. If ANY member is `fail` → `fail`.
+  2. Else if EVERY member is `pass` → `pass`.
+  3. Else if EVERY member is `unknown` → `unknown`.
+  4. Otherwise (a mix of `pass`/`degraded`/`unknown` with no `fail`) → `degraded`.
+
+  `doctor` participates in the aggregate; because it only emits `pass`/`degraded` it can move
+  the aggregate toward `degraded` but never `fail`. In the Issue #4 baseline the members are
+  typecheck=`pass`, lint/test/build=`unknown`, doctor=`pass`/`degraded`, so the aggregate is
+  `degraded`; once #5 populates `lint`/`test`/`build` `maps_to` and they pass (doctor
+  healthy), the SAME rule yields `pass` with no code change.
 - **R7 — `--json` is stable.** Every machine-facing verb MUST support `--json` emitting the
   JSON schema below; the schema is a stable contract and MUST NOT break existing keys.
-- **R8 — Data-driven verbs.** Verb-to-command mappings live in `.harness/contract.yml`.
-  Adding or wiring a verb MUST be possible by editing that data, without restructuring the
-  harness.
+- **R8 — Data-driven verbs (no hard-coded command wiring).** Verb-to-command mappings live
+  ONLY in `.harness/contract.yml`. The harness MUST NOT embed any hard-coded verb→command
+  string: every wrapped command it runs MUST be read from that verb's `maps_to` at runtime,
+  and the `verify` aggregate's members MUST be read from `verify.aggregate`. A structural
+  dispatch that routes a verb name to its handler function is permitted (that is dispatch
+  mechanics, not command wiring). Every command-capable verb MUST honor its `maps_to`: a
+  command string is wrapped (→ `pass`/`fail`), `native` selects the harness-native behavior,
+  and `null` yields `unknown` + friction (R4). In particular `clean` MUST honor
+  `clean.maps_to` and run a mapped clean command rather than ignoring it. Adding or rewiring
+  any verb — moving `unknown`→`pass`, or wiring `clean` — MUST be possible by editing
+  contract data alone, with NO change to `./harness`.
 - **R9 — KEY_QUESTION rule.** Every friction record MUST answer verbatim:
   **"What did the agent have to infer that the harness should have proved?"**
 - **R10 — Idempotent agent-surface updates.** Each agent surface MUST contain exactly one
@@ -72,11 +97,43 @@ editing `contract.yml` data).
   surface for supported verbs and MAY bypass to a direct command only when the contract
   lacks the verb or the harness reports `unknown`/`degraded` — and MUST log that gap via
   `./harness friction add`.
-- **R12 — Dependency-light & portable.** The harness MUST run as a portable POSIX shell
-  script adding no new runtime dependency.
+- **R12 — Dependency-light, portable, POSIX-only.** The harness MUST run as a portable POSIX
+  shell script adding no new runtime dependency, and MUST use only POSIX-specified
+  `sh`/`sed`/`awk`/`printf` constructs. It MUST NOT rely on GNU-only extensions; in
+  particular JSON string escaping MUST NOT use GNU-only sed idioms such as the `:a;N;$!ba`
+  label loop or `\n` newline matching in a regex. Escaping MUST use POSIX-defined behavior
+  (e.g. an `awk` routine) that correctly encodes `"`, `\`, tab, newline, and other control
+  characters. Portability MUST be validated on a non-GNU userland (e.g. busybox `sh` + busybox
+  `sed`/`awk`) using multiline and control-character inputs.
 - **R13 — VCS policy.** `.harness/contract.yml`, `.harness/README.md`, and
   `.harness/friction.jsonl` are committed. `.harness/evidence/` run output is git-ignored;
   the directory is retained via a committed `.gitkeep`.
+- **R14 — Reliable, collision-safe persistence.** Any record a verb is contractually required
+  to store MUST be persisted reliably:
+  - **Collision-safe names.** Evidence filenames MUST be unique even for runs within the same
+    wall-clock second — the name MUST include a uniqueness component beyond second precision
+    (e.g. process id plus a random or monotonic suffix). Overlapping runs MUST NOT overwrite
+    one another's records.
+  - **Atomic, checked writes.** Directory creation, evidence writes, and friction appends MUST
+    be checked for success. Evidence MUST be written atomically (write to a temp file on the
+    same filesystem, then rename into place) so no partial or truncated record is ever
+    observed.
+  - **Required-persistence failure ⇒ `fail`.** When a REQUIRED record cannot be stored — a
+    `verify` evidence record (R5), a `friction add` append, or the R4-mandated friction entry
+    for an `unknown`/`degraded` verdict — the verb MUST return `fail` and exit non-zero. It
+    MUST NOT report `pass`/`degraded`/`unknown` after a required persistence failure.
+- **R15 — Environment checks validate the full supported range.** `doctor` (and any env probe)
+  MUST validate the COMPLETE supported Node range derived from `package.json` `engines.node`
+  (`>=22 <23`) and cross-checked against `.nvmrc` (pinned major `22`) — i.e. exactly major
+  `22`. BOTH bounds MUST be enforced: a below-range Node (`<22`) and an above-range Node
+  (`>=23`) MUST each be reported as unsupported (`degraded`), never `pass`. `doctor` MUST NOT
+  pass any Node whose major is outside the supported range.
+- **R16 — Executable regression suite.** The harness MUST ship a durable, executable regression
+  suite (dependency-light POSIX shell, e.g. `tests/harness/`) that exercises every verb, the
+  `--json` schema, the `verify` aggregate truth table, the Node-range boundaries, evidence
+  collision-safety and atomicity, required-persistence-failure `fail` behavior, and non-GNU
+  portability. The suite MUST run non-interactively, leave the working tree clean, and exit
+  non-zero on any failure.
 
 ### Interfaces
 
@@ -92,11 +149,16 @@ editing `contract.yml` data).
     verify:
       maps_to: "npm run typecheck"   # wrapped command, or "native", or null
       json: true
+      aggregate: [lint, test, build, doctor]  # member verbs folded into the verify verdict (R6)
       description: "Aggregate static verification gate"
     test:
       maps_to: null                  # null => verdict unknown, friction recorded
       json: true
       description: "Run the test suite (none present yet)"
+    clean:
+      maps_to: native                # native prunes harness evidence; set a command to wrap it (R8)
+      json: true
+      description: "Remove harness-owned artifacts, or wrap a mapped clean command"
     # ...one entry per required verb...
   evidence:
     dir: ".harness/evidence"
@@ -116,9 +178,12 @@ editing `contract.yml` data).
     "timestamp": "2026-07-20T07:20:35Z",
     "checks": [
       { "name": "typecheck", "maps_to": "npm run typecheck", "verdict": "pass", "exit_code": 0 },
-      { "name": "test", "verdict": "unknown", "reason": "no test command detected" }
+      { "name": "lint", "verdict": "unknown", "reason": "no lint command detected" },
+      { "name": "test", "verdict": "unknown", "reason": "no test command detected" },
+      { "name": "build", "verdict": "unknown", "reason": "no build command detected" },
+      { "name": "doctor", "verdict": "pass" }
     ],
-    "evidence": ".harness/evidence/verify-20260720T072035Z.json",
+    "evidence": ".harness/evidence/verify-20260720T072035Z-4821-a3f9.json",
     "notes": "test, lint, and build are unknown until Issue #5"
   }
   ```
@@ -149,6 +214,12 @@ editing `contract.yml` data).
 - `unknown`/`degraded` are normal, expected states in the Issue #4 baseline and MUST NOT be
   treated as failures.
 - New verbs added later reuse this schema; they do not invent per-verb output shapes.
+- The `verify` aggregate iterates the contract-declared members (`verify.aggregate`, including
+  `doctor`); populating `lint`/`test`/`build` `maps_to` in a later story moves the aggregate to
+  `pass` with no code change, and the same derivation rule applies unchanged (R6).
+- Evidence filenames are collision-safe (unique even within the same second) and written
+  atomically; a required record that cannot be persisted yields `fail`, never a masked
+  `pass`/`degraded`/`unknown` (R14).
 - The seed `.harness/friction.jsonl` created in Issue #4 contains one entry per verb that is
   `unknown`/`degraded` (`lint`, `test`, `build`, `boot`, `clean`, and `verify`'s degraded
   aggregate), each answering the KEY_QUESTION.
@@ -227,12 +298,16 @@ Under what circumstances is it acceptable to deviate from this component's rules
 
 How is compliance with this component verified?
 
-- [x] Automated checks — `./harness verify --json` must return a valid schema and a
-  non-`fail` verdict; a schema/verdict check and an agent-surface idempotency check are
-  part of the test plan (03-test-plan.md).
-- [x] Code review checklist — reviewers confirm: verbs return one of the four verdicts;
-  exit-code contract honoured; friction entries answer the KEY_QUESTION verbatim; each agent
-  surface has exactly one marker-delimited harness block; no reimplemented/faked commands.
+- [x] Automated checks — a durable executable regression suite (R16, `tests/harness/`) runs
+  every verb, the `--json` schema check, the `verify` aggregate truth table, the Node-range
+  boundaries, evidence collision-safety/atomicity, required-persistence-failure `fail`
+  behavior, and non-GNU portability; `./harness verify --json` must return a valid schema and
+  a non-`fail` verdict; an agent-surface idempotency check is included (03-test-plan.md).
+- [x] Code review checklist — reviewers confirm: every verb returns one of the four verdicts
+  in both human (terminal `Verdict:` line) and `--json` form; exit-code contract honoured;
+  wrapped commands and aggregate members come only from `contract.yml` (no hard-coded wiring);
+  friction entries answer the KEY_QUESTION verbatim; each agent surface has exactly one
+  marker-delimited harness block; no reimplemented/faked commands.
 - [x] Test coverage requirements — every task in 02-task-breakdown.md that touches the
   contract, verdicts, JSON, evidence, friction, or agent surfaces carries explicit test
   coverage in 03-test-plan.md.

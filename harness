@@ -253,6 +253,19 @@ ensure_friction() {
 	write_friction "$@"
 }
 
+# friction_count : print EXACTLY one integer counting non-empty JSONL records in
+# the friction log, for a missing file, an empty file, and a populated file
+# (CORE-COMPONENT-0003 R7 stable JSON). Uses awk NR-style counting so it emits a
+# single number (never the `grep -c` "0\n" + `|| echo 0` double-zero that broke
+# --json). Handles a final record without a trailing newline (awk counts it).
+friction_count() {
+	if [ -f "$FRICTION_PATH" ]; then
+		awk 'NF { n++ } END { printf "%d", n + 0 }' "$FRICTION_PATH" 2>/dev/null || printf '0'
+	else
+		printf '0'
+	fi
+}
+
 # ---------------------------------------------------------------------------
 # JSON output helpers
 # ---------------------------------------------------------------------------
@@ -583,9 +596,14 @@ verb_verify() {
 	esac
 
 	# --- aggregate members: verify.aggregate (data-driven, incl. doctor) ----
+	# Each member is resolved EXACTLY ONCE here; its verdict, JSON check, and the
+	# human-rendered row are cached and reused for aggregation, evidence, AND
+	# human output. Resolving twice would run a mapped member command twice
+	# (CORE-COMPONENT-0003 R6 determinism; review F-06).
 	_members=$(get_aggregate)
 	_verdicts="$_tc_verdict"
 	_checks="[$_tc_check"
+	_rows=""
 	for _m in $_members; do
 		resolve_member "$_m"
 		_verdicts="$_verdicts $MEMBER_VERDICT"
@@ -600,6 +618,11 @@ verb_verify() {
 		else
 			_checks="$_checks, {\"name\": \"$_m\", \"maps_to\": \"$(json_escape "$MEMBER_MAPS")\", \"verdict\": \"$MEMBER_VERDICT\"}"
 		fi
+		# cache the human-rendered row (newline-separated) for reuse below
+		_row=$(printf '%-9s : %s' "$_m" "$MEMBER_VERDICT")
+		[ -n "$MEMBER_REASON" ] && _row="$_row ($MEMBER_REASON)"
+		_rows="${_rows}${_rows:+
+}$_row"
 	done
 	_checks="$_checks]"
 
@@ -641,15 +664,15 @@ verb_verify() {
 		printf 'typecheck : %s' "$_tc_verdict"
 		[ -n "$_tc_code" ] && printf ' (%s, exit %s)' "$_tc_maps" "$_tc_code"
 		printf '\n'
-		for _m in $_members; do
-			resolve_member "$_m"
-			printf '%-9s : %s' "$_m" "$MEMBER_VERDICT"
-			[ -n "$MEMBER_REASON" ] && printf ' (%s)' "$MEMBER_REASON"
-			printf '\n'
-		done
+		# reuse the rows cached during the single resolve loop above (F-06: no
+		# second resolve_member pass, so mapped members run exactly once).
+		[ -n "$_rows" ] && printf '%s\n' "$_rows"
 		printf 'evidence  : %s\n' "$_evrel"
+		# Diagnostics MUST precede the single terminal verdict line so the LAST
+		# line of output is exactly `Verdict: <value>` (CORE-COMPONENT-0003 R2/R7;
+		# review F-02R).
+		[ "$_tc_verdict" = "fail" ] && printf -- '--- typecheck output ---\n%s\n' "$_tc_out"
 		printf 'Verdict: %s\n' "$_overall"
-		[ "$_tc_verdict" = "fail" ] && printf '\n--- typecheck output ---\n%s\n' "$_tc_out"
 	fi
 	finish "$_overall"
 }
@@ -663,8 +686,7 @@ verb_status() {
 	else
 		_lastrel="none"
 	fi
-	_fcount=0
-	[ -f "$FRICTION_PATH" ] && _fcount=$(grep -c . "$FRICTION_PATH" 2>/dev/null || echo 0)
+	_fcount=$(friction_count)
 	if [ "$_json" = "1" ]; then
 		json_response status pass ",\"contract\": \".harness/contract.yml\", \"verbs\": $_vcount, \"last_evidence\": \"$(json_escape "$_lastrel")\", \"friction_entries\": $_fcount"
 	else
@@ -797,16 +819,19 @@ friction_add() {
 friction_list() {
 	_json="0"
 	for a in "$@"; do [ "$a" = "--json" ] && _json="1"; done
-	[ -f "$FRICTION_PATH" ] || : > "$FRICTION_PATH" 2>/dev/null || true
+	_n=$(friction_count)
 	if [ "$_json" = "1" ]; then
-		_entries=$(awk 'NF{ if(n++) printf ","; printf "%s", $0 } END{ }' "$FRICTION_PATH" 2>/dev/null)
-		json_response "friction list" pass ",\"count\": $(grep -c . "$FRICTION_PATH" 2>/dev/null || echo 0), \"entries\": [${_entries}]"
+		if [ -f "$FRICTION_PATH" ]; then
+			_entries=$(awk 'NF{ if(n++) printf ","; printf "%s", $0 }' "$FRICTION_PATH" 2>/dev/null)
+		else
+			_entries=""
+		fi
+		json_response "friction list" pass ",\"count\": $_n, \"entries\": [${_entries}]"
 	else
-		_n=$(grep -c . "$FRICTION_PATH" 2>/dev/null || echo 0)
 		printf 'Friction log (%s entries): %s\n' "$_n" ".harness/friction.jsonl"
 		printf 'KEY_QUESTION: %s\n' "$KEY_QUESTION"
 		printf -- '---\n'
-		if [ "$_n" -gt 0 ]; then
+		if [ "$_n" -gt 0 ] && [ -f "$FRICTION_PATH" ]; then
 			cat "$FRICTION_PATH"
 		else
 			printf '(no entries)\n'

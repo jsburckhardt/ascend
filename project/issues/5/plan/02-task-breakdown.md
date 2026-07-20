@@ -1,242 +1,346 @@
 # Task Breakdown: Issue #5 — Add local development and validation commands
 
-Reference: `project/issues/5/plan/01-action-plan.md` (decisions D1–D5).
-Governing artifacts: **ADR-0002** (baseline stack / no speculative frameworks),
-**ADR-0003** (repo-local harness), **CORE-COMPONENT-0003** (harness contract:
-R1 wrap-never-reimplement, R3 exit codes, R4/R9 friction, R6 verify aggregate,
-R8 data-driven verbs, R16 durable suite), **CORE-COMPONENT-0002** (commit standards).
+**Revision: REVIEW CYCLE 1 (resolves blocking finding F-01).** This breakdown
+supersedes the prior data-only plan: the dev command is now made genuinely
+invokable through the harness via a new interactive/handoff verb `dev`.
+
+Reference: `project/issues/5/plan/01-action-plan.md` (decisions D1–D5),
+`project/issues/5/review/00-review.md` (finding F-01).
+Governing artifacts: **ADR-0004** (interactive/handoff verbs), **ADR-0002**
+(baseline stack / no speculative frameworks), **ADR-0003** (repo-local harness),
+**CORE-COMPONENT-0003** (harness contract: R1 wrap-never-reimplement, R3 exit
+codes, R4/R9 friction, R6 verify aggregate, R8 data-driven verbs, R16 durable
+suite, **R17 interactive/handoff verbs**), **CORE-COMPONENT-0002** (commit standards).
 
 Complexity scale: XS < S < M < L.
 
 ---
 
-## Task T1: Add the `dev` development-inner-loop script to package.json
+## Task T1: Add the interactive/handoff verb path to the `harness` script
+
+- **Status:** Not started
+- **Complexity:** M
+- **Dependencies:** None
+- **Related ADRs:** ADR-0004, ADR-0003, ADR-0002
+- **Related Core-Components:** CORE-COMPONENT-0003 (R17, R8, R12, R2/R3/R5 exemption)
+
+### Description
+Add the minimal harness code to support `mode: exec` interactive/handoff verbs and
+dispatch the new `dev` verb. Concretely:
+
+1. **`get_mode <verb>` reader** — a contract reader analogous to `get_maps_to`
+   that prints the `mode:` scalar (4-space-indented `^    mode:`) for a verb, or
+   empty when absent. POSIX awk only (R12).
+2. **Dispatch** — add `dev)` to the `main()` case statement routing to a handoff
+   handler (verb→handler routing is dispatch mechanics, permitted by R8). The
+   global `--json` is already stripped by `main`'s first pass; `--print` survives
+   into `$@` and is parsed by the handler.
+3. **Handoff handler** (e.g. `verb_dev`/`verb_exec`) that reads `mode` + `maps_to`
+   from the contract and:
+   - if `maps_to` is `""`/`null`/`None`/`native` → `unknown` + friction (R4/R9),
+     exit 0, **exec nothing** (R17.3);
+   - else if `--json` → print a JSON descriptor with `harness_version`, `verb`,
+     `timestamp`, `mode` (`"exec"`), `maps_to`, `interactive: true` and **no**
+     `verdict` key; exit 0 (R17.4);
+   - else if `--print` → print the resolved command (containing `npm run dev`);
+     exit 0 (R17.4);
+   - else → `cd "$ROOT" && exec sh -c "$maps_to"` (process handoff; the harness
+     process is replaced; the wrapped command's exit code becomes the process exit
+     code) (R17.1).
+4. **`verb_help`** — add a `dev` line describing it as an interactive handoff
+   (execs `npm run dev`; emits no verdict); keep help's own terminal `Verdict: pass`.
+5. **`verb_orient`** — surface the resolved dev command honestly (human line and/or
+   a `--json` field), keeping the JSON valid and the required keys intact.
+
+Do **not** change any existing verb's behavior, the exit-code contract for
+verdict-emitting verbs, `--json` for existing verbs, evidence, or friction. Do
+**not** map a blocking command into `verb_capability` or `boot`.
+
+### Acceptance Criteria
+- [ ] `./harness dev` (no flags) execs `npm run dev` (process handoff); it does
+      **not** run to completion inside the harness and emits no `Verdict:` line.
+- [ ] `./harness dev --print` prints a line containing `npm run dev` and exits 0
+      **without** starting the watch.
+- [ ] `./harness dev --json` prints valid JSON containing `"mode": "exec"`,
+      `"maps_to"` = `npm run dev`, `"interactive": true`, and **no** `verdict`
+      key; exits 0 without exec.
+- [ ] With `dev.maps_to` null/native (isolated contract), `./harness dev` returns
+      `unknown` + friction, exit 0, and execs nothing.
+- [ ] `./harness help` lists `dev` and states it is an interactive handoff that
+      emits no verdict.
+- [ ] `./harness orient` (human and `--json`) surfaces the dev command; `--json`
+      remains valid with required keys.
+- [ ] No existing verb’s behavior, verdict, `--json`, evidence, or exit code
+      changes; the script remains POSIX-only (no GNU-only idioms).
+
+### Test Coverage
+- **Automated (TEST-30, rewritten):** assert `dev --print` and `dev --json`
+  resolve `npm run dev` and exit 0 without hanging; assert `help`/`orient` list
+  `dev`; assert an isolated `dev.maps_to: null` contract yields `unknown`+friction.
+- **Automated (TEST-20, corrected):** the run-to-completion loop excludes `dev`;
+  a dedicated assertion runs `dev --print` (bounded/instant) proving no hang.
+- **Regression:** TEST-18 (harness byte-unchanged under data-only rewiring) is
+  necessarily updated for this cycle because the harness **is** intentionally
+  changed; confirm its intent (data-only rewiring of *capability* verbs) still
+  holds by comparing against the new baseline harness cksum.
+
+---
+
+## Task T2: Wire the `dev` verb in `.harness/contract.yml`
+
+- **Status:** Not started
+- **Complexity:** XS
+- **Dependencies:** T1
+- **Related ADRs:** ADR-0004, ADR-0003
+- **Related Core-Components:** CORE-COMPONENT-0003 (R8 data-driven, R17)
+
+### Description
+Add the `dev` verb entry to `.harness/contract.yml` (data-driven wiring, R8):
+
+```yaml
+  dev:
+    maps_to: "npm run dev"
+    mode: exec
+    json: true
+    description: "Start the local dev inner loop (interactive handoff; execs npm run dev)"
+```
+
+Leave `boot.maps_to: null` and `verify.maps_to: "npm run typecheck"` **unchanged**
+(no drift; `boot` app-serve stays owned by #6). Place `dev` logically near `boot`
+or `verify`.
+
+### Acceptance Criteria
+- [ ] `.harness/contract.yml` declares a `dev` verb with `maps_to: "npm run dev"`,
+      `mode: exec`, `json: true`, and a description.
+- [ ] `boot.maps_to` is still `null`; `verify.maps_to` is still `"npm run typecheck"`
+      (exactly one occurrence).
+- [ ] The contract remains valid YAML parseable by the harness readers
+      (`get_maps_to`, `get_mode`, `count_verbs`).
+
+### Test Coverage
+- **Automated (TEST-30):** grep-assert the `dev` verb has `maps_to: "npm run dev"`
+  and `mode: exec`; assert `boot.maps_to: null` and one `verify` typecheck mapping.
+- **Regression (TEST-01):** contract schema still conforms (add `dev` to the
+  checked verb list; verb count is now 13).
+
+---
+
+## Task T3: Confirm the `package.json` `dev` script and the no-alias rule
 
 - **Status:** Not started
 - **Complexity:** XS
 - **Dependencies:** None
-- **Related ADRs:** ADR-0002, ADR-0003
-- **Related Core-Components:** CORE-COMPONENT-0003 (R8), CORE-COMPONENT-0002 (commit)
+- **Related ADRs:** ADR-0002
+- **Related Core-Components:** CORE-COMPONENT-0003 (R1 wrap-never-reimplement)
 
 ### Description
-Add exactly one script to `package.json` `scripts`:
-
-```json
-"dev": "tsc --noEmit --watch"
-```
-
-This is the Prototype-0 "start the local development environment" command
-(continuous typecheck feedback) per decision **D1**. It adds no dependency (uses
-the existing `typescript` devDependency and `tsconfig.json`), leaves `typecheck`
-untouched, and introduces **no** linter/test-runner/bundler/dev-server
-(ADR-0002 / PRD §28.7). Do **not** add a `validate`/`check` alias (**D5**). Do
-**not** edit `.harness/contract.yml` or the `harness` script (**D1/D2**;
-CORE-COMPONENT-0003 R8).
+`package.json` already defines `"dev": "tsc --noEmit --watch"` and
+`"typecheck": "tsc --noEmit"`. Confirm these are present and unchanged, add no new
+dependency, and add **no** `validate`/`check`/`test`/`lint`/`build`/`start` alias
+(D5). The harness `dev` verb wraps this existing script — it does not reimplement
+it (R1).
 
 ### Acceptance Criteria
-- [ ] `package.json` `scripts.dev` equals `tsc --noEmit --watch`.
-- [ ] `package.json` `scripts.typecheck` is still `tsc --noEmit` (unchanged).
-- [ ] No new entries under `dependencies`/`devDependencies`; `package-lock.json`
-      is unchanged by this task.
-- [ ] No `validate`, `check`, `test`, `lint`, `build`, or `start` script is added.
-- [ ] `package.json` remains valid JSON.
+- [ ] `package.json` `scripts.dev` == `tsc --noEmit --watch`.
+- [ ] `package.json` `scripts.typecheck` == `tsc --noEmit` (unchanged).
+- [ ] No `validate`/`check`/`test`/`lint`/`build`/`start` script; no new
+      dependency; `package-lock.json` unchanged.
+- [ ] `package.json` is valid JSON.
 
 ### Test Coverage
-- **Static (automated, TEST-30 in `tests/harness/run.sh`):** grep-assert
-  `scripts.dev` = `tsc --noEmit --watch` and `scripts.typecheck` = `tsc --noEmit`;
-  assert absence of `validate`/`check` scripts. The suite **must not execute**
-  `npm run dev` (it is a blocking watch and would hang).
-- **Manual (interactive, documented in `03-test-plan.md` TEST-M1):** run
-  `npm run dev`, confirm it starts a persistent watch and reports the baseline as
-  clean, then Ctrl-C.
+- **Automated (TEST-30 §1):** assert `scripts.dev`/`scripts.typecheck` values and
+  the absence of alias scripts.
 
 ---
 
-## Task T2: Document dev + validation commands in the root README
+## Task T4: Update the root README to document `./harness dev` and validation
 
 - **Status:** Not started
 - **Complexity:** S
+- **Dependencies:** T1, T2
+- **Related ADRs:** ADR-0004, ADR-0003, ADR-0002
+- **Related Core-Components:** CORE-COMPONENT-0003 (R3 exit codes, R17)
+
+### Description
+Update `README.md` "Development and validation" so the **development environment is
+started through the harness** (AC1, AC3, AC4):
+
+- **Development:** document **`./harness dev`** as the command that starts the local
+  development environment (it execs `npm run dev` = `tsc --noEmit --watch`); note
+  `npm run dev` is the backing script. Prefer `./harness dev` (single operating
+  surface). Explain it is an interactive handoff (Ctrl-C to stop; emits no verdict).
+- **Validation:** keep `./harness verify` (wraps `npm run typecheck`) and the direct
+  `npm run typecheck`; keep the honest `degraded`/exit-0 = non-blocking explanation
+  (D5; R3).
+- **`boot` note:** revise so it defers the **app-serve + health `boot`** to #6 — and
+  **remove** the prior instruction to "run `npm run dev` directly" instead of the
+  harness (that was the F-01 gap). The dev command is now `./harness dev`.
+
+### Acceptance Criteria
+- [ ] README documents `./harness dev` as the command that starts the local
+      development environment (with `npm run dev` as the backing script).
+- [ ] README documents `./harness verify` and `npm run typecheck` for validation,
+      with the `degraded`/non-blocking note.
+- [ ] README no longer tells users to run `npm run dev` directly *in place of* the
+      harness; it defers only the app-serve `boot` to #6.
+- [ ] No `validate`/`check` alias is documented (D5); existing README content
+      (product boundary, structure, `npm install`) is preserved.
+
+### Test Coverage
+- **Automated (TEST-30 §2):** grep-assert README contains `./harness dev`,
+  `./harness verify`, `npm run typecheck`, a `degraded`/`non-blocking` token; and
+  contains no `npm run validate`/`npm run check` alias.
+- **Doc review (TEST-P3):** reviewer confirms AC1/AC3/AC4 wording is accurate.
+
+---
+
+## Task T5: Update `.harness/README.md` for the `dev` handoff verb
+
+- **Status:** Not started
+- **Complexity:** S
+- **Dependencies:** T1, T2
+- **Related ADRs:** ADR-0004, ADR-0003
+- **Related Core-Components:** CORE-COMPONENT-0003 (R17, R6, R8)
+
+### Description
+Keep the harness docs truthful and consistent with the root README, `package.json`,
+and the contract:
+
+- Add **`dev`** to the verb table as an **interactive handoff** (backing command
+  `npm run dev`; current verdict: *n/a — hands off, emits no verdict*).
+- Document the **`mode: exec`** category and the non-exec `--print`/`--json`
+  introspection forms (R17).
+- Keep **`boot` = `unknown`**, owned by **#6** for the app-serve + health endpoint
+  (not the dev inner loop); keep **`verify` = `degraded`** as the accepted baseline
+  and the no-alias rule for `typecheck`.
+- Do **not** contradict the exit-code contract; note handoff verbs propagate the
+  exec'd command's exit code.
+
+### Acceptance Criteria
+- [ ] `.harness/README.md` lists `dev` as an interactive handoff executing
+      `npm run dev` and emitting no verdict.
+- [ ] `.harness/README.md` documents the `mode: exec` category and `--print`/`--json`
+      introspection.
+- [ ] `.harness/README.md` states `boot` is `unknown` and owned by #6 (app-serve),
+      and reaffirms `verify` = `degraded` accepted baseline + the no-alias rule.
+- [ ] All TEST-11 tokens still present: verbs `help`, `orient`, `doctor`, `lint`,
+      `test`, `build`, `boot`, `verify`, `status`, `clean`, `friction` (+ `dev`);
+      `pass`/`fail`/`degraded`/`unknown`; `--json`; `./harness`; the KEY_QUESTION.
+
+### Test Coverage
+- **Regression (TEST-11):** `.harness/README.md` still documents all verbs,
+  verdicts, exit codes, `--json`, KEY_QUESTION (add `dev` to the checked list).
+- **Automated (TEST-30 §3):** grep-assert `.harness/README.md` names `dev`/`npm run
+  dev` and references #6 for `boot`.
+
+---
+
+## Task T6: Append a friction annotation closing the interactive-process gap
+
+- **Status:** Not started
+- **Complexity:** XS
 - **Dependencies:** T1
-- **Related ADRs:** ADR-0002, ADR-0003
-- **Related Core-Components:** CORE-COMPONENT-0003 (R3 exit codes)
-
-### Description
-Extend `README.md` "Getting Started" (or a new "Development and validation"
-subsection) to document **both** commands (AC1, AC2, AC4):
-
-- **Development environment:** `npm run dev` — starts the local development inner
-  loop (`tsc --noEmit --watch`, continuous typecheck feedback).
-- **Validation:** `./harness verify` (preferred, single operating surface) which
-  wraps `npm run typecheck`; and the direct form `npm run typecheck`.
-- State honestly (per **D3**) that `./harness verify` returns **`degraded`** and
-  **exits 0** on the baseline — this is the expected, non-blocking "passing"
-  state at Prototype 0 (only `fail` blocks; ADR-0003 exit-code contract), because
-  `lint`/`test`/`build` are intentionally still `unknown` (ADR-0002, no
-  speculative frameworks).
-- Note (per **D2**) that `./harness boot` currently reports `unknown`; wrapping
-  the interactive dev/serve process through the harness is delivered by issue #6.
-- Prefer `./harness <verb>` over direct commands, consistent with the harness
-  agent-workflow rule.
-
-### Acceptance Criteria
-- [ ] README documents `npm run dev` as the command that starts the local
-      development environment.
-- [ ] README documents `./harness verify` **and** `npm run typecheck` as the
-      validation commands.
-- [ ] README explains `degraded`/exit-0 is non-blocking and is the expected
-      Prototype-0 passing state.
-- [ ] README notes `./harness boot` is `unknown` today and that harness wrapping
-      of the dev/serve process is owned by #6.
-- [ ] No `validate`/`check` alias is documented or implied (**D5**).
-- [ ] Existing README content (product boundary, directory structure, `npm install`
-      setup step) is preserved.
-
-### Test Coverage
-- **Static (automated, TEST-30):** grep-assert `README.md` contains `npm run dev`,
-  `./harness verify`, and `npm run typecheck`; assert it contains a
-  `degraded`/non-blocking note token; assert it does **not** introduce a
-  `npm run validate`/`npm run check` alias.
-- **Doc review (TEST-P3):** reviewer confirms AC1/AC2/AC4 wording is accurate and
-  honest.
-
----
-
-## Task T3: Update `.harness/README.md` for the dev command and boot/verify status
-
-- **Status:** Not started
-- **Complexity:** S
-- **Dependencies:** T1
-- **Related ADRs:** ADR-0003
-- **Related Core-Components:** CORE-COMPONENT-0003 (R6 aggregate, R8 data-driven)
-
-### Description
-Keep the harness documentation truthful and consistent with the root README and
-`package.json` (avoiding README/contract drift):
-
-- In the verb table / narrative, note the **development inner loop is
-  `npm run dev`** (run directly today).
-- State that **`boot` stays `unknown`** and that wrapping the interactive
-  dev/serve process is deferred to **#6** (interactive-process handling:
-  exec/handoff or readiness-probe+detach) per **D2**.
-- Reaffirm that **`verify` = `degraded`** is the accepted Prototype-0 validation
-  baseline (typecheck passes; `lint`/`test`/`build` remain `unknown`) per **D3**,
-  and that `npm run typecheck` is wrapped **only** by `verify` (never aliased as
-  `lint`/`test`/`build`).
-- Do **not** change the `harness` script or `.harness/contract.yml`.
-
-### Acceptance Criteria
-- [ ] `.harness/README.md` names `npm run dev` as the dev inner loop.
-- [ ] `.harness/README.md` states `boot` is `unknown` and owned by #6.
-- [ ] `.harness/README.md` reaffirms `verify`=`degraded` as the accepted baseline
-      and the no-alias rule for `typecheck`.
-- [ ] Every verb token still appears in `.harness/README.md` (keeps TEST-11 green):
-      `help`, `orient`, `doctor`, `lint`, `test`, `build`, `boot`, `verify`,
-      `status`, `clean`, `friction`, plus `pass`/`fail`/`degraded`/`unknown`,
-      `--json`, `./harness`, and the KEY_QUESTION string.
-
-### Test Coverage
-- **Regression (existing TEST-11):** `.harness/README.md` still documents all verbs,
-  verdicts, exit-code contract, `--json`, and KEY_QUESTION.
-- **Static (automated, TEST-30):** grep-assert `.harness/README.md` mentions
-  `npm run dev` and references #6 for `boot`.
-
----
-
-## Task T4: Append friction annotations to keep the log's closures truthful
-
-- **Status:** Not started
-- **Complexity:** S
-- **Dependencies:** None (independent; may run any time)
-- **Related ADRs:** ADR-0002, ADR-0003
+- **Related ADRs:** ADR-0004, ADR-0002
 - **Related Core-Components:** CORE-COMPONENT-0003 (R4/R9 friction, append-only)
 
 ### Description
-Per **D4**, the friction log is append-only. Using `./harness friction add`
-(never hand-editing seed lines), append clarifying entries so the #4-seeded
-`suggested_closure` text stays truthful:
-
-- `--verb lint` / `--verb test` / `--verb build`: closure re-pointed off #5 to a
-  future story once a validated need arises; note #5 deliberately left them
-  `unknown` per ADR-0002 (no speculative frameworks).
-- `--verb verify`: record #5 confirms `verify`=`degraded`/exit-0 as the accepted
-  Prototype-0 validation surface; full `pass` deferred until real lint/test/build exist.
-- `--verb boot`: record #5 keeps `boot` `unknown`; #6 owns it (interactive-process
-  handling); the dev inner loop today is `npm run dev`.
-
-Each entry answers the verbatim KEY_QUESTION (the harness enforces this) and
-carries a non-empty `suggested_closure`.
+The friction log is append-only. Using `./harness friction add` (never hand-editing
+seed lines), append a clarifying entry for the `boot`/dev interactive-process gap:
+the gap recorded in entries #8/#14 (a long-running watch/dev process does not fit the
+run-once verdict model) is now **handled** by the `mode: exec` handoff category — the
+dev command is invokable as **`./harness dev`** — while `boot` (app-serve + health)
+remains owned by #6. Answer the verbatim KEY_QUESTION with a non-empty
+`suggested_closure`.
 
 ### Acceptance Criteria
-- [ ] New friction entries exist for `lint`, `test`, `build`, `verify`, `boot`
-      recording the #5 decisions above.
-- [ ] Each new entry is valid JSON on its own line, includes the verbatim
-      KEY_QUESTION, and a non-empty `suggested_closure`.
-- [ ] Seed entries (lines 1–9) are **not** rewritten (append-only preserved).
-- [ ] Entries were produced via `./harness friction add` (not hand-edited).
+- [ ] A new friction entry records that `mode: exec` / `./harness dev` closes the
+      dev interactive-process gap, with `boot` app-serve still deferred to #6.
+- [ ] The entry is valid JSON on its own line, includes the verbatim KEY_QUESTION,
+      and a non-empty `suggested_closure`.
+- [ ] Seed/prior lines are not rewritten (append-only); the entry was produced via
+      `./harness friction add`.
 
 ### Test Coverage
-- **Regression (existing TEST-08/TEST-09/TEST-27):** friction schema, verbatim
-  KEY_QUESTION, non-empty closures, and dynamic counts all stay green with the
-  additional valid entries.
-- **Static (automated, TEST-30):** assert a post-#5 `boot` closure entry mentions
-  `#6`, and a `lint`/`test`/`build` closure entry no longer claims #5 will wire it
-  (grep for the deferral marker text).
+- **Regression (TEST-08/09/27):** friction schema, verbatim KEY_QUESTION, non-empty
+  closures, and dynamic counts stay green with the added entry.
+- **Automated (TEST-30 §5):** assert a post-#5 friction entry references
+  `./harness dev` / `mode: exec` handling the interactive gap.
 
 ---
 
-## Task T5: Add durable regression coverage for #5's acceptance criteria
+## Task T7: Correct TEST-20 and rewrite TEST-30 to prove AC3 without hanging
 
 - **Status:** Not started
 - **Complexity:** M
-- **Dependencies:** T1, T2, T3, T4
-- **Related ADRs:** ADR-0002, ADR-0003
-- **Related Core-Components:** CORE-COMPONENT-0003 (R16 durable suite, R8 data-driven)
+- **Dependencies:** T1, T2, T3, T4, T5, T6
+- **Related ADRs:** ADR-0004, ADR-0003, ADR-0002
+- **Related Core-Components:** CORE-COMPONENT-0003 (R16 durable suite, R17)
 
 ### Description
-Add a new test block **TEST-30** to `tests/harness/run.sh` that locks in #5's ACs
-without regressing TEST-01..29. All assertions are **static** (file greps /
-`./harness verify` which already returns cleanly); the suite **must not** run
-`npm run dev` or map a blocking command to `boot` (TEST-20 would hang).
+Update the durable suite `tests/harness/run.sh` so it proves AC3 for the dev command
+without hanging, and keep TEST-01..29 green.
 
-TEST-30 asserts:
-1. `package.json` has `scripts.dev` = `tsc --noEmit --watch` and `scripts.typecheck`
-   = `tsc --noEmit`; no `validate`/`check` alias (D1, D5).
-2. `README.md` documents `npm run dev`, `./harness verify`, and `npm run typecheck`,
-   and carries the `degraded`/non-blocking note (D2, D3, AC1/AC2/AC4).
-3. `.harness/README.md` names `npm run dev` and defers `boot` to #6 (D2, D3).
-4. `.harness/contract.yml` still has `boot.maps_to: null` and
-   `verify.maps_to: "npm run typecheck"` (no drift; D1/D3; reaffirms #6 owns boot).
-5. `./harness verify` runs and returns a **non-`fail`** verdict with exit 0
-   (validation "passes"; reuses the existing TC_OK guard, node-gated).
+**TEST-20 correction (R17.5):** the "one `Verdict:` line per verb" loop MUST NOT
+`exec` `dev`. Keep the loop for the run-to-completion verbs (help/orient/doctor/lint/
+test/build/boot/verify/status/clean) and add a dedicated assertion that
+`./harness dev --print` resolves `npm run dev` and exits 0 (no hang, no `Verdict:`
+line expected because `dev` is verdict-exempt).
 
-Also confirm the full suite still passes: TEST-01 (`boot` maps_to null),
-TEST-06 (`boot` unknown), TEST-20 (every verb one Verdict line, no hang),
-TEST-04/05/17 (`verify` degraded/exit0/non-fail) all remain green because
-`contract.yml` and the `harness` script are unchanged.
+**TEST-30 rewrite (proves AC3):** replace the prior "boot stays null" gap-codifying
+assertions with positive proof of dev invocability:
+1. `package.json` `scripts.dev` == `tsc --noEmit --watch`, no alias (D5).
+2. `.harness/contract.yml`: `dev.maps_to` == `"npm run dev"` and `dev.mode` ==
+   `exec`; `boot.maps_to` still `null`; one `verify` typecheck mapping.
+3. `./harness help` and `./harness orient` list `dev`.
+4. `./harness dev --print` prints `npm run dev` and exits 0 **without hanging**;
+   `./harness dev --json` is valid JSON with `mode: exec`, `maps_to`, `interactive`,
+   and no `verdict` key, exit 0.
+5. (isolated) an override contract with `dev.maps_to: null` makes `./harness dev`
+   return `unknown` + friction, exit 0, exec nothing.
+6. `README.md` documents `./harness dev`; `.harness/README.md` lists `dev` as a
+   handoff and defers `boot` to #6.
+7. `./harness verify` runs non-`fail`, exit 0 (validation "passes"; node/typecheck
+   gated) — unchanged.
+8. **(Optional, skippable)** a guarded exec probe: run `./harness dev` under a hard
+   `timeout`/`gtimeout` (skip if neither exists) in an isolated subshell and assert
+   the watch actually starts, then is killed — proving genuine invocation.
+
+Adjust **TEST-02** (help lists verbs; label 12→13 and add `dev` to the list) and
+**TEST-11** (add `dev`) and **TEST-01** (add `dev` header) so they stay green with
+the 13th verb. Confirm **TEST-18** still demonstrates data-only rewiring of
+*capability* verbs against the new harness baseline.
+
+The suite MUST run non-interactively, never hang, and leave the tree clean (all
+mutations isolated to the scratch dir).
 
 ### Acceptance Criteria
-- [ ] `tests/harness/run.sh` contains a TEST-30 block covering items 1–5 above.
-- [ ] TEST-30 performs **no** execution of `npm run dev` or a boot watch (static
-      greps + the already-clean `./harness verify` only).
-- [ ] Running `sh tests/harness/run.sh` yields `Verdict: pass` (all of
-      TEST-01..30 green) in an environment with Node 22 + `node_modules` present.
-- [ ] The suite still leaves the working tree clean (mutations isolated to the
-      scratch dir; tracked files untouched).
+- [ ] TEST-20 does not `exec` `dev`; it asserts `dev --print` resolves and exits
+      without hanging.
+- [ ] TEST-30 positively proves AC3: `dev` listed by help/orient, `dev --print`/
+      `--json` resolve `npm run dev` without exec, contract has `dev`/`mode: exec`,
+      docs updated; `boot` still `null`; `verify` still non-fail.
+- [ ] `sh tests/harness/run.sh` → `Verdict: pass` (TEST-01..30, FAIL=0) with Node 22
+      + `node_modules` present, and **completes without hanging**.
+- [ ] Working tree stays clean; no tracked files mutated by the suite.
 
 ### Test Coverage
-- **Self-referential:** TEST-30 *is* the coverage for the AC-level behavior; this
-  task's own gate is `sh tests/harness/run.sh` → `Verdict: pass`.
-- **Regression:** TEST-01..29 unchanged and green.
+- **Self-referential:** TEST-20 + TEST-30 are the coverage for the AC-level behavior;
+  the gate is `sh tests/harness/run.sh` → `Verdict: pass` with no hang.
+- **Regression:** TEST-01/02/11/18 adjusted for the 13th verb and the intentional
+  harness change; TEST-03..17, TEST-19, TEST-21..29 unchanged and green.
 
 ---
 
 ## Dependency order summary
 
 ```
-T1 (dev script) ──▶ T2 (root README) ──┐
-T1 ─────────────▶ T3 (.harness README) ─┼─▶ T5 (regression coverage)
-T4 (friction annotations) ──────────────┘
+T1 (harness handoff verb) ─┬─▶ T2 (contract dev verb) ─┐
+                           ├─▶ T4 (root README) ────────┤
+                           ├─▶ T5 (.harness README) ─────┼─▶ T7 (TEST-20 fix + TEST-30)
+                           └─▶ T6 (friction annotation) ─┤
+T3 (package.json confirm) ───────────────────────────────┘
 ```
 
-T1 first (everything references the `dev` script); T2 and T3 depend on T1; T4 is
-independent; T5 last (it asserts the results of T1–T4).
+T1 first (the harness behavior everything else references); T2 depends on T1; T3 is
+independent; T4/T5/T6 depend on T1 (and T2 for the wired command); T7 last (it
+asserts the results of T1–T6).

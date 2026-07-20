@@ -21,7 +21,11 @@ SEED_FRICTION="$REPO/.harness/friction.jsonl"
 CONTRACT="$REPO/.harness/contract.yml"
 NODE=$(command -v node 2>/dev/null || true)
 
-WORK=$(mktemp -d)
+# POSIX-portable scratch dir (no mktemp): a PID-based directory under TMPDIR,
+# created private with umask, trap-cleaned. All mutation lands here so the tracked
+# tree is never written.
+WORK="${TMPDIR:-/tmp}/harness-suite.$$"
+( umask 077 && mkdir "$WORK" ) || { printf 'FATAL: cannot create scratch dir %s\n' "$WORK" >&2; exit 2; }
 cleanup() {
 	chmod -R u+rwx "$WORK" 2>/dev/null || true
 	rm -rf "$WORK"
@@ -260,18 +264,41 @@ for f in "$REPO"/.github/agents/*.agent.md; do [ -e "$f" ] || continue; check_bl
 { [ "$t12" = "1" ] && [ "$surfaces" -ge 17 ]; } && ok "TEST-12 all $surfaces surfaces carry exactly one harness block" || no "TEST-12 harness blocks (t12=$t12 surfaces=$surfaces)"
 
 # ===========================================================================
-# TEST-13: agent-surface block is well-formed (idempotency invariant)
+# TEST-13: agent-surface marker update is idempotent + behaviour-preserving (F-09)
 # ===========================================================================
-# Exactly one begin/end per surface (proven in TEST-12) means a marker-scoped
-# replace is idempotent by construction; assert begin precedes end everywhere.
-t13=1
+# Exercise the REAL marker-update operation (tests/harness/apply-marker.sh, the
+# committed helper implementing CC-0003 R10) TWICE on an isolated copy of every
+# one of the 17 surfaces (output goes to scratch; tracked files are never
+# mutated) and assert:
+#   (a) the second run is byte-identical to the first (full-file cksum),
+#   (b) re-applying on the committed surface is a no-op (cksum == original) with
+#       exactly one BEGIN/END pair -> the block is never duplicated,
+#   (c) content OUTSIDE the markers is preserved verbatim.
+APPLY="$SUITE_DIR/apply-marker.sh"
+outside_markers() { awk '/<!-- HARNESS:BEGIN -->/{p=1} !p{print} /<!-- HARNESS:END -->/{p=0}' "$1"; }
+t13=1; t13n=0
+[ -f "$APPLY" ] || { t13=0; printf '  (t13 helper missing: %s)\n' "$APPLY"; }
 for f in "$REPO/AGENTS.md" "$REPO"/.github/agents/*.agent.md; do
 	[ -e "$f" ] || continue
-	bl=$(grep -n '<!-- HARNESS:BEGIN -->' "$f" | head -1 | cut -d: -f1)
-	el=$(grep -n '<!-- HARNESS:END -->' "$f" | head -1 | cut -d: -f1)
-	{ [ -n "$bl" ] && [ -n "$el" ] && [ "$bl" -lt "$el" ]; } || t13=0
+	t13n=$((t13n + 1))
+	wdir="$WORK/t13.$t13n"; mkdir -p "$wdir"
+	blk="$wdir/block.txt"
+	# extract this surface's own harness block (BEGIN..END inclusive)
+	awk '/<!-- HARNESS:BEGIN -->/{p=1} p{print} /<!-- HARNESS:END -->/{p=0}' "$f" > "$blk"
+	[ -s "$blk" ] || { t13=0; printf '  (t13 no block: %s)\n' "$f"; continue; }
+	r1="$wdir/r1"; r2="$wdir/r2"
+	sh "$APPLY" "$f"  "$blk" > "$r1" 2>/dev/null || { t13=0; printf '  (t13 apply1 failed: %s)\n' "$f"; }
+	sh "$APPLY" "$r1" "$blk" > "$r2" 2>/dev/null || { t13=0; printf '  (t13 apply2 failed: %s)\n' "$f"; }
+	# (a) rerun byte-identical
+	[ "$(cksum < "$r1")" = "$(cksum < "$r2")" ] || { t13=0; printf '  (t13 rerun not identical: %s)\n' "$f"; }
+	# (b) no-op on committed state + exactly one block (no duplication)
+	[ "$(cksum < "$f")" = "$(cksum < "$r1")" ] || { t13=0; printf '  (t13 not a no-op on committed state: %s)\n' "$f"; }
+	{ [ "$(grep -c '<!-- HARNESS:BEGIN -->' "$r1")" = "1" ] && [ "$(grep -c '<!-- HARNESS:END -->' "$r1")" = "1" ]; } || { t13=0; printf '  (t13 duplicated block: %s)\n' "$f"; }
+	# (c) content outside markers preserved
+	outside_markers "$f" > "$wdir/o0"; outside_markers "$r1" > "$wdir/o1"
+	diff "$wdir/o0" "$wdir/o1" >/dev/null 2>&1 || { t13=0; printf '  (t13 outside-markers changed: %s)\n' "$f"; }
 done
-[ "$t13" = "1" ] && ok "TEST-13 marker blocks well-formed (begin<end; single-block idempotency)" || no "TEST-13 marker block ordering"
+{ [ "$t13" = "1" ] && [ "$t13n" -ge 17 ]; } && ok "TEST-13 marker update idempotent: $t13n surfaces byte-identical on rerun, no duplication, outside-markers preserved" || no "TEST-13 idempotency (t13=$t13 surfaces=$t13n)"
 
 # ===========================================================================
 # TEST-14: issue acceptance criteria end-to-end
@@ -326,7 +353,7 @@ else skip "TEST-17 (node absent)"; fi
 # ===========================================================================
 # TEST-18: contract-driven rewiring works by data alone (no code change)
 # ===========================================================================
-h1=$(sha256sum "$H" | cut -d' ' -f1)
+h1=$(cksum < "$H")
 fr=$(new_friction); ev=$(new_evdir)
 c1="$WORK/c18a.yml"; c2="$WORK/c18b.yml"; c3="$WORK/c18c.yml"; c4="$WORK/c18d.yml"
 set_maps "$CONTRACT" "$c1" verify '"true"'
@@ -339,7 +366,7 @@ else pv="skip"; fi
 # clean wrapping a mapped command
 cc="$WORK/c18clean.yml"; set_maps "$CONTRACT" "$cc" clean '"true"'
 clv=$(HARNESS_ROOT="$HEALTHY_ROOT" HARNESS_CONTRACT="$cc" HARNESS_FRICTION="$fr" HARNESS_EVIDENCE_DIR="$ev" "$H" clean --json | jget verdict)
-h2=$(sha256sum "$H" | cut -d' ' -f1)
+h2=$(cksum < "$H")
 if [ -n "$NODE" ]; then
 	{ [ "$pv" = "pass" ] && [ "$clv" = "pass" ] && [ "$h1" = "$h2" ]; } && ok "TEST-18 data-only rewiring: verify->pass, clean wraps cmd, harness unchanged" || no "TEST-18 rewiring (verify=$pv clean=$clv unchanged=$([ "$h1" = "$h2" ] && echo yes || echo NO))"
 else
@@ -432,7 +459,7 @@ else
 	HARNESS_FRICTION="$fr" HARNESS_EVIDENCE_DIR="$ev" "$H" verify >/dev/null 2>&1; vc=$?
 	chmod 755 "$ev"
 	vd=$(printf '%s' "$vv" | jget verdict 2>/dev/null)
-	[ -z "$NODE" ] && vd=$(printf '%s' "$vv" | grep -o '"verdict": "[a-z]*"' | head -1 | sed 's/.*"\([a-z]*\)"$/\1/')
+	[ -z "$NODE" ] && vd=$(printf '%s' "$vv" | sed -n 's/.*"verdict": "\([a-z]*\)".*/\1/p' | head -1)
 	c23a=0; { [ "$vc" = "1" ] && { [ "$vd" = "fail" ] || printf '%s' "$vv" | grep -q '"verdict": "fail"'; }; } && c23a=1
 	# friction unwritable -> friction add fail
 	frx="$WORK/fr23"; : > "$frx"; chmod 000 "$frx"
@@ -443,24 +470,133 @@ else
 fi
 
 # ===========================================================================
-# TEST-24: non-GNU portability of JSON escaping (dash + non-GNU awk)
+# TEST-24: non-GNU portability of JSON escaping (REQUIRES a real non-GNU awk;
+# explicit SKIP when no non-GNU userland exists) (F-08)
 # ===========================================================================
-awk_impl=$(awk -Wversion 2>&1 | head -1; awk --version 2>&1 | head -1)
+# The escaping routine is pure awk, so portability MUST be proven on a genuine
+# non-GNU awk. We locate a non-GNU awk (mawk / busybox awk / a non-GNU default
+# awk), force it onto PATH via a shim, run the escaping path under dash (or sh),
+# and FAIL if the JSON is invalid. If NO non-GNU awk is available we SKIP loudly
+# instead of silently passing on GNU awk.
+find_nongnu_awk() { # echoes an absolute non-GNU awk command, or nothing
+	_p=$(command -v mawk 2>/dev/null)
+	if [ -n "$_p" ] && printf '' | "$_p" 'BEGIN{exit 0}' >/dev/null 2>&1; then printf '%s' "$_p"; return 0; fi
+	_bb=$(command -v busybox 2>/dev/null)
+	if [ -n "$_bb" ] && printf '' | "$_bb" awk 'BEGIN{exit 0}' >/dev/null 2>&1; then printf '%s awk' "$_bb"; return 0; fi
+	_ap=$(command -v awk 2>/dev/null)
+	# default awk counts only if it is NOT GNU awk
+	if [ -n "$_ap" ] && ! "$_ap" --version 2>&1 | grep -qi 'gnu awk'; then printf '%s' "$_ap"; return 0; fi
+	return 1
+}
+NONGNU_AWK=$(find_nongnu_awk || true)
 sh_run=sh; command -v dash >/dev/null 2>&1 && sh_run=dash
-if [ -n "$NODE" ]; then
+if [ -z "$NODE" ]; then
+	skip "TEST-24 non-GNU portability (node absent for JSON validation)"
+elif [ -z "$NONGNU_AWK" ]; then
+	skip "TEST-24 non-GNU portability (NO non-GNU awk/busybox/mawk userland available -- cannot prove R12)"
+else
+	# force awk -> the non-GNU implementation for every awk the harness invokes
+	shimd="$WORK/awkshim"; mkdir -p "$shimd"
+	printf '#!/bin/sh\nexec %s "$@"\n' "$NONGNU_AWK" > "$shimd/awk"; chmod +x "$shimd/awk"
+	awk_label=$(printf '%s' "$NONGNU_AWK" | cut -c1-40)
+	usedawk=$(PATH="$shimd:$PATH" "$sh_run" -c 'command -v awk')
 	fr=$(new_friction)
 	inf=$(printf 'l1\nl2\twith"q\\b\001ctrl')
-	HARNESS_FRICTION="$fr" "$sh_run" "$H" friction add --verb portable --inference "$inf" --proof-gap "g" --suggested-closure "c" >/dev/null 2>&1
-	lj=$(HARNESS_FRICTION="$fr" "$sh_run" "$H" friction list --json)
-	ev=$(new_evdir); vj=$(HARNESS_FRICTION="$fr" HARNESS_EVIDENCE_DIR="$ev" "$sh_run" "$H" verify --json)
+	PATH="$shimd:$PATH" HARNESS_FRICTION="$fr" "$sh_run" "$H" friction add --verb portable --inference "$inf" --proof-gap "g" --suggested-closure "c" >/dev/null 2>&1
+	lj=$(PATH="$shimd:$PATH" HARNESS_FRICTION="$fr" "$sh_run" "$H" friction list --json)
+	ev=$(new_evdir); vj=$(PATH="$shimd:$PATH" HARNESS_FRICTION="$fr" HARNESS_EVIDENCE_DIR="$ev" "$sh_run" "$H" verify --json)
 	lok=0; vok=0
 	printf '%s' "$lj" | json_valid && lok=1
 	printf '%s' "$vj" | json_valid && vok=1
-	# confirm the control-char round-trips as \u0001
+	# confirm the control-char/newline/tab round-trip through the non-GNU escaper
 	rt=$(printf '%s' "$lj" | "$NODE" -e 'let d="";process.stdin.on("data",c=>d+=c);process.stdin.on("end",()=>{const o=JSON.parse(d);const e=o.entries.find(x=>x.verb==="portable");process.stdout.write(e&&/\u0001/.test(e.inference)&&/\n/.test(e.inference)&&/\t/.test(e.inference)?"ok":"no")})')
-	nongnu=1; case "$awk_impl" in *[Gg][Nn][Uu]*|*gawk*) nongnu=0;; esac
-	{ [ "$lok" = "1" ] && [ "$vok" = "1" ] && [ "$rt" = "ok" ]; } && ok "TEST-24 JSON escaping valid under $sh_run + $(printf '%s' "$awk_impl" | head -c 20) (non-GNU=$nongnu)" || no "TEST-24 non-GNU portability (list=$lok verify=$vok roundtrip=$rt)"
-else skip "TEST-24 portability (node absent for JSON validation)"; fi
+	# assert the harness actually resolved awk to the shim (i.e. really ran non-GNU)
+	used_ok=0; [ "$usedawk" = "$shimd/awk" ] && used_ok=1
+	{ [ "$lok" = "1" ] && [ "$vok" = "1" ] && [ "$rt" = "ok" ] && [ "$used_ok" = "1" ]; } \
+		&& ok "TEST-24 JSON escaping valid under $sh_run + forced non-GNU awk ($awk_label)" \
+		|| no "TEST-24 non-GNU portability (list=$lok verify=$vok roundtrip=$rt forced-awk=$usedawk)"
+fi
+
+# ===========================================================================
+# TEST-26: verify resolves each mapped aggregate member EXACTLY ONCE (F-06)
+# ===========================================================================
+# Regression for the double-execution bug: human `verify` previously resolved
+# each member once to aggregate and again to render, running mapped member
+# commands twice. Map `lint` to a command that appends to a counter file and
+# assert the count is exactly 1 for BOTH human and --json verify.
+if [ -n "$NODE" ]; then
+	t26=1
+	ctr="$WORK/mem.count"
+	c26="$WORK/c26.yml"
+	# verify->true (fast, deterministic pass), lint-> counter-incrementing command
+	set_maps "$CONTRACT" "$WORK/c26a" verify '"true"'
+	set_maps "$WORK/c26a" "$c26" lint "\"sh -c 'echo x >> $ctr'\""
+	# human form
+	: > "$ctr"
+	fr=$(new_friction); ev=$(new_evdir)
+	HARNESS_ROOT="$HEALTHY_ROOT" HARNESS_CONTRACT="$c26" HARNESS_FRICTION="$fr" HARNESS_EVIDENCE_DIR="$ev" "$H" verify >/dev/null 2>&1
+	human_n=$(awk 'END{print NR+0}' "$ctr")
+	[ "$human_n" = "1" ] || { t26=0; printf '  (t26 human ran member %s times)\n' "$human_n"; }
+	# --json form
+	: > "$ctr"
+	fr=$(new_friction); ev=$(new_evdir)
+	HARNESS_ROOT="$HEALTHY_ROOT" HARNESS_CONTRACT="$c26" HARNESS_FRICTION="$fr" HARNESS_EVIDENCE_DIR="$ev" "$H" verify --json >/dev/null 2>&1
+	json_n=$(awk 'END{print NR+0}' "$ctr")
+	[ "$json_n" = "1" ] || { t26=0; printf '  (t26 --json ran member %s times)\n' "$json_n"; }
+	[ "$t26" = "1" ] && ok "TEST-26 verify runs each mapped member exactly once (human=$human_n json=$json_n)" || no "TEST-26 member invoked more than once (human=$human_n json=$json_n)"
+else skip "TEST-26 member single-execution (node absent)"; fi
+
+# ===========================================================================
+# TEST-27: friction count is valid JSON + correct for missing/empty/populated (F-07)
+# ===========================================================================
+# Regression for the empty/missing friction log producing invalid JSON (grep -c
+# emitting "0\n" + `|| echo 0` appending a second 0). Cover status --json and
+# friction list --json (and their human forms) for MISSING, EMPTY, POPULATED.
+if [ -n "$NODE" ]; then
+	t27=1
+	# populated fixture: known number of records
+	fr_pop="$WORK/fr27.pop"; cp "$SEED_FRICTION" "$fr_pop"
+	pop_n=$(awk 'NF{n++} END{print n+0}' "$fr_pop")
+	fr_empty="$WORK/fr27.empty"; : > "$fr_empty"
+	fr_missing="$WORK/fr27.missing"; rm -f "$fr_missing"
+	for spec in "missing:$fr_missing:0" "empty:$fr_empty:0" "populated:$fr_pop:$pop_n"; do
+		kind=${spec%%:*}; rest=${spec#*:}; file=${rest%:*}; want=${rest##*:}
+		# status --json
+		sj=$(HARNESS_FRICTION="$file" HARNESS_EVIDENCE_DIR="$WORK/ev27" "$H" status --json)
+		printf '%s' "$sj" | json_valid || { t27=0; printf '  (t27 status --json invalid: %s)\n' "$kind"; }
+		sc=$(printf '%s' "$sj" | jget friction_entries)
+		[ "$sc" = "$want" ] || { t27=0; printf '  (t27 status count %s want %s: %s)\n' "$sc" "$want" "$kind"; }
+		# friction list --json
+		lj=$(HARNESS_FRICTION="$file" "$H" friction list --json)
+		printf '%s' "$lj" | json_valid || { t27=0; printf '  (t27 friction list --json invalid: %s)\n' "$kind"; }
+		lc=$(printf '%s' "$lj" | jget count)
+		[ "$lc" = "$want" ] || { t27=0; printf '  (t27 list count %s want %s: %s)\n' "$lc" "$want" "$kind"; }
+		# human forms must still emit exactly one Verdict: line and exit 0
+		HARNESS_FRICTION="$file" HARNESS_EVIDENCE_DIR="$WORK/ev27" "$H" status >/dev/null 2>&1 || { t27=0; printf '  (t27 status human nonzero: %s)\n' "$kind"; }
+		HARNESS_FRICTION="$file" "$H" friction list >/dev/null 2>&1 || { t27=0; printf '  (t27 friction list human nonzero: %s)\n' "$kind"; }
+	done
+	# missing file must NOT be created as a side effect of a read-only list
+	[ -e "$fr_missing" ] && { t27=0; printf '  (t27 friction list created the missing file)\n'; }
+	[ "$t27" = "1" ] && ok "TEST-27 status/friction-list counts valid JSON for missing/empty/populated ($pop_n)" || no "TEST-27 friction count JSON (see notes)"
+else skip "TEST-27 friction count JSON (node absent)"; fi
+
+# ===========================================================================
+# TEST-28: failing verify prints the terminal Verdict line LAST (F-02R / R2,R7)
+# ===========================================================================
+# Force the wrapped typecheck to fail (data-only: verify.maps_to -> a failing
+# command) and assert the human output's LAST line is exactly `Verdict: fail`,
+# with diagnostics printed BEFORE it, and exit code 1.
+t28=1
+c28="$WORK/c28.yml"; set_maps "$CONTRACT" "$c28" verify '"sh -c '\''echo TYPECHECK_DIAG >&2; exit 1'\''"'
+fr=$(new_friction); ev=$(new_evdir)
+out28=$(HARNESS_ROOT="$HEALTHY_ROOT" HARNESS_CONTRACT="$c28" HARNESS_FRICTION="$fr" HARNESS_EVIDENCE_DIR="$ev" "$H" verify 2>/dev/null)
+HARNESS_ROOT="$HEALTHY_ROOT" HARNESS_CONTRACT="$c28" HARNESS_FRICTION="$fr" HARNESS_EVIDENCE_DIR="$ev" "$H" verify >/dev/null 2>&1; code28=$?
+last28=$(printf '%s\n' "$out28" | awk 'NF{last=$0} END{print last}')
+nverd=$(printf '%s\n' "$out28" | grep -c '^Verdict:')
+[ "$last28" = "Verdict: fail" ] || { t28=0; printf '  (t28 last line = "%s")\n' "$last28"; }
+[ "$code28" = "1" ] || { t28=0; printf '  (t28 exit = %s, want 1)\n' "$code28"; }
+[ "$nverd" = "1" ] || { t28=0; printf '  (t28 Verdict lines = %s)\n' "$nverd"; }
+[ "$t28" = "1" ] && ok "TEST-28 failing verify: last line exactly 'Verdict: fail', exit 1, one Verdict line" || no "TEST-28 terminal verdict on failure (last='$last28' exit=$code28 verds=$nverd)"
 
 # ===========================================================================
 # Summary

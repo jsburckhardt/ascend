@@ -1,7 +1,9 @@
 #!/bin/sh
 # tests/harness/run.sh - durable, dependency-light regression suite for ./harness
 # (CORE-COMPONENT-0003 R16). Exercises TEST-01..TEST-24 from
-# project/issues/4/plan/03-test-plan.md. Runs non-interactively, prints a summary
+# project/issues/4/plan/03-test-plan.md, plus TEST-30 from
+# project/issues/5/plan/03-test-plan.md (dev + validation commands). Runs
+# non-interactively, prints a summary
 # and an overall Verdict line, exits non-zero on any failure, and leaves the
 # working tree clean (all mutations go to a scratch dir; permission changes are
 # reverted; tracked files are never written because every verb run is isolated
@@ -630,6 +632,68 @@ for ro in rpiv-research rpiv-planner; do
 	extract_block "$AGD/$ro.agent.md" | grep -Eq 'MUST run ./harness (lint|test|build)' && { t29=0; printf '  (t29 %s instructs an execution verb)\n' "$ro"; }
 done
 [ "$t29" = "1" ] && ok "TEST-29 consuming agents carry role-scoped, distinct harness blocks ($uniq_n distinct)" || no "TEST-29 role-scoped blocks (t29=$t29 distinct=$uniq_n)"
+
+# ===========================================================================
+# TEST-30: Issue #5 dev + validation commands wired honestly (no drift)
+# ===========================================================================
+# STATIC assertions only (file greps) plus the already-clean `./harness verify`.
+# It MUST NOT execute `npm run dev` (a blocking watch) or map any blocking
+# command to `boot` (TEST-20 would hang). All verify writes are isolated to the
+# scratch dir so tracked files stay clean.
+t30=1
+PKG="$REPO/package.json"
+ROOT_RD="$REPO/README.md"
+HARN_RD="$REPO/.harness/README.md"
+
+# (1) package.json: dev == 'tsc --noEmit --watch', typecheck == 'tsc --noEmit',
+#     and NO validate/check/test/lint/build/start alias script (D1, D5).
+if [ -n "$NODE" ]; then
+	dev=$("$NODE" -e 'process.stdout.write((require(process.argv[1]).scripts||{}).dev||"")' "$PKG")
+	tc=$("$NODE" -e 'process.stdout.write((require(process.argv[1]).scripts||{}).typecheck||"")' "$PKG")
+	extra=$("$NODE" -e 's=require(process.argv[1]).scripts||{};process.stdout.write(["validate","check","test","lint","build","start"].filter(k=>k in s).join(","))' "$PKG")
+	[ "$dev" = "tsc --noEmit --watch" ] || t30=0
+	[ "$tc" = "tsc --noEmit" ] || t30=0
+	[ -z "$extra" ] || t30=0
+else
+	grep -q '"dev": "tsc --noEmit --watch"' "$PKG" || t30=0
+	grep -q '"typecheck": "tsc --noEmit"' "$PKG" || t30=0
+	for k in validate check test lint build start; do grep -q "\"$k\":" "$PKG" && t30=0; done
+fi
+
+# (2) root README documents dev + both validation forms + degraded/non-blocking
+#     note; and introduces NO validate/check alias (D2, D3, D5; AC1/AC2/AC4).
+for tok in "npm run dev" "./harness verify" "npm run typecheck" "degraded" "non-blocking"; do
+	grep -qF -- "$tok" "$ROOT_RD" || t30=0
+done
+grep -q 'npm run validate' "$ROOT_RD" && t30=0
+grep -q 'npm run check' "$ROOT_RD" && t30=0
+
+# (3) .harness/README.md names the dev inner loop and defers boot to #6 (D2, D3).
+grep -qF 'npm run dev' "$HARN_RD" || t30=0
+grep -Eq 'boot.*#6|#6.*boot' "$HARN_RD" || t30=0
+
+# (4) contract.yml wiring is UNCHANGED: boot.maps_to null; verify.maps_to
+#     "npm run typecheck" (exactly one occurrence) -> no drift; #6 still owns boot.
+boot_maps=$(awk '/^  [^ ].*:[ \t]*$/&&/^  /&&!/^    /{h=$0;sub(/^  /,"",h);sub(/:.*/,"",h);gsub(/"/,"",h);cur=h} cur=="boot"&&/^    maps_to:/{v=$0;sub(/^    maps_to:[ \t]*/,"",v);print v;exit}' "$CONTRACT")
+[ "$boot_maps" = "null" ] || t30=0
+[ "$(grep -c '    maps_to: "npm run typecheck"' "$CONTRACT")" = "1" ] || t30=0
+
+# (5) friction closures stay truthful (D4): a post-#5 boot closure names #6 and
+#     the lint/test/build closures are re-pointed off #5 (deferral marker).
+grep -q 'Owned by #6' "$SEED_FRICTION" || t30=0
+[ "$(grep -c 'Deferred beyond #5' "$SEED_FRICTION")" -ge 3 ] || t30=0
+
+# (6) `./harness verify` runs non-fail + exit 0 = validation "passes" (D3).
+#     Node/typecheck-gated and isolated; NEVER runs `npm run dev`.
+if [ -n "$NODE" ] && [ "$TC_OK" = "1" ]; then
+	fr=$(new_friction); ev=$(new_evdir)
+	vv=$(HARNESS_FRICTION="$fr" HARNESS_EVIDENCE_DIR="$ev" "$H" verify --json | jget verdict)
+	HARNESS_FRICTION="$fr" HARNESS_EVIDENCE_DIR="$ev" "$H" verify >/dev/null 2>&1; vc=$?
+	{ [ "$vv" != "fail" ] && [ "$vv" != "__ERR__" ] && [ "$vc" = "0" ]; } || t30=0
+	[ "$t30" = "1" ] && ok "TEST-30 #5 dev+validation wired honestly (verify=$vv non-fail exit $vc; no drift)" || no "TEST-30 #5 dev+validation (verify=$vv exit $vc t30=$t30)"
+else
+	[ "$t30" = "1" ] && ok "TEST-30 #5 dev+validation static assertions (verify exec skipped: node/typecheck unavailable)" || no "TEST-30 #5 dev+validation static assertions (t30=$t30)"
+fi
 
 # ===========================================================================
 # Summary

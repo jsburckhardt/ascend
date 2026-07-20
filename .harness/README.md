@@ -138,6 +138,26 @@ to `pass` by editing the verb's `maps_to` in
 [`.harness/contract.yml`](./contract.yml) (data) — **not** by restructuring the
 harness — and then closing the corresponding friction entry.
 
+### Issue #5 status: dev inner loop and validation
+
+- **Development inner loop:** the Prototype-0 "start the local development
+  environment" command is **`npm run dev`** (`tsc --noEmit --watch` — continuous
+  typecheck feedback), run **directly** today. See the root
+  [`README.md`](../README.md).
+- **`boot` stays `unknown` (owned by #6):** the dev/serve command is a
+  long-running, interactive process, which does not fit the harness's run-once
+  verdict + evidence model, so `boot.maps_to` remains `null`. Wrapping the
+  interactive process (exec/handoff or readiness-probe + detach) is delivered by
+  **issue #6** (shell + health); #5 does **not** rewire `boot`.
+- **`verify` = `degraded` is the accepted baseline:** `./harness verify` wraps
+  `npm run typecheck` (which passes) and stays `degraded` because `lint`,
+  `test`, and `build` remain `unknown`. `degraded` exits `0` and is the honest,
+  non-blocking Prototype-0 validation state — #5 does **not** add a
+  linter/test-runner/build to force `pass` (ADR-0002, no speculative frameworks).
+- **No alias:** `npm run typecheck` is wrapped **only** by `verify`; it is never
+  aliased as `lint`, `test`, or `build`, and no redundant `validate`/`check`
+  entry point is introduced.
+
 ## Agent workflow
 
 The RPIV stages MUST prefer `./harness` for supported verbs and MAY bypass to a direct

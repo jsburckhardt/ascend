@@ -137,3 +137,33 @@ Cycle-2 fixes resolve the remaining major/minor findings from the re-review (F-0
 ### Cycle-2 Generated At
 
 2026-07-20T09:38:00Z
+
+---
+
+## Review Cycle 2 — F-08R follow-up
+
+The final review verdict was **COMMENT** with **0 blocking findings**. The single
+residual item, **F-08R** (minor, strict-portability), flagged that the
+portability suite still invoked the non-POSIX `awk --version` flag when
+classifying the default `awk`. That probe has been removed from
+`find_nongnu_awk` in `tests/harness/run.sh`: the non-GNU awk under test is now
+selected only from explicit `mawk` / `busybox awk` candidates, and the existing
+visible SKIP fires when neither is present — no non-POSIX awk flag remains in the
+selection path.
+
+The suite stays green under both shells: `sh tests/harness/run.sh` and
+`dash tests/harness/run.sh` each report `Totals: PASS=34 FAIL=0 SKIP=0`,
+`Verdict: pass`, exit 0, with TEST-24 exercising a real non-GNU `mawk` run.
+`./harness verify` remains `degraded`, exit 0 (non-blocking; wrapped
+`npm run typecheck` = `pass`).
+
+### Follow-up Commits
+
+| Hash | Message |
+|------|---------|
+| 39a5dd0 | test(harness): remove non-POSIX awk --version probe from portability suite |
+| 2b1b766 | docs(issue-4): record F-08R remediation and cycle-2 review disposition |
+
+### F-08R Generated At
+
+2026-07-20T09:57:26Z

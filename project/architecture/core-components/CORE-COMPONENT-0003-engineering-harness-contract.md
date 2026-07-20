@@ -90,6 +90,9 @@ editing `contract.yml` data).
   **"What did the agent have to infer that the harness should have proved?"**
 - **R10 — Idempotent agent-surface updates.** Each agent surface MUST contain exactly one
   harness-usage block delimited by `<!-- HARNESS:BEGIN -->` / `<!-- HARNESS:END -->`.
+  The block MUST live inside the surface's `<instructions>` section (immediately before its
+  `</instructions>` tag) as one MUST/MAY directive per line, never as trailing prose after a
+  closing section tag, so it conforms to the APS document flow.
   Re-running the update MUST replace only the content between the markers, MUST NOT
   duplicate the block, and MUST NOT alter any content outside the markers or change the
   agent's existing behaviour.

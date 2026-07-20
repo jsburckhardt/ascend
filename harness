@@ -120,6 +120,39 @@ get_maps_to() {
 	' "$CONTRACT"
 }
 
+# get_mode <verb> -> prints the raw `mode:` scalar for a verb in contract.yml
+# (e.g. `exec` for an interactive/handoff verb, or `capability`). Empty when the
+# attribute is absent, which selects the default run-to-completion behaviour so
+# every pre-existing verb is unchanged (CORE-COMPONENT-0003 R17). POSIX awk (R12).
+get_mode() {
+	_verb="$1"
+	[ -f "$CONTRACT" ] || return 0
+	awk -v want="$_verb" '
+		/^verbs:[ \t]*$/ { inverbs = 1; next }
+		/^[^ ]/ { if ($0 !~ /^verbs:/) inverbs = 0 }
+		inverbs == 1 {
+			line = $0
+			# verb header: two leading spaces, not four, ending with a colon
+			if (line ~ /^  [^ ].*:[ \t]*$/ && line !~ /^    /) {
+				h = line
+				sub(/^  /, "", h)
+				sub(/:[ \t]*$/, "", h)
+				gsub(/"/, "", h)
+				cur = h
+				next
+			}
+			if (cur == want && line ~ /^    mode:/) {
+				v = line
+				sub(/^    mode:[ \t]*/, "", v)
+				gsub(/"/, "", v)
+				sub(/[ \t]*$/, "", v)
+				print v
+				exit
+			}
+		}
+	' "$CONTRACT"
+}
+
 # get_aggregate -> prints the space-separated member verbs from verify.aggregate.
 get_aggregate() {
 	[ -f "$CONTRACT" ] || return 0
@@ -432,6 +465,8 @@ Verbs:
   test              Run the test suite (none present yet -> unknown)
   build             Build/emit artifacts (none; tsc is noEmit -> unknown)
   boot              Boot/serve the app (no dev/serve command yet -> unknown)
+  dev               Start the local dev inner loop (interactive handoff; execs
+                    npm run dev -> hands off, emits NO verdict)
   verify            Aggregate static verification gate (wraps npm run typecheck)
   status            Report contract summary and last evidence
   clean             Remove harness-owned ephemeral artifacts (-> degraded)
@@ -445,6 +480,8 @@ does not exist yet; each is recorded as friction answering the KEY_QUESTION:
   "$KEY_QUESTION"
 
 Machine consumers: add --json to any verb except 'help'/'friction add'.
+Interactive/handoff verbs (e.g. 'dev', mode: exec) hand off via exec and emit
+NO verdict; introspect them without executing via 'dev --print' / 'dev --json'.
 Docs: .harness/README.md   Contract: .harness/contract.yml
 Verdict: pass
 EOF
@@ -455,8 +492,9 @@ verb_orient() {
 	_json="$1"
 	_vcount=$(count_verbs)
 	_verify_maps=$(get_maps_to verify)
+	_dev_maps=$(get_maps_to dev)
 	if [ "$_json" = "1" ]; then
-		json_response orient pass ",\"stack\": \"TypeScript + Node.js 22 + npm\", \"setup_entrypoint\": \"npm install\", \"operating_surface\": \"./harness\", \"contract\": \".harness/contract.yml\", \"verbs\": $_vcount, \"verify_maps_to\": \"$(json_escape "$_verify_maps")\""
+		json_response orient pass ",\"stack\": \"TypeScript + Node.js 22 + npm\", \"setup_entrypoint\": \"npm install\", \"operating_surface\": \"./harness\", \"contract\": \".harness/contract.yml\", \"verbs\": $_vcount, \"verify_maps_to\": \"$(json_escape "$_verify_maps")\", \"dev_maps_to\": \"$(json_escape "$_dev_maps")\", \"dev_mode\": \"exec\""
 	else
 		cat <<EOF
 Repository orientation
@@ -467,6 +505,7 @@ Setup entry    : npm install   (single documented setup entry point)
 Operating face : ./harness     (prefer this over direct commands)
 Contract       : .harness/contract.yml ($_vcount verbs)
 verify wraps   : ${_verify_maps:-none}
+dev execs      : ${_dev_maps:-none}   (interactive handoff; emits no verdict)
 Evidence       : .harness/evidence/
 Friction       : .harness/friction.jsonl
 Verdict: pass
@@ -567,6 +606,76 @@ verb_capability() {
 				printf 'Verdict: %s\n' "$_verdict"
 			fi
 			finish "$_verdict"
+			;;
+	esac
+}
+
+# Interactive/handoff verb (CORE-COMPONENT-0003 R17). Used by `dev`. Reads
+# maps_to + mode from the contract and either introspects (non-exec) or hands
+# off the process via exec. Unlike verb_capability it NEVER runs the wrapped
+# command to completion, so a long-running watch/serve cannot hang the harness.
+#
+# A mode: exec verb is EXEMPT from the single-verdict rule (R2), the
+# verdict->exit-code mapping (R3, it propagates the exec'd command's exit code),
+# and the evidence rule (R5). If its maps_to is null/native/empty it stays
+# honest: verdict unknown + friction (R4/R9), exit 0, and execs nothing.
+#
+# Introspection (non-exec, exits 0):
+#   --json  -> JSON descriptor (harness_version, verb, timestamp, mode, maps_to,
+#              interactive:true; NO verdict key)
+#   --print -> the resolved wrapped command in human form
+verb_exec() {
+	_name="$1"; _json="$2"
+	shift 2 2>/dev/null || true
+	_print=0
+	while [ "$#" -gt 0 ]; do
+		case "$1" in
+			--print) _print=1; shift ;;
+			--json) _json=1; shift ;;
+			*) err "$_name: unknown option '$1'"; exit 2 ;;
+		esac
+	done
+	_maps=$(get_maps_to "$_name")
+	_mode=$(get_mode "$_name")
+	[ -n "$_mode" ] || _mode="exec"
+	case "$_maps" in
+		""|null|None|native)
+			# Honest when unmapped: behave like an unmapped capability verb --
+			# unknown + friction, exit 0, and exec NOTHING (R17.3).
+			if ! ensure_friction "$_name" \
+				"There is no interactive $_name command mapped; the $_name verb returns unknown and hands off nothing." \
+				"$_name.maps_to is null/native; no interactive process exists to exec." \
+				"Wire the $_name verb's maps_to in contract.yml when an interactive command exists."; then
+				persist_fail "$_name" "$_json" "required friction record could not be persisted"
+			fi
+			if [ "$_json" = "1" ]; then
+				json_response "$_name" unknown ",\"reason\": \"no $_name command detected\", \"mode\": \"$(json_escape "$_mode")\", \"maps_to\": null, \"interactive\": true"
+			else
+				printf '%s: unknown (no %s command mapped)\n' "$_name" "$_name"
+				printf 'Recorded as friction (honest gap).\n'
+				printf 'Verdict: unknown\n'
+			fi
+			finish unknown
+			;;
+		*)
+			# --- non-exec introspection forms (R17.4): never exec -----------
+			if [ "$_json" = "1" ]; then
+				# Verdict-exempt handoff descriptor: NO verdict key (R17.2/R17.4).
+				printf '{"harness_version": "%s", "verb": "%s", "timestamp": "%s", "mode": "%s", "maps_to": "%s", "interactive": true}\n' \
+					"$HARNESS_VERSION" "$(json_escape "$_name")" "$(now_iso)" "$(json_escape "$_mode")" "$(json_escape "$_maps")"
+				exit 0
+			fi
+			if [ "$_print" = "1" ]; then
+				printf '%s\n' "$_maps"
+				exit 0
+			fi
+			# --- process handoff (R17.1) ------------------------------------
+			# Replace the harness process with the wrapped command. The harness
+			# never runs it to completion and never blocks; the wrapped
+			# command's exit code becomes the process exit code. No verdict, no
+			# evidence (R17.2). maps_to is passed as DATA to `sh -c`, matching
+			# the wrapping used by every other verb.
+			cd "$ROOT" && exec sh -c "$_maps"
 			;;
 	esac
 }
@@ -869,6 +978,7 @@ main() {
 		orient) verb_orient "$JSON" ;;
 		doctor) verb_doctor "$JSON" ;;
 		lint|test|build|boot) verb_capability "$_verb" "$JSON" ;;
+		dev) verb_exec "$_verb" "$JSON" "$@" ;;
 		verify) verb_verify "$JSON" ;;
 		status) verb_status "$JSON" ;;
 		clean) verb_clean "$JSON" ;;

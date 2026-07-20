@@ -94,11 +94,16 @@ t01=1
 for k in "^version:" "^entrypoint:" "^verbs:" "^evidence:" "^friction:"; do
 	grep -q "$k" "$c" || t01=0
 done
-for v in help orient doctor lint test build boot verify status clean '"friction add"' '"friction list"'; do
+for v in help orient doctor lint test build boot dev verify status clean '"friction add"' '"friction list"'; do
 	grep -Eq "^  $v:" "$c" || t01=0
 done
 grep -q '    maps_to: "npm run typecheck"' "$c" || t01=0
 [ "$(grep -c '    maps_to: "npm run typecheck"' "$c")" = "1" ] || t01=0
+# dev verb: interactive/handoff (R17) -> maps_to "npm run dev", mode exec.
+grep -q '    maps_to: "npm run dev"' "$c" || t01=0
+[ "$(grep -c '    maps_to: "npm run dev"' "$c")" = "1" ] || t01=0
+dev_mode=$(awk '/^  [^ ].*:[ \t]*$/&&/^  /&&!/^    /{h=$0;sub(/^  /,"",h);sub(/:.*/,"",h);gsub(/"/,"",h);cur=h} cur=="dev"&&/^    mode:/{v=$0;sub(/^    mode:[ \t]*/,"",v);print v;exit}' "$c")
+[ "$dev_mode" = "exec" ] || t01=0
 for v in lint test build boot; do
 	# the maps_to line following the verb header must be null
 	got=$(awk -v verb="$v" '/^  [^ ].*:[ \t]*$/&&/^  /&&!/^    /{h=$0;sub(/^  /,"",h);sub(/:.*/,"",h);gsub(/"/,"",h);cur=h} cur==verb&&/^    maps_to:/{v=$0;sub(/^    maps_to:[ \t]*/,"",v);print v;exit}' "$c")
@@ -116,10 +121,10 @@ grep -q 'What did the agent have to infer that the harness should have proved?' 
 # ===========================================================================
 hv=$("$H" help); code=$?
 verbs_ok=1
-for v in help orient doctor lint test build boot verify status clean "friction add" "friction list"; do
+for v in help orient doctor lint test build boot dev verify status clean "friction add" "friction list"; do
 	printf '%s' "$hv" | grep -q "$v" || verbs_ok=0
 done
-[ "$code" = "0" ] && [ "$verbs_ok" = "1" ] && ok "TEST-02 help lists 12 verbs, exit 0" || no "TEST-02 help lists 12 verbs, exit 0"
+[ "$code" = "0" ] && [ "$verbs_ok" = "1" ] && ok "TEST-02 help lists 13 verbs, exit 0" || no "TEST-02 help lists 13 verbs, exit 0"
 "$H" orient >/dev/null 2>&1; expect_eq "TEST-02 orient human exit 0" 0 "$?"
 if [ -n "$NODE" ]; then
 	oj=$("$H" orient --json); code=$?
@@ -248,7 +253,7 @@ rd="$REPO/.harness/README.md"
 t11=1
 [ -f "$rd" ] || t11=0
 for tok in "pass" "fail" "degraded" "unknown" "--json" "./harness" "What did the agent have to infer"; do grep -qF -- "$tok" "$rd" || t11=0; done
-vc=1; for v in help orient doctor lint test build boot verify status clean friction; do grep -q "$v" "$rd" || vc=0; done
+vc=1; for v in help orient doctor lint test build boot dev verify status clean friction; do grep -q "$v" "$rd" || vc=0; done
 { [ "$t11" = "1" ] && [ "$vc" = "1" ]; } && ok "TEST-11 README documents verbs, verdicts, exit-code, --json, KEY_QUESTION" || no "TEST-11 README completeness"
 
 # ===========================================================================
@@ -432,7 +437,15 @@ fr=$(new_friction); out=$(HARNESS_FRICTION="$fr" "$H" friction list 2>/dev/null)
 fr=$(new_friction); out=$(HARNESS_FRICTION="$fr" "$H" friction add --verb z --inference i --proof-gap g --suggested-closure c 2>/dev/null); one_verdict "$out" || t20=0
 # help/friction list say pass
 hout=$("$H" help); [ "$(printf '%s\n' "$hout" | grep '^Verdict:')" = "Verdict: pass" ] || t20=0
-[ "$t20" = "1" ] && ok "TEST-20 exactly one Verdict: line per human verb (help/friction list = pass)" || no "TEST-20 one Verdict line per verb"
+# dev is an interactive/handoff verb (mode: exec, R17): it is EXCLUDED from the
+# run-to-completion loop above (exec'ing it would hang). Prove invocability via
+# the non-exec --print form instead: it resolves `npm run dev`, exits 0, does NOT
+# hang, and emits NO `Verdict:` line (handoff verbs are verdict-exempt).
+dpr=$("$H" dev --print 2>/dev/null); dprc=$?
+[ "$dpr" = "npm run dev" ] || { t20=0; printf '  (dev --print = "%s" exit %s)\n' "$dpr" "$dprc"; }
+[ "$dprc" = "0" ] || t20=0
+[ "$(printf '%s\n' "$dpr" | grep -c '^Verdict:')" = "0" ] || t20=0
+[ "$t20" = "1" ] && ok "TEST-20 exactly one Verdict: line per human verb (help/friction list = pass; dev handoff excluded, --print no hang)" || no "TEST-20 one Verdict line per verb"
 
 # ===========================================================================
 # TEST-21: doctor validates full Node range (21/22/23 boundaries)
@@ -634,11 +647,13 @@ done
 [ "$t29" = "1" ] && ok "TEST-29 consuming agents carry role-scoped, distinct harness blocks ($uniq_n distinct)" || no "TEST-29 role-scoped blocks (t29=$t29 distinct=$uniq_n)"
 
 # ===========================================================================
-# TEST-30: Issue #5 dev + validation commands wired honestly (no drift)
+# TEST-30: Issue #5 dev command is genuinely invokable through the harness (AC3;
+#          resolves review finding F-01) + validation unchanged (no drift)
 # ===========================================================================
-# STATIC assertions only (file greps) plus the already-clean `./harness verify`.
-# It MUST NOT execute `npm run dev` (a blocking watch) or map any blocking
-# command to `boot` (TEST-20 would hang). All verify writes are isolated to the
+# Proves AC3 POSITIVELY via the interactive/handoff verb `dev` (mode: exec, R17)
+# WITHOUT hanging: it never `exec`s the blocking watch, using the non-exec
+# --print/--json introspection forms instead. `boot` stays `null` (owned by #6)
+# and `verify` stays degraded/exit-0. All mutating runs are isolated to the
 # scratch dir so tracked files stay clean.
 t30=1
 PKG="$REPO/package.json"
@@ -660,39 +675,91 @@ else
 	for k in validate check test lint build start; do grep -q "\"$k\":" "$PKG" && t30=0; done
 fi
 
-# (2) root README documents dev + both validation forms + degraded/non-blocking
-#     note; and introduces NO validate/check alias (D2, D3, D5; AC1/AC2/AC4).
-for tok in "npm run dev" "./harness verify" "npm run typecheck" "degraded" "non-blocking"; do
+# (2) contract.yml: dev.maps_to == "npm run dev", dev.mode == exec (R17);
+#     boot.maps_to still null (owned by #6); exactly one verify typecheck mapping
+#     -> no drift.
+dev_maps=$(awk '/^  [^ ].*:[ \t]*$/&&/^  /&&!/^    /{h=$0;sub(/^  /,"",h);sub(/:.*/,"",h);gsub(/"/,"",h);cur=h} cur=="dev"&&/^    maps_to:/{v=$0;sub(/^    maps_to:[ \t]*/,"",v);gsub(/"/,"",v);print v;exit}' "$CONTRACT")
+dev_mode=$(awk '/^  [^ ].*:[ \t]*$/&&/^  /&&!/^    /{h=$0;sub(/^  /,"",h);sub(/:.*/,"",h);gsub(/"/,"",h);cur=h} cur=="dev"&&/^    mode:/{v=$0;sub(/^    mode:[ \t]*/,"",v);print v;exit}' "$CONTRACT")
+boot_maps=$(awk '/^  [^ ].*:[ \t]*$/&&/^  /&&!/^    /{h=$0;sub(/^  /,"",h);sub(/:.*/,"",h);gsub(/"/,"",h);cur=h} cur=="boot"&&/^    maps_to:/{v=$0;sub(/^    maps_to:[ \t]*/,"",v);print v;exit}' "$CONTRACT")
+[ "$dev_maps" = "npm run dev" ] || t30=0
+[ "$dev_mode" = "exec" ] || t30=0
+[ "$boot_maps" = "null" ] || t30=0
+[ "$(grep -c '    maps_to: "npm run typecheck"' "$CONTRACT")" = "1" ] || t30=0
+
+# (3) `./harness help` and `./harness orient` list `dev` as an interactive handoff.
+"$H" help | grep -qE '^  dev ' || t30=0
+"$H" orient 2>/dev/null | grep -q 'dev execs' || t30=0
+
+# (4) `./harness dev --print` resolves `npm run dev`, exit 0, WITHOUT hanging.
+#     `./harness dev --json` is a valid handoff descriptor: mode exec, maps_to,
+#     interactive:true, and NO verdict key; exit 0 without exec.
+dpr=$("$H" dev --print 2>/dev/null); dprc=$?
+{ [ "$dpr" = "npm run dev" ] && [ "$dprc" = "0" ]; } || { t30=0; printf '  (TEST-30 dev --print="%s" exit=%s)\n' "$dpr" "$dprc"; }
+dj=$("$H" dev --json 2>/dev/null); djc=$?
+[ "$djc" = "0" ] || t30=0
+printf '%s' "$dj" | grep -q '"mode": "exec"' || t30=0
+printf '%s' "$dj" | grep -q '"maps_to": "npm run dev"' || t30=0
+printf '%s' "$dj" | grep -q '"interactive": true' || t30=0
+printf '%s' "$dj" | grep -q '"verdict"' && { t30=0; printf '  (TEST-30 dev --json unexpectedly carries a verdict key)\n'; }
+if [ -n "$NODE" ]; then printf '%s' "$dj" | json_valid || { t30=0; printf '  (TEST-30 dev --json not valid JSON)\n'; }; fi
+
+# (5) Isolated contract with dev.maps_to null -> `./harness dev` returns unknown +
+#     friction, exit 0, and execs NOTHING (honest-when-unmapped, R17.3). Uses a
+#     fresh empty friction file so the appended entry is observable.
+dn="$WORK/c30devnull.yml"; set_maps "$CONTRACT" "$dn" dev 'null'
+frdn="$WORK/fr30devnull.$$"; : > "$frdn"
+fb=$(awk 'NF{n++}END{print n+0}' "$frdn")
+dno=$(HARNESS_CONTRACT="$dn" HARNESS_FRICTION="$frdn" HARNESS_EVIDENCE_DIR="$(new_evdir)" "$H" dev 2>/dev/null); dnc=$?
+fa=$(awk 'NF{n++}END{print n+0}' "$frdn")
+printf '%s\n' "$dno" | grep -q '^Verdict: unknown' || { t30=0; printf '  (TEST-30 unmapped dev verdict: %s)\n' "$(printf '%s\n' "$dno" | grep '^Verdict:')"; }
+[ "$dnc" = "0" ] || t30=0
+[ "$fa" -gt "$fb" ] || { t30=0; printf '  (TEST-30 unmapped dev did not record friction: %s->%s)\n' "$fb" "$fa"; }
+
+# (6) docs: root README documents `./harness dev` + validation + degraded/
+#     non-blocking, and introduces NO validate/check alias (AC1/AC3/AC4).
+#     .harness/README.md lists `dev` and defers `boot` to #6.
+for tok in "./harness dev" "./harness verify" "npm run typecheck" "degraded" "non-blocking"; do
 	grep -qF -- "$tok" "$ROOT_RD" || t30=0
 done
 grep -q 'npm run validate' "$ROOT_RD" && t30=0
 grep -q 'npm run check' "$ROOT_RD" && t30=0
-
-# (3) .harness/README.md names the dev inner loop and defers boot to #6 (D2, D3).
 grep -qF 'npm run dev' "$HARN_RD" || t30=0
+grep -qF -- '| `dev`' "$HARN_RD" || t30=0
 grep -Eq 'boot.*#6|#6.*boot' "$HARN_RD" || t30=0
 
-# (4) contract.yml wiring is UNCHANGED: boot.maps_to null; verify.maps_to
-#     "npm run typecheck" (exactly one occurrence) -> no drift; #6 still owns boot.
-boot_maps=$(awk '/^  [^ ].*:[ \t]*$/&&/^  /&&!/^    /{h=$0;sub(/^  /,"",h);sub(/:.*/,"",h);gsub(/"/,"",h);cur=h} cur=="boot"&&/^    maps_to:/{v=$0;sub(/^    maps_to:[ \t]*/,"",v);print v;exit}' "$CONTRACT")
-[ "$boot_maps" = "null" ] || t30=0
-[ "$(grep -c '    maps_to: "npm run typecheck"' "$CONTRACT")" = "1" ] || t30=0
-
-# (5) friction closures stay truthful (D4): a post-#5 boot closure names #6 and
-#     the lint/test/build closures are re-pointed off #5 (deferral marker).
+# (7) friction closure (T6): a post-#5 `dev` friction entry records that the
+#     interactive-process gap is now handled by the mode: exec handoff / ./harness dev.
+grep '"verb": "dev"' "$SEED_FRICTION" | grep -q './harness dev' || t30=0
+grep '"verb": "dev"' "$SEED_FRICTION" | grep -q 'mode: exec' || t30=0
+# no-drift on the seeded boot/deferral closures (append-only integrity).
 grep -q 'Owned by #6' "$SEED_FRICTION" || t30=0
 [ "$(grep -c 'Deferred beyond #5' "$SEED_FRICTION")" -ge 3 ] || t30=0
 
-# (6) `./harness verify` runs non-fail + exit 0 = validation "passes" (D3).
+# (8) `./harness verify` runs non-fail + exit 0 = validation "passes" (D5).
 #     Node/typecheck-gated and isolated; NEVER runs `npm run dev`.
 if [ -n "$NODE" ] && [ "$TC_OK" = "1" ]; then
 	fr=$(new_friction); ev=$(new_evdir)
 	vv=$(HARNESS_FRICTION="$fr" HARNESS_EVIDENCE_DIR="$ev" "$H" verify --json | jget verdict)
 	HARNESS_FRICTION="$fr" HARNESS_EVIDENCE_DIR="$ev" "$H" verify >/dev/null 2>&1; vc=$?
 	{ [ "$vv" != "fail" ] && [ "$vv" != "__ERR__" ] && [ "$vc" = "0" ]; } || t30=0
-	[ "$t30" = "1" ] && ok "TEST-30 #5 dev+validation wired honestly (verify=$vv non-fail exit $vc; no drift)" || no "TEST-30 #5 dev+validation (verify=$vv exit $vc t30=$t30)"
+	[ "$t30" = "1" ] && ok "TEST-30 #5 dev invokable via ./harness dev (print='$dpr'); verify=$vv non-fail exit $vc; boot null; no drift" || no "TEST-30 #5 dev invokable + validation (verify=$vv exit $vc t30=$t30)"
 else
-	[ "$t30" = "1" ] && ok "TEST-30 #5 dev+validation static assertions (verify exec skipped: node/typecheck unavailable)" || no "TEST-30 #5 dev+validation static assertions (t30=$t30)"
+	[ "$t30" = "1" ] && ok "TEST-30 #5 dev invokable via ./harness dev (print='$dpr'); verify exec skipped: node/typecheck unavailable" || no "TEST-30 #5 dev invokable + validation static assertions (t30=$t30)"
+fi
+
+# (9, optional) guarded exec probe: prove `./harness dev` genuinely starts the
+#     watch via process handoff. Hard-bounded by timeout/gtimeout so it can never
+#     hang; skipped loudly when no timeout tool (or node/typecheck) is available.
+TMO=""
+command -v timeout  >/dev/null 2>&1 && TMO="timeout"
+command -v gtimeout >/dev/null 2>&1 && TMO="gtimeout"
+if [ -n "$TMO" ] && [ -n "$NODE" ] && [ "$TC_OK" = "1" ]; then
+	probe=$( ( cd "$REPO" && "$TMO" 3 "$H" dev ) 2>&1 ); pc=$?
+	{ [ "$pc" = "124" ] || printf '%s' "$probe" | grep -q 'Watching for file changes'; } \
+		&& ok "TEST-30b guarded exec probe: ./harness dev started the watch, killed by ${TMO} (exit $pc)" \
+		|| no "TEST-30b guarded exec probe (exit=$pc, no watch banner observed)"
+else
+	skip "TEST-30b guarded exec probe (no timeout tool or node/typecheck unavailable)"
 fi
 
 # ===========================================================================

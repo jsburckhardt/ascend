@@ -60,17 +60,25 @@ calling a wrapped command directly.
 ### Start the local development environment
 
 ```bash
-npm run dev
+./harness dev           # preferred — single operating surface
+npm run dev             # the underlying script that ./harness dev execs
 ```
 
-`npm run dev` runs `tsc --noEmit --watch` — the Prototype-0 development inner
-loop that gives continuous TypeScript typecheck feedback as you edit `src/`.
-Leave it running; press Ctrl-C to stop.
+`./harness dev` starts the local development environment through the harness. It
+is an **interactive handoff**: the harness `exec`s `npm run dev` (which runs
+`tsc --noEmit --watch`) — the Prototype-0 development inner loop that gives
+continuous TypeScript typecheck feedback as you edit `src/`. Because it hands off
+the process, it emits **no verdict** and writes no evidence; leave it running and
+press Ctrl-C to stop. To see what it would run without starting the watch, use
+`./harness dev --print` (prints `npm run dev`) or `./harness dev --json` (a JSON
+handoff descriptor). See
+[ADR-0004](project/architecture/ADR/ADR-0004-interactive-handoff-verbs.md) for
+the interactive/handoff verb (`mode: exec`) behavior.
 
-> **`./harness boot` currently reports `unknown`** (there is no app to serve yet).
-> Wrapping the interactive dev/serve process through the harness is owned by
-> **issue #6** (shell + health). Until then, start the development environment by
-> running `npm run dev` directly.
+> **`./harness boot` currently reports `unknown`** (there is no app to serve
+> yet). Wrapping the real **app-serve + health** boot through the harness is
+> owned by **issue #6** (shell + health); it is a distinct concern from the dev
+> inner loop above, which is invokable today as `./harness dev`.
 
 ### Validate the codebase
 

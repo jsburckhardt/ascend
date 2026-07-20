@@ -124,9 +124,9 @@ bootstrap:
     - must ask user to confirm or customize proposed verification commands
     - must not set up CI/CD pipelines or infrastructure
     - must not make feature-level decisions
-rpiv:
-  file: .github/agents/rpiv.agent.md
-  purpose: Coordinate the full RPIV pipeline for a GitHub issue by dispatching Research, Plan, Implement, and Verify stages in order.
+ship:
+  file: .github/agents/ship.agent.md
+  purpose: Ship a GitHub issue end-to-end by coordinating the full RPIV pipeline (Research, Plan, Implement, Verify) in order, then obtaining an independent local-code-reviewer verdict, acting on it, and finalizing by syncing the base branch, pushing, and closing the pull request.
   tools:
     - subagent dispatch
     - codebase exploration and reading
@@ -145,6 +145,11 @@ rpiv:
     - must execute Research, Plan, Implement, and Verify in strict order
     - must delegate stage work to rpiv-research, rpiv-planner, rpiv-implementer, and rpiv-verifier
     - must validate each stage artifact before proceeding
+    - must dispatch local-code-reviewer after Verify and act on its verdict
+    - must route REQUEST_CHANGES findings to rpiv-planner or rpiv-implementer by complexity, then re-verify and re-review
+    - must not close the pull request until the review verdict is APPROVE or a non-blocking COMMENT
+    - must finalize by syncing the base branch, resolving conflicts via rpiv-implementer, pushing, and closing the PR with gh
+    - must not force-push, use --no-verify, or push directly to the base branch
     - must stop with a pipeline error when a stage fails
 rpiv-research:
   file: .github/agents/rpiv-research.agent.md

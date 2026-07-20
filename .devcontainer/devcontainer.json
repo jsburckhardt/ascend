@@ -64,10 +64,10 @@
         "UV_LINK_MODE": "copy",
         "UV_PROJECT_ENVIRONMENT": "/home/vscode/.venv",
         "HOST_PROJECT_PATH": "${localWorkspaceFolder}",
-        "COPILOT_OTEL_ENABLED": "${localEnv:COPILOT_OTEL_ENABLED}",
-        "COPILOT_OTEL_EXPORTER_TYPE": "${localEnv:COPILOT_OTEL_EXPORTER_TYPE}",
+        "COPILOT_OTEL_ENABLED": "true",
+        "COPILOT_OTEL_EXPORTER_TYPE": "otlp-http",
         "OTEL_EXPORTER_OTLP_ENDPOINT": "http://host.docker.internal:4318",
-        "OTEL_SERVICE_NAME": "${localEnv:OTEL_SERVICE_NAME}",
+        "OTEL_SERVICE_NAME": "github-copilot",
         "GIT_PAGER": "",
         "GH_PAGER": ""
     },

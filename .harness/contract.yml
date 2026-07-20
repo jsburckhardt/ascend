@@ -9,6 +9,10 @@
 #   native       -> harness-native behaviour (no wrapped project command)
 #   null         -> no backing command exists yet; verdict is `unknown` and a
 #                   friction entry answering the KEY_QUESTION is recorded (R4)
+#
+# verify.aggregate lists the member verbs whose verdicts are folded into the
+# `verify` verdict (CORE-COMPONENT-0003 R6). The `verify` verdict is derived at
+# runtime from its own maps_to (the `typecheck` check) plus these members.
 version: 1
 entrypoint: ./harness
 verbs:
@@ -43,6 +47,7 @@ verbs:
   verify:
     maps_to: "npm run typecheck"
     json: true
+    aggregate: [lint, test, build, doctor]
     description: "Aggregate static verification gate (wraps npm run typecheck)"
   status:
     maps_to: native

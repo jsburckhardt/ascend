@@ -8,6 +8,12 @@ by `rpiv-verifier` during Verify. All harness runs assume `npm install` has been
 
 **Priority:** High = release-gating; Medium = important; Low = nice-to-have.
 
+> **Review Cycle 1 (2026-07-20).** Tests **TEST-18…TEST-24** were added to cover the review
+> findings F-01…F-05, and **TEST-25** requires a durable executable regression suite
+> (`tests/harness/run.sh`, CC-0003 R16) that runs every case below and exits non-zero on any
+> failure. TEST-05 and TEST-07 were amended for the `doctor` aggregate member and the
+> data-driven `clean` mapping.
+
 ---
 
 ## Test TEST-01: Contract file conforms to the CORE-COMPONENT-0003 schema
@@ -108,8 +114,8 @@ YAML parses; all assertions pass; no build-system/new-tooling command present.
 1. Run `./harness verify --json`; parse JSON.
 2. Assert required keys: `harness_version`, `verb` (`verify`), `verdict` (`degraded`),
    `timestamp`, `checks` (array), `evidence` (path).
-3. Assert `checks` includes a `typecheck` check whose `verdict` is `pass` and includes
-   entries for `test`/`lint`/`build` with `verdict` `unknown`.
+3. Assert `checks` includes a `typecheck` check whose `verdict` is `pass`, entries for
+   `lint`/`test`/`build` with `verdict` `unknown`, and a `doctor` member check (CC-0003 R6).
 4. Assert the `evidence` path exists on disk.
 
 ### Expected Result
@@ -155,6 +161,8 @@ All assertions pass; schema matches CORE-COMPONENT-0003; exit 0.
 - Verdict `degraded`, exit 0.
 - `node_modules` is NOT removed.
 - A friction entry records the missing project `clean` command.
+- When `clean.maps_to` is set to a command, `clean` wraps it instead of the native prune
+  (covered in depth by TEST-18, CC-0003 R8).
 
 ---
 
@@ -345,3 +353,179 @@ CORE-COMPONENT-0003 R13.
 - `./harness orient` exits 0.
 - `./harness verify --json` returns valid JSON with a non-`fail` verdict (`degraded`) and
   exits 0, so the skill's harness branch behaves as designed.
+
+---
+
+## Test TEST-18: Contract-driven rewiring works by data alone (no code change)
+
+- **Type:** Contract / Integration
+- **Task:** T10, T11
+- **Priority:** High
+
+### Setup
+- Copy `.harness/contract.yml` and `./harness` to a scratch workspace (or snapshot the
+  `./harness` hash) so behavior is exercised without editing the tracked harness.
+
+### Steps
+1. With the baseline contract, run `./harness verify --json`; assert overall `degraded`.
+2. Patch the contract copy so `lint`/`test`/`build` `maps_to` are a trivially-passing command
+   (e.g. `true`) with `doctor` healthy; re-run `verify --json` WITHOUT editing `./harness`.
+3. Patch the contract copy so `clean.maps_to` is a harmless command (e.g. `sh -c 'echo cleaned'`
+   or `true`); run `./harness clean`.
+4. Hash `./harness` before and after the whole exercise.
+
+### Expected Result
+- Step 2 yields overall `verdict: pass` purely from data (aggregate reaches `pass`).
+- Step 3 shows `clean` wrapping the mapped command (verdict `pass`) instead of the native
+  prune.
+- `./harness` is byte-identical throughout (no code change required to rewire).
+
+---
+
+## Test TEST-19: `verify` aggregate verdict truth table
+
+- **Type:** Unit / Integration
+- **Task:** T11
+- **Priority:** High
+
+### Setup
+- Ability to force member verdicts via a temp contract copy (`maps_to: true` ⇒ pass,
+  `maps_to: false` ⇒ fail, `maps_to: null` ⇒ unknown) and a `doctor` stub for its verdict.
+
+### Steps
+1. Any member `fail` (e.g. `test.maps_to: false`) ⇒ run `verify`; assert overall `fail`,
+   exit non-zero.
+2. All members `pass` ⇒ assert overall `pass`, exit 0.
+3. All members `unknown` (all `maps_to: null`, typecheck excluded/also unknown) ⇒ assert
+   overall `unknown`, exit 0.
+4. Mix of `pass` + `unknown`, no `fail` ⇒ assert overall `degraded`, exit 0.
+5. `doctor` `degraded` with other members `pass` ⇒ assert overall `degraded` (never `fail`).
+
+### Expected Result
+Every case matches the fixed rule (any fail⇒fail; all pass⇒pass; all unknown⇒unknown; else
+degraded); exit codes follow the R3 contract; member verdicts appear in `checks[]`.
+
+---
+
+## Test TEST-20: Every human verb emits exactly one `Verdict:` line
+
+- **Type:** Integration
+- **Task:** T12
+- **Priority:** High
+
+### Steps
+1. For each verb (`help`, `orient`, `doctor`, `lint`, `test`, `build`, `boot`, `verify`,
+   `status`, `clean`, `friction add`, `friction list`), run the human (non-`--json`) form.
+2. Count lines matching `^Verdict:` in each verb's output.
+
+### Expected Result
+- Exactly one `Verdict:` line per verb (no zero, no duplicates).
+- `help` and `friction list` each print `Verdict: pass`.
+
+---
+
+## Test TEST-21: `doctor` validates the full supported Node range (boundaries)
+
+- **Type:** Integration
+- **Task:** T13
+- **Priority:** High
+
+### Setup
+- A `node` shim earlier on `PATH` that reports a chosen major version (21, 22, 23) for the
+  version probe; `node_modules` present.
+
+### Steps
+1. With the shim reporting major `22`, run `./harness doctor` / `--json`.
+2. With the shim reporting major `21`, re-run.
+3. With the shim reporting major `23`, re-run.
+
+### Expected Result
+- Major `22` → node check ok, verdict `pass`, exit 0.
+- Major `21` → verdict `degraded` (below range), friction recorded, exit 0.
+- Major `23` → verdict `degraded` (above range), friction recorded, exit 0.
+- `doctor` never reports `pass` for a major outside `22`.
+
+---
+
+## Test TEST-22: Evidence is collision-safe and written atomically
+
+- **Type:** Integration
+- **Task:** T14
+- **Priority:** High
+
+### Setup
+- Empty `.harness/evidence/` (except `.gitkeep`).
+
+### Steps
+1. Run `./harness verify` many times in a tight loop within the same wall-clock second
+   (e.g. 20 iterations).
+2. Count the resulting evidence files.
+3. Parse each evidence file as complete JSON.
+
+### Expected Result
+- One distinct evidence file per run (e.g. 20 files); no run overwrites another.
+- Every evidence file parses as complete, non-truncated JSON (atomic write).
+
+---
+
+## Test TEST-23: Required-persistence failure yields `fail`
+
+- **Type:** Integration / Negative
+- **Task:** T14
+- **Priority:** High
+
+### Setup
+- A way to make the evidence directory/file unwritable and the friction path unwritable
+  (e.g. `chmod`), reverted after the test.
+
+### Steps
+1. Make `.harness/evidence/` unwritable; run `./harness verify`; capture verdict + exit code.
+2. Make `.harness/friction.jsonl` unwritable; run `./harness friction add --verb x ...`;
+   capture verdict + exit code.
+3. Restore permissions.
+
+### Expected Result
+- `verify` returns `fail` and exits non-zero when the required evidence cannot be persisted
+  (never `degraded`/`pass`).
+- `friction add` returns `fail` and exits non-zero when the append cannot be persisted.
+
+---
+
+## Test TEST-24: Non-GNU portability of JSON escaping
+
+- **Type:** Portability
+- **Task:** T15
+- **Priority:** High
+
+### Setup
+- A non-GNU userland available (busybox `sh` + busybox `sed`/`awk`).
+
+### Steps
+1. Record a friction entry whose `inference`/`proof-gap` contain a newline, a tab, a double
+   quote, a backslash, and a control character.
+2. Under the busybox userland, run `./harness friction list --json` and `./harness verify --json`.
+3. Parse the outputs as JSON.
+
+### Expected Result
+- All JSON parses; quotes, backslashes, tabs, newlines, and control characters are correctly
+  escaped.
+- No GNU-only sed/awk construct is exercised; output is identical in intent to the GNU path.
+
+---
+
+## Test TEST-25: Durable executable regression suite runs green and clean
+
+- **Type:** Regression
+- **Task:** T16
+- **Priority:** High
+
+### Steps
+1. Run `tests/harness/run.sh`; capture the summary and exit code.
+2. Run `git status --porcelain` afterwards.
+3. Inject a temporary regression (e.g. force `verify` to `pass` incorrectly) and re-run the
+   suite; then revert.
+
+### Expected Result
+- The suite exercises TEST-01…TEST-24 and exits 0 on the conformant harness.
+- The working tree is clean afterwards (no leftover scratch/evidence/contract/stub files).
+- The suite exits non-zero when a regression is present (step 3), proving it is a real gate.

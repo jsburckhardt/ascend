@@ -3,8 +3,17 @@
 Implements the repo-local engineering harness (`./harness`) per **ADR-0003** and
 **CORE-COMPONENT-0003**, generated to the `harness-cli-it` agent's
 `REQUIRED_OUTPUTS` / `REQUIRED_VERBS` / `VERDICTS` / `JSON_VERBS` / `KEY_QUESTION`
-contract. All nine tasks (T1–T9) are complete and every test in
-[`../plan/03-test-plan.md`](../plan/03-test-plan.md) (TEST-01…TEST-17) passes.
+contract. Tasks T1–T9 (initial delivery) and **T10–T16 (Review Cycle 1
+remediation)** are complete; every test in
+[`../plan/03-test-plan.md`](../plan/03-test-plan.md) (TEST-01…TEST-25) passes via
+the durable suite `tests/harness/run.sh`.
+
+> **Review Cycle 1 (2026-07-20).** Independent review returned REQUEST_CHANGES
+> (F-01 blocking + F-02…F-05 major). All five findings are resolved; see the
+> [Review Cycle 1 remediation](#review-cycle-1-remediation-f-01f-05--r16) section
+> below for the data-driven dispatch/aggregate design, the aggregate truth table,
+> evidence-reliability, POSIX escaping, Node-range handling, and how to run the
+> regression suite.
 
 ## What was built
 
@@ -161,3 +170,138 @@ altered.
 - No ADR/core-component deviation was required; implementation stayed within
   ADR-0003 / CORE-COMPONENT-0003 boundaries.
 - Not committed here — committing/PR is the Verify stage's responsibility.
+
+---
+
+## Review Cycle 1 remediation (F-01…F-05 + R16)
+
+Files changed this cycle: `harness` (rewritten within ADR/CC boundaries),
+`.harness/contract.yml` (added `verify.aggregate`), and a new durable suite
+`tests/harness/run.sh`. No agent surfaces, VCS policy, or the wrapped-typecheck
+mapping changed. `git diff` touches no `AGENTS.md` / `.github/agents/*` file.
+
+### F-01 — Data-driven dispatch & aggregate (blocking, R6/R8)
+
+- **No hard-coded verb→command wiring.** Every executed command is resolved from
+  `.harness/contract.yml` `maps_to` at runtime via `get_maps_to <verb>` and run
+  through `sh -c "$maps"`. The previous `_maps="npm run typecheck"` fallback and
+  the always-`degraded` aggregate are gone. `grep -E 'npm|tsc' harness` now only
+  matches comments, help text, and the `typecheck` *check name* — never a
+  dispatched command string. The `case "$_verb"` block is retained solely as
+  **structural** name→handler routing (permitted by R8).
+- **`clean` honors `clean.maps_to`.** `native` → prune only harness-owned
+  evidence (`degraded`); a command → wrap it (`pass`/`fail`); `null` → `unknown`
+  + friction. Proven by TEST-18 (a temp contract with `clean.maps_to: "true"`
+  makes `clean` return `pass` with **no** `./harness` edit).
+- **Data-driven aggregate.** `verify` builds its member set from data: the
+  `typecheck` check = verify's own `maps_to`, plus every verb in
+  `verify.aggregate` (`[lint, test, build, doctor]`). Each member verdict is
+  resolved from the contract at runtime (`resolve_member`); `doctor` is the one
+  native member (via `compute_doctor`, `pass`/`degraded` only). Members appear in
+  `checks[]` including `doctor`. Baseline stays `degraded`; once #5 wires
+  `lint`/`test`/`build` `maps_to` and doctor is healthy, the **same** code yields
+  `pass` (TEST-18 proves this via a temp contract, `./harness` byte-identical).
+
+#### Aggregate truth table (`derive_overall`, evaluated in order — R6)
+
+| # | Member verdicts (typecheck + aggregate) | Overall | Exit |
+|---|------------------------------------------|---------|------|
+| 1 | any member `fail` | `fail` | 1 |
+| 2 | else all `pass` | `pass` | 0 |
+| 3 | else all `unknown` | `unknown` | 0 |
+| 4 | else (mix, no `fail`) | `degraded` | 0 |
+
+`doctor` `degraded` with all others `pass` ⇒ `degraded` (never `fail`) — rule 4.
+All five rows are asserted by TEST-19.
+
+### F-02 — One `Verdict:` line per human verb (R2)
+
+Every human/default verb now prints exactly one terminal line matching
+`^Verdict: <value>` (verified by TEST-20 counting `grep -c '^Verdict:'` = 1).
+`help` and `friction list` print `Verdict: pass`; the old aligned
+`Verdict        : x` and inline `... Verdict: x (exit 0)` forms were normalised;
+the help "Verdicts:" vocabulary line was renamed to "Vocabulary:" to avoid a
+false match. `--json` keeps the `verdict` key.
+
+### F-03 — Full Node range in `doctor` (R15)
+
+`doctor` now requires the Node major to **equal** the supported major derived
+from `.nvmrc` (`22`), which matches `engines.node` `>=22 <23`. Both `<22` and
+`>=23` are `degraded` (with friction), never `pass`. `node_major` parses
+`node --version`, making the boundary testable with a `node` shim. TEST-21
+asserts 21→`degraded`, 22→`pass`, 23→`degraded` (all exit 0).
+
+### F-04 — Reliable, collision-safe, atomic persistence (R14)
+
+- **Collision-safe names:** `verify-<UTCstamp>-<pid>-<randhex>.json`
+  (e.g. `verify-20260720T085041Z-82802-65859913.json`). 20 same-second runs
+  produce 20 distinct files (TEST-22).
+- **Atomic writes:** `persist_atomic` writes a temp file in the target dir then
+  `mv`-renames into place — no partial/truncated record is ever observable; no
+  `.tmp-*` leftovers.
+- **Checked ops:** `mkdir`, evidence write, and friction append are all checked.
+  A **required** record that cannot be stored (verify evidence, a `friction add`
+  append, or an R4 auto-friction entry) returns `fail` and exits non-zero via
+  `persist_fail` — never a masked `pass`/`degraded`/`unknown` (TEST-23).
+  `ensure_friction` dedupe means the healthy happy path attempts no write and so
+  never spuriously fails.
+
+### F-05 — POSIX-only JSON escaping (R12)
+
+`json_escape` is a POSIX `awk` routine (no GNU-only `:a;N;$!ba` / `\n`-regex sed).
+It builds a byte→code table with `sprintf("%c",i)` under `LC_ALL=C` and encodes
+`"`, `\`, backspace, tab, newline, form-feed, carriage-return, and any other
+control char as `\uXXXX`; non-ASCII bytes pass through as valid UTF-8.
+**Injection-safe:** untrusted friction input is passed to `awk` as *data* through
+the environment (`JE_INPUT`), never via `-v` or code interpolation. Validated on
+a non-GNU userland (dash + **mawk 1.3.4**) with multiline/tab/quote/backslash/
+control-char input; all `friction list --json` and `verify --json` output parses
+(TEST-24). `busybox` is unavailable offline in this sandbox, so mawk (a non-GNU
+awk) + dash serve as the non-GNU userland proof.
+
+### R16 — Durable regression suite
+
+`tests/harness/run.sh` (POSIX shell, executable) exercises TEST-01…TEST-24,
+prints a summary and a final `Verdict:` line, and exits non-zero on any failure.
+It is **isolated** — every verb run overrides `HARNESS_EVIDENCE_DIR` /
+`HARNESS_FRICTION` / `HARNESS_CONTRACT` / `HARNESS_ROOT` (new optional env knobs,
+unset in normal use) into a `mktemp -d` scratch dir, so it never mutates tracked
+files; permission changes are reverted and the scratch dir is trapped for
+cleanup. It uses only POSIX shell + the repo's own `node` for strict JSON
+validation (no new dependency; node-dependent checks `SKIP` if node is absent),
+and guards permission tests when run as root. It is **not** aliased as the
+project `test` verb (which stays honest `unknown`).
+
+Run it:
+
+```sh
+./tests/harness/run.sh        # -> "Totals: PASS=31 FAIL=0 SKIP=0" / "Verdict: pass"; exit 0
+```
+
+Injecting a regression (e.g. forcing `derive_overall` to `pass`) makes it exit 1
+with 6 failures; reverting restores green. After a run, `git status --porcelain`
+shows no leftover scratch/evidence/contract/stub files.
+
+### Cycle-1 validation evidence
+
+| Check | Result |
+|-------|--------|
+| Every verb human form: exactly one `^Verdict:` line | ✅ 12/12 |
+| Every machine verb `--json`: valid JSON + `verdict` | ✅ |
+| `./harness verify --json` baseline | `degraded`, exit 0, `doctor` in `checks[]`, collision-safe evidence |
+| Data-driven rewiring (temp contract, no script edit) | `verify`→`pass`, `clean` wraps cmd, `./harness` byte-identical |
+| Aggregate truth table (TEST-19) | all 5 rows ✅ |
+| Node range 21/22/23 (TEST-21) | degraded/pass/degraded ✅ |
+| Evidence collision + atomicity (TEST-22) | 20/20 distinct, 0 invalid, 0 temp leftovers |
+| Persistence failure ⇒ `fail` (TEST-23) | verify + friction add exit 1 ✅ |
+| Non-GNU portability (TEST-24) | dash + mawk, all JSON parses ✅ |
+| `npm run typecheck` | exit 0 |
+| 17 agent surfaces, one marker block each, unchanged | ✅ (no diff to `AGENTS.md`/`.github/agents/*`) |
+| Regression suite | PASS=31 FAIL=0; catches injected regression |
+
+**Environment limitation:** the npm registry is proxy-blocked in this sandbox;
+`node_modules/typescript` was reconstructed so `npm run typecheck` (wrapped by
+`verify`) runs and exits 0. `busybox` could not be installed offline, so the
+non-GNU portability proof uses dash + mawk (both non-GNU) instead of busybox.
+No ADR/CC deviation was required; all work stayed within the reconciled
+ADR-0003 §5–§7 / CORE-COMPONENT-0003 R2/R6/R8/R12/R14/R15/R16 boundaries.

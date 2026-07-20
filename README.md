@@ -48,11 +48,54 @@ Ascend uses Node.js and TypeScript (see
    npm install
    ```
 
-That is the only setup step. To verify the toolchain:
+That is the only setup step.
+
+## Development and validation
+
+Ascend's single, documented operating surface is the engineering harness
+(`./harness`, see [ADR-0003](project/architecture/ADR/ADR-0003-repo-local-engineering-harness.md)
+and [`.harness/README.md`](.harness/README.md)). Prefer `./harness <verb>` over
+calling a wrapped command directly.
+
+### Start the local development environment
 
 ```bash
-npm run typecheck
+./harness dev           # preferred — single operating surface
+npm run dev             # the underlying script that ./harness dev execs
 ```
+
+`./harness dev` starts the local development environment through the harness. It
+is an **interactive handoff**: the harness `exec`s `npm run dev` (which runs
+`tsc --noEmit --watch`) — the Prototype-0 development inner loop that gives
+continuous TypeScript typecheck feedback as you edit `src/`. Because it hands off
+the process, it emits **no verdict** and writes no evidence; leave it running and
+press Ctrl-C to stop. To see what it would run without starting the watch, use
+`./harness dev --print` (prints `npm run dev`) or `./harness dev --json` (a JSON
+handoff descriptor). See
+[ADR-0004](project/architecture/ADR/ADR-0004-interactive-handoff-verbs.md) for
+the interactive/handoff verb (`mode: exec`) behavior.
+
+> **`./harness boot` currently reports `unknown`** (there is no app to serve
+> yet). Wrapping the real **app-serve + health** boot through the harness is
+> owned by **issue #6** (shell + health); it is a distinct concern from the dev
+> inner loop above, which is invokable today as `./harness dev`.
+
+### Validate the codebase
+
+```bash
+./harness verify        # preferred — single operating surface
+npm run typecheck       # the underlying check that verify wraps
+```
+
+`./harness verify` wraps `npm run typecheck` and aggregates the other checks. On
+the Prototype-0 baseline it returns **`degraded`** and **exits `0`** — this is
+the expected, **non-blocking** "passing" state, not a failure. Per the harness
+exit-code contract (ADR-0003 / CORE-COMPONENT-0003) only a real `fail` exits
+non-zero; `pass`, `degraded`, and `unknown` all exit `0`. `verify` is `degraded`
+because `lint`, `test`, and `build` are intentionally still `unknown`: no linter,
+test runner, or build step is added ahead of a validated need (ADR-0002, avoid
+speculative frameworks). Run directly, `npm run typecheck` exits `0` on the
+baseline.
 
 ## Documentation
 

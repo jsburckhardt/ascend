@@ -8,13 +8,14 @@ This file is the single registry of all architectural decisions and core-compone
 |----|-------|--------|------|
 | ADR-0002 | Ascend baseline technology stack and repository layout | Accepted | 2026-07-14 |
 | ADR-0003 | Adopt a repo-local engineering harness (`./harness`) as the operating surface for humans and agents | Accepted | 2026-07-20 |
+| ADR-0004 | Interactive/handoff verbs in the engineering harness (`./harness dev`) | Accepted | 2026-07-20 |
 
 ## Core-Components
 
 | ID | Title | Status | Date |
 |----|-------|--------|------|
 | CORE-COMPONENT-0002 | Commit Standards | Adopted | 2026-05-05 |
-| CORE-COMPONENT-0003 | Engineering harness contract, verdicts, and evidence/friction conventions | Adopted | 2026-07-20 |
+| CORE-COMPONENT-0003 | Engineering harness contract, verdicts, and evidence/friction conventions | Adopted (amended 2026-07-20, R17) | 2026-07-20 |
 
 ## Decisions
 
@@ -59,3 +60,12 @@ Short, actionable statements derived from ADRs and core-components. More than on
 | 35 | Return `fail` when a required evidence or friction record cannot be persisted | CORE-COMPONENT-0003 | 2026-07-20 |
 | 36 | Validate the full supported Node range (exactly major 22); reject Node 23+ as unsupported | CORE-COMPONENT-0003 | 2026-07-20 |
 | 37 | Maintain a durable executable harness regression suite enforcing CORE-COMPONENT-0003 | CORE-COMPONENT-0003 | 2026-07-20 |
+| 38 | Add a `./harness dev` verb that execs `npm run dev` as a process handoff | ADR-0004 | 2026-07-20 |
+| 39 | Introduce interactive/handoff verbs that hand off the process instead of returning a verdict | ADR-0004 | 2026-07-20 |
+| 40 | Keep `boot` unmapped and reserved for issue #6 app-serve and health | ADR-0004 | 2026-07-20 |
+| 41 | Prohibit mapping long-running watch/serve commands into the run-to-completion capability handler | ADR-0004 | 2026-07-20 |
+| 42 | Declare interactive/handoff verbs with `mode: exec` in `.harness/contract.yml` as data | CORE-COMPONENT-0003 | 2026-07-20 |
+| 43 | Exempt `mode: exec` handoff verbs from the single-verdict, exit-code, and evidence rules | CORE-COMPONENT-0003 | 2026-07-20 |
+| 44 | Require handoff verbs to expose a non-exec `--print`/`--json` introspection form that exits 0 | CORE-COMPONENT-0003 | 2026-07-20 |
+| 45 | Exclude `mode: exec` verbs from run-to-completion enumeration in the harness regression suite | CORE-COMPONENT-0003 | 2026-07-20 |
+| 46 | Propagate the exec'd command's exit code for handoff verbs instead of a verdict mapping | CORE-COMPONENT-0003 | 2026-07-20 |

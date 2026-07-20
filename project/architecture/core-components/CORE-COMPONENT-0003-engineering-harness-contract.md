@@ -4,6 +4,10 @@
 
 Adopted
 
+> **Amended 2026-07-20 (issue #5, ADR-0004):** added **R17** (interactive/handoff
+> verbs), the `mode` contract attribute, and the associated verdict/evidence
+> exemption and regression-suite conventions.
+
 ## Purpose
 
 ADR-0003 adopts `./harness` as the mandatory operating surface for humans and agents.
@@ -145,12 +149,43 @@ editing `contract.yml` data).
   collision-safety and atomicity, required-persistence-failure `fail` behavior, and non-GNU
   portability. The suite MUST run non-interactively, leave the working tree clean, and exit
   non-zero on any failure.
+- **R17 — Interactive/handoff verbs (`mode: exec`).** A verb whose backing command is a
+  long-running, interactive process (e.g. a dev watch or a serve loop) MUST NOT be run to
+  completion by the run-once capability handler — doing so would block indefinitely and never
+  return a verdict. Such a verb MUST be declared in `.harness/contract.yml` with the attribute
+  **`mode: exec`** (data-driven, R8). Absence of `mode` — or `mode: capability` — selects the
+  default run-to-completion capability behavior, so every pre-existing verb is unchanged.
+  A `mode: exec` verb MUST:
+  1. **Hand off via `exec`.** When its `maps_to` is a command, it MUST replace the harness
+     process with the wrapped command (`cd "$ROOT" && exec sh -c "$maps_to"`), so the harness
+     never runs the command to completion and never blocks. The wrapped command's exit code
+     becomes the process exit code.
+  2. **Be verdict/evidence-exempt.** Because it hands off, it is EXEMPT from R2 (single
+     `Verdict:` verdict), from the R3 verdict→exit-code mapping (it propagates the exec'd
+     command's exit code instead), and from R5 (evidence). It MUST NOT be required to emit
+     `pass`/`fail`/`degraded`/`unknown`.
+  3. **Stay honest when unmapped.** When its `maps_to` is `null`/`native`/empty, it MUST behave
+     like an unmapped capability verb — verdict `unknown`, exit 0, and a friction entry
+     answering the KEY_QUESTION (R4/R9). It MUST NOT `exec` anything in that case.
+  4. **Expose a non-exec introspection form.** It MUST provide a way to resolve and report its
+     wrapped command and `mode` WITHOUT executing it, exiting 0: `--print` MUST print the
+     resolved command in human form, and `--json` MUST print a JSON descriptor containing at
+     least `harness_version`, `verb`, `timestamp`, `mode` (`"exec"`), `maps_to`, and
+     `interactive: true` (and, being verdict-exempt, MUST omit `verdict`). Neither form may
+     `exec`.
+  5. **Be excluded from run-to-completion enumeration.** The regression suite's
+     "one `Verdict:` line per verb" enumeration (R16) MUST NOT `exec` a `mode: exec` verb; it
+     MUST instead assert the verb's non-exec introspection form resolves the expected command
+     and exits without hanging.
+  `help`, `orient`, and `status` MUST represent handoff verbs honestly (listed as interactive,
+  emitting no verdict); the automatic verb count includes them.
 
 ### Interfaces
 
 - **CLI:** `./harness <verb> [--json] [args]` with verbs `help`, `orient`, `doctor`,
   `lint`, `test`, `build`, `boot`, `verify`, `status`, `clean`, `friction add`,
-  `friction list`.
+  `friction list`, and interactive/handoff verbs (e.g. `dev`) declared with `mode: exec`
+  (R17). A handoff verb also accepts `--print` (non-exec introspection).
 - **Contract file** `.harness/contract.yml` (data-driven declaration):
 
   ```yaml
@@ -162,6 +197,11 @@ editing `contract.yml` data).
       json: true
       aggregate: [lint, test, build, doctor]  # member verbs folded into the verify verdict (R6)
       description: "Aggregate static verification gate"
+    dev:
+      maps_to: "npm run dev"         # wrapped command handed off via exec
+      mode: exec                     # interactive/handoff verb (R17); default (absent) = capability
+      json: true
+      description: "Start the local dev inner loop (interactive handoff; execs npm run dev)"
     test:
       maps_to: null                  # null => verdict unknown, friction recorded
       json: true
@@ -234,6 +274,10 @@ editing `contract.yml` data).
 - The seed `.harness/friction.jsonl` created in Issue #4 contains one entry per verb that is
   `unknown`/`degraded` (`lint`, `test`, `build`, `boot`, `clean`, and `verify`'s degraded
   aggregate), each answering the KEY_QUESTION.
+- Interactive/handoff verbs (`mode: exec`, e.g. `dev`) hand off the process via `exec` and are
+  verdict/evidence-exempt (R17); they are invoked directly (`./harness dev`) and introspected
+  non-destructively via `--print`/`--json`. `boot` is NOT a handoff verb at this baseline: it
+  stays `unknown` and is owned by issue #6 (app-serve + health).
 
 ## Rationale
 
@@ -315,10 +359,12 @@ How is compliance with this component verified?
   behavior, and non-GNU portability; `./harness verify --json` must return a valid schema and
   a non-`fail` verdict; an agent-surface idempotency check is included (03-test-plan.md).
 - [x] Code review checklist — reviewers confirm: every verb returns one of the four verdicts
-  in both human (terminal `Verdict:` line) and `--json` form; exit-code contract honoured;
-  wrapped commands and aggregate members come only from `contract.yml` (no hard-coded wiring);
-  friction entries answer the KEY_QUESTION verbatim; each RPIV stage agent has exactly one
-  marker-delimited harness block and ship/non-stage agents have none; no reimplemented/faked commands.
+  in both human (terminal `Verdict:` line) and `--json` form (except `mode: exec` handoff verbs,
+  which are verdict/evidence-exempt per R17 and instead hand off via `exec` and expose a non-exec
+  `--print`/`--json` introspection form); exit-code contract honoured; wrapped commands and
+  aggregate members come only from `contract.yml` (no hard-coded wiring); friction entries answer
+  the KEY_QUESTION verbatim; each RPIV stage agent has exactly one marker-delimited harness block
+  and ship/non-stage agents have none; no reimplemented/faked commands.
 - [x] Test coverage requirements — every task in 02-task-breakdown.md that touches the
   contract, verdicts, JSON, evidence, friction, or agent surfaces carries explicit test
   coverage in 03-test-plan.md.
@@ -326,5 +372,6 @@ How is compliance with this component verified?
 ## Related ADRs
 
 - [ADR-0003-repo-local-engineering-harness](../ADR/ADR-0003-repo-local-engineering-harness.md)
+- [ADR-0004-interactive-handoff-verbs](../ADR/ADR-0004-interactive-handoff-verbs.md)
 - [ADR-0002-ascend-baseline-stack-and-layout](../ADR/ADR-0002-ascend-baseline-stack-and-layout.md)
 - [CORE-COMPONENT-0002-commit-standards](./CORE-COMPONENT-0002-commit-standards.md)

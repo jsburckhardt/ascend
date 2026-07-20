@@ -10,6 +10,14 @@
 #   null         -> no backing command exists yet; verdict is `unknown` and a
 #                   friction entry answering the KEY_QUESTION is recorded (R4)
 #
+# mode semantics (CORE-COMPONENT-0003 R17):
+#   absent / capability -> run-to-completion capability verb (default): the
+#                          wrapped command runs to a single pass/fail verdict.
+#   exec                -> interactive/handoff verb: the harness hands off via
+#                          `exec` (replacing its own process) and emits NO
+#                          verdict/evidence. Introspect without executing via
+#                          `--print` / `--json`.
+#
 # verify.aggregate lists the member verbs whose verdicts are folded into the
 # `verify` verdict (CORE-COMPONENT-0003 R6). The `verify` verdict is derived at
 # runtime from its own maps_to (the `typecheck` check) plus these members.
@@ -44,6 +52,11 @@ verbs:
     maps_to: null
     json: true
     description: "Boot/serve the app (no dev/serve command yet)"
+  dev:
+    maps_to: "npm run dev"
+    mode: exec
+    json: true
+    description: "Start the local dev inner loop (interactive handoff; execs npm run dev)"
   verify:
     maps_to: "npm run typecheck"
     json: true

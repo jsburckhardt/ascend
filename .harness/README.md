@@ -49,6 +49,7 @@ is not a verdict and exits `2`.
 | `test` | none (no runner/script/files) | `unknown` | yes |
 | `build` | none (`tsc` is `noEmit`; nothing emits) | `unknown` | yes |
 | `boot` | none (no dev/serve app yet) | `unknown` | yes |
+| `dev` | `npm run dev` (`tsc --noEmit --watch`) — interactive handoff (`mode: exec`) | n/a — hands off via `exec`, emits **no verdict** | yes (descriptor) / `--print` |
 | `verify` | `npm run typecheck` (aggregate) | `degraded` | yes |
 | `status` | contract + last evidence (native) | `pass` | yes |
 | `clean` | none (harness-owned evidence only) | `degraded` | yes |
@@ -82,10 +83,48 @@ failure as `pass`/`degraded`/`unknown` (R14). On a failure path the human output
 prints any diagnostics **before** the single terminal `Verdict: <value>` line, so
 the last line of output is always exactly the verdict.
 
+## Interactive/handoff verbs (`mode: exec`, R17)
+
+A verb whose backing command is a long-running, interactive process (a dev watch
+or a serve loop) cannot be run to completion by the run-once capability handler —
+it would block forever and never return a verdict. Such a verb is declared in
+[`.harness/contract.yml`](./contract.yml) with the attribute **`mode: exec`**
+(data-driven). Absence of `mode` — or `mode: capability` — selects the default
+run-to-completion behavior, so **every pre-existing verb is unchanged**.
+
+The only interactive/handoff verb today is **`dev`** (backing command
+`npm run dev` = `tsc --noEmit --watch`). A `mode: exec` verb:
+
+- **Hands off via `exec`.** `./harness dev` replaces the harness process with the
+  wrapped command (`cd "$ROOT" && exec sh -c "npm run dev"`), so the harness
+  never runs it to completion and never blocks. The wrapped command's exit code
+  becomes the process exit code.
+- **Is verdict/evidence-exempt.** Because it hands off, it emits **no**
+  `pass`/`fail`/`degraded`/`unknown` verdict and writes **no** evidence — it is
+  exempt from the single-verdict rule (R2), the verdict→exit-code mapping (R3, it
+  propagates the exec'd command's exit code instead), and the evidence rule (R5).
+- **Stays honest when unmapped.** If its `maps_to` were `null`/`native`, it would
+  behave like an unmapped capability verb — verdict `unknown`, exit `0`, and a
+  friction entry answering the KEY_QUESTION — and would `exec` nothing.
+- **Exposes a non-exec introspection form.** To resolve the wrapped command
+  without starting it:
+
+  ```sh
+  ./harness dev --print   # prints: npm run dev   (exit 0, no exec)
+  ./harness dev --json     # JSON descriptor (exit 0, no exec):
+  # {"harness_version":"1","verb":"dev","timestamp":"…","mode":"exec",
+  #  "maps_to":"npm run dev","interactive":true}   ← note: NO "verdict" key
+  ```
+
+`help` and `orient` list `dev` as an interactive handoff (`orient` also surfaces
+the resolved `dev` command); the automatic verb count includes it. The regression
+suite (`tests/harness/run.sh`) never `exec`s `dev`; it proves invocability via
+`dev --print`/`--json` (which cannot hang).
+
 ## `--json` contract
 
 Every machine-facing verb (`orient`, `doctor`, `lint`, `test`, `build`, `boot`,
-`verify`, `status`, `clean`, `friction list`) supports `--json` and emits a
+`dev`, `verify`, `status`, `clean`, `friction list`) supports `--json` and emits a
 stable schema. Required keys on every JSON response:
 
 ```json
@@ -97,6 +136,11 @@ evidence additionally include `evidence`. Consumers read `verdict` (and, for
 aggregates, `checks[].verdict`) rather than parsing human text. The
 `pr-review-complement` skill already relies on `./harness orient` and
 `./harness verify --json`.
+
+Interactive/handoff verbs (`mode: exec`, e.g. `dev`) are the one documented
+exception: their `--json` form is a non-exec **descriptor** that is
+verdict-exempt (R17) and therefore **omits** the `verdict` key, carrying
+`mode: "exec"`, `maps_to`, and `interactive: true` instead (see above).
 
 ```sh
 ./harness orient --json
@@ -137,6 +181,31 @@ Later stories (#5 dev/validation, #6 shell + health) move a verb from `unknown`
 to `pass` by editing the verb's `maps_to` in
 [`.harness/contract.yml`](./contract.yml) (data) — **not** by restructuring the
 harness — and then closing the corresponding friction entry.
+
+### Issue #5 status: dev inner loop and validation
+
+- **Development inner loop (invokable through the harness):** the Prototype-0
+  "start the local development environment" command is **`./harness dev`** — an
+  interactive/handoff verb (`mode: exec`) that `exec`s **`npm run dev`**
+  (`tsc --noEmit --watch` — continuous typecheck feedback). It is genuinely
+  invokable through the harness CLI (resolving review finding F-01 / ADR-0004);
+  introspect it without starting the watch via `./harness dev --print` or
+  `./harness dev --json`. See the root [`README.md`](../README.md) and
+  [ADR-0004](../project/architecture/ADR/ADR-0004-interactive-handoff-verbs.md).
+- **`boot` stays `unknown` (owned by #6):** `boot` is reserved for the real
+  **app-serve + health** endpoint, a distinct concern from the dev inner loop, so
+  `boot.maps_to` remains `null`. Wrapping app-serve (it may reuse this
+  `mode: exec` handoff pattern or choose readiness-probe + detach) is delivered by
+  **issue #6** (shell + health); #5 does **not** rewire `boot`.
+- **`verify` = `degraded` is the accepted baseline:** `./harness verify` wraps
+  `npm run typecheck` (which passes) and stays `degraded` because `lint`,
+  `test`, and `build` remain `unknown`. `degraded` exits `0` and is the honest,
+  non-blocking Prototype-0 validation state — #5 does **not** add a
+  linter/test-runner/build to force `pass` (ADR-0002, no speculative frameworks).
+- **No alias:** `npm run typecheck` is wrapped **only** by `verify`; it is never
+  aliased as `lint`, `test`, or `build`, and no redundant `validate`/`check`
+  entry point is introduced. `npm run dev` is the backing script for `./harness
+  dev` and is not aliased elsewhere.
 
 ## Agent workflow
 

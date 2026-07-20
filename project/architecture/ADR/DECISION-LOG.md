@@ -47,3 +47,15 @@ Short, actionable statements derived from ADRs and core-components. More than on
 | 23 | Declare verb-to-command mappings in `.harness/contract.yml` so verbs are wired by data | CORE-COMPONENT-0003 | 2026-07-20 |
 | 24 | Require exactly one marker-delimited, idempotent harness block per agent surface | CORE-COMPONENT-0003 | 2026-07-20 |
 | 25 | Commit `contract.yml`, `README.md`, and `friction.jsonl`; git-ignore `.harness/evidence/` run output | CORE-COMPONENT-0003 | 2026-07-20 |
+| 26 | Derive `verify`'s verdict by iterating contract-declared member checks, not a hard-coded list | ADR-0003, CORE-COMPONENT-0003 | 2026-07-20 |
+| 27 | Apply fixed verify aggregate rule: any fail⇒fail, all pass⇒pass, all unknown⇒unknown, else degraded | CORE-COMPONENT-0003 | 2026-07-20 |
+| 28 | Include `doctor` in the verify aggregate; it may degrade but never fail it | ADR-0003, CORE-COMPONENT-0003 | 2026-07-20 |
+| 29 | Read every wrapped command from `maps_to`; prohibit hard-coded verb-to-command wiring | CORE-COMPONENT-0003 | 2026-07-20 |
+| 30 | Wire `clean` via `clean.maps_to`; run a mapped clean command instead of ignoring it | CORE-COMPONENT-0003 | 2026-07-20 |
+| 31 | Emit exactly one terminal `Verdict:` line from every human verb form, including help and friction list | CORE-COMPONENT-0003 | 2026-07-20 |
+| 32 | Escape JSON with POSIX-only constructs; prohibit GNU-only sed idioms | CORE-COMPONENT-0003 | 2026-07-20 |
+| 33 | Test harness portability on a non-GNU userland with multiline and control-character inputs | CORE-COMPONENT-0003 | 2026-07-20 |
+| 34 | Generate collision-safe evidence filenames and write evidence atomically | CORE-COMPONENT-0003 | 2026-07-20 |
+| 35 | Return `fail` when a required evidence or friction record cannot be persisted | CORE-COMPONENT-0003 | 2026-07-20 |
+| 36 | Validate the full supported Node range (exactly major 22); reject Node 23+ as unsupported | CORE-COMPONENT-0003 | 2026-07-20 |
+| 37 | Maintain a durable executable harness regression suite enforcing CORE-COMPONENT-0003 | CORE-COMPONENT-0003 | 2026-07-20 |

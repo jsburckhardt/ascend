@@ -1,0 +1,73 @@
+# Engineering harness contract (CORE-COMPONENT-0003, ADR-0003)
+#
+# Data-driven declaration of the ./harness verb surface. Later stories move a
+# verb from `unknown` to `pass` by editing `maps_to` here (data), not by
+# restructuring the harness (CORE-COMPONENT-0003 R8).
+#
+# maps_to semantics:
+#   "<command>" -> the wrapped project command the verb runs
+#   native       -> harness-native behaviour (no wrapped project command)
+#   null         -> no backing command exists yet; verdict is `unknown` and a
+#                   friction entry answering the KEY_QUESTION is recorded (R4)
+#
+# verify.aggregate lists the member verbs whose verdicts are folded into the
+# `verify` verdict (CORE-COMPONENT-0003 R6). The `verify` verdict is derived at
+# runtime from its own maps_to (the `typecheck` check) plus these members.
+version: 1
+entrypoint: ./harness
+verbs:
+  help:
+    maps_to: native
+    json: false
+    description: "List supported harness verbs and usage"
+  orient:
+    maps_to: native
+    json: true
+    description: "Summarize repo stack, setup entry point, and harness contract"
+  doctor:
+    maps_to: native
+    json: true
+    description: "Check Node/toolchain environment health"
+  lint:
+    maps_to: null
+    json: true
+    description: "Run the linter (none configured yet)"
+  test:
+    maps_to: null
+    json: true
+    description: "Run the test suite (none present yet)"
+  build:
+    maps_to: null
+    json: true
+    description: "Build/emit artifacts (none; tsc is noEmit)"
+  boot:
+    maps_to: null
+    json: true
+    description: "Boot/serve the app (no dev/serve command yet)"
+  verify:
+    maps_to: "npm run typecheck"
+    json: true
+    aggregate: [lint, test, build, doctor]
+    description: "Aggregate static verification gate (wraps npm run typecheck)"
+  status:
+    maps_to: native
+    json: true
+    description: "Report contract summary and last evidence"
+  clean:
+    maps_to: native
+    json: true
+    description: "Remove harness-owned ephemeral artifacts (no project clean command)"
+  "friction add":
+    maps_to: native
+    json: false
+    description: "Append a friction entry answering the KEY_QUESTION"
+  "friction list":
+    maps_to: native
+    json: true
+    description: "List recorded friction entries"
+evidence:
+  dir: ".harness/evidence"
+  format: "json"
+friction:
+  path: ".harness/friction.jsonl"
+  key_question: "What did the agent have to infer that the harness should have proved?"

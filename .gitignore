@@ -2,3 +2,9 @@
 .trees/
 node_modules
 node_modules/
+
+# Engineering harness (CORE-COMPONENT-0003 R13):
+# evidence run output is ephemeral and git-ignored; the directory is retained
+# via the committed .gitkeep. contract.yml, README.md and friction.jsonl stay tracked.
+.harness/evidence/*
+!.harness/evidence/.gitkeep

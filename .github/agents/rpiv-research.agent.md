@@ -41,6 +41,12 @@ You MUST follow the Research Brief template defined by the RESEARCH_BRIEF format
 You SHOULD reference related existing ADRs and core-components in your research brief.
 You SHOULD identify risks, open questions, and unknowns in the research brief.
 You MAY consult external documentation or APIs for additional context.
+<!-- HARNESS:BEGIN -->
+You MUST use ./harness as the first-choice operating surface for supported commands once ./harness and .harness/contract.yml exist.
+You MUST prefer ./harness orient, doctor, lint, test, build, verify, status, and clean over the direct wrapped commands.
+You MAY call a direct project command only when the harness contract lacks the verb or the harness reports unknown or degraded.
+You MUST record the gap with ./harness friction add using the harness KEY_QUESTION whenever you bypass the harness for missing proof.
+<!-- HARNESS:END -->
 </instructions>
 
 <constants>
@@ -165,15 +171,3 @@ SET RESEARCH_COMPLETE := true (from "Agent Inference")
 <input>
 USER_INPUT is a GitHub issue number, URL, or reference to research.
 </input>
-
-<!-- HARNESS:BEGIN -->
-## Engineering harness (`./harness`) — required usage
-
-This repository has a single operating surface, `./harness` (ADR-0003,
-CORE-COMPONENT-0003, `.harness/contract.yml`). Agents MUST follow these rules:
-
-- Once ./harness and .harness/contract.yml exist, agents MUST use ./harness as the first-choice operating surface for supported commands.
-- Agents MUST prefer ./harness orient, ./harness doctor, ./harness lint, ./harness test, ./harness build, ./harness verify, ./harness status, and ./harness clean over direct wrapped commands.
-- Agents MAY call direct project commands only when the harness contract lacks the needed verb or the harness reports unknown or degraded.
-- Agents MUST record gaps with ./harness friction add using KEY_QUESTION ("What did the agent have to infer that the harness should have proved?") when bypassing the harness due to missing proof.
-<!-- HARNESS:END -->

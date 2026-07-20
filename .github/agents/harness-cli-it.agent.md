@@ -39,10 +39,17 @@ You MUST answer KEY_QUESTION in friction records.
 You MUST update AGENTS.md to require ./harness usage.
 You MUST update .github/agents/*.agent.md to use ./harness after the harness is configured.
 You MUST make agent definition updates idempotent and preserve existing agent behavior.
+You MUST inject the harness rules as one-directive-per-line MUST/MAY entries inside each surface's <instructions> block, delimited by the HARNESS markers, and never as trailing prose after a closing section tag.
 You MUST run ./harness verify before claiming completion.
 You SHOULD keep the harness implementation dependency-light.
 You SHOULD prefer portable shell or existing repo runtime tooling.
 You MAY add small helper files inside .harness when needed.
+<!-- HARNESS:BEGIN -->
+You MUST use ./harness as the first-choice operating surface for supported commands once ./harness and .harness/contract.yml exist.
+You MUST prefer ./harness orient, doctor, lint, test, build, verify, status, and clean over the direct wrapped commands.
+You MAY call a direct project command only when the harness contract lacks the verb or the harness reports unknown or degraded.
+You MUST record the gap with ./harness friction add using the harness KEY_QUESTION whenever you bypass the harness for missing proof.
+<!-- HARNESS:END -->
 </instructions>
 
 <constants>
@@ -57,10 +64,11 @@ AGENT_FILE_PATTERN: ".github/agents/*.agent.md"
 KEY_QUESTION: "What did the agent have to infer that the harness should have proved?"
 
 AGENT_HARNESS_RULES: TEXT<<
-- Once ./harness and .harness/contract.yml exist, agents MUST use ./harness as the first-choice operating surface for supported commands.
-- Agents MUST prefer ./harness orient, ./harness doctor, ./harness lint, ./harness test, ./harness build, ./harness verify, ./harness status, and ./harness clean over direct wrapped commands.
-- Agents MAY call direct project commands only when the harness contract lacks the needed verb or the harness reports unknown or degraded.
-- Agents MUST record gaps with ./harness friction add using KEY_QUESTION when bypassing the harness due to missing proof.
+Injected as one directive per line inside the target surface's <instructions> block, immediately before its </instructions> tag, delimited by the HARNESS markers so re-runs replace in place:
+- You MUST use ./harness as the first-choice operating surface for supported commands once ./harness and .harness/contract.yml exist.
+- You MUST prefer ./harness orient, doctor, lint, test, build, verify, status, and clean over the direct wrapped commands.
+- You MAY call a direct project command only when the harness contract lacks the verb or the harness reports unknown or degraded.
+- You MUST record the gap with ./harness friction add using the harness KEY_QUESTION whenever you bypass the harness for missing proof.
 >>
 
 REQUIRED_OUTPUTS: YAML<<
@@ -280,15 +288,3 @@ SET EVIDENCE_FILES := <FILES> (from "Agent Inference" using VERIFY_OUTPUT, EVIDE
 <input>
 USER_INPUT is the request to create, update, repair, or verify a repo-local engineering harness CLI.
 </input>
-
-<!-- HARNESS:BEGIN -->
-## Engineering harness (`./harness`) — required usage
-
-This repository has a single operating surface, `./harness` (ADR-0003,
-CORE-COMPONENT-0003, `.harness/contract.yml`). Agents MUST follow these rules:
-
-- Once ./harness and .harness/contract.yml exist, agents MUST use ./harness as the first-choice operating surface for supported commands.
-- Agents MUST prefer ./harness orient, ./harness doctor, ./harness lint, ./harness test, ./harness build, ./harness verify, ./harness status, and ./harness clean over direct wrapped commands.
-- Agents MAY call direct project commands only when the harness contract lacks the needed verb or the harness reports unknown or degraded.
-- Agents MUST record gaps with ./harness friction add using KEY_QUESTION ("What did the agent have to infer that the harness should have proved?") when bypassing the harness due to missing proof.
-<!-- HARNESS:END -->

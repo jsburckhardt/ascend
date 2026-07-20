@@ -46,6 +46,12 @@ You MUST NOT include secrets, credentials, or personal data in generated issue t
 You SHOULD propose acceptance criteria that cover security, accessibility, validation, error states, and data integrity when relevant, phrased as observable outcomes rather than implementation steps.
 You SHOULD identify edge cases based on patterns from previous issues without prescribing how to solve them.
 You MAY suggest labels based on the issue content.
+<!-- HARNESS:BEGIN -->
+You MUST use ./harness as the first-choice operating surface for supported commands once ./harness and .harness/contract.yml exist.
+You MUST prefer ./harness orient, doctor, lint, test, build, verify, status, and clean over the direct wrapped commands.
+You MAY call a direct project command only when the harness contract lacks the verb or the harness reports unknown or degraded.
+You MUST record the gap with ./harness friction add using the harness KEY_QUESTION whenever you bypass the harness for missing proof.
+<!-- HARNESS:END -->
 </instructions>
 
 <constants>
@@ -253,15 +259,3 @@ SET ISSUE_NUMBER := <NUMBER> (from "Agent Inference" using CREATE_OUTPUT)
 <input>
 USER_INPUT is a feature request description or area of the codebase to investigate for issue generation.
 </input>
-
-<!-- HARNESS:BEGIN -->
-## Engineering harness (`./harness`) — required usage
-
-This repository has a single operating surface, `./harness` (ADR-0003,
-CORE-COMPONENT-0003, `.harness/contract.yml`). Agents MUST follow these rules:
-
-- Once ./harness and .harness/contract.yml exist, agents MUST use ./harness as the first-choice operating surface for supported commands.
-- Agents MUST prefer ./harness orient, ./harness doctor, ./harness lint, ./harness test, ./harness build, ./harness verify, ./harness status, and ./harness clean over direct wrapped commands.
-- Agents MAY call direct project commands only when the harness contract lacks the needed verb or the harness reports unknown or degraded.
-- Agents MUST record gaps with ./harness friction add using KEY_QUESTION ("What did the agent have to infer that the harness should have proved?") when bypassing the harness due to missing proof.
-<!-- HARNESS:END -->

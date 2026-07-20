@@ -48,6 +48,12 @@ You MUST NOT skip user confirmation before writing any files.
 You SHOULD present an onboarding summary for user confirmation before writing files.
 You SHOULD identify risks, gaps, and open questions discovered during analysis.
 You MAY consult external documentation to clarify inferred tech stack choices.
+<!-- HARNESS:BEGIN -->
+You MUST use ./harness as the first-choice operating surface for supported commands once ./harness and .harness/contract.yml exist.
+You MUST prefer ./harness orient, doctor, lint, test, build, verify, status, and clean over the direct wrapped commands.
+You MAY call a direct project command only when the harness contract lacks the verb or the harness reports unknown or degraded.
+You MUST record the gap with ./harness friction add using the harness KEY_QUESTION whenever you bypass the harness for missing proof.
+<!-- HARNESS:END -->
 </instructions>
 
 <constants>
@@ -482,15 +488,3 @@ SET UPDATED_FILES := UPDATED_FILES + [LLM_TXT_PATH] (from "Agent Inference")
 <input>
 USER_INPUT is an optional description of the repository or any context the user wants to provide about the project. If omitted, the agent infers everything from the codebase.
 </input>
-
-<!-- HARNESS:BEGIN -->
-## Engineering harness (`./harness`) — required usage
-
-This repository has a single operating surface, `./harness` (ADR-0003,
-CORE-COMPONENT-0003, `.harness/contract.yml`). Agents MUST follow these rules:
-
-- Once ./harness and .harness/contract.yml exist, agents MUST use ./harness as the first-choice operating surface for supported commands.
-- Agents MUST prefer ./harness orient, ./harness doctor, ./harness lint, ./harness test, ./harness build, ./harness verify, ./harness status, and ./harness clean over direct wrapped commands.
-- Agents MAY call direct project commands only when the harness contract lacks the needed verb or the harness reports unknown or degraded.
-- Agents MUST record gaps with ./harness friction add using KEY_QUESTION ("What did the agent have to infer that the harness should have proved?") when bypassing the harness due to missing proof.
-<!-- HARNESS:END -->

@@ -49,6 +49,12 @@ You MUST NOT re-run or dispatch any RPIV pipeline stage; this agent is a standal
 You SHOULD corroborate findings by running the project's read-only verification commands from .github/soft-factory/verification.yml when it is present.
 You SHOULD keep every finding actionable with a concrete recommendation.
 You MAY consult ADR and core-component rationale and external documentation for additional context.
+<!-- HARNESS:BEGIN -->
+You MUST use ./harness as the first-choice operating surface for supported commands once ./harness and .harness/contract.yml exist.
+You MUST prefer ./harness orient, doctor, lint, test, build, verify, status, and clean over the direct wrapped commands.
+You MAY call a direct project command only when the harness contract lacks the verb or the harness reports unknown or degraded.
+You MUST record the gap with ./harness friction add using the harness KEY_QUESTION whenever you bypass the harness for missing proof.
+<!-- HARNESS:END -->
 </instructions>
 
 <constants>
@@ -297,15 +303,3 @@ SET REVIEW_COMPLETE := true (from "Agent Inference")
 USER_INPUT is the GitHub issue number (e.g., 42) that the rpiv-verifier has marked ready for review, and optionally the pull request URL or feature branch name.
 The reviewer runs after the Verify stage and reviews the branch that is currently checked out.
 </input>
-
-<!-- HARNESS:BEGIN -->
-## Engineering harness (`./harness`) — required usage
-
-This repository has a single operating surface, `./harness` (ADR-0003,
-CORE-COMPONENT-0003, `.harness/contract.yml`). Agents MUST follow these rules:
-
-- Once ./harness and .harness/contract.yml exist, agents MUST use ./harness as the first-choice operating surface for supported commands.
-- Agents MUST prefer ./harness orient, ./harness doctor, ./harness lint, ./harness test, ./harness build, ./harness verify, ./harness status, and ./harness clean over direct wrapped commands.
-- Agents MAY call direct project commands only when the harness contract lacks the needed verb or the harness reports unknown or degraded.
-- Agents MUST record gaps with ./harness friction add using KEY_QUESTION ("What did the agent have to infer that the harness should have proved?") when bypassing the harness due to missing proof.
-<!-- HARNESS:END -->

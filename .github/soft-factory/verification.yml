@@ -1,0 +1,13 @@
+# Canonical verification gate for the Soft Factory Verify stage.
+#
+# Routes verification through the single operating surface (`./harness`, ADR-0003
+# / CORE-COMPONENT-0003). The harness exit-code contract keeps `degraded` and
+# `unknown` non-blocking (exit 0) while a real failing wrapped command exits
+# non-zero, so the Verify stage is deterministic.
+#
+# In the Issue #4 baseline `./harness verify` returns `degraded` (typecheck
+# passes; test/lint/build are unknown) and exits 0.
+verification:
+  - name: harness-verify
+    command: "./harness verify"
+    description: "Aggregate static verification gate (wraps npm run typecheck); degraded is non-blocking."

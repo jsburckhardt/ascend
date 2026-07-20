@@ -1,0 +1,542 @@
+#!/bin/sh
+# harness - repo-local engineering harness CLI (ADR-0003, CORE-COMPONENT-0003)
+#
+# ./harness is the single, documented operating surface for humans and agents.
+# It WRAPS existing project commands (it never reimplements them or invents a
+# build system) and reports one verdict per verb: pass | fail | degraded | unknown.
+#
+# Exit-code contract (CORE-COMPONENT-0003 R3):
+#   fail    -> exit 1 (a real wrapped command failed)
+#   pass    -> exit 0
+#   degraded-> exit 0 (partially proven / aggregate with unknown sub-checks)
+#   unknown -> exit 0 (no backing command exists yet; not faked)
+# A usage error (bad/missing verb) is NOT a verdict and exits 2.
+#
+# Portable POSIX shell; adds no new runtime dependency (R12).
+
+set -u
+
+HARNESS_VERSION="1"
+KEY_QUESTION="What did the agent have to infer that the harness should have proved?"
+
+# Resolve the repo root from the script location so ./harness works from anywhere.
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+ROOT="$SCRIPT_DIR"
+HARNESS_DIR="$ROOT/.harness"
+CONTRACT="$HARNESS_DIR/contract.yml"
+EVIDENCE_DIR="$HARNESS_DIR/evidence"
+FRICTION_PATH="$HARNESS_DIR/friction.jsonl"
+
+REQUIRED_VERBS="help orient doctor lint test build boot verify status clean 'friction add' 'friction list'"
+
+# ---------------------------------------------------------------------------
+# Small utilities
+# ---------------------------------------------------------------------------
+
+now_iso() { date -u +%Y-%m-%dT%H:%M:%SZ; }
+now_stamp() { date -u +%Y%m%dT%H%M%SZ; }
+
+err() { printf '%s\n' "$*" >&2; }
+
+# JSON-escape a single string value (backslash, quote, tab, newline -> \n).
+json_escape() {
+	printf '%s' "$1" \
+		| sed -e 's/\\/\\\\/g' -e 's/"/\\"/g' -e 's/	/\\t/g' \
+		| sed ':a;N;$!ba;s/\n/\\n/g'
+}
+
+# ---------------------------------------------------------------------------
+# Contract reader (data-driven verbs; CORE-COMPONENT-0003 R8)
+# ---------------------------------------------------------------------------
+
+# get_maps_to <verb> -> prints the raw maps_to token for a verb in contract.yml
+# (e.g. `native`, `null`, or `npm run typecheck`). Empty if not found.
+get_maps_to() {
+	_verb="$1"
+	[ -f "$CONTRACT" ] || return 0
+	awk -v want="$_verb" '
+		/^verbs:[ \t]*$/ { inverbs = 1; next }
+		/^[^ ]/ { if ($0 !~ /^verbs:/) inverbs = 0 }
+		inverbs == 1 {
+			line = $0
+			# verb header: two leading spaces, not four, ending with a colon
+			if (line ~ /^  [^ ].*:[ \t]*$/ && line !~ /^    /) {
+				h = line
+				sub(/^  /, "", h)
+				sub(/:[ \t]*$/, "", h)
+				gsub(/"/, "", h)
+				cur = h
+				next
+			}
+			if (cur == want && line ~ /^    maps_to:/) {
+				v = line
+				sub(/^    maps_to:[ \t]*/, "", v)
+				gsub(/"/, "", v)
+				sub(/[ \t]*$/, "", v)
+				print v
+				exit
+			}
+		}
+	' "$CONTRACT"
+}
+
+# read_scalar <top-key> <sub-key> -> prints a nested scalar value from contract.yml
+read_scalar() {
+	_top="$1"; _sub="$2"
+	[ -f "$CONTRACT" ] || return 0
+	awk -v top="$_top" -v sub="$_sub" '
+		$0 ~ "^" top ":[ \t]*$" { intop = 1; next }
+		/^[^ ]/ { intop = 0 }
+		intop == 1 {
+			if ($0 ~ "^  " sub ":") {
+				v = $0
+				sub("^  " sub ":[ \t]*", "", v)
+				gsub(/"/, "", v)
+				sub(/[ \t]*$/, "", v)
+				print v
+				exit
+			}
+		}
+	' "$CONTRACT"
+}
+
+# Count declared verbs in the contract.
+count_verbs() {
+	[ -f "$CONTRACT" ] || { printf '0'; return; }
+	awk '
+		/^verbs:[ \t]*$/ { inverbs = 1; next }
+		/^[^ ]/ { if ($0 !~ /^verbs:/) inverbs = 0 }
+		inverbs == 1 && /^  [^ ].*:[ \t]*$/ && !/^    / { n++ }
+		END { printf "%d", n+0 }
+	' "$CONTRACT"
+}
+
+# ---------------------------------------------------------------------------
+# Friction subsystem (CORE-COMPONENT-0003 R4/R9)
+# ---------------------------------------------------------------------------
+
+# write_friction <verb> <inference> <proof_gap> <suggested_closure> [severity]
+write_friction() {
+	_fverb="$1"; _finf="$2"; _fgap="$3"; _fclose="$4"; _fsev="${5:-info}"
+	mkdir -p "$HARNESS_DIR"
+	printf '{"ts": "%s", "verb": "%s", "key_question": "%s", "inference": "%s", "proof_gap": "%s", "suggested_closure": "%s", "severity": "%s"}\n' \
+		"$(now_iso)" \
+		"$(json_escape "$_fverb")" \
+		"$(json_escape "$KEY_QUESTION")" \
+		"$(json_escape "$_finf")" \
+		"$(json_escape "$_fgap")" \
+		"$(json_escape "$_fclose")" \
+		"$(json_escape "$_fsev")" \
+		>> "$FRICTION_PATH"
+}
+
+# ensure_friction <verb> ... : append a friction entry only if one for <verb>
+# does not already exist (keeps the honest-gap record without log bloat).
+ensure_friction() {
+	_everb="$1"
+	if [ -f "$FRICTION_PATH" ] && grep -q "\"verb\": \"$_everb\"" "$FRICTION_PATH" 2>/dev/null; then
+		return 0
+	fi
+	write_friction "$@"
+}
+
+# ---------------------------------------------------------------------------
+# JSON output helpers
+# ---------------------------------------------------------------------------
+
+# json_response <verb> <verdict> [extra] : extra is a pre-formatted JSON
+# fragment beginning with a comma (e.g. ,"checks":[...]).
+json_response() {
+	printf '{"harness_version": "%s", "verb": "%s", "verdict": "%s", "timestamp": "%s"%s}\n' \
+		"$HARNESS_VERSION" "$1" "$2" "$(now_iso)" "${3:-}"
+}
+
+# finish <verdict> : apply the exit-code contract.
+finish() {
+	case "$1" in
+		fail) exit 1 ;;
+		*) exit 0 ;;
+	esac
+}
+
+# ---------------------------------------------------------------------------
+# Environment probes
+# ---------------------------------------------------------------------------
+
+node_present() { command -v node >/dev/null 2>&1; }
+node_major() { node -p 'process.versions.node.split(".")[0]' 2>/dev/null; }
+required_major() {
+	if [ -f "$ROOT/.nvmrc" ]; then
+		tr -dc '0-9' < "$ROOT/.nvmrc" | cut -c1-2
+	else
+		printf '22'
+	fi
+}
+modules_present() { [ -d "$ROOT/node_modules" ]; }
+
+# ---------------------------------------------------------------------------
+# Verbs
+# ---------------------------------------------------------------------------
+
+verb_help() {
+	cat <<EOF
+harness - repo-local engineering harness (single operating surface)
+
+Usage: ./harness <verb> [--json] [args]
+
+Verbs:
+  help              List supported harness verbs and usage
+  orient            Summarize repo stack, setup entry point, and contract
+  doctor            Check Node/toolchain environment health
+  lint              Run the linter (none configured yet -> unknown)
+  test              Run the test suite (none present yet -> unknown)
+  build             Build/emit artifacts (none; tsc is noEmit -> unknown)
+  boot              Boot/serve the app (no dev/serve command yet -> unknown)
+  verify            Aggregate static verification gate (wraps npm run typecheck)
+  status            Report contract summary and last evidence
+  clean             Remove harness-owned ephemeral artifacts (-> degraded)
+  friction add      Append a friction entry answering the KEY_QUESTION
+  friction list     List recorded friction entries
+
+Verdicts: pass | fail | degraded | unknown
+Exit codes: fail -> 1; pass/degraded/unknown -> 0 (only a real failure blocks).
+'unknown' and 'degraded' are honest, expected states while a backing command
+does not exist yet; each is recorded as friction answering the KEY_QUESTION:
+  "$KEY_QUESTION"
+
+Machine consumers: add --json to any verb except 'help'/'friction add'.
+Docs: .harness/README.md   Contract: .harness/contract.yml
+EOF
+	finish pass
+}
+
+verb_orient() {
+	_json="$1"
+	_vcount=$(count_verbs)
+	_verify_maps=$(get_maps_to verify)
+	if [ "$_json" = "1" ]; then
+		json_response orient pass ",\"stack\": \"TypeScript + Node.js 22 + npm\", \"setup_entrypoint\": \"npm install\", \"operating_surface\": \"./harness\", \"contract\": \".harness/contract.yml\", \"verbs\": $_vcount, \"verify_maps_to\": \"$(json_escape "$_verify_maps")\""
+	else
+		cat <<EOF
+Repository orientation
+======================
+Project        : ascend
+Stack          : TypeScript + Node.js 22 (LTS) + npm   (ADR-0002)
+Setup entry    : npm install   (single documented setup entry point)
+Operating face : ./harness     (prefer this over direct commands)
+Contract       : .harness/contract.yml ($_vcount verbs)
+verify wraps   : ${_verify_maps:-none}
+Evidence       : .harness/evidence/
+Friction       : .harness/friction.jsonl
+Verdict        : pass
+EOF
+	fi
+	finish pass
+}
+
+verb_doctor() {
+	_json="$1"
+	_reqmaj=$(required_major)
+	_verdict="pass"
+	_node_ok="true"; _node_reason=""
+	_mods_ok="true"; _mods_reason=""
+
+	if node_present; then
+		_maj=$(node_major)
+		if [ -n "$_maj" ] && [ "$_maj" -ge "$_reqmaj" ] 2>/dev/null; then
+			_node_ok="true"
+		else
+			_node_ok="false"; _node_reason="node major $_maj < required $_reqmaj"; _verdict="degraded"
+		fi
+	else
+		_node_ok="false"; _node_reason="node not found on PATH"; _verdict="degraded"
+	fi
+
+	if modules_present; then
+		_mods_ok="true"
+	else
+		_mods_ok="false"; _mods_reason="node_modules missing (run npm install)"; _verdict="degraded"
+	fi
+
+	if [ "$_verdict" = "degraded" ]; then
+		ensure_friction doctor \
+			"Environment health is degraded (${_node_reason}${_node_reason:+; }${_mods_reason}); the harness had to infer the expected toolchain state." \
+			"Node/toolchain readiness is not proven by a wrapped setup check; doctor infers it from .nvmrc/engines and node_modules presence." \
+			"Wire an explicit environment/setup proof (e.g. a 'boot'/setup command) in contract.yml when #5/#6 land."
+	fi
+
+	if [ "$_json" = "1" ]; then
+		json_response doctor "$_verdict" ",\"checks\": [{\"name\": \"node\", \"ok\": $_node_ok, \"required_major\": \"$_reqmaj\"}, {\"name\": \"node_modules\", \"ok\": $_mods_ok}], \"notes\": \"$(json_escape "${_node_reason}${_node_reason:+; }${_mods_reason}")\""
+	else
+		printf 'Environment doctor\n==================\n'
+		printf 'node present     : %s\n' "$(node_present && node --version || echo 'no')"
+		printf 'node major >= %s : %s\n' "$_reqmaj" "$_node_ok"
+		printf 'node_modules     : %s\n' "$_mods_ok"
+		[ -n "$_node_reason" ] && printf 'note             : %s\n' "$_node_reason"
+		[ -n "$_mods_reason" ] && printf 'note             : %s\n' "$_mods_reason"
+		printf 'Verdict          : %s\n' "$_verdict"
+	fi
+	finish "$_verdict"
+}
+
+# Generic capability verb for lint/test/build/boot. Reads maps_to from the
+# contract: null -> unknown (+friction); otherwise runs the wrapped command.
+verb_capability() {
+	_name="$1"; _json="$2"
+	_maps=$(get_maps_to "$_name")
+	case "$_maps" in
+		""|null|None)
+			_verdict="unknown"
+			_reason="no $_name command detected"
+			case "$_name" in
+				lint) _inf="There is no linter (no ESLint/Prettier); the lint verb returns unknown.";
+					_gap="No lint script/config exists; tsc --noEmit is a typecheck, not a linter, and is deliberately not aliased as lint." ;;
+				test) _inf="There is no test runner or test script; the test verb returns unknown.";
+					_gap="No 'npm test' script and no test files exist in the repo." ;;
+				build) _inf="There is no build/emit step; the build verb returns unknown.";
+					_gap="tsc is configured with noEmit; nothing emits build artifacts." ;;
+				boot) _inf="There is no dev/serve/boot command; the boot verb returns unknown.";
+					_gap="No dev server or start command exists; npm install is setup, not boot." ;;
+				*) _inf="No backing command exists for $_name; it returns unknown.";
+					_gap="No wrapped command is mapped for $_name in contract.yml." ;;
+			esac
+			ensure_friction "$_name" "$_inf" "$_gap" \
+				"Issue #5 adds dev/validation commands; wire the $_name verb's maps_to in contract.yml."
+			if [ "$_json" = "1" ]; then
+				json_response "$_name" unknown ",\"reason\": \"$(json_escape "$_reason")\", \"maps_to\": null"
+			else
+				printf '%s: unknown (%s)\n' "$_name" "$_reason"
+				printf 'Recorded as friction. Verdict: unknown (exit 0)\n'
+			fi
+			finish unknown
+			;;
+		*)
+			# A backing command exists (future state): wrap it, never reimplement.
+			if ( cd "$ROOT" && sh -c "$_maps" ) >/dev/null 2>&1; then
+				_verdict="pass"
+			else
+				_verdict="fail"
+			fi
+			if [ "$_json" = "1" ]; then
+				json_response "$_name" "$_verdict" ",\"maps_to\": \"$(json_escape "$_maps")\""
+			else
+				printf '%s: %s (wrapped: %s)\n' "$_name" "$_verdict" "$_maps"
+			fi
+			finish "$_verdict"
+			;;
+	esac
+}
+
+verb_verify() {
+	_json="$1"
+	_maps=$(get_maps_to verify)
+	[ -n "$_maps" ] || _maps="npm run typecheck"
+
+	# Wrapped static check: run npm run typecheck (never reimplemented).
+	_tc_out=$( cd "$ROOT" && sh -c "$_maps" 2>&1 )
+	_tc_code=$?
+	if [ "$_tc_code" -eq 0 ]; then
+		_tc_verdict="pass"
+	else
+		_tc_verdict="fail"
+	fi
+
+	# Aggregation policy (R6): fail if any wrapped check fails; else degraded if
+	# any required capability is unknown/degraded; else pass.
+	if [ "$_tc_verdict" = "fail" ]; then
+		_overall="fail"
+	else
+		_overall="degraded"   # test/lint/build are unknown in the Issue #4 baseline
+	fi
+
+	_checks="[{\"name\": \"typecheck\", \"maps_to\": \"$(json_escape "$_maps")\", \"verdict\": \"$_tc_verdict\", \"exit_code\": $_tc_code}, {\"name\": \"lint\", \"verdict\": \"unknown\", \"reason\": \"no lint command detected\"}, {\"name\": \"test\", \"verdict\": \"unknown\", \"reason\": \"no test command detected\"}, {\"name\": \"build\", \"verdict\": \"unknown\", \"reason\": \"no build command detected\"}]"
+
+	# Evidence: write a timestamped record on every run (R5).
+	mkdir -p "$EVIDENCE_DIR"
+	_evrel=".harness/evidence/verify-$(now_stamp).json"
+	_evabs="$ROOT/$_evrel"
+	_notes="test, lint, and build are unknown until Issue #5 wires their commands in contract.yml"
+	json_response verify "$_overall" ",\"checks\": $_checks, \"evidence\": \"$_evrel\", \"notes\": \"$(json_escape "$_notes")\"" > "$_evabs"
+
+	# The verify aggregate is degraded because capabilities are unknown -> friction.
+	if [ "$_overall" = "degraded" ]; then
+		ensure_friction verify \
+			"The verify aggregate is degraded because test, lint, and build have no backing command; the agent had to infer the repo's real verification surface is only typecheck." \
+			"Only 'npm run typecheck' is a wrappable check today; test/lint/build are unknown, so verify cannot prove full verification." \
+			"Issue #5 adds dev/validation commands; once wired in contract.yml the aggregate can reach pass."
+	fi
+
+	if [ "$_json" = "1" ]; then
+		cat "$_evabs"
+	else
+		printf 'Verification (aggregate)\n========================\n'
+		printf 'typecheck : %s (%s, exit %s)\n' "$_tc_verdict" "$_maps" "$_tc_code"
+		printf 'lint      : unknown (no lint command)\n'
+		printf 'test      : unknown (no test command)\n'
+		printf 'build     : unknown (no build command)\n'
+		printf 'evidence  : %s\n' "$_evrel"
+		printf 'Verdict   : %s\n' "$_overall"
+		[ "$_tc_verdict" = "fail" ] && printf '\n--- typecheck output ---\n%s\n' "$_tc_out"
+	fi
+	finish "$_overall"
+}
+
+verb_status() {
+	_json="$1"
+	_vcount=$(count_verbs)
+	_last=$(ls -1t "$EVIDENCE_DIR"/*.json 2>/dev/null | head -n 1)
+	if [ -n "$_last" ]; then
+		_lastrel=".harness/evidence/$(basename "$_last")"
+	else
+		_lastrel="none"
+	fi
+	_fcount=0
+	[ -f "$FRICTION_PATH" ] && _fcount=$(grep -c . "$FRICTION_PATH" 2>/dev/null || echo 0)
+	if [ "$_json" = "1" ]; then
+		json_response status pass ",\"contract\": \".harness/contract.yml\", \"verbs\": $_vcount, \"last_evidence\": \"$(json_escape "$_lastrel")\", \"friction_entries\": $_fcount"
+	else
+		cat <<EOF
+Harness status
+==============
+Contract        : .harness/contract.yml ($_vcount verbs)
+Last evidence   : $_lastrel
+Friction entries: $_fcount
+Verdict         : pass
+EOF
+	fi
+	finish pass
+}
+
+verb_clean() {
+	_json="$1"
+	# Non-destructive: remove only harness-owned ephemeral evidence output.
+	# MUST NOT delete node_modules or any project source (ADR-0003 / R1).
+	_removed=0
+	if [ -d "$EVIDENCE_DIR" ]; then
+		for f in "$EVIDENCE_DIR"/*; do
+			[ -e "$f" ] || continue
+			case "$(basename "$f")" in
+				.gitkeep) : ;;
+				*) rm -f "$f" && _removed=$((_removed + 1)) ;;
+			esac
+		done
+	fi
+	ensure_friction clean \
+		"There is no project 'clean' command; clean only prunes harness-owned evidence and returns degraded." \
+		"No clean/reset script exists; the harness must not delete node_modules or project artifacts, so the capability is only partially available." \
+		"Issue #5/#6 may add a real clean command; wire the clean verb's maps_to in contract.yml when it exists."
+	if [ "$_json" = "1" ]; then
+		json_response clean degraded ",\"removed\": $_removed, \"scope\": \"harness-owned evidence only\", \"preserved\": [\"node_modules\", \"project sources\"]"
+	else
+		printf 'clean: degraded\n'
+		printf 'Removed %s harness-owned evidence artifact(s); node_modules and project sources preserved.\n' "$_removed"
+		printf 'Verdict: degraded (exit 0)\n'
+	fi
+	finish degraded
+}
+
+verb_friction() {
+	_sub="${1:-}"
+	shift 2>/dev/null || true
+	case "$_sub" in
+		add) friction_add "$@" ;;
+		list) friction_list "$@" ;;
+		"")
+			err "Usage: ./harness friction <add|list> [args]"
+			exit 2 ;;
+		*)
+			err "Unknown friction subcommand: $_sub (expected 'add' or 'list')"
+			exit 2 ;;
+	esac
+}
+
+friction_add() {
+	_fverb=""; _finf=""; _fgap=""; _fclose=""; _fsev="info"
+	while [ "$#" -gt 0 ]; do
+		case "$1" in
+			--verb) _fverb="${2:-}"; shift 2 ;;
+			--inference) _finf="${2:-}"; shift 2 ;;
+			--proof-gap) _fgap="${2:-}"; shift 2 ;;
+			--suggested-closure) _fclose="${2:-}"; shift 2 ;;
+			--severity) _fsev="${2:-info}"; shift 2 ;;
+			--json) shift ;;
+			*) err "friction add: unknown option '$1'"; exit 2 ;;
+		esac
+	done
+	if [ -z "$_fverb" ]; then
+		err "friction add: --verb is required"
+		exit 2
+	fi
+	write_friction "$_fverb" "$_finf" "$_fgap" "$_fclose" "$_fsev"
+	printf 'friction: recorded 1 entry for verb "%s". Verdict: pass\n' "$_fverb"
+	finish pass
+}
+
+friction_list() {
+	_json="0"
+	for a in "$@"; do [ "$a" = "--json" ] && _json="1"; done
+	[ -f "$FRICTION_PATH" ] || : > "$FRICTION_PATH" 2>/dev/null || true
+	if [ "$_json" = "1" ]; then
+		_entries=$(awk 'NF{ if(n++) printf ","; printf "%s", $0 } END{ }' "$FRICTION_PATH" 2>/dev/null)
+		json_response "friction list" pass ",\"count\": $(grep -c . "$FRICTION_PATH" 2>/dev/null || echo 0), \"entries\": [${_entries}]"
+	else
+		_n=$(grep -c . "$FRICTION_PATH" 2>/dev/null || echo 0)
+		printf 'Friction log (%s entries): %s\n' "$_n" ".harness/friction.jsonl"
+		printf 'KEY_QUESTION: %s\n' "$KEY_QUESTION"
+		printf -- '---\n'
+		if [ "$_n" -gt 0 ]; then
+			cat "$FRICTION_PATH"
+		else
+			printf '(no entries)\n'
+		fi
+	fi
+	finish pass
+}
+
+# ---------------------------------------------------------------------------
+# Dispatch
+# ---------------------------------------------------------------------------
+
+main() {
+	# First pass: pull out the global --json flag, preserving remaining args.
+	JSON=0
+	_count=$#
+	_i=0
+	while [ "$_i" -lt "$_count" ]; do
+		_arg="$1"; shift
+		if [ "$_arg" = "--json" ]; then
+			JSON=1
+		else
+			set -- "$@" "$_arg"
+		fi
+		_i=$((_i + 1))
+	done
+
+	_verb="${1:-help}"
+	[ "$#" -gt 0 ] && shift 2>/dev/null || true
+
+	case "$_verb" in
+		help|-h|--help) verb_help ;;
+		orient) verb_orient "$JSON" ;;
+		doctor) verb_doctor "$JSON" ;;
+		lint|test|build|boot) verb_capability "$_verb" "$JSON" ;;
+		verify) verb_verify "$JSON" ;;
+		status) verb_status "$JSON" ;;
+		clean) verb_clean "$JSON" ;;
+		friction)
+			# Re-inject --json for friction subcommands that consume it themselves.
+			if [ "$JSON" = "1" ]; then
+				verb_friction "$@" --json
+			else
+				verb_friction "$@"
+			fi
+			;;
+		*)
+			err "Unknown verb: $_verb"
+			err "Run './harness help' for the supported verb surface."
+			exit 2
+			;;
+	esac
+}
+
+main "$@"

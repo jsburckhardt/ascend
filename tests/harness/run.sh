@@ -474,18 +474,19 @@ fi
 # explicit SKIP when no non-GNU userland exists) (F-08)
 # ===========================================================================
 # The escaping routine is pure awk, so portability MUST be proven on a genuine
-# non-GNU awk. We locate a non-GNU awk (mawk / busybox awk / a non-GNU default
-# awk), force it onto PATH via a shim, run the escaping path under dash (or sh),
+# non-GNU awk. We locate a non-GNU awk from explicit candidates (mawk / busybox
+# awk only -- never probing the default awk, which would need a non-POSIX flag),
+# force it onto PATH via a shim, run the escaping path under dash (or sh),
 # and FAIL if the JSON is invalid. If NO non-GNU awk is available we SKIP loudly
 # instead of silently passing on GNU awk.
 find_nongnu_awk() { # echoes an absolute non-GNU awk command, or nothing
+	# Select ONLY from explicit non-GNU candidates. We never probe the default
+	# `awk`, since detecting its implementation would require a non-POSIX flag; if
+	# neither explicit candidate exists we return nothing so the caller SKIPs.
 	_p=$(command -v mawk 2>/dev/null)
 	if [ -n "$_p" ] && printf '' | "$_p" 'BEGIN{exit 0}' >/dev/null 2>&1; then printf '%s' "$_p"; return 0; fi
 	_bb=$(command -v busybox 2>/dev/null)
 	if [ -n "$_bb" ] && printf '' | "$_bb" awk 'BEGIN{exit 0}' >/dev/null 2>&1; then printf '%s awk' "$_bb"; return 0; fi
-	_ap=$(command -v awk 2>/dev/null)
-	# default awk counts only if it is NOT GNU awk
-	if [ -n "$_ap" ] && ! "$_ap" --version 2>&1 | grep -qi 'gnu awk'; then printf '%s' "$_ap"; return 0; fi
 	return 1
 }
 NONGNU_AWK=$(find_nongnu_awk || true)

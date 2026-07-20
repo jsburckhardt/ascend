@@ -426,3 +426,17 @@ persistence-failure case (R14).
 
 No ADR/CC deviation was required; all cycle-2 work is CODE/TEST-level within the
 CORE-COMPONENT-0003 R2/R6/R7/R12/R14/R15/R16 boundaries.
+
+## Review Cycle 3 remediation (F-08R)
+
+### F-08R — remove non-POSIX `awk --version` probe from TEST-24 selection (TEST-only)
+
+Removed the default-`awk` `--version` probe from `find_nongnu_awk`
+(`tests/harness/run.sh`); the non-GNU awk under test is now selected ONLY from
+explicit `mawk` / `busybox awk` candidates, and the already-implemented visible
+SKIP fires when neither exists — no non-POSIX awk flag remains in the selection
+path. Validation: `grep -n "awk --version\|-Wversion\|--version" tests/harness/run.sh`
+returns nothing; `sh` and `dash` runs both `PASS=34 FAIL=0 SKIP=0` exit 0 with
+TEST-24 executing the real non-GNU path via `/usr/bin/mawk`; tree clean;
+`./harness verify --json` still `degraded` exit 0; `harness`, `.harness/contract.yml`,
+`.harness/README.md`, `.github/agents/*`, and `AGENTS.md` unmodified.

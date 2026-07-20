@@ -250,26 +250,38 @@ vc=1; for v in help orient doctor lint test build boot verify status clean frict
 { [ "$t11" = "1" ] && [ "$vc" = "1" ]; } && ok "TEST-11 README documents verbs, verdicts, exit-code, --json, KEY_QUESTION" || no "TEST-11 README completeness"
 
 # ===========================================================================
-# TEST-12: every agent surface carries exactly one harness block
+# TEST-12: the harness block is scoped to the consuming agents only
 # ===========================================================================
-t12=1; surfaces=0
-check_block() {
-	b=$(grep -c '<!-- HARNESS:BEGIN -->' "$1")
-	e=$(grep -c '<!-- HARNESS:END -->' "$1")
-	surfaces=$((surfaces + 1))
-	[ "$b" = "1" ] && [ "$e" = "1" ] || t12=0
+# The harness exposes deterministic tasks for the execution pipeline, so only
+# the consuming agents (ship + rpiv-*) carry the usage rule. Assert each
+# consumer has exactly one block and every non-consumer (incl. AGENTS.md) none.
+t12=1; cons=0; noncons_bad=0
+is_consumer() {
+	case "$1" in
+		ship|rpiv-research|rpiv-planner|rpiv-implementer|rpiv-verifier) return 0;;
+		*) return 1;;
+	esac
 }
-[ -f "$REPO/AGENTS.md" ] && check_block "$REPO/AGENTS.md" || t12=0
-for f in "$REPO"/.github/agents/*.agent.md; do [ -e "$f" ] || continue; check_block "$f"; done
-{ [ "$t12" = "1" ] && [ "$surfaces" -ge 17 ]; } && ok "TEST-12 all $surfaces surfaces carry exactly one harness block" || no "TEST-12 harness blocks (t12=$t12 surfaces=$surfaces)"
+for f in "$REPO"/.github/agents/*.agent.md; do
+	[ -e "$f" ] || continue
+	base=$(basename "$f" .agent.md)
+	b=$(grep -c '<!-- HARNESS:BEGIN -->' "$f"); e=$(grep -c '<!-- HARNESS:END -->' "$f")
+	if is_consumer "$base"; then
+		{ [ "$b" = "1" ] && [ "$e" = "1" ]; } && cons=$((cons + 1)) || { t12=0; printf '  (t12 consumer missing/dup block: %s)\n' "$base"; }
+	else
+		{ [ "$b" = "0" ] && [ "$e" = "0" ]; } || { t12=0; noncons_bad=$((noncons_bad + 1)); printf '  (t12 non-consumer has block: %s)\n' "$base"; }
+	fi
+done
+{ [ "$(grep -c '<!-- HARNESS:BEGIN -->' "$REPO/AGENTS.md")" = "0" ]; } || { t12=0; printf '  (t12 AGENTS.md has block)\n'; }
+{ [ "$t12" = "1" ] && [ "$cons" = "5" ]; } && ok "TEST-12 harness block on $cons consuming agents only; none on non-consumers or AGENTS.md" || no "TEST-12 harness block scoping (t12=$t12 consumers=$cons noncons_bad=$noncons_bad)"
 
 # ===========================================================================
 # TEST-13: agent-surface marker update is idempotent + behaviour-preserving (F-09)
 # ===========================================================================
 # Exercise the REAL marker-update operation (tests/harness/apply-marker.sh, the
 # committed helper implementing CC-0003 R10) TWICE on an isolated copy of every
-# one of the 17 surfaces (output goes to scratch; tracked files are never
-# mutated) and assert:
+# consuming surface (output goes to scratch; tracked files are never mutated)
+# and assert:
 #   (a) the second run is byte-identical to the first (full-file cksum),
 #   (b) re-applying on the committed surface is a no-op (cksum == original) with
 #       exactly one BEGIN/END pair -> the block is never duplicated,
@@ -278,8 +290,9 @@ APPLY="$SUITE_DIR/apply-marker.sh"
 outside_markers() { awk '/<!-- HARNESS:BEGIN -->/{p=1} !p{print} /<!-- HARNESS:END -->/{p=0}' "$1"; }
 t13=1; t13n=0
 [ -f "$APPLY" ] || { t13=0; printf '  (t13 helper missing: %s)\n' "$APPLY"; }
-for f in "$REPO/AGENTS.md" "$REPO"/.github/agents/*.agent.md; do
-	[ -e "$f" ] || continue
+for base in ship rpiv-research rpiv-planner rpiv-implementer rpiv-verifier; do
+	f="$REPO/.github/agents/$base.agent.md"
+	[ -e "$f" ] || { t13=0; printf '  (t13 consumer missing: %s)\n' "$f"; continue; }
 	t13n=$((t13n + 1))
 	wdir="$WORK/t13.$t13n"; mkdir -p "$wdir"
 	blk="$wdir/block.txt"
@@ -298,7 +311,7 @@ for f in "$REPO/AGENTS.md" "$REPO"/.github/agents/*.agent.md; do
 	outside_markers "$f" > "$wdir/o0"; outside_markers "$r1" > "$wdir/o1"
 	diff "$wdir/o0" "$wdir/o1" >/dev/null 2>&1 || { t13=0; printf '  (t13 outside-markers changed: %s)\n' "$f"; }
 done
-{ [ "$t13" = "1" ] && [ "$t13n" -ge 17 ]; } && ok "TEST-13 marker update idempotent: $t13n surfaces byte-identical on rerun, no duplication, outside-markers preserved" || no "TEST-13 idempotency (t13=$t13 surfaces=$t13n)"
+{ [ "$t13" = "1" ] && [ "$t13n" -ge 5 ]; } && ok "TEST-13 marker update idempotent: $t13n consuming surfaces byte-identical on rerun, no duplication, outside-markers preserved" || no "TEST-13 idempotency (t13=$t13 surfaces=$t13n)"
 
 # ===========================================================================
 # TEST-14: issue acceptance criteria end-to-end
@@ -312,7 +325,7 @@ if [ "$TC_OK" = "1" ]; then
 	[ "$(ls -1 "$ev"/verify-*.json 2>/dev/null | wc -l)" -ge 1 ] || t14=0
 fi
 [ -f "$REPO/.harness/README.md" ] || t14=0
-grep -q './harness' "$REPO/AGENTS.md" || t14=0
+grep -q './harness' "$REPO/.github/agents/rpiv-verifier.agent.md" || t14=0
 [ "$t14" = "1" ] && ok "TEST-14 acceptance criteria (exists/wraps/evidence/docs/entrypoint)" || no "TEST-14 acceptance criteria"
 
 # ===========================================================================

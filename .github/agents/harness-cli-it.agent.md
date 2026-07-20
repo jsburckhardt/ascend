@@ -36,20 +36,14 @@ You MUST record each inference as a friction entry.
 You MUST wrap an existing repo command when one exists.
 You MUST preserve existing project behavior.
 You MUST answer KEY_QUESTION in friction records.
-You MUST update AGENTS.md to require ./harness usage.
-You MUST update .github/agents/*.agent.md to use ./harness after the harness is configured.
+You MUST update only the harness-consuming agent definitions listed in HARNESS_CONSUMERS to require ./harness usage.
+You MUST NOT inject harness usage rules into AGENTS.md or into non-consuming agent definitions.
 You MUST make agent definition updates idempotent and preserve existing agent behavior.
-You MUST inject the harness rules as one-directive-per-line MUST/MAY entries inside each surface's <instructions> block, delimited by the HARNESS markers, and never as trailing prose after a closing section tag.
+You MUST inject the harness rules as one-directive-per-line MUST/MAY entries inside each consuming surface's <instructions> block, delimited by the HARNESS markers, and never as trailing prose after a closing section tag.
 You MUST run ./harness verify before claiming completion.
 You SHOULD keep the harness implementation dependency-light.
 You SHOULD prefer portable shell or existing repo runtime tooling.
 You MAY add small helper files inside .harness when needed.
-<!-- HARNESS:BEGIN -->
-You MUST use ./harness as the first-choice operating surface for supported commands once ./harness and .harness/contract.yml exist.
-You MUST prefer ./harness orient, doctor, lint, test, build, verify, status, and clean over the direct wrapped commands.
-You MAY call a direct project command only when the harness contract lacks the verb or the harness reports unknown or degraded.
-You MUST record the gap with ./harness friction add using the harness KEY_QUESTION whenever you bypass the harness for missing proof.
-<!-- HARNESS:END -->
 </instructions>
 
 <constants>
@@ -58,10 +52,19 @@ CONTRACT_PATH: ".harness/contract.yml"
 EVIDENCE_DIR: ".harness/evidence"
 FRICTION_PATH: ".harness/friction.jsonl"
 README_PATH: ".harness/README.md"
-AGENTS_MD_PATH: "AGENTS.md"
 AGENTS_DIR: ".github/agents"
 AGENT_FILE_PATTERN: ".github/agents/*.agent.md"
 KEY_QUESTION: "What did the agent have to infer that the harness should have proved?"
+
+HARNESS_CONSUMERS: YAML<<
+# The execution pipeline that runs deterministic harness tasks. Only these
+# agents receive the harness usage rule; other agents do not run the harness.
+- .github/agents/ship.agent.md
+- .github/agents/rpiv-research.agent.md
+- .github/agents/rpiv-planner.agent.md
+- .github/agents/rpiv-implementer.agent.md
+- .github/agents/rpiv-verifier.agent.md
+>>
 
 AGENT_HARNESS_RULES: TEXT<<
 Injected as one directive per line inside the target surface's <instructions> block, immediately before its </instructions> tag, delimited by the HARNESS markers so re-runs replace in place:
@@ -77,8 +80,11 @@ REQUIRED_OUTPUTS: YAML<<
 - .harness/evidence/
 - .harness/friction.jsonl
 - .harness/README.md
-- AGENTS.md
-- .github/agents/*.agent.md
+- .github/agents/ship.agent.md
+- .github/agents/rpiv-research.agent.md
+- .github/agents/rpiv-planner.agent.md
+- .github/agents/rpiv-implementer.agent.md
+- .github/agents/rpiv-verifier.agent.md
 >>
 
 REQUIRED_VERBS: YAML<<
@@ -194,7 +200,6 @@ RUN `inspect-repo`
 RUN `detect-commands`
 RUN `record-inferences`
 RUN `write-harness-files`
-RUN `write-agent-instructions`
 RUN `write-agent-definitions`
 RUN `verify-harness`
 RETURN: format="HARNESS_RESULT_V1", agent_update_summary=AGENT_UPDATE_SUMMARY, command_summary=COMMAND_MAP, evidence_summary=EVIDENCE_FILES, friction_summary=FRICTION_ENTRIES, harness_path=HARNESS_PATH, verdict=VERIFY_VERDICT, verify_summary=VERIFY_OUTPUT
@@ -237,23 +242,11 @@ CAPTURE CHMOD_OUTPUT from `execute/runInTerminal`
 SET HARNESS_READY := true (from "Agent Inference" using CHMOD_OUTPUT)
 </process>
 
-<process id="write-agent-instructions" name="Require harness usage in AGENTS.md">
-SET INSTRUCTION_TEXT := <INSTRUCTIONS> (from "Agent Inference" using AGENTS_MD_PATH, CONTRACT_PATH, HARNESS_PATH, KEY_QUESTION)
-TRY:
-  USE `read/readFile` where: filePath=AGENTS_MD_PATH
-  CAPTURE EXISTING_INSTRUCTIONS from `read/readFile`
-  SET UPDATED_INSTRUCTIONS := <MERGED> (from "Agent Inference" using EXISTING_INSTRUCTIONS, INSTRUCTION_TEXT)
-  USE `edit/editFiles` where: filePath=AGENTS_MD_PATH
-RECOVER (err):
-  USE `edit/createFile` where: content=INSTRUCTION_TEXT, filePath=AGENTS_MD_PATH
-</process>
-
-<process id="write-agent-definitions" name="Require harness usage in repo agent definitions">
-USE `search/fileSearch` where: pattern=AGENT_FILE_PATTERN
-CAPTURE AGENT_FILES from `search/fileSearch`
+<process id="write-agent-definitions" name="Require harness usage in the consuming agent definitions">
+SET AGENT_FILES := HARNESS_CONSUMERS (from "Agent Inference")
 SET AGENT_INSTRUCTION_TEXT := <INSTRUCTIONS> (from "Agent Inference" using AGENT_HARNESS_RULES, CONTRACT_PATH, HARNESS_PATH, KEY_QUESTION)
 IF AGENT_FILES is empty:
-  SET FRICTION_ENTRIES := FRICTION_ENTRIES + ["No repo-local agent definitions found at .github/agents/*.agent.md"] (from "Agent Inference")
+  SET FRICTION_ENTRIES := FRICTION_ENTRIES + ["No harness-consuming agent definitions found in HARNESS_CONSUMERS"] (from "Agent Inference")
 ELSE:
   FOREACH agent IN AGENT_FILES:
     USE `read/readFile` where: filePath=agent
@@ -261,7 +254,7 @@ ELSE:
     SET UPDATED_AGENT_CONTENT := <MERGED> (from "Agent Inference" using AGENT_CONTENT, AGENT_INSTRUCTION_TEXT, agent)
     USE `edit/editFiles` where: filePath=agent
     SET UPDATED_AGENT_FILES := UPDATED_AGENT_FILES + [agent] (from "Agent Inference")
-SET AGENT_UPDATE_SUMMARY := <SUMMARY> (from "Agent Inference" using AGENT_FILE_PATTERN, UPDATED_AGENT_FILES)
+SET AGENT_UPDATE_SUMMARY := <SUMMARY> (from "Agent Inference" using HARNESS_CONSUMERS, UPDATED_AGENT_FILES)
 </process>
 
 <process id="verify-harness" name="Verify harness contract">

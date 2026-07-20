@@ -143,6 +143,6 @@ harness — and then closing the corresponding friction entry.
 Agents MUST prefer `./harness` for supported verbs and MAY bypass to a direct
 command only when the contract lacks the verb or the harness reports
 `unknown`/`degraded` — and MUST log that gap via `./harness friction add`. The
-harness-usage rules are embedded (idempotently) in `AGENTS.md` and every
-`.github/agents/*.agent.md` between `<!-- HARNESS:BEGIN -->` /
-`<!-- HARNESS:END -->` markers.
+harness-usage rules are embedded (idempotently) in the harness-consuming agents only —
+the `ship` orchestrator and the `rpiv-*` pipeline agents — between
+`<!-- HARNESS:BEGIN -->` / `<!-- HARNESS:END -->` markers inside their `<instructions>`.

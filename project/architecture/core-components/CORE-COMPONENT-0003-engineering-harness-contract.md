@@ -22,8 +22,9 @@ Applies to:
 
 - The `./harness` executable and everything under `.harness/` (`contract.yml`,
   `evidence/`, `friction.jsonl`, `README.md`).
-- Every agent surface that must route through the harness: `AGENTS.md` and every
-  `.github/agents/*.agent.md`.
+- The harness-consuming agents that must route through the harness: the `ship` orchestrator
+  and the `rpiv-research`, `rpiv-planner`, `rpiv-implementer`, and `rpiv-verifier` pipeline
+  agents. `AGENTS.md` and non-consuming agents do not run the harness and carry no rule.
 - Every skill or tool that consumes harness verdicts or JSON output (e.g.
   `pr-review-complement`).
 - `.github/soft-factory/verification.yml` where it references the harness.
@@ -88,15 +89,19 @@ editing `contract.yml` data).
   contract data alone, with NO change to `./harness`.
 - **R9 — KEY_QUESTION rule.** Every friction record MUST answer verbatim:
   **"What did the agent have to infer that the harness should have proved?"**
-- **R10 — Idempotent agent-surface updates.** Each agent surface MUST contain exactly one
+- **R10 — Idempotent agent-surface updates.** Only the harness-consuming agents — the `ship`
+  orchestrator and the `rpiv-research`, `rpiv-planner`, `rpiv-implementer`, and `rpiv-verifier`
+  pipeline agents — carry the harness-usage rule, and each such surface MUST contain exactly one
   harness-usage block delimited by `<!-- HARNESS:BEGIN -->` / `<!-- HARNESS:END -->`.
+  `AGENTS.md` and non-consuming agents MUST NOT carry the block.
   The block MUST live inside the surface's `<instructions>` section (immediately before its
   `</instructions>` tag) as one MUST/MAY directive per line, never as trailing prose after a
   closing section tag, so it conforms to the APS document flow.
   Re-running the update MUST replace only the content between the markers, MUST NOT
   duplicate the block, and MUST NOT alter any content outside the markers or change the
   agent's existing behaviour.
-- **R11 — Agents prefer the harness.** Agents MUST use `./harness` as the first-choice
+- **R11 — Consuming agents prefer the harness.** The harness-consuming agents (the `ship`
+  orchestrator and the `rpiv-*` pipeline agents) MUST use `./harness` as the first-choice
   surface for supported verbs and MAY bypass to a direct command only when the contract
   lacks the verb or the harness reports `unknown`/`degraded` — and MUST log that gap via
   `./harness friction add`.
@@ -235,8 +240,8 @@ data-driven (`contract.yml`) means later stories add capability by editing data,
 contract churn. The KEY_QUESTION friction rule turns every honest gap into a tracked,
 closable record instead of an invisible assumption. The exit-code contract ensures CI and
 the verifier are not tripped by capabilities that legitimately do not exist yet, while still
-catching real failures. Marker-delimited idempotent edits make the 17-surface rewrite safe
-and re-runnable. Portable POSIX shell honours the dependency-light and no-build-system
+catching real failures. Marker-delimited idempotent edits make the consumer-scoped rewrite
+safe and re-runnable. Portable POSIX shell honours the dependency-light and no-build-system
 constraints of ADR-0002 and PRD §28.7.
 
 ## Usage Examples
@@ -309,8 +314,8 @@ How is compliance with this component verified?
 - [x] Code review checklist — reviewers confirm: every verb returns one of the four verdicts
   in both human (terminal `Verdict:` line) and `--json` form; exit-code contract honoured;
   wrapped commands and aggregate members come only from `contract.yml` (no hard-coded wiring);
-  friction entries answer the KEY_QUESTION verbatim; each agent surface has exactly one
-  marker-delimited harness block; no reimplemented/faked commands.
+  friction entries answer the KEY_QUESTION verbatim; each consuming agent surface has exactly one
+  marker-delimited harness block and non-consumers have none; no reimplemented/faked commands.
 - [x] Test coverage requirements — every task in 02-task-breakdown.md that touches the
   contract, verdicts, JSON, evidence, friction, or agent surfaces carries explicit test
   coverage in 03-test-plan.md.

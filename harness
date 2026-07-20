@@ -1,0 +1,389 @@
+#!/usr/bin/env bash
+# ./harness — Ascend repo-local engineering harness CLI.
+#
+# The supported operating surface for humans and agents. Wraps existing project
+# commands (never reimplements them), returns a pass|fail|degraded|unknown verdict,
+# records evidence under .harness/evidence/, and records inference gaps as friction
+# in .harness/friction.jsonl.
+#
+# Generated via the harness-cli-it agent. See:
+#   - .harness/README.md               (usage + supported workflows)
+#   - .harness/contract.yml            (machine-readable command contract)
+#   - project/architecture/ADR/ADR-0003-adopt-engineering-harness.md
+#   - project/architecture/core-components/CORE-COMPONENT-0003-engineering-harness-contract.md
+#
+# Dependency-light: the harness itself needs only a POSIX shell. Only the *wrapped*
+# commands (npm install, npm run typecheck) require the Node toolchain.
+
+# Resolve repo root (directory containing this script) and operate from there.
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)"
+cd "$ROOT" || exit 1
+
+HARNESS_DIR=".harness"
+EVIDENCE_DIR="$HARNESS_DIR/evidence"
+FRICTION_PATH="$HARNESS_DIR/friction.jsonl"
+CONTRACT_PATH="$HARNESS_DIR/contract.yml"
+KEY_QUESTION="What did the agent have to infer that the harness should have proved?"
+NODE_MAJOR_EXPECTED="22"
+
+# --- flag parsing -----------------------------------------------------------
+JSON=0
+STRICT=0
+ARGS=()
+for a in "$@"; do
+  case "$a" in
+    --json)   JSON=1 ;;
+    --strict) STRICT=1 ;;
+    *)        ARGS+=("$a") ;;
+  esac
+done
+set -- "${ARGS[@]:-}"
+
+VERB="${1:-help}"
+
+# --- helpers ----------------------------------------------------------------
+_now() { date -u +"%Y-%m-%dT%H:%M:%SZ"; }
+_ts_file() { date -u +"%Y%m%dT%H%M%SZ"; }
+_have() { command -v "$1" >/dev/null 2>&1; }
+
+# Minimal JSON string escaper for controlled values.
+_jesc() {
+  local s="$1"
+  s="${s//\\/\\\\}"
+  s="${s//\"/\\\"}"
+  s="${s//$'\n'/\\n}"
+  s="${s//$'\t'/\\t}"
+  s="${s//$'\r'/}"
+  printf '%s' "$s"
+}
+
+# Map a verdict to an exit code, honouring --strict.
+_verdict_exit() {
+  case "$1" in
+    pass) return 0 ;;
+    fail) return 1 ;;
+    degraded|unknown)
+      if [ "$STRICT" -eq 1 ]; then return 2; else return 0; fi ;;
+    *) return 1 ;;
+  esac
+}
+
+# Human-readable one-line result.
+_say() { printf '%s\n' "$*"; }
+
+# Emit a simple {verb,verdict,detail} JSON object.
+_emit_json_simple() {
+  local verb="$1" verdict="$2" detail="$3"
+  printf '{"verb":"%s","verdict":"%s","detail":"%s","timestamp":"%s"}\n' \
+    "$(_jesc "$verb")" "$(_jesc "$verdict")" "$(_jesc "$detail")" "$(_now)"
+}
+
+# Finish a simple verb: print human or json, then exit per verdict.
+_finish_simple() {
+  local verb="$1" verdict="$2" detail="$3"
+  if [ "$JSON" -eq 1 ]; then
+    _emit_json_simple "$verb" "$verdict" "$detail"
+  else
+    _say "[$verb] verdict=$verdict — $detail"
+  fi
+  _verdict_exit "$verdict"; exit $?
+}
+
+_ensure_dirs() { mkdir -p "$HARNESS_DIR" "$EVIDENCE_DIR"; }
+
+# Node/npm probe -> sets DOCTOR_VERDICT / DOCTOR_DETAIL.
+_probe_toolchain() {
+  local node_v npm_v major
+  if ! _have node; then
+    DOCTOR_VERDICT="degraded"
+    DOCTOR_DETAIL="node not found on PATH; run ./harness boot after installing Node ${NODE_MAJOR_EXPECTED} (see .nvmrc)"
+    return
+  fi
+  node_v="$(node --version 2>/dev/null)"     # e.g. v22.17.1
+  major="${node_v#v}"; major="${major%%.*}"
+  if ! _have npm; then
+    DOCTOR_VERDICT="degraded"
+    DOCTOR_DETAIL="node ${node_v} present but npm not found"
+    return
+  fi
+  npm_v="$(npm --version 2>/dev/null)"
+  if [ "$major" != "$NODE_MAJOR_EXPECTED" ]; then
+    DOCTOR_VERDICT="degraded"
+    DOCTOR_DETAIL="node ${node_v} (expected major ${NODE_MAJOR_EXPECTED} per .nvmrc); npm ${npm_v}"
+    return
+  fi
+  DOCTOR_VERDICT="pass"
+  DOCTOR_DETAIL="node ${node_v}, npm ${npm_v} (matches .nvmrc major ${NODE_MAJOR_EXPECTED})"
+}
+
+# Append a friction entry (JSON line).
+_friction_add() {
+  local verb="$1" inference="$2"
+  _ensure_dirs
+  printf '{"timestamp":"%s","verb":"%s","inference":"%s","question":"%s"}\n' \
+    "$(_now)" "$(_jesc "$verb")" "$(_jesc "$inference")" "$(_jesc "$KEY_QUESTION")" \
+    >> "$FRICTION_PATH"
+}
+
+# --- verbs ------------------------------------------------------------------
+cmd_help() {
+  if [ "$JSON" -eq 1 ]; then
+    _emit_json_simple "help" "pass" "listed supported verbs"
+    exit 0
+  fi
+  cat <<'EOF'
+Ascend engineering harness — ./harness <verb> [--json] [--strict]
+
+Supported verbs:
+  help            Show this help and the supported verbs.
+  orient          Summarise the repo, stack, and the command contract.
+  doctor          Check the Node/npm toolchain against .nvmrc / package.json engines.
+  boot            Install dependencies (wraps `npm install`).
+  lint            Run project lint (no lint command declared yet -> unknown).
+  test            Run project tests (no test command declared yet -> unknown).
+  build           Build the project (no build command declared yet -> unknown).
+  typecheck       Type-check the project (wraps `npm run typecheck`).
+  verify          Run doctor + typecheck and write evidence under .harness/evidence/.
+  status          Show git + toolchain + harness status.
+  clean           Remove build artifacts (inferred; no clean command declared).
+  friction add    Append a friction record: ./harness friction add "<note>"
+  friction list   List recorded friction records.
+
+Every verb returns one verdict: pass | fail | degraded | unknown.
+Docs: .harness/README.md   Contract: .harness/contract.yml
+EOF
+  exit 0
+}
+
+cmd_orient() {
+  _probe_toolchain
+  if [ "$JSON" -eq 1 ]; then
+    printf '{"verb":"orient","verdict":"pass","repo":"ascend","stack":"Node.js %s + TypeScript (npm)","entrypoint":"./harness","contract":"%s","toolchain":"%s","wrapped":{"boot":"npm install","typecheck":"npm run typecheck","verify":"doctor + npm run typecheck"},"unknown":["lint","test","build"],"timestamp":"%s"}\n' \
+      "$NODE_MAJOR_EXPECTED" "$(_jesc "$CONTRACT_PATH")" "$(_jesc "$DOCTOR_DETAIL")" "$(_now)"
+    exit 0
+  fi
+  cat <<EOF
+Ascend — repo-local engineering harness
+  Entry point : ./harness   (single documented operating surface)
+  Stack       : Node.js ${NODE_MAJOR_EXPECTED} + TypeScript, npm (ADR-0002)
+  Contract    : ${CONTRACT_PATH}
+  Toolchain   : ${DOCTOR_DETAIL}
+
+Wrapped commands:
+  boot       -> npm install
+  typecheck  -> npm run typecheck
+  verify     -> doctor + npm run typecheck (+ evidence)
+
+Not yet declared (verdict unknown, friction recorded): lint, test, build
+Run ./harness help for the full verb list.
+EOF
+  exit 0
+}
+
+cmd_doctor() {
+  _probe_toolchain
+  _finish_simple "doctor" "$DOCTOR_VERDICT" "$DOCTOR_DETAIL"
+}
+
+cmd_boot() {
+  if ! _have npm; then
+    _finish_simple "boot" "degraded" "npm not found; install Node ${NODE_MAJOR_EXPECTED} (see .nvmrc) then re-run"
+  fi
+  if [ "$JSON" -eq 1 ]; then
+    if npm install >/tmp/harness_boot.$$ 2>&1; then
+      rm -f /tmp/harness_boot.$$
+      _finish_simple "boot" "pass" "npm install completed"
+    else
+      rm -f /tmp/harness_boot.$$
+      _finish_simple "boot" "fail" "npm install failed (run ./harness boot without --json to see output)"
+    fi
+  else
+    _say "[boot] running: npm install"
+    if npm install; then
+      _finish_simple "boot" "pass" "npm install completed"
+    else
+      _finish_simple "boot" "fail" "npm install failed"
+    fi
+  fi
+}
+
+cmd_lint() {
+  _finish_simple "lint" "unknown" "no lint command declared in package.json; nothing to wrap (see friction log)"
+}
+
+cmd_test() {
+  _finish_simple "test" "unknown" "no test command declared in package.json; nothing to wrap (see friction log)"
+}
+
+cmd_build() {
+  _finish_simple "build" "unknown" "no build command declared (tsc runs with --noEmit as typecheck, not a build); see friction log"
+}
+
+# typecheck check -> sets TC_VERDICT / TC_DETAIL. Does not exit.
+_run_typecheck() {
+  if ! _have npm; then
+    TC_VERDICT="degraded"; TC_DETAIL="npm not found; run ./harness boot"
+    return
+  fi
+  if [ ! -d node_modules ]; then
+    TC_VERDICT="degraded"; TC_DETAIL="dependencies not installed; run ./harness boot first"
+    return
+  fi
+  if npm run typecheck >/tmp/harness_tc.$$ 2>&1; then
+    TC_VERDICT="pass"; TC_DETAIL="npm run typecheck exit 0"
+  else
+    TC_VERDICT="fail"; TC_DETAIL="npm run typecheck failed (exit non-zero)"
+  fi
+  rm -f /tmp/harness_tc.$$
+}
+
+cmd_typecheck() {
+  _run_typecheck
+  _finish_simple "typecheck" "$TC_VERDICT" "$TC_DETAIL"
+}
+
+# Aggregate the worst verdict across checks (fail > degraded/unknown > pass).
+_aggregate() {
+  local overall="pass" v
+  for v in "$@"; do
+    case "$v" in
+      fail) overall="fail" ;;
+      degraded) [ "$overall" != "fail" ] && overall="degraded" ;;
+      unknown) [ "$overall" = "pass" ] && overall="unknown" ;;
+    esac
+  done
+  printf '%s' "$overall"
+}
+
+cmd_verify() {
+  _ensure_dirs
+  _probe_toolchain
+  _run_typecheck
+  local overall ts file
+  overall="$(_aggregate "$DOCTOR_VERDICT" "$TC_VERDICT")"
+  ts="$(_now)"
+  file="$EVIDENCE_DIR/verify-$(_ts_file).json"
+  {
+    printf '{\n'
+    printf '  "verb": "verify",\n'
+    printf '  "verdict": "%s",\n' "$(_jesc "$overall")"
+    printf '  "timestamp": "%s",\n' "$ts"
+    printf '  "checks": [\n'
+    printf '    {"name": "doctor", "verdict": "%s", "detail": "%s"},\n' "$(_jesc "$DOCTOR_VERDICT")" "$(_jesc "$DOCTOR_DETAIL")"
+    printf '    {"name": "typecheck", "command": "npm run typecheck", "verdict": "%s", "detail": "%s"}\n' "$(_jesc "$TC_VERDICT")" "$(_jesc "$TC_DETAIL")"
+    printf '  ]\n'
+    printf '}\n'
+  } > "$file"
+  cp "$file" "$EVIDENCE_DIR/latest.json"
+
+  if [ "$JSON" -eq 1 ]; then
+    printf '{"verb":"verify","verdict":"%s","evidence":"%s","checks":[{"name":"doctor","verdict":"%s"},{"name":"typecheck","command":"npm run typecheck","verdict":"%s"}],"timestamp":"%s"}\n' \
+      "$(_jesc "$overall")" "$(_jesc "$file")" "$(_jesc "$DOCTOR_VERDICT")" "$(_jesc "$TC_VERDICT")" "$ts"
+  else
+    _say "[verify] verdict=$overall"
+    _say "  doctor    : $DOCTOR_VERDICT — $DOCTOR_DETAIL"
+    _say "  typecheck : $TC_VERDICT — $TC_DETAIL"
+    _say "  evidence  : $file"
+  fi
+  _verdict_exit "$overall"; exit $?
+}
+
+cmd_status() {
+  local branch dirty
+  if _have git && git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null)"
+    if [ -n "$(git status --porcelain 2>/dev/null)" ]; then dirty="dirty"; else dirty="clean"; fi
+  else
+    branch="(no git)"; dirty="unknown"
+  fi
+  _probe_toolchain
+  local deps; if [ -d node_modules ]; then deps="installed"; else deps="missing (run ./harness boot)"; fi
+  if [ "$JSON" -eq 1 ]; then
+    printf '{"verb":"status","verdict":"pass","git_branch":"%s","working_tree":"%s","dependencies":"%s","toolchain":"%s","timestamp":"%s"}\n' \
+      "$(_jesc "$branch")" "$(_jesc "$dirty")" "$(_jesc "$deps")" "$(_jesc "$DOCTOR_DETAIL")" "$(_now)"
+    exit 0
+  fi
+  cat <<EOF
+[status] verdict=pass
+  git branch    : ${branch} (${dirty})
+  dependencies  : ${deps}
+  toolchain     : ${DOCTOR_DETAIL}
+  contract      : ${CONTRACT_PATH}
+EOF
+  exit 0
+}
+
+cmd_clean() {
+  # Inferred behaviour: no clean command is declared. Conservatively remove common
+  # TypeScript build artifacts only. node_modules is intentionally preserved.
+  local removed=()
+  [ -e tsconfig.tsbuildinfo ] && { rm -f tsconfig.tsbuildinfo && removed+=("tsconfig.tsbuildinfo"); }
+  for f in *.tsbuildinfo; do [ -e "$f" ] && { rm -f "$f" && removed+=("$f"); }; done
+  [ -d dist ] && { rm -rf dist && removed+=("dist/"); }
+  local detail
+  if [ "${#removed[@]}" -eq 0 ]; then
+    detail="no build artifacts to remove (inferred clean: *.tsbuildinfo, dist/); node_modules preserved"
+  else
+    detail="removed ${removed[*]} (inferred clean; no declared clean command)"
+  fi
+  _finish_simple "clean" "pass" "$detail"
+}
+
+cmd_friction() {
+  local sub="${2:-list}"
+  case "$sub" in
+    add)
+      local note="${3:-}"
+      if [ -z "$note" ]; then
+        _finish_simple "friction" "fail" "usage: ./harness friction add \"<note>\""
+      fi
+      _friction_add "manual" "$note"
+      _finish_simple "friction" "pass" "recorded friction: $note"
+      ;;
+    list)
+      if [ ! -f "$FRICTION_PATH" ]; then
+        if [ "$JSON" -eq 1 ]; then
+          printf '{"verb":"friction list","verdict":"pass","count":0,"entries":[],"timestamp":"%s"}\n' "$(_now)"
+        else
+          _say "[friction list] verdict=pass — no friction recorded"
+        fi
+        exit 0
+      fi
+      if [ "$JSON" -eq 1 ]; then
+        local count; count="$(wc -l < "$FRICTION_PATH" | tr -d ' ')"
+        printf '{"verb":"friction list","verdict":"pass","count":%s,"entries":[' "$count"
+        local first=1 line
+        while IFS= read -r line; do
+          [ -z "$line" ] && continue
+          if [ "$first" -eq 1 ]; then first=0; else printf ','; fi
+          printf '%s' "$line"
+        done < "$FRICTION_PATH"
+        printf '],"timestamp":"%s"}\n' "$(_now)"
+      else
+        _say "[friction list] verdict=pass"
+        cat "$FRICTION_PATH"
+      fi
+      exit 0
+      ;;
+    *)
+      _finish_simple "friction" "unknown" "unknown friction subcommand '$sub' (use add|list)"
+      ;;
+  esac
+}
+
+# --- dispatch ---------------------------------------------------------------
+case "$VERB" in
+  help|-h|--help) cmd_help ;;
+  orient)         cmd_orient ;;
+  doctor)         cmd_doctor ;;
+  boot)           cmd_boot ;;
+  lint)           cmd_lint ;;
+  test)           cmd_test ;;
+  build)          cmd_build ;;
+  typecheck)      cmd_typecheck ;;
+  verify)         cmd_verify ;;
+  status)         cmd_status ;;
+  clean)          cmd_clean ;;
+  friction)       cmd_friction "$@" ;;
+  *)              _finish_simple "$VERB" "unknown" "unknown verb '$VERB'; run ./harness help" ;;
+esac

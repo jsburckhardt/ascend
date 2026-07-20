@@ -1,0 +1,92 @@
+# .harness/contract.yml — machine-readable command contract for the Ascend engineering harness.
+#
+# Adopted by ADR-0003 and specified by CORE-COMPONENT-0003. The harness at ./harness is the
+# supported operating surface. It WRAPS existing project commands and never reimplements them.
+# Every verb returns exactly one verdict: pass | fail | degraded | unknown.
+
+version: 1
+entrypoint: ./harness
+stack: "Node.js 22 + TypeScript (npm)"
+key_question: "What did the agent have to infer that the harness should have proved?"
+
+paths:
+  contract: .harness/contract.yml
+  evidence_dir: .harness/evidence/
+  friction: .harness/friction.jsonl
+  readme: .harness/README.md
+
+verdicts:
+  - pass
+  - fail
+  - degraded
+  - unknown
+
+# exit-code policy: pass -> 0, fail -> non-zero, degraded/unknown -> 0 (non-zero only with --strict)
+
+verbs:
+  help:
+    wraps: null
+    json: true
+    description: List the supported verbs.
+    status: supported
+  orient:
+    wraps: null
+    json: true
+    description: Summarise repo, stack, toolchain, and the command contract.
+    status: supported
+  doctor:
+    wraps: "node --version / npm --version vs .nvmrc + package.json engines"
+    json: true
+    description: Probe the Node/npm toolchain against the pinned version.
+    status: supported
+  boot:
+    wraps: "npm install"
+    json: true
+    description: Install dependencies (the ADR-0002 setup entry point).
+    status: supported
+  typecheck:
+    wraps: "npm run typecheck"
+    json: true
+    description: Type-check the project (tsc --noEmit).
+    status: supported
+  verify:
+    wraps: "doctor + npm run typecheck"
+    json: true
+    description: Coordinate available checks and write evidence under .harness/evidence/.
+    status: supported
+    writes_evidence: true
+  status:
+    wraps: "git status / toolchain probe"
+    json: true
+    description: Show git, dependency, and toolchain status.
+    status: supported
+  clean:
+    wraps: null
+    json: true
+    description: Remove build artifacts (*.tsbuildinfo, dist/). Inferred; no declared clean command.
+    status: inferred
+  lint:
+    wraps: null
+    json: true
+    description: No lint command declared in package.json.
+    status: unknown
+  test:
+    wraps: null
+    json: true
+    description: No test command declared in package.json.
+    status: unknown
+  build:
+    wraps: null
+    json: true
+    description: No build command declared (tsc runs --noEmit as typecheck, not a build).
+    status: unknown
+  friction add:
+    wraps: null
+    json: false
+    description: Append a friction record answering the key_question.
+    status: supported
+  friction list:
+    wraps: null
+    json: true
+    description: List recorded friction records.
+    status: supported

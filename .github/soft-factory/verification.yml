@@ -1,0 +1,17 @@
+# .github/soft-factory/verification.yml
+# Verification commands for the RPIV Verify stage (rpiv-verifier).
+#
+# The engineering harness (./harness) is the supported verification surface — adopted by
+# ADR-0003 and specified by CORE-COMPONENT-0003. The verifier MUST run these commands and
+# MUST NOT proceed to push or PR creation if any step fails (a non-pass verdict).
+#
+# `./harness verify` coordinates the available checks (doctor + `npm run typecheck`) and
+# writes an evidence record under .harness/evidence/.
+
+version: 1
+verification:
+  - name: harness-verify
+    description: Run the engineering harness verification (doctor + typecheck) and write evidence.
+    command: ./harness verify
+    expect_verdict: pass
+    evidence: .harness/evidence/

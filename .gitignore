@@ -2,3 +2,9 @@
 .trees/
 node_modules
 node_modules/
+
+# Harness-generated verification evidence (runtime artifacts).
+# The .harness/evidence/ directory is tracked via .gitkeep; generated records are not.
+.harness/evidence/*
+!.harness/evidence/.gitkeep
+

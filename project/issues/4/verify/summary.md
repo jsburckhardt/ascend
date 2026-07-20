@@ -102,3 +102,38 @@ The reviewer (GPT-5.6 Sol) returned `REQUEST_CHANGES` with one blocking finding 
 ### Cycle-1 Generated At
 
 2026-07-20T08:56:40Z
+
+## Review Cycle 2
+
+Cycle-2 fixes resolve the remaining major/minor findings from the re-review (F-02R, F-06, F-07, F-08, F-09) plus a README wording update. No application source (`src/`) was touched; only the harness surface, its regression suite, harness/issue documentation, and the review report changed.
+
+### Verification Results
+
+| Category | Command | Status |
+|----------|---------|--------|
+| harness verify | `./harness verify` | pass — verdict `degraded`, exit 0 (non-blocking; wrapped `npm run typecheck` = `pass`) |
+| regression suite (sh) | `sh tests/harness/run.sh` | pass — `Totals: PASS=34 FAIL=0 SKIP=0`, `Verdict: pass`, exit 0 |
+| regression suite (dash) | `dash tests/harness/run.sh` | pass — `Totals: PASS=34 FAIL=0 SKIP=0`, `Verdict: pass`, exit 0 |
+| typecheck | `npm run typecheck` | pass — `tsc --noEmit`, exit 0 |
+
+### Findings Verified
+
+| Finding | Severity | Fix | Evidence |
+|---------|----------|-----|----------|
+| F-02R | major | On a failing human `verify`, typecheck diagnostics are printed before the single terminal verdict, so the last output line is exactly `Verdict: fail` (CORE-COMPONENT-0003 R2/R7). | `verb_verify` in `harness` moves the `--- typecheck output ---` block ahead of the `Verdict:` line; TEST-28 asserts the last line is exactly `Verdict: fail`, exit 1, and exactly one `Verdict:` line. |
+| F-06 | major | Each `verify.aggregate` member is resolved exactly once; its verdict/reason/rendered row are cached and reused for aggregation, evidence, and human output, so a mapped member never runs twice. | Single resolve loop with cached `_rows` in `harness`; TEST-26 proves each mapped member executes exactly once in human (=1) and `--json` (=1) modes. |
+| F-07 | major | `friction_count` prints exactly one integer for missing, empty, and populated logs, replacing the `grep -c` "double-zero", so `status --json` and `friction list --json` stay valid JSON. | `friction_count` awk pass in `harness`; TEST-27 validates all six missing/empty/populated JSON counts parse. |
+| F-08 | major | The regression suite is POSIX-portable (no `mktemp`/`sha256sum`/`grep -o`/`head -c`/GNU-only awk flags) and forces a real non-GNU awk (`/usr/bin/mawk`) execution rather than passing on GNU userland. | `tests/harness/run.sh` runs green under both `sh` and `dash`; TEST-24 exercises JSON escaping under `dash` + forced `mawk`. |
+| F-09 | minor | Marker-update idempotency is proven by re-running the real update operation across all 17 agent surfaces and comparing full output plus outside-marker content, not just marker ordering. | New POSIX helper `tests/harness/apply-marker.sh` re-runs the real update; TEST-13 asserts 17 surfaces are byte-identical on rerun, no duplication, and outside-marker content preserved. |
+
+### New Commits (this cycle)
+
+| Hash | Message |
+|------|---------|
+| f0dd84d | fix(harness): keep verdict terminal, resolve members once, stabilize friction JSON |
+| 5ec9008 | test(harness): enforce POSIX portability and real marker idempotency |
+| 0e97d35 | docs: align harness README semantics and record cycle-2 review |
+
+### Cycle-2 Generated At
+
+2026-07-20T09:38:00Z

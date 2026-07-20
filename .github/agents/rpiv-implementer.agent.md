@@ -34,6 +34,11 @@ You MUST follow the task breakdown order respecting dependencies between tasks.
 You SHOULD make the smallest possible changes to achieve each task.
 You SHOULD commit frequently with descriptive messages referencing task IDs.
 You MAY refactor existing code when required by a task.
+<!-- HARNESS:BEGIN -->
+You MUST run deterministic checks through ./harness — lint, test, build, and boot as applicable — instead of calling the wrapped commands directly.
+You MUST use ./harness verify to self-check the implementation against the aggregate gate before handing off, and MAY use ./harness clean to reset build or test state.
+You MAY call a direct command only when the harness lacks the verb or reports unknown or degraded, and MUST then record the gap via ./harness friction add using the harness KEY_QUESTION.
+<!-- HARNESS:END -->
 </instructions>
 
 <constants>
@@ -150,15 +155,3 @@ RECOVER (err):
 <input>
 USER_INPUT is a GitHub issue number and optionally a specific task ID to implement.
 </input>
-
-<!-- HARNESS:BEGIN -->
-## Engineering harness (`./harness`) — required usage
-
-This repository has a single operating surface, `./harness` (ADR-0003,
-CORE-COMPONENT-0003, `.harness/contract.yml`). Agents MUST follow these rules:
-
-- Once ./harness and .harness/contract.yml exist, agents MUST use ./harness as the first-choice operating surface for supported commands.
-- Agents MUST prefer ./harness orient, ./harness doctor, ./harness lint, ./harness test, ./harness build, ./harness verify, ./harness status, and ./harness clean over direct wrapped commands.
-- Agents MAY call direct project commands only when the harness contract lacks the needed verb or the harness reports unknown or degraded.
-- Agents MUST record gaps with ./harness friction add using KEY_QUESTION ("What did the agent have to infer that the harness should have proved?") when bypassing the harness due to missing proof.
-<!-- HARNESS:END -->

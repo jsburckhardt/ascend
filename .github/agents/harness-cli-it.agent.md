@@ -36,9 +36,11 @@ You MUST record each inference as a friction entry.
 You MUST wrap an existing repo command when one exists.
 You MUST preserve existing project behavior.
 You MUST answer KEY_QUESTION in friction records.
-You MUST update AGENTS.md to require ./harness usage.
-You MUST update .github/agents/*.agent.md to use ./harness after the harness is configured.
+You MUST update only the harness-consuming agent definitions listed in HARNESS_CONSUMERS to require ./harness usage.
+You MUST NOT inject harness usage rules into AGENTS.md or into non-consuming agent definitions.
 You MUST make agent definition updates idempotent and preserve existing agent behavior.
+You MUST inject the harness rules as one-directive-per-line MUST/MAY entries inside each consuming surface's <instructions> block, delimited by the HARNESS markers, and never as trailing prose after a closing section tag.
+You MUST scope each consuming agent's harness block to the verbs relevant to its role in HARNESS_CONSUMERS, never the full verb set, and forbid execution verbs (lint, test, build, boot, verify, clean) for the read-only research and plan roles.
 You MUST run ./harness verify before claiming completion.
 You SHOULD keep the harness implementation dependency-light.
 You SHOULD prefer portable shell or existing repo runtime tooling.
@@ -51,16 +53,39 @@ CONTRACT_PATH: ".harness/contract.yml"
 EVIDENCE_DIR: ".harness/evidence"
 FRICTION_PATH: ".harness/friction.jsonl"
 README_PATH: ".harness/README.md"
-AGENTS_MD_PATH: "AGENTS.md"
 AGENTS_DIR: ".github/agents"
 AGENT_FILE_PATTERN: ".github/agents/*.agent.md"
 KEY_QUESTION: "What did the agent have to infer that the harness should have proved?"
 
+HARNESS_CONSUMERS: YAML<<
+# The RPIV stage agents that run deterministic harness tasks. Only these stages
+# receive the harness usage rule, and each block is scoped to the verbs relevant
+# to that stage's role -- never the full verb set. The ship orchestrator does NOT
+# run the harness; it dispatches stages and each stage runs the harness itself.
+- file: .github/agents/rpiv-research.agent.md
+  role: research
+  verbs: [orient, doctor]
+  note: read-only understanding; MUST NOT run execution verbs
+- file: .github/agents/rpiv-planner.agent.md
+  role: plan
+  verbs: [orient, status]
+  note: plan against the real contract verbs; MUST NOT run execution verbs
+- file: .github/agents/rpiv-implementer.agent.md
+  role: implement
+  verbs: [lint, test, build, boot, verify, clean]
+  note: runs deterministic checks and self-verifies through the harness
+- file: .github/agents/rpiv-verifier.agent.md
+  role: verify
+  verbs: [verify, status, doctor]
+  note: verify is the canonical gate before the PR
+>>
+
 AGENT_HARNESS_RULES: TEXT<<
-- Once ./harness and .harness/contract.yml exist, agents MUST use ./harness as the first-choice operating surface for supported commands.
-- Agents MUST prefer ./harness orient, ./harness doctor, ./harness lint, ./harness test, ./harness build, ./harness verify, ./harness status, and ./harness clean over direct wrapped commands.
-- Agents MAY call direct project commands only when the harness contract lacks the needed verb or the harness reports unknown or degraded.
-- Agents MUST record gaps with ./harness friction add using KEY_QUESTION when bypassing the harness due to missing proof.
+Render harness directives per consuming agent, scoped to that agent's role and the verbs listed for it in HARNESS_CONSUMERS -- never the full verb set. Inject as one MUST/MAY directive per line inside the agent's <instructions> block, immediately before </instructions>, delimited by the HARNESS markers so re-runs replace in place. Each block MUST:
+- name only the harness verbs relevant to the agent's role;
+- require ./harness over the wrapped commands for those verbs;
+- for read-only roles (research, plan) forbid the execution verbs (lint, test, build, boot, verify, clean);
+- require recording harness gaps via ./harness friction add using the KEY_QUESTION.
 >>
 
 REQUIRED_OUTPUTS: YAML<<
@@ -69,8 +94,10 @@ REQUIRED_OUTPUTS: YAML<<
 - .harness/evidence/
 - .harness/friction.jsonl
 - .harness/README.md
-- AGENTS.md
-- .github/agents/*.agent.md
+- .github/agents/rpiv-research.agent.md
+- .github/agents/rpiv-planner.agent.md
+- .github/agents/rpiv-implementer.agent.md
+- .github/agents/rpiv-verifier.agent.md
 >>
 
 REQUIRED_VERBS: YAML<<
@@ -186,7 +213,6 @@ RUN `inspect-repo`
 RUN `detect-commands`
 RUN `record-inferences`
 RUN `write-harness-files`
-RUN `write-agent-instructions`
 RUN `write-agent-definitions`
 RUN `verify-harness`
 RETURN: format="HARNESS_RESULT_V1", agent_update_summary=AGENT_UPDATE_SUMMARY, command_summary=COMMAND_MAP, evidence_summary=EVIDENCE_FILES, friction_summary=FRICTION_ENTRIES, harness_path=HARNESS_PATH, verdict=VERIFY_VERDICT, verify_summary=VERIFY_OUTPUT
@@ -229,31 +255,19 @@ CAPTURE CHMOD_OUTPUT from `execute/runInTerminal`
 SET HARNESS_READY := true (from "Agent Inference" using CHMOD_OUTPUT)
 </process>
 
-<process id="write-agent-instructions" name="Require harness usage in AGENTS.md">
-SET INSTRUCTION_TEXT := <INSTRUCTIONS> (from "Agent Inference" using AGENTS_MD_PATH, CONTRACT_PATH, HARNESS_PATH, KEY_QUESTION)
-TRY:
-  USE `read/readFile` where: filePath=AGENTS_MD_PATH
-  CAPTURE EXISTING_INSTRUCTIONS from `read/readFile`
-  SET UPDATED_INSTRUCTIONS := <MERGED> (from "Agent Inference" using EXISTING_INSTRUCTIONS, INSTRUCTION_TEXT)
-  USE `edit/editFiles` where: filePath=AGENTS_MD_PATH
-RECOVER (err):
-  USE `edit/createFile` where: content=INSTRUCTION_TEXT, filePath=AGENTS_MD_PATH
-</process>
-
-<process id="write-agent-definitions" name="Require harness usage in repo agent definitions">
-USE `search/fileSearch` where: pattern=AGENT_FILE_PATTERN
-CAPTURE AGENT_FILES from `search/fileSearch`
-SET AGENT_INSTRUCTION_TEXT := <INSTRUCTIONS> (from "Agent Inference" using AGENT_HARNESS_RULES, CONTRACT_PATH, HARNESS_PATH, KEY_QUESTION)
-IF AGENT_FILES is empty:
-  SET FRICTION_ENTRIES := FRICTION_ENTRIES + ["No repo-local agent definitions found at .github/agents/*.agent.md"] (from "Agent Inference")
+<process id="write-agent-definitions" name="Require role-scoped harness usage in the consuming agent definitions">
+SET CONSUMERS := HARNESS_CONSUMERS (from "Agent Inference")
+IF CONSUMERS is empty:
+  SET FRICTION_ENTRIES := FRICTION_ENTRIES + ["No harness-consuming agent definitions found in HARNESS_CONSUMERS"] (from "Agent Inference")
 ELSE:
-  FOREACH agent IN AGENT_FILES:
-    USE `read/readFile` where: filePath=agent
+  FOREACH consumer IN CONSUMERS:
+    SET AGENT_INSTRUCTION_TEXT := <INSTRUCTIONS> (from "Agent Inference" using AGENT_HARNESS_RULES, CONTRACT_PATH, HARNESS_PATH, KEY_QUESTION, consumer)
+    USE `read/readFile` where: filePath=consumer.file
     CAPTURE AGENT_CONTENT from `read/readFile`
-    SET UPDATED_AGENT_CONTENT := <MERGED> (from "Agent Inference" using AGENT_CONTENT, AGENT_INSTRUCTION_TEXT, agent)
-    USE `edit/editFiles` where: filePath=agent
-    SET UPDATED_AGENT_FILES := UPDATED_AGENT_FILES + [agent] (from "Agent Inference")
-SET AGENT_UPDATE_SUMMARY := <SUMMARY> (from "Agent Inference" using AGENT_FILE_PATTERN, UPDATED_AGENT_FILES)
+    SET UPDATED_AGENT_CONTENT := <MERGED> (from "Agent Inference" using AGENT_CONTENT, AGENT_INSTRUCTION_TEXT, consumer)
+    USE `edit/editFiles` where: filePath=consumer.file
+    SET UPDATED_AGENT_FILES := UPDATED_AGENT_FILES + [consumer.file] (from "Agent Inference")
+SET AGENT_UPDATE_SUMMARY := <SUMMARY> (from "Agent Inference" using HARNESS_CONSUMERS, UPDATED_AGENT_FILES)
 </process>
 
 <process id="verify-harness" name="Verify harness contract">
@@ -280,15 +294,3 @@ SET EVIDENCE_FILES := <FILES> (from "Agent Inference" using VERIFY_OUTPUT, EVIDE
 <input>
 USER_INPUT is the request to create, update, repair, or verify a repo-local engineering harness CLI.
 </input>
-
-<!-- HARNESS:BEGIN -->
-## Engineering harness (`./harness`) — required usage
-
-This repository has a single operating surface, `./harness` (ADR-0003,
-CORE-COMPONENT-0003, `.harness/contract.yml`). Agents MUST follow these rules:
-
-- Once ./harness and .harness/contract.yml exist, agents MUST use ./harness as the first-choice operating surface for supported commands.
-- Agents MUST prefer ./harness orient, ./harness doctor, ./harness lint, ./harness test, ./harness build, ./harness verify, ./harness status, and ./harness clean over direct wrapped commands.
-- Agents MAY call direct project commands only when the harness contract lacks the needed verb or the harness reports unknown or degraded.
-- Agents MUST record gaps with ./harness friction add using KEY_QUESTION ("What did the agent have to infer that the harness should have proved?") when bypassing the harness due to missing proof.
-<!-- HARNESS:END -->

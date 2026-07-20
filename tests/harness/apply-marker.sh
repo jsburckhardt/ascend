@@ -13,7 +13,10 @@
 #     content from that marker through the first following
 #     `<!-- HARNESS:END -->` (inclusive) is REPLACED by <block-file> verbatim.
 #     All content outside the markers is preserved byte-for-byte.
-#   - If no marker is present, the block is appended after a blank-line separator.
+#   - If no marker is present, the block is inserted immediately before the
+#     first `</instructions>` closing tag so it lives inside <instructions>
+#     (APS flow); if the surface has no <instructions> tag, it is appended after
+#     a blank-line separator as a fallback.
 #   - Re-running against the produced output yields a byte-identical result and
 #     never duplicates the block (exactly one BEGIN/END pair).
 #
@@ -45,6 +48,12 @@ awk -v blockfile="$block" '
 	}
 	skipping && /<!-- HARNESS:END -->/ { skipping = 0; next }
 	skipping { next }
+	!injected && /^[ \t]*<\/instructions>[ \t]*$/ {
+		printf "%s", blk
+		injected = 1
+		print
+		next
+	}
 	{ print }
 	END {
 		if (!injected) printf "\n%s", blk

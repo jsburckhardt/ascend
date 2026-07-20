@@ -140,9 +140,10 @@ harness — and then closing the corresponding friction entry.
 
 ## Agent workflow
 
-Agents MUST prefer `./harness` for supported verbs and MAY bypass to a direct
+The RPIV stages MUST prefer `./harness` for supported verbs and MAY bypass to a direct
 command only when the contract lacks the verb or the harness reports
-`unknown`/`degraded` — and MUST log that gap via `./harness friction add`. The
-harness-usage rules are embedded (idempotently) in `AGENTS.md` and every
-`.github/agents/*.agent.md` between `<!-- HARNESS:BEGIN -->` /
-`<!-- HARNESS:END -->` markers.
+`unknown`/`degraded` — and MUST log that gap via `./harness friction add` (collected in
+`.harness/friction.jsonl`). The harness-usage rules are embedded (idempotently) in the RPIV
+stage agents only — `rpiv-research`, `rpiv-planner`, `rpiv-implementer`, `rpiv-verifier` —
+between `<!-- HARNESS:BEGIN -->` / `<!-- HARNESS:END -->` markers inside their `<instructions>`.
+The `ship` orchestrator does not run the harness; it dispatches the stages.

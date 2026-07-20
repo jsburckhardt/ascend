@@ -38,14 +38,14 @@ Short, actionable statements derived from ADRs and core-components. More than on
 | 14 | Implement the harness as a dependency-light, portable POSIX shell script | ADR-0003 | 2026-07-20 |
 | 15 | Wrap `npm run typecheck` under the harness `verify` verb only, not `lint` or `build` | ADR-0003 | 2026-07-20 |
 | 16 | Create `.github/soft-factory/verification.yml` running `./harness verify` as the canonical gate | ADR-0003 | 2026-07-20 |
-| 17 | Update `AGENTS.md` and every `.github/agents/*.agent.md` to require harness usage | ADR-0003 | 2026-07-20 |
+| 17 | Add the harness-usage rule only to the RPIV stage agents (`rpiv-research`/`rpiv-planner`/`rpiv-implementer`/`rpiv-verifier`); the `ship` orchestrator, `AGENTS.md`, and non-stage agents run no harness | ADR-0003 | 2026-07-20 |
 | 18 | Return exactly one verdict — pass, fail, degraded, or unknown — from every harness verb | CORE-COMPONENT-0003 | 2026-07-20 |
 | 19 | Exit non-zero only on `fail`; exit 0 for pass, degraded, and unknown | CORE-COMPONENT-0003 | 2026-07-20 |
 | 20 | Record every honest capability gap as a friction entry answering the KEY_QUESTION verbatim | CORE-COMPONENT-0003 | 2026-07-20 |
 | 21 | Write a timestamped evidence record under `.harness/evidence/` on every `verify` run | CORE-COMPONENT-0003 | 2026-07-20 |
 | 22 | Support `--json` with a stable schema on every machine-facing harness verb | CORE-COMPONENT-0003 | 2026-07-20 |
 | 23 | Declare verb-to-command mappings in `.harness/contract.yml` so verbs are wired by data | CORE-COMPONENT-0003 | 2026-07-20 |
-| 24 | Require exactly one marker-delimited, idempotent harness block per agent surface | CORE-COMPONENT-0003 | 2026-07-20 |
+| 24 | Require exactly one marker-delimited, idempotent harness block inside `<instructions>` on each consuming agent surface, and none on non-consumers | CORE-COMPONENT-0003 | 2026-07-20 |
 | 25 | Commit `contract.yml`, `README.md`, and `friction.jsonl`; git-ignore `.harness/evidence/` run output | CORE-COMPONENT-0003 | 2026-07-20 |
 | 26 | Derive `verify`'s verdict by iterating contract-declared member checks, not a hard-coded list | ADR-0003, CORE-COMPONENT-0003 | 2026-07-20 |
 | 27 | Apply fixed verify aggregate rule: any fail⇒fail, all pass⇒pass, all unknown⇒unknown, else degraded | CORE-COMPONENT-0003 | 2026-07-20 |

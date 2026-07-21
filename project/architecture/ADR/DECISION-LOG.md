@@ -9,7 +9,7 @@ This file is the single registry of all architectural decisions and core-compone
 | ADR-0002 | Ascend baseline technology stack and repository layout | Accepted | 2026-07-14 |
 | ADR-0003 | Adopt a repo-local engineering harness (`./harness`) as the operating surface for humans and agents | Accepted | 2026-07-20 |
 | ADR-0004 | Interactive/handoff verbs in the engineering harness (`./harness dev`) | Accepted | 2026-07-20 |
-| ADR-0005 | Ascend application-serve runtime (HTTP server, TypeScript runtime execution, and `boot` lifecycle) | Accepted | 2026-07-21 |
+| ADR-0005 | Ascend application-serve runtime (HTTP server, TypeScript runtime execution, and `boot` lifecycle) | Accepted (refined 2026-07-21: Node ≥22.6.0 runtime floor) | 2026-07-21 |
 
 ## Core-Components
 
@@ -59,7 +59,7 @@ Short, actionable statements derived from ADRs and core-components. More than on
 | 33 | Test harness portability on a non-GNU userland with multiline and control-character inputs | CORE-COMPONENT-0003 | 2026-07-20 |
 | 34 | Generate collision-safe evidence filenames and write evidence atomically | CORE-COMPONENT-0003 | 2026-07-20 |
 | 35 | Return `fail` when a required evidence or friction record cannot be persisted | CORE-COMPONENT-0003 | 2026-07-20 |
-| 36 | Validate the full supported Node range (exactly major 22); reject Node 23+ as unsupported | CORE-COMPONENT-0003 | 2026-07-20 |
+| 36 | Validate the complete supported Node range declared by `engines.node` (enforce both bounds); report out-of-range Node as unsupported (degraded) | CORE-COMPONENT-0003 | 2026-07-20 |
 | 37 | Maintain a durable executable harness regression suite enforcing CORE-COMPONENT-0003 | CORE-COMPONENT-0003 | 2026-07-20 |
 | 38 | Add a `./harness dev` verb that execs `npm run dev` as a process handoff | ADR-0004 | 2026-07-20 |
 | 39 | Introduce interactive/handoff verbs that hand off the process instead of returning a verdict | ADR-0004 | 2026-07-20 |
@@ -71,7 +71,7 @@ Short, actionable statements derived from ADRs and core-components. More than on
 | 45 | Exclude `mode: exec` verbs from run-to-completion enumeration in the harness regression suite | CORE-COMPONENT-0003 | 2026-07-20 |
 | 46 | Propagate the exec'd command's exit code for handoff verbs instead of a verdict mapping | CORE-COMPONENT-0003 | 2026-07-20 |
 | 47 | Use Node built-in `node:http` for the app-serve HTTP server; prohibit web frameworks | ADR-0005 | 2026-07-21 |
-| 48 | Execute `src/` TypeScript at runtime via `node --experimental-strip-types`; add no build/emit step | ADR-0005 | 2026-07-21 |
+| 48 | Execute `src/` TypeScript at runtime via `node --experimental-strip-types` (requires Node ≥22.6.0); add no build/emit step | ADR-0005 | 2026-07-21 |
 | 49 | Add `@types/node` as a compile-time-only devDependency to typecheck Node built-ins | ADR-0005 | 2026-07-21 |
 | 50 | Constrain `src/` to strip-types-safe TypeScript (no enum, namespace, or parameter properties) | ADR-0005 | 2026-07-21 |
 | 51 | Add an `npm run start` script running `node --experimental-strip-types src/main.ts` | ADR-0005 | 2026-07-21 |
@@ -83,3 +83,5 @@ Short, actionable statements derived from ADRs and core-components. More than on
 | 57 | Wire the harness `test` verb to `npm test`, moving it from unknown to pass in `verify` | ADR-0005 | 2026-07-21 |
 | 58 | Keep `./harness dev` as the typecheck watch; document `./harness boot` as the shell+health start command | ADR-0005 | 2026-07-21 |
 | 59 | Keep the service health/HTTP contract issue-local at Prototype 0; create no core-component | ADR-0005 | 2026-07-21 |
+| 60 | Require Node ≥22.6.0 (<23) as the supported runtime floor; `--experimental-strip-types` is unavailable before 22.6.0 | ADR-0005 | 2026-07-21 |
+| 61 | Report `doctor` degraded (never fail) when running Node is major 22 and minor < 6, since 22.0–22.5 cannot run the app | ADR-0005, CORE-COMPONENT-0003 | 2026-07-21 |

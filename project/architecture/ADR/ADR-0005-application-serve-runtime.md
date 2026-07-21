@@ -4,6 +4,13 @@
 
 Accepted
 
+> **Refined 2026-07-21 (PR #6 review F-01):** narrowed the Decision 2 runtime floor
+> from "major 22" to **`>=22.6.0 <23`** — `--experimental-strip-types` first shipped
+> in Node **v22.6.0**, so Node 22.0–22.5 cannot run the app — and recorded the
+> `doctor` degraded-on-minor<6 readiness diagnostic. No other decision (D1, D3–D8)
+> changes, and **no CORE-COMPONENT-0003 amendment is required** (CC-0003 R15 already
+> derives the supported range from `engines.node` and enforces both bounds).
+
 ## Context
 
 Issue #6 gives Ascend its **first executable application**: a real HTTP service
@@ -68,15 +75,26 @@ data alone.
    not-yet-listening `http.Server` (so tests can bind an ephemeral port);
    `src/main.ts` is the entry that starts listening.
 
-2. **TypeScript runtime execution — `node --experimental-strip-types`.** `src/`
-   TypeScript runs directly under Node 22 via `node --experimental-strip-types`;
-   **no emit, no build step, no bundler, no loader dependency** is added, and
-   `tsconfig.json` stays `noEmit` (ADR-0002 "no build beyond `tsc`"). Because
-   type-stripping does not support all TS constructs, `src/` app code MUST stay
-   strip-types-safe (no `enum`, `namespace`, or parameter properties). The
-   experimental flag prints an `ExperimentalWarning` and its behaviour can change
-   across Node 22.x — mitigated by pinning the Node major (existing `engines`
-   `>=22 <23` and `.nvmrc`).
+2. **TypeScript runtime execution — `node --experimental-strip-types` (requires
+   Node ≥ 22.6.0).** `src/` TypeScript runs directly under Node via
+   `node --experimental-strip-types`; **no emit, no build step, no bundler, no loader
+   dependency** is added, and `tsconfig.json` stays `noEmit` (ADR-0002 "no build
+   beyond `tsc`"). Because type-stripping does not support all TS constructs, `src/`
+   app code MUST stay strip-types-safe (no `enum`, `namespace`, or parameter
+   properties). This runtime **requires Node.js ≥ 22.6.0** — `--experimental-strip-types`
+   first shipped in Node **v22.6.0**, so on Node 22.0–22.5 `npm run start`/`npm test`
+   fail *before executing* (the flag is unrecognized). The supported runtime floor is
+   therefore **`>=22.6.0 <23`** (still within major 22), which `engines.node`, `.nvmrc`
+   (`22`, which nvm resolves to the newest 22.x), and the README MUST express. The
+   experimental flag prints an `ExperimentalWarning` and its behaviour can change across
+   Node 22.x — mitigated by strip-types-safe code and the `>=22.6.0 <23` pin. `doctor`
+   enforces this floor as a **readiness diagnostic**: when the running Node is major 22
+   but minor < 6 it reports **`degraded`** (its existing non-failing verdict — never
+   `fail`) with a clear reason, since 22.0–22.5 cannot run the app. This is
+   CORE-COMPONENT-0003 R15 applied to the narrowed `engines.node` range (R15 derives the
+   supported range from `engines.node` and enforces both bounds), so **no
+   CORE-COMPONENT-0003 amendment is required** — the `compute_doctor` minor-floor check
+   is an implementation detail bounded by this ADR's `>=22.6.0` floor.
 
 3. **Add `@types/node` as a devDependency.** `tsc --noEmit` (the `verify` gate)
    cannot typecheck `node:http`/`process`/`console` without Node type
@@ -156,7 +174,14 @@ What becomes easier or harder as a result of this decision?
 - Runtime execution depends on the **experimental** `--experimental-strip-types`
   flag: it emits an `ExperimentalWarning`, supports only a subset of TS, and its
   behaviour may shift across Node 22.x patch releases (mitigated by
-  strip-types-safe code and a pinned Node major).
+  strip-types-safe code and the `>=22.6.0 <23` pin).
+- The supported runtime range **narrows from "major 22" to `>=22.6.0 <23`** because
+  `--experimental-strip-types` is unavailable before Node **v22.6.0**; Node 22.0–22.5
+  are now unsupported (they cannot run `npm run start`/`npm test`). `engines.node`,
+  `.nvmrc`, the README, and `doctor` MUST reflect the `>=22.6.0` floor — `doctor`
+  reports `degraded` (never `fail`) when the running Node is major 22 but minor < 6.
+  This is CORE-COMPONENT-0003 R15 applied to the narrowed range; **no CC-0003
+  amendment** is needed.
 - `verify` now **runs the test suite** as an aggregate member, so it is slower and
   turns `fail` if a test fails — intended, but a new way for the gate to block.
 - `@types/node` is added to `package.json`; `package-lock.json` cannot be

@@ -75,8 +75,14 @@ in-sandbox, so `package-lock.json` cannot be regenerated here — update best-ef
 README) that a connected `npm install` must refresh it. Verify gate is `tsc --noEmit` (not `npm ci`),
 so lock drift does not fail `./harness verify`.
 
+> **Refinement (PR #6 review F-01 — ADR-0005 D2):** also set `engines.node` to
+> **`>=22.6.0 <23`** (was `>=22 <23`). `--experimental-strip-types` first ships in
+> Node **v22.6.0**, so 22.0–22.5 cannot run `start`/`test`. Keep `.nvmrc` as `22`
+> (nvm resolves the newest 22.x, which is ≥22.6.0).
+
 ### Acceptance Criteria
 - `devDependencies` includes `@types/node` `^22`.
+- `engines.node` is `>=22.6.0 <23` (PR #6 F-01 / ADR-0005 D2 runtime floor); `.nvmrc` stays `22`.
 - `scripts.start` and `scripts.test` present with the exact commands above.
 - `tsconfig.json` remains `noEmit` and includes the new source/test globs.
 - Offline lock caveat documented (README/PR).
@@ -162,11 +168,21 @@ document truthfully: (a) **start the shell + health endpoint** with `./harness b
 override; (e) the offline `package-lock` caveat from T3. Keep README, contract, and `help`/`orient`
 mutually consistent.
 
+> **Refinement (PR #6 review F-01 — ADR-0005 D2):** README MUST state the supported
+> runtime is **Node `>=22.6.0 <23`** (not merely "Node 22") and explain why
+> (`--experimental-strip-types` needs ≥22.6.0). Refine `compute_doctor`/`node_major`
+> so that when the running Node is major 22 but minor < 6 it reports **`degraded`**
+> (exit 0, never `fail`) with a clear reason (e.g. "Node 22.x < 22.6.0 cannot run
+> --experimental-strip-types"). This is CORE-COMPONENT-0003 R15 applied to the
+> narrowed `engines.node` range — a localized `compute_doctor` change, **no CC-0003
+> amendment**.
+
 ### Acceptance Criteria
 - README documents `./harness boot` as the shell+health start command and distinguishes it from
   `./harness dev` (typecheck watch).
 - README documents the `/health` response, `/` shell, port/`PORT`, and the lock caveat.
 - No contradiction between README, `.harness/contract.yml`, and `help`/`orient` output.
+- README documents the `>=22.6.0 <23` runtime floor and why; `./harness doctor` reports `degraded` (never `fail`) on Node major 22 / minor < 6.
 
 ### Test Coverage
 - Doc review (checklist) + **TEST-M1** (manual browser follows the documented command).
@@ -253,10 +269,15 @@ unwired). **Never run bare `./harness boot`** in the suite (binds a port / hangs
 - **ADD TEST-32**: new block proving issue #6 — `boot` exec handoff resolves `npm run start` (via
   `--print`), `test`→`pass`, `verify` non-fail/degraded, docs coherent. Guard any port-binding probe
   with `timeout`; never leave a server running.
+- **ADD TEST-33 (PR #6 F-01 / ADR-0005 D2):** assert the refined `doctor` Node-floor diagnostic —
+  using the suite's existing Node-version stubbing (the same seam that drives the range-boundary
+  cases), a Node whose minor < 6 (e.g. `v22.5.1`) makes `./harness doctor --json` report `degraded`
+  (exit 0, never `fail`) with a reason naming the `>=22.6.0` floor, while a Node ≥22.6.0 within major
+  22 still passes the Node check. Confirm the change is localized to `compute_doctor` (no CC-0003 amendment).
 
 ### Acceptance Criteria
 - `sh tests/harness/run.sh` runs to completion, all cases pass, **no hang** and no leaked port.
-- TEST-01/05/06/19/20/30/31D updated as above; TEST-32 added and passing.
+- TEST-01/05/06/19/20/30/31D updated as above; TEST-32 and TEST-33 added and passing.
 - The suite never executes bare `./harness boot`.
 
 ### Test Coverage

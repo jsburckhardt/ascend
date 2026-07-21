@@ -41,9 +41,14 @@ Ascend uses Node.js and TypeScript (see
 [ADR-0002](project/architecture/ADR/ADR-0002-ascend-baseline-stack-and-layout.md)).
 
 1. Clone the repository.
-2. Ensure the pinned Node.js version is active. The version is pinned in
-   [`.nvmrc`](.nvmrc) and enforced by the `engines` field in `package.json`
-   (Node.js 22 LTS). With [nvm](https://github.com/nvm-sh/nvm): `nvm use`.
+2. Ensure a supported Node.js version is active. The runtime floor is
+   **Node.js ≥ 22.6.0 (< 23)** — pinned in [`.nvmrc`](.nvmrc) (`22`, which nvm
+   resolves to the newest 22.x, i.e. ≥ 22.6.0) and enforced by the `engines`
+   field (`>=22.6.0 <23`) in `package.json`. The **≥ 22.6.0** floor is required
+   because the app runs via `node --experimental-strip-types` (see
+   [Run the application](#run-the-application-shell--health)), a flag that first
+   shipped in Node **v22.6.0**; Node 22.0–22.5 cannot run it. With
+   [nvm](https://github.com/nvm-sh/nvm): `nvm use`.
 3. From the repository root, run the single setup command:
 
    ```bash
@@ -105,6 +110,12 @@ process, it emits **no verdict** and writes no evidence; leave it running and
 press Ctrl-C to stop. To resolve the command **without** starting the server,
 use `./harness boot --print` (prints `npm run start`) or `./harness boot --json`
 (a JSON handoff descriptor).
+
+> **Runtime floor.** `--experimental-strip-types` first shipped in Node
+> **v22.6.0**, so the app requires **Node.js ≥ 22.6.0 (< 23)** (matching
+> `engines.node`). On Node 22.0–22.5 `npm run start`/`npm test` fail before
+> executing; `./harness doctor` reports **`degraded`** (never `fail`) on such a
+> runtime, naming the `>=22.6.0` floor.
 
 The server listens on **port 3000** by default; override it with the **`PORT`**
 environment variable (e.g. `PORT=8080 ./harness boot`). Routes:

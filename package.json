@@ -6,7 +6,7 @@
   "description": "Ascend orchestrates cross-project developer workflow; VS Code (code-server) provides the IDE.",
   "license": "UNLICENSED",
   "engines": {
-    "node": ">=22 <23"
+    "node": ">=22.6.0 <23"
   },
   "scripts": {
     "dev": "tsc --noEmit --watch",

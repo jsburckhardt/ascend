@@ -4,7 +4,9 @@
 # project/issues/4/plan/03-test-plan.md, TEST-30..TEST-31 from
 # project/issues/5/plan/03-test-plan.md (dev + validation commands), plus
 # TEST-32 from project/issues/6/plan/03-test-plan.md (app shell + /health wired
-# via boot/test). Runs non-interactively, prints a summary
+# via boot/test), plus PR #6 review additions TEST-32c (F-02 truthful friction)
+# and TEST-33 (F-01 doctor >=22.6.0 minor floor). Runs non-interactively, prints
+# a summary
 # and an overall Verdict line, exits non-zero on any failure, and leaves the
 # working tree clean (all mutations go to a scratch dir; permission changes are
 # reverted; tracked files are never written because every verb run is isolated
@@ -480,18 +482,20 @@ bpr=$("$H" boot --print 2>/dev/null); bprc=$?
 # ===========================================================================
 # TEST-21: doctor validates full Node range (21/22/23 boundaries)
 # ===========================================================================
+# The major-22 case uses a minor >= 6 so it clears the >=22.6.0 floor introduced
+# by PR #6 F-01 / ADR-0005 D2 (the minor-floor boundary itself is TEST-33).
 if [ -n "$NODE" ]; then
 	shimdir="$WORK/shim"; mkdir -p "$shimdir"
 	t21=1
-	for pair in "21:degraded" "22:pass" "23:degraded"; do
-		maj=${pair%%:*}; want=${pair##*:}
-		printf '#!/bin/sh\necho v%s.0.0\n' "$maj" > "$shimdir/node"; chmod +x "$shimdir/node"
+	for pair in "v21.0.0:degraded" "v22.6.0:pass" "v23.0.0:degraded"; do
+		ver=${pair%%:*}; want=${pair##*:}
+		printf '#!/bin/sh\necho %s\n' "$ver" > "$shimdir/node"; chmod +x "$shimdir/node"
 		fr=$(new_friction); ev=$(new_evdir)
 		got=$(PATH="$shimdir:$PATH" HARNESS_ROOT="$HEALTHY_ROOT" HARNESS_FRICTION="$fr" HARNESS_EVIDENCE_DIR="$ev" "$H" doctor --json | "$NODE" -e 'let d="";process.stdin.on("data",c=>d+=c);process.stdin.on("end",()=>{try{process.stdout.write(JSON.parse(d).verdict)}catch(e){process.stdout.write("__ERR__")}})')
 		PATH="$shimdir:$PATH" HARNESS_ROOT="$HEALTHY_ROOT" HARNESS_FRICTION="$fr" HARNESS_EVIDENCE_DIR="$ev" "$H" doctor >/dev/null 2>&1; gc=$?
-		{ [ "$got" = "$want" ] && [ "$gc" = "0" ]; } || { t21=0; printf '  (node %s -> %s exit %s, want %s)\n' "$maj" "$got" "$gc" "$want"; }
+		{ [ "$got" = "$want" ] && [ "$gc" = "0" ]; } || { t21=0; printf '  (node %s -> %s exit %s, want %s)\n' "$ver" "$got" "$gc" "$want"; }
 	done
-	[ "$t21" = "1" ] && ok "TEST-21 doctor node range: 21->degraded, 22->pass, 23->degraded (exit 0)" || no "TEST-21 doctor node range"
+	[ "$t21" = "1" ] && ok "TEST-21 doctor node range: 21->degraded, 22.6->pass, 23->degraded (exit 0)" || no "TEST-21 doctor node range"
 else skip "TEST-21 node range (node absent)"; fi
 
 # ===========================================================================
@@ -984,34 +988,115 @@ grep -qF -- 'npm run start' "$HARN_RD" || { t32=0; printf '  (TEST-32 .harness/R
 [ "$t32" = "1" ] && ok "TEST-32 #6 shell+health wired: boot exec->npm run start (--print/--json), test->pass, verify degraded/test=pass, docs coherent" || no "TEST-32 #6 wiring (t32=$t32)"
 
 # ---------------------------------------------------------------------------
-# TEST-32b (guarded live probe): a REAL bind on a high port, hard-bounded by
-# timeout/gtimeout so it can never hang or leak. Uses the strip-types entrypoint
-# directly (never bare `./harness boot`, never the default port 3000).
+# TEST-32b (guarded live probe): a REAL bind on an OS-chosen EPHEMERAL port,
+# hard-bounded by timeout/gtimeout so it can never hang or leak. Uses the
+# strip-types entrypoint directly (never bare `./harness boot`, never the default
+# port 3000). The port is allocated by asking the OS for a free one (node binds
+# port 0, reports it, releases it) instead of a hard-coded port, and EVERY curl
+# carries a client connect/overall timeout so a hung or foreign listener can
+# neither stall the test nor silently defeat the assertions.
 # ---------------------------------------------------------------------------
 TMO=""
 command -v timeout  >/dev/null 2>&1 && TMO="timeout"
 command -v gtimeout >/dev/null 2>&1 && TMO="gtimeout"
-if [ -n "$TMO" ] && [ -n "$NODE" ] && [ "$TEST_OK" = "1" ] && command -v curl >/dev/null 2>&1; then
-	pp=39517
+# free_port: ask the OS for an available ephemeral TCP port on 127.0.0.1 (bind 0,
+# read the assigned port, close). Empty on failure -> the probe skips.
+free_port() {
+	"$NODE" -e 'const net=require("net");const s=net.createServer();s.on("error",()=>process.exit(1));s.listen(0,"127.0.0.1",()=>{const p=s.address().port;s.close(()=>process.stdout.write(String(p)))})' 2>/dev/null
+}
+# per-curl client timeout (POSIX curl): fail fast on connect, cap total time.
+CURL_TMO="--connect-timeout 2 --max-time 5"
+pp=""
+[ -n "$NODE" ] && pp=$(free_port)
+if [ -n "$TMO" ] && [ -n "$NODE" ] && [ -n "$pp" ] && [ "$TEST_OK" = "1" ] && command -v curl >/dev/null 2>&1; then
 	( cd "$REPO" && exec env PORT="$pp" "$TMO" 5 "$NODE" --experimental-strip-types src/main.ts >/dev/null 2>&1 ) &
 	probe_pid=$!
 	up=0; i=0
 	while [ "$i" -lt 50 ]; do
-		if curl -fsS "http://127.0.0.1:$pp/health" >/dev/null 2>&1; then up=1; break; fi
+		if curl $CURL_TMO -fsS "http://127.0.0.1:$pp/health" >/dev/null 2>&1; then up=1; break; fi
 		sleep 0.1; i=$((i + 1))
 	done
-	hb=$(curl -fsS "http://127.0.0.1:$pp/health" 2>/dev/null)
-	hs=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$pp/health" 2>/dev/null)
-	rs=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$pp/" 2>/dev/null)
-	rb=$(curl -fsS "http://127.0.0.1:$pp/" 2>/dev/null)
-	us=$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$pp/does-not-exist" 2>/dev/null)
+	hb=$(curl $CURL_TMO -fsS "http://127.0.0.1:$pp/health" 2>/dev/null)
+	hs=$(curl $CURL_TMO -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$pp/health" 2>/dev/null)
+	rs=$(curl $CURL_TMO -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$pp/" 2>/dev/null)
+	rb=$(curl $CURL_TMO -fsS "http://127.0.0.1:$pp/" 2>/dev/null)
+	us=$(curl $CURL_TMO -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$pp/does-not-exist" 2>/dev/null)
 	kill "$probe_pid" 2>/dev/null
 	wait "$probe_pid" 2>/dev/null
 	{ [ "$up" = "1" ] && [ "$hb" = '{"status":"ok"}' ] && [ "$hs" = "200" ] && [ "$rs" = "200" ] && [ "$us" = "404" ] && printf '%s' "$rb" | grep -qi '<html'; } \
-		&& ok "TEST-32b live probe: /health 200 {\"status\":\"ok\"}, / 200 HTML, unknown 404 (timeout-bounded, port $pp, no leak)" \
-		|| no "TEST-32b live probe (up=$up health='$hb' hs=$hs rs=$rs unknown=$us)"
+		&& ok "TEST-32b live probe: /health 200 {\"status\":\"ok\"}, / 200 HTML, unknown 404 (timeout-bounded, ephemeral port $pp, per-curl timeout, no leak)" \
+		|| no "TEST-32b live probe (up=$up health='$hb' hs=$hs rs=$rs unknown=$us port=$pp)"
 else
-	skip "TEST-32b live probe (no timeout/curl/node or npm test preflight unavailable)"
+	skip "TEST-32b live probe (no timeout/curl/node, no free ephemeral port, or npm test preflight unavailable)"
+fi
+
+# ---------------------------------------------------------------------------
+# TEST-32c (PR #6 F-02 regression): a `verify` run against the REAL contract
+# with an EMPTY friction log records a TRUTHFUL friction entry -- it names the
+# ACTUAL unknown members (lint/build) and does NOT falsely claim `test` is
+# unwired, nor reference an "Issue #5" wiring of test (test is now `npm test`
+# and passes). Asserted with plain grep (no node needed for the text checks);
+# gated on the typecheck preflight so `verify` is degraded (not fail) and thus
+# writes the aggregate friction record.
+# ---------------------------------------------------------------------------
+if [ "$TC_OK" = "1" ]; then
+	t32c=1
+	frc="$WORK/fr32c.$$"; : > "$frc"; ev=$(new_evdir)
+	HARNESS_FRICTION="$frc" HARNESS_EVIDENCE_DIR="$ev" "$H" verify >/dev/null 2>&1
+	vfl=$(grep '"verb": "verify"' "$frc" 2>/dev/null | tail -n 1)
+	[ -n "$vfl" ] || { t32c=0; printf '  (TEST-32c no verify friction entry recorded on empty log)\n'; }
+	printf '%s' "$vfl" | grep -q 'lint, build' || { t32c=0; printf '  (TEST-32c verify friction does not name the real unknown members lint, build)\n'; }
+	printf '%s' "$vfl" | grep -q 'test' && { t32c=0; printf '  (TEST-32c verify friction FALSELY names test)\n'; }
+	printf '%s' "$vfl" | grep -q 'Issue #5' && { t32c=0; printf '  (TEST-32c verify friction references stale Issue #5 wiring)\n'; }
+	[ "$t32c" = "1" ] && ok "TEST-32c #6 F-02: empty-friction verify records truthful friction (names lint/build; no false test, no Issue #5)" || no "TEST-32c F-02 friction truthfulness (t32c=$t32c)"
+else
+	skip "TEST-32c F-02 friction truthfulness (typecheck preflight unavailable)"
+fi
+
+# ===========================================================================
+# TEST-33 (PR #6 F-01 / ADR-0005 D2): doctor Node minor-floor boundary
+# ===========================================================================
+# Proves the refined `doctor` >=22.6.0 floor WITHOUT depending on this machine's
+# Node: stub a fake `node` on PATH (same seam as TEST-21) reporting a chosen
+# version. Major-22 minor<6 -> `degraded` (exit 0, NEVER fail) with a reason
+# naming the 22.6.0 floor; major-22 minor>=6 -> node check OK (pass). The change
+# is localized to compute_doctor (no CC-0003 amendment). SKIPs cleanly if the
+# stub mechanism is unavailable (no node, or shim dir unwritable).
+if [ -n "$NODE" ]; then
+	shimdir33="$WORK/shim33"; mkdir -p "$shimdir33" 2>/dev/null
+	if [ -d "$shimdir33" ] && [ -w "$shimdir33" ]; then
+		t33=1
+		# (a) below the floor (v22.5.0) -> degraded, exit 0, NEVER fail, node
+		#     check not-ok, and reason names the 22.6.0 floor.
+		printf '#!/bin/sh\necho v22.5.0\n' > "$shimdir33/node"; chmod +x "$shimdir33/node"
+		fr=$(new_friction); ev=$(new_evdir)
+		dj=$(PATH="$shimdir33:$PATH" HARNESS_ROOT="$HEALTHY_ROOT" HARNESS_FRICTION="$fr" HARNESS_EVIDENCE_DIR="$ev" "$H" doctor --json)
+		PATH="$shimdir33:$PATH" HARNESS_ROOT="$HEALTHY_ROOT" HARNESS_FRICTION="$fr" HARNESS_EVIDENCE_DIR="$ev" "$H" doctor >/dev/null 2>&1; dc=$?
+		dv=$(printf '%s' "$dj" | jget verdict)
+		dnotes=$(printf '%s' "$dj" | jget notes)
+		dnodeok=$(printf '%s' "$dj" | jget checks.0.ok)
+		[ "$dv" = "degraded" ] || { t33=0; printf '  (TEST-33 v22.5.0 verdict=%s want degraded)\n' "$dv"; }
+		[ "$dv" != "fail" ] || { t33=0; printf '  (TEST-33 v22.5.0 verdict must NEVER be fail)\n'; }
+		[ "$dc" = "0" ] || { t33=0; printf '  (TEST-33 v22.5.0 exit=%s want 0)\n' "$dc"; }
+		[ "$dnodeok" = "false" ] || { t33=0; printf '  (TEST-33 v22.5.0 node.ok=%s want false)\n' "$dnodeok"; }
+		printf '%s' "$dnotes" | grep -q '22.6.0' || { t33=0; printf '  (TEST-33 v22.5.0 reason does not name the 22.6.0 floor: %s)\n' "$dnotes"; }
+		printf '%s' "$dj" | json_valid || { t33=0; printf '  (TEST-33 v22.5.0 doctor --json not valid JSON)\n'; }
+		# (b) at/above the floor -> node check OK (pass), exit 0.
+		for ver in v22.6.0 v22.17.1; do
+			printf '#!/bin/sh\necho %s\n' "$ver" > "$shimdir33/node"; chmod +x "$shimdir33/node"
+			fr=$(new_friction); ev=$(new_evdir)
+			dj=$(PATH="$shimdir33:$PATH" HARNESS_ROOT="$HEALTHY_ROOT" HARNESS_FRICTION="$fr" HARNESS_EVIDENCE_DIR="$ev" "$H" doctor --json)
+			PATH="$shimdir33:$PATH" HARNESS_ROOT="$HEALTHY_ROOT" HARNESS_FRICTION="$fr" HARNESS_EVIDENCE_DIR="$ev" "$H" doctor >/dev/null 2>&1; dc=$?
+			dv=$(printf '%s' "$dj" | jget verdict)
+			dnodeok=$(printf '%s' "$dj" | jget checks.0.ok)
+			{ [ "$dv" = "pass" ] && [ "$dc" = "0" ] && [ "$dnodeok" = "true" ]; } || { t33=0; printf '  (TEST-33 %s verdict=%s exit=%s node.ok=%s want pass/0/true)\n' "$ver" "$dv" "$dc" "$dnodeok"; }
+		done
+		[ "$t33" = "1" ] && ok "TEST-33 doctor >=22.6.0 floor: v22.5.0->degraded (exit 0, reason names 22.6.0), v22.6.0/v22.17.1->pass" || no "TEST-33 doctor node minor floor (t33=$t33)"
+	else
+		skip "TEST-33 doctor node minor floor (shim dir unavailable)"
+	fi
+else
+	skip "TEST-33 doctor node minor floor (node absent -> cannot stub/validate)"
 fi
 
 

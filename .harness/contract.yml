@@ -58,6 +58,11 @@ verbs:
     mode: exec
     json: true
     description: "Start the local dev inner loop (interactive handoff; execs npm run dev)"
+  edit:
+    maps_to: "npm run edit"
+    mode: exec
+    json: true
+    description: "Launch code-server against $PROJECT_PATH (interactive handoff; execs npm run edit)"
   verify:
     maps_to: "npm run typecheck"
     json: true

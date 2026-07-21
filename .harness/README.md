@@ -50,6 +50,7 @@ is not a verdict and exits `2`.
 | `build` | none (`tsc` is `noEmit`; nothing emits) | `unknown` | yes |
 | `boot` | `npm run start` (`node --experimental-strip-types src/main.ts`) — app-serve handoff (`mode: exec`) | n/a — hands off via `exec`, emits **no verdict** | yes (descriptor) / `--print` |
 | `dev` | `npm run dev` (`tsc --noEmit --watch`) — interactive handoff (`mode: exec`) | n/a — hands off via `exec`, emits **no verdict** | yes (descriptor) / `--print` |
+| `edit` | `npm run edit` (`sh scripts/launch-editor.sh` → code-server against `$PROJECT_PATH`) — interactive handoff (`mode: exec`) | n/a — hands off via `exec`, emits **no verdict** | yes (descriptor) / `--print` |
 | `verify` | `npm run typecheck` (aggregate) | `degraded` | yes |
 | `status` | contract + last evidence (native) | `pass` | yes |
 | `clean` | none (harness-owned evidence only) | `degraded` | yes |
@@ -95,7 +96,15 @@ run-to-completion behavior, so **every pre-existing verb is unchanged**.
 Two interactive/handoff verbs use this category: **`dev`** (backing command
 `npm run dev` = `tsc --noEmit --watch`, the typecheck inner loop) and **`boot`**
 (backing command `npm run start` = `node --experimental-strip-types src/main.ts`,
-the app-serve + `/health` process wired by issue #6). A `mode: exec` verb:
+the app-serve + `/health` process wired by issue #6). A **third**, **`edit`**
+(backing command `npm run edit` = `sh scripts/launch-editor.sh`, the code-server
+launcher wired by issue #7 / ADR-0006), launches one code-server instance against
+`$PROJECT_PATH` (config: `PROJECT_PATH` required, `EDITOR_PORT` default `8080`,
+loopback + `--auth none` — local-spike only). All code-server-specific flags live
+**only** in the launcher script (PRD §5.7); the verb and npm script stay
+provider-agnostic. See the root [`README.md`](../README.md) section "Launch the
+editor (code-server)" for configuration, invalid-path behaviour (AC4), and the
+read-only safety guarantee (AC5). A `mode: exec` verb:
 
 - **Hands off via `exec`.** `./harness dev` replaces the harness process with the
   wrapped command (`cd "$ROOT" && exec sh -c "npm run dev"`), so the harness
@@ -118,17 +127,18 @@ the app-serve + `/health` process wired by issue #6). A `mode: exec` verb:
   #  "maps_to":"npm run dev","interactive":true}   ← note: NO "verdict" key
   ```
 
-`help` lists both `dev` and `boot` as interactive handoffs (and `orient`
+`help` lists `dev`, `boot`, and `edit` as interactive handoffs (and `orient`
 surfaces the resolved `dev` command); the automatic verb count includes them. The
-regression suite (`tests/harness/run.sh`) never `exec`s `dev` or `boot` — a live
-`boot` would bind a port — so it proves invocability via `dev --print` /
-`boot --print` (and `--json`), which cannot hang.
+regression suite (`tests/harness/run.sh`) never `exec`s `dev`, `boot`, or `edit`
+— a live `boot`/`edit` would bind a port / launch code-server — so it proves
+invocability via `dev --print` / `boot --print` / `edit --print` (and `--json`),
+which cannot hang.
 
 ## `--json` contract
 
 Every machine-facing verb (`orient`, `doctor`, `lint`, `test`, `build`, `boot`,
-`dev`, `verify`, `status`, `clean`, `friction list`) supports `--json` and emits a
-stable schema. Required keys on every JSON response:
+`dev`, `edit`, `verify`, `status`, `clean`, `friction list`) supports `--json` and
+emits a stable schema. Required keys on every JSON response:
 
 ```json
 { "harness_version": "1", "verb": "verify", "verdict": "degraded", "timestamp": "2026-07-20T07:20:35Z" }
@@ -140,8 +150,8 @@ aggregates, `checks[].verdict`) rather than parsing human text. The
 `pr-review-complement` skill already relies on `./harness orient` and
 `./harness verify --json`.
 
-Interactive/handoff verbs (`mode: exec`, e.g. `dev` and `boot`) are the one
-documented exception: their `--json` form is a non-exec **descriptor** that is
+Interactive/handoff verbs (`mode: exec`, e.g. `dev`, `boot`, and `edit`) are the
+one documented exception: their `--json` form is a non-exec **descriptor** that is
 verdict-exempt (R17) and therefore **omits** the `verdict` key, carrying
 `mode: "exec"`, `maps_to`, and `interactive: true` instead (see above).
 
@@ -218,6 +228,23 @@ harness — and then closing the corresponding friction entry.
   aliased as `lint`, `test`, or `build`, and no redundant `validate`/`check`
   entry point is introduced. `npm run dev` backs `./harness dev` and `npm run
   start` backs `./harness boot`; neither is aliased elsewhere.
+
+### Issue #7 status: launch the editor (code-server)
+
+- **`edit` launches code-server (wired by #7 / ADR-0006):** `edit` is the
+  editor-provider launch verb. It reuses the `mode: exec` handoff —
+  `edit.maps_to: "npm run edit"` execs `sh scripts/launch-editor.sh`, the single
+  dependency-light launcher seam that starts **one** code-server instance against
+  `$PROJECT_PATH` (`EDITOR_PORT` default `8080`, loopback + `--auth none`).
+  **All** code-server flags live only in that launcher (PRD §5.7); the verb and
+  `npm run edit` stay provider-agnostic. Being a handoff it is verdict-exempt;
+  introspect it without launching code-server via `./harness edit --print` /
+  `--json`. The launcher is **read-only** w.r.t. `PROJECT_PATH` and fails fast on
+  an unset/empty/missing/not-a-directory target or a missing code-server binary
+  (see the root [`README.md`](../README.md) "Launch the editor (code-server)").
+  code-server is a **documented prerequisite** (absent here/CI): AC1–AC3 are
+  verified by a manual demo, AC4–AC5 by the code-server-free `tests/launcher/`
+  suite (wired into `verify`).
 
 ## Agent workflow
 

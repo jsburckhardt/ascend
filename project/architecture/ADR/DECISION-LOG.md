@@ -9,6 +9,7 @@ This file is the single registry of all architectural decisions and core-compone
 | ADR-0002 | Ascend baseline technology stack and repository layout | Accepted | 2026-07-14 |
 | ADR-0003 | Adopt a repo-local engineering harness (`./harness`) as the operating surface for humans and agents | Accepted | 2026-07-20 |
 | ADR-0004 | Interactive/handoff verbs in the engineering harness (`./harness dev`) | Accepted | 2026-07-20 |
+| ADR-0005 | Ascend application-serve runtime (HTTP server, TypeScript runtime execution, and `boot` lifecycle) | Accepted | 2026-07-21 |
 
 ## Core-Components
 
@@ -69,3 +70,16 @@ Short, actionable statements derived from ADRs and core-components. More than on
 | 44 | Require handoff verbs to expose a non-exec `--print`/`--json` introspection form that exits 0 | CORE-COMPONENT-0003 | 2026-07-20 |
 | 45 | Exclude `mode: exec` verbs from run-to-completion enumeration in the harness regression suite | CORE-COMPONENT-0003 | 2026-07-20 |
 | 46 | Propagate the exec'd command's exit code for handoff verbs instead of a verdict mapping | CORE-COMPONENT-0003 | 2026-07-20 |
+| 47 | Use Node built-in `node:http` for the app-serve HTTP server; prohibit web frameworks | ADR-0005 | 2026-07-21 |
+| 48 | Execute `src/` TypeScript at runtime via `node --experimental-strip-types`; add no build/emit step | ADR-0005 | 2026-07-21 |
+| 49 | Add `@types/node` as a compile-time-only devDependency to typecheck Node built-ins | ADR-0005 | 2026-07-21 |
+| 50 | Constrain `src/` to strip-types-safe TypeScript (no enum, namespace, or parameter properties) | ADR-0005 | 2026-07-21 |
+| 51 | Add an `npm run start` script running `node --experimental-strip-types src/main.ts` | ADR-0005 | 2026-07-21 |
+| 52 | Wire `boot` as a `mode: exec` handoff mapped to `npm run start` via contract data only | ADR-0005 | 2026-07-21 |
+| 53 | Serve `GET /health` as `200 application/json` with body `{"status":"ok"}` | ADR-0005 | 2026-07-21 |
+| 54 | Serve `GET /` as a thin `200 text/html` shell and return `404` for other routes | ADR-0005 | 2026-07-21 |
+| 55 | Default the server port to 3000, overridable via the `PORT` environment variable | ADR-0005 | 2026-07-21 |
+| 56 | Adopt Node built-in `node:test` as the Prototype-0 test runner; add no test framework | ADR-0005 | 2026-07-21 |
+| 57 | Wire the harness `test` verb to `npm test`, moving it from unknown to pass in `verify` | ADR-0005 | 2026-07-21 |
+| 58 | Keep `./harness dev` as the typecheck watch; document `./harness boot` as the shell+health start command | ADR-0005 | 2026-07-21 |
+| 59 | Keep the service health/HTTP contract issue-local at Prototype 0; create no core-component | ADR-0005 | 2026-07-21 |

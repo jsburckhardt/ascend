@@ -49,3 +49,70 @@ The application tests bind port 0 and close their server in `finally` (`tests/ap
 ## Suggested Follow-ups
 - Reconcile the intentionally stale lockfile with a connected `npm install` as already documented; this is not a review finding.
 - Preserve the dependency-free server, ephemeral application tests, data-only mappings, and current aggregate behavior while addressing F-01 through F-03.
+
+
+---
+
+## Review Cycle 2 (Re-review)
+
+### Cycle 2 Summary
+- **Reviewer Model:** GPT-5.6 Sol
+- **Verdict:** APPROVE
+- **Blocking Findings:** 0
+- **New Findings:** 0
+- **Cycle 1 findings:** F-01 resolved; F-02 resolved; F-03 resolved
+- **Base Branch:** `main`
+- **Feature Branch:** `feat/6-app-shell-health-endpoint`
+
+The full `main...HEAD` changeset and the Cycle 1 remediation delta were re-reviewed. The remediation narrows the Node runtime floor, makes doctor and verify output truthful, hardens the live probe, and adds focused regressions. No application behavior regression, harness dispatch regression, security defect, or new review finding was found.
+
+### Cycle 1 Finding Resolution
+
+| ID | Prior Severity | Status | Evidence |
+|----|----------------|--------|----------|
+| F-01 | major | **Resolved** | `package.json:8-10` now declares `>=22.6.0 <23`; `.nvmrc:1` remains `22`; `README.md:43-51,114-118`, `project/architecture/ADR/ADR-0005-application-serve-runtime.md:7-12,78-97`, and `project/architecture/ADR/DECISION-LOG.md:62,74,86-87` agree on the 22.6.0 floor and reason. `harness:339-410,543-568` portably parses the minor version and returns `degraded`/exit 0 below the floor. TEST-21 and TEST-33 cover 21, 22.5, 22.6, 22.17, and 23 boundaries (`tests/harness/run.sh:483-499,1057-1099`). Direct stubbing also confirmed Node 22.5 makes both doctor and verify degraded, never fail. |
+| F-02 | minor | **Resolved** | `harness:744-795` builds the unknown-member list from actual aggregate results. On the real contract, friction and evidence name only `lint, build`; they do not claim `test` is unwired or reference Issue #5. TEST-32c covers an empty isolated friction log (`tests/harness/run.sh:1033-1054`). |
+| F-03 | minor | **Resolved** | TEST-32b obtains an OS-assigned ephemeral port, applies connect and overall timeouts to every curl, keeps the server under `timeout`/`gtimeout`, and performs numeric-PID kill plus wait (`tests/harness/run.sh:990-1031`). The durable suite completed with TEST-32b passing, no skips, and no leaked `src/main.ts` process. |
+
+### Acceptance Criteria Re-assessment
+
+| Criterion | Status | Evidence |
+|-----------|--------|----------|
+| Ascend serves a minimal application shell at a browser URL | Met | `src/server.ts:17-31,49-52`; application test and TEST-32b both pass. |
+| A health endpoint returns a success status when the service is running | Met | `src/server.ts:43-46` returns 200 JSON `{"status":"ok"}`; application test and TEST-32b verify it. |
+| The shell and health endpoint start via the documented dev command | Met | `.harness/contract.yml:51-55`, `package.json:14`, `src/main.ts:10-17`, and `README.md:98-121` consistently define and document `./harness boot` to `npm run start`; introspection and the live probe pass. |
+
+### Architecture Conformance
+
+- ADR-0005, Decision Log records #36/#48/#60/#61, `engines.node`, README, and doctor behavior consistently enforce Node `>=22.6.0 <23`.
+- No semantic CORE-COMPONENT-0003 amendment is needed. R15 already requires validation of the complete range derived from `engines.node` and already assigns unsupported runtimes the non-failing `degraded` verdict; ADR-0005 supplies the concrete 22.6.0 floor. The localized `compute_doctor` refinement applies that existing rule.
+- The new shell code uses POSIX parameter expansion and test constructs; no Bash-only or GNU-only idiom was introduced. `dash -n` passes for both scripts. The optional `timeout`/`gtimeout` probe remains capability-guarded.
+- Doctor degradation continues to fold through the unchanged R6 aggregate as `degraded`, not `fail`. Existing handoff verbs and command resolution remain intact, as corroborated by TEST-31 and the full suite.
+
+### Test Coverage and Corroboration
+
+- `./harness verify`: degraded, exit 0; typecheck/test/doctor pass and lint/build are unknown.
+- `./harness doctor`: pass, exit 0 on Node 22.17.1; JSON is valid and reports the required range.
+- Isolated Node 22.5 stub: doctor degraded, verify degraded, both exit 0, and the reason names 22.6.0.
+- `npm run typecheck`: pass, exit 0.
+- `npm test`: 3/3 pass, exit 0.
+- `sh tests/harness/run.sh`: PASS=42, FAIL=0, SKIP=0; verdict pass.
+- Verification left no tracked changes and no live application process.
+
+### Commit and Security Review
+
+All 11 `main..HEAD` commits have Conventional Commit subjects, `Co-authored-by` trailers, and valid GitHub signature verification. The history is linear and local HEAD matches the remote feature head; no evidence of force-push or `--no-verify` use was found. The PR title is conventional. No common secret pattern, binary payload, or unexpected executable-mode change was found.
+
+### New Findings
+
+| ID | Severity | Location | Finding | Recommendation |
+|----|----------|----------|---------|----------------|
+| — | — | — | No new findings. | — |
+
+### Cycle 2 Verdict Rationale
+
+**APPROVE.** F-01, F-02, and F-03 are genuinely resolved. All three issue acceptance criteria remain met, the narrowed runtime contract is coherent, the fixes are portable and covered by deterministic regressions, and no new correctness, security, error-handling, architecture, or test-coverage issue was found. The intentionally stale offline lockfile remains the already-documented environment caveat and is not a review finding.
+
+### Cycle 2 Suggested Follow-ups
+
+None required for approval.

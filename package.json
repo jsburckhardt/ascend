@@ -2,16 +2,20 @@
   "name": "ascend",
   "version": "0.0.0",
   "private": true,
+  "type": "module",
   "description": "Ascend orchestrates cross-project developer workflow; VS Code (code-server) provides the IDE.",
   "license": "UNLICENSED",
   "engines": {
-    "node": ">=22 <23"
+    "node": ">=22.6.0 <23"
   },
   "scripts": {
     "dev": "tsc --noEmit --watch",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "start": "node --experimental-strip-types src/main.ts",
+    "test": "node --test --experimental-strip-types 'tests/app/**/*.test.ts'"
   },
   "devDependencies": {
+    "@types/node": "^22",
     "typescript": "^5.7.3"
   }
 }

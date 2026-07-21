@@ -1,9 +1,12 @@
 #!/bin/sh
 # tests/harness/run.sh - durable, dependency-light regression suite for ./harness
 # (CORE-COMPONENT-0003 R16). Exercises TEST-01..TEST-24 from
-# project/issues/4/plan/03-test-plan.md, plus TEST-30 from
-# project/issues/5/plan/03-test-plan.md (dev + validation commands). Runs
-# non-interactively, prints a summary
+# project/issues/4/plan/03-test-plan.md, TEST-30..TEST-31 from
+# project/issues/5/plan/03-test-plan.md (dev + validation commands), plus
+# TEST-32 from project/issues/6/plan/03-test-plan.md (app shell + /health wired
+# via boot/test), plus PR #6 review additions TEST-32c (F-02 truthful friction)
+# and TEST-33 (F-01 doctor >=22.6.0 minor floor). Runs non-interactively, prints
+# a summary
 # and an overall Verdict line, exits non-zero on any failure, and leaves the
 # working tree clean (all mutations go to a scratch dir; permission changes are
 # reverted; tracked files are never written because every verb run is isolated
@@ -86,6 +89,13 @@ printf '=== harness regression suite (tests/harness/run.sh) ===\n'
 TC_OK=0
 if ( cd "$REPO" && npm run typecheck ) >/dev/null 2>&1; then TC_OK=1; fi
 
+# preflight: does `npm test` run to green? Gates the #6 wired-`test` assertions
+# (TEST-05 / TEST-32). `npm test` uses the repo's node runtime (built-in
+# node:test) with no third-party install; guarded so the suite stays honest when
+# node is absent.
+TEST_OK=0
+if [ -n "$NODE" ] && ( cd "$REPO" && npm test ) >/dev/null 2>&1; then TEST_OK=1; fi
+
 # ===========================================================================
 # TEST-01: contract schema
 # ===========================================================================
@@ -104,11 +114,20 @@ grep -q '    maps_to: "npm run dev"' "$c" || t01=0
 [ "$(grep -c '    maps_to: "npm run dev"' "$c")" = "1" ] || t01=0
 dev_mode=$(awk '/^  [^ ].*:[ \t]*$/&&/^  /&&!/^    /{h=$0;sub(/^  /,"",h);sub(/:.*/,"",h);gsub(/"/,"",h);cur=h} cur=="dev"&&/^    mode:/{v=$0;sub(/^    mode:[ \t]*/,"",v);print v;exit}' "$c")
 [ "$dev_mode" = "exec" ] || t01=0
-for v in lint test build boot; do
+# lint/build remain honestly unmapped (null); #6 wires test + boot (below).
+for v in lint build; do
 	# the maps_to line following the verb header must be null
 	got=$(awk -v verb="$v" '/^  [^ ].*:[ \t]*$/&&/^  /&&!/^    /{h=$0;sub(/^  /,"",h);sub(/:.*/,"",h);gsub(/"/,"",h);cur=h} cur==verb&&/^    maps_to:/{v=$0;sub(/^    maps_to:[ \t]*/,"",v);print v;exit}' "$c")
 	[ "$got" = "null" ] || t01=0
 done
+# #6 / ADR-0005: test -> "npm test" (capability verb) and boot -> "npm run start"
+# with mode: exec (interactive handoff). Assert the wired values (data-driven R8).
+test_maps=$(awk '/^  [^ ].*:[ \t]*$/&&/^  /&&!/^    /{h=$0;sub(/^  /,"",h);sub(/:.*/,"",h);gsub(/"/,"",h);cur=h} cur=="test"&&/^    maps_to:/{v=$0;sub(/^    maps_to:[ \t]*/,"",v);gsub(/"/,"",v);print v;exit}' "$c")
+boot_maps=$(awk '/^  [^ ].*:[ \t]*$/&&/^  /&&!/^    /{h=$0;sub(/^  /,"",h);sub(/:.*/,"",h);gsub(/"/,"",h);cur=h} cur=="boot"&&/^    maps_to:/{v=$0;sub(/^    maps_to:[ \t]*/,"",v);gsub(/"/,"",v);print v;exit}' "$c")
+boot_mode=$(awk '/^  [^ ].*:[ \t]*$/&&/^  /&&!/^    /{h=$0;sub(/^  /,"",h);sub(/:.*/,"",h);gsub(/"/,"",h);cur=h} cur=="boot"&&/^    mode:/{v=$0;sub(/^    mode:[ \t]*/,"",v);print v;exit}' "$c")
+[ "$test_maps" = "npm test" ] || t01=0
+[ "$boot_maps" = "npm run start" ] || t01=0
+[ "$boot_mode" = "exec" ] || t01=0
 grep -q '    aggregate: \[lint, test, build, doctor\]' "$c" || t01=0
 grep -Eq '^  clean:' "$c" && awk '/^  clean:/{f=1} f&&/^    maps_to:/{print;exit}' "$c" | grep -q 'maps_to:' || t01=0
 grep -q '  dir: ".harness/evidence"' "$c" || t01=0
@@ -168,17 +187,20 @@ if [ -n "$NODE" ]; then
 	names=$(printf '%s' "$vv" | jget checks)
 	evp=$(printf '%s' "$vv" | jget evidence)
 	hasall=1
-	for want in "typecheck=" "lint=unknown" "test=unknown" "build=unknown" "doctor="; do
+	# #6 wired `test`: it now aggregates as `pass` when the npm test preflight is
+	# green; otherwise just require the member key is present.
+	if [ "$TEST_OK" = "1" ]; then test_want="test=pass"; else test_want="test="; fi
+	for want in "typecheck=" "lint=unknown" "$test_want" "build=unknown" "doctor="; do
 		printf '%s' "$names" | grep -q "$want" || hasall=0
 	done
-	{ [ "$jv" = "1" ] && [ "$hasall" = "1" ] && [ -f "$ev/$(basename "$evp")" ]; } && ok "TEST-05 verify --json schema incl doctor member + evidence exists" || no "TEST-05 verify --json schema (jv=$jv checks='$names')"
+	{ [ "$jv" = "1" ] && [ "$hasall" = "1" ] && [ -f "$ev/$(basename "$evp")" ]; } && ok "TEST-05 verify --json schema incl doctor member + wired test + evidence exists" || no "TEST-05 verify --json schema (jv=$jv checks='$names')"
 else skip "TEST-05 verify --json schema (node absent)"; fi
 
 # ===========================================================================
-# TEST-06: lint/test/build/boot unknown + friction, no tsc alias
+# TEST-06: lint/build unknown + friction, no tsc alias (test/boot wired by #6)
 # ===========================================================================
 t06=1
-for v in lint test build boot; do
+for v in lint build; do
 	fr=$(new_friction); ev=$(new_evdir)
 	# strip the seed entry for this verb so we can prove friction is (re)recorded
 	grep -v "\"verb\": \"$v\"" "$SEED_FRICTION" > "$fr"
@@ -189,7 +211,7 @@ for v in lint test build boot; do
 	# no evidence file should be created by these verbs
 	[ "$(ls -1 "$ev" 2>/dev/null | wc -l)" = "0" ] || t06=0
 done
-[ "$t06" = "1" ] && ok "TEST-06 lint/test/build/boot unknown+friction, no evidence" || no "TEST-06 lint/test/build/boot unknown+friction"
+[ "$t06" = "1" ] && ok "TEST-06 lint/build unknown+friction, no evidence" || no "TEST-06 lint/build unknown+friction"
 
 # ===========================================================================
 # TEST-07: clean degraded + non-destructive (node_modules preserved)
@@ -410,10 +432,12 @@ if [ -n "$NODE" ]; then
 	b="$WORK/c19b.yml"; set_maps "$CONTRACT" "$WORK/c19b0" verify '"true"'; set_maps "$WORK/c19b0" "$WORK/c19b1" lint '"true"'; set_maps "$WORK/c19b1" "$WORK/c19b2" test '"true"'; set_maps "$WORK/c19b2" "$b" build '"true"'
 	tt_case "all-pass -> pass" "$HEALTHY_ROOT" "pass" "0" "$b"
 	# 3. all unknown -> unknown (verify null; lint/test/build null; doctor removed)
-	d="$WORK/c19c.yml"; set_maps "$CONTRACT" "$WORK/c19c0" verify 'null'; set_aggregate "$WORK/c19c0" "$d" "lint, test, build"
+	#    #6 wired test -> npm test, so null it here too (fake root has no package).
+	d="$WORK/c19c.yml"; set_maps "$CONTRACT" "$WORK/c19c0" verify 'null'; set_maps "$WORK/c19c0" "$WORK/c19c1" test 'null'; set_aggregate "$WORK/c19c1" "$d" "lint, test, build"
 	tt_case "all-unknown -> unknown" "$HEALTHY_ROOT" "unknown" "0" "$d"
 	# 4. mix pass+unknown -> degraded (verify true; lint/test/build null; doctor pass)
-	e="$WORK/c19d.yml"; set_maps "$CONTRACT" "$e" verify '"true"'
+	#    null the #6-wired test so it stays unknown in this fake root (no package).
+	e="$WORK/c19d.yml"; set_maps "$CONTRACT" "$WORK/c19d0" verify '"true"'; set_maps "$WORK/c19d0" "$e" test 'null'
 	tt_case "mix pass+unknown -> degraded" "$HEALTHY_ROOT" "degraded" "0" "$e"
 	# 5. doctor degraded + others pass -> degraded (never fail)
 	g="$WORK/c19e.yml"; set_maps "$CONTRACT" "$WORK/c19e0" verify '"true"'; set_maps "$WORK/c19e0" "$WORK/c19e1" lint '"true"'; set_maps "$WORK/c19e1" "$WORK/c19e2" test '"true"'; set_maps "$WORK/c19e2" "$g" build '"true"'
@@ -425,7 +449,7 @@ else skip "TEST-19 aggregate truth table (node absent)"; fi
 # ===========================================================================
 t20=1
 one_verdict() { n=$(printf '%s\n' "$1" | grep -c '^Verdict:'); [ "$n" = "1" ]; }
-for v in help orient doctor lint test build boot verify status clean; do
+for v in help orient doctor lint test build verify status clean; do
 	fr=$(new_friction); ev=$(new_evdir)
 	out=$(HARNESS_ROOT="$HEALTHY_ROOT" HARNESS_FRICTION="$fr" HARNESS_EVIDENCE_DIR="$ev" "$H" "$v" 2>/dev/null)
 	one_verdict "$out" || { t20=0; printf '  (verb %s Verdict count=%s)\n' "$v" "$(printf '%s\n' "$out" | grep -c '^Verdict:')"; }
@@ -445,23 +469,33 @@ dpr=$("$H" dev --print 2>/dev/null); dprc=$?
 [ "$dpr" = "npm run dev" ] || { t20=0; printf '  (dev --print = "%s" exit %s)\n' "$dpr" "$dprc"; }
 [ "$dprc" = "0" ] || t20=0
 [ "$(printf '%s\n' "$dpr" | grep -c '^Verdict:')" = "0" ] || t20=0
-[ "$t20" = "1" ] && ok "TEST-20 exactly one Verdict: line per human verb (help/friction list = pass; dev handoff excluded, --print no hang)" || no "TEST-20 one Verdict line per verb"
+# boot is likewise an interactive/handoff verb (#6: mode: exec, execs
+# `npm run start`). It is EXCLUDED from the run-to-completion loop above (exec'ing
+# it would bind a port and hang). Prove invocability via --print: resolves
+# `npm run start`, exits 0, no hang, and emits NO `Verdict:` line.
+bpr=$("$H" boot --print 2>/dev/null); bprc=$?
+[ "$bpr" = "npm run start" ] || { t20=0; printf '  (boot --print = "%s" exit %s)\n' "$bpr" "$bprc"; }
+[ "$bprc" = "0" ] || t20=0
+[ "$(printf '%s\n' "$bpr" | grep -c '^Verdict:')" = "0" ] || t20=0
+[ "$t20" = "1" ] && ok "TEST-20 exactly one Verdict: line per human verb (help/friction list = pass; dev+boot handoffs excluded, --print no hang)" || no "TEST-20 one Verdict line per verb"
 
 # ===========================================================================
 # TEST-21: doctor validates full Node range (21/22/23 boundaries)
 # ===========================================================================
+# The major-22 case uses a minor >= 6 so it clears the >=22.6.0 floor introduced
+# by PR #6 F-01 / ADR-0005 D2 (the minor-floor boundary itself is TEST-33).
 if [ -n "$NODE" ]; then
 	shimdir="$WORK/shim"; mkdir -p "$shimdir"
 	t21=1
-	for pair in "21:degraded" "22:pass" "23:degraded"; do
-		maj=${pair%%:*}; want=${pair##*:}
-		printf '#!/bin/sh\necho v%s.0.0\n' "$maj" > "$shimdir/node"; chmod +x "$shimdir/node"
+	for pair in "v21.0.0:degraded" "v22.6.0:pass" "v23.0.0:degraded"; do
+		ver=${pair%%:*}; want=${pair##*:}
+		printf '#!/bin/sh\necho %s\n' "$ver" > "$shimdir/node"; chmod +x "$shimdir/node"
 		fr=$(new_friction); ev=$(new_evdir)
 		got=$(PATH="$shimdir:$PATH" HARNESS_ROOT="$HEALTHY_ROOT" HARNESS_FRICTION="$fr" HARNESS_EVIDENCE_DIR="$ev" "$H" doctor --json | "$NODE" -e 'let d="";process.stdin.on("data",c=>d+=c);process.stdin.on("end",()=>{try{process.stdout.write(JSON.parse(d).verdict)}catch(e){process.stdout.write("__ERR__")}})')
 		PATH="$shimdir:$PATH" HARNESS_ROOT="$HEALTHY_ROOT" HARNESS_FRICTION="$fr" HARNESS_EVIDENCE_DIR="$ev" "$H" doctor >/dev/null 2>&1; gc=$?
-		{ [ "$got" = "$want" ] && [ "$gc" = "0" ]; } || { t21=0; printf '  (node %s -> %s exit %s, want %s)\n' "$maj" "$got" "$gc" "$want"; }
+		{ [ "$got" = "$want" ] && [ "$gc" = "0" ]; } || { t21=0; printf '  (node %s -> %s exit %s, want %s)\n' "$ver" "$got" "$gc" "$want"; }
 	done
-	[ "$t21" = "1" ] && ok "TEST-21 doctor node range: 21->degraded, 22->pass, 23->degraded (exit 0)" || no "TEST-21 doctor node range"
+	[ "$t21" = "1" ] && ok "TEST-21 doctor node range: 21->degraded, 22.6->pass, 23->degraded (exit 0)" || no "TEST-21 doctor node range"
 else skip "TEST-21 node range (node absent)"; fi
 
 # ===========================================================================
@@ -469,7 +503,11 @@ else skip "TEST-21 node range (node absent)"; fi
 # ===========================================================================
 if [ -n "$NODE" ]; then
 	fr=$(new_friction); ev=$(new_evdir)
-	i=0; while [ "$i" -lt 20 ]; do HARNESS_FRICTION="$fr" HARNESS_EVIDENCE_DIR="$ev" "$H" verify >/dev/null 2>&1; i=$((i + 1)); done
+	# Isolate `test` to null so the 20x loop exercises evidence writing WITHOUT
+	# re-running the #6-wired `npm test` 20 times; collision-safety/atomicity is
+	# independent of which members the aggregate contains.
+	c22="$WORK/c22.yml"; set_maps "$CONTRACT" "$c22" test 'null'
+	i=0; while [ "$i" -lt 20 ]; do HARNESS_CONTRACT="$c22" HARNESS_FRICTION="$fr" HARNESS_EVIDENCE_DIR="$ev" "$H" verify >/dev/null 2>&1; i=$((i + 1)); done
 	files=$(ls -1 "$ev"/verify-*.json 2>/dev/null | wc -l)
 	bad=0; for f in "$ev"/verify-*.json; do "$NODE" -e 'JSON.parse(require("fs").readFileSync(process.argv[1]))' "$f" 2>/dev/null || bad=$((bad + 1)); done
 	tmpleft=$(ls -a "$ev" 2>/dev/null | grep -c '^\.tmp' || true)
@@ -557,9 +595,11 @@ if [ -n "$NODE" ]; then
 	t26=1
 	ctr="$WORK/mem.count"
 	c26="$WORK/c26.yml"
-	# verify->true (fast, deterministic pass), lint-> counter-incrementing command
+	# verify->true (fast, deterministic pass), lint-> counter-incrementing command;
+	# null the #6-wired test so `npm test` does not run in this fake root.
 	set_maps "$CONTRACT" "$WORK/c26a" verify '"true"'
-	set_maps "$WORK/c26a" "$c26" lint "\"sh -c 'echo x >> $ctr'\""
+	set_maps "$WORK/c26a" "$WORK/c26b" test 'null'
+	set_maps "$WORK/c26b" "$c26" lint "\"sh -c 'echo x >> $ctr'\""
 	# human form
 	: > "$ctr"
 	fr=$(new_friction); ev=$(new_evdir)
@@ -616,7 +656,7 @@ else skip "TEST-27 friction count JSON (node absent)"; fi
 # command) and assert the human output's LAST line is exactly `Verdict: fail`,
 # with diagnostics printed BEFORE it, and exit code 1.
 t28=1
-c28="$WORK/c28.yml"; set_maps "$CONTRACT" "$c28" verify '"sh -c '\''echo TYPECHECK_DIAG >&2; exit 1'\''"'
+c28="$WORK/c28.yml"; set_maps "$CONTRACT" "$WORK/c28a" verify '"sh -c '\''echo TYPECHECK_DIAG >&2; exit 1'\''"'; set_maps "$WORK/c28a" "$c28" test 'null'
 fr=$(new_friction); ev=$(new_evdir)
 out28=$(HARNESS_ROOT="$HEALTHY_ROOT" HARNESS_CONTRACT="$c28" HARNESS_FRICTION="$fr" HARNESS_EVIDENCE_DIR="$ev" "$H" verify 2>/dev/null)
 HARNESS_ROOT="$HEALTHY_ROOT" HARNESS_CONTRACT="$c28" HARNESS_FRICTION="$fr" HARNESS_EVIDENCE_DIR="$ev" "$H" verify >/dev/null 2>&1; code28=$?
@@ -652,38 +692,39 @@ done
 # ===========================================================================
 # Proves AC3 POSITIVELY via the interactive/handoff verb `dev` (mode: exec, R17)
 # WITHOUT hanging: it never `exec`s the blocking watch, using the non-exec
-# --print/--json introspection forms instead. `boot` stays `null` (owned by #6)
-# and `verify` stays degraded/exit-0. All mutating runs are isolated to the
-# scratch dir so tracked files stay clean.
+# --print/--json introspection forms instead. `boot` is wired by #6 (mode: exec,
+# `npm run start`) and `verify` stays degraded/exit-0. All mutating runs are
+# isolated to the scratch dir so tracked files stay clean.
 t30=1
 PKG="$REPO/package.json"
 ROOT_RD="$REPO/README.md"
 HARN_RD="$REPO/.harness/README.md"
 
 # (1) package.json: dev == 'tsc --noEmit --watch', typecheck == 'tsc --noEmit',
-#     and NO validate/check/test/lint/build/start alias script (D1, D5).
+#     and NO validate/check/lint/build alias script (D1, D5). `test` and `start`
+#     ARE now present (added by #6 / ADR-0005) and asserted in TEST-32.
 if [ -n "$NODE" ]; then
 	dev=$("$NODE" -e 'process.stdout.write((require(process.argv[1]).scripts||{}).dev||"")' "$PKG")
 	tc=$("$NODE" -e 'process.stdout.write((require(process.argv[1]).scripts||{}).typecheck||"")' "$PKG")
-	extra=$("$NODE" -e 's=require(process.argv[1]).scripts||{};process.stdout.write(["validate","check","test","lint","build","start"].filter(k=>k in s).join(","))' "$PKG")
+	extra=$("$NODE" -e 's=require(process.argv[1]).scripts||{};process.stdout.write(["validate","check","lint","build"].filter(k=>k in s).join(","))' "$PKG")
 	[ "$dev" = "tsc --noEmit --watch" ] || t30=0
 	[ "$tc" = "tsc --noEmit" ] || t30=0
 	[ -z "$extra" ] || t30=0
 else
 	grep -q '"dev": "tsc --noEmit --watch"' "$PKG" || t30=0
 	grep -q '"typecheck": "tsc --noEmit"' "$PKG" || t30=0
-	for k in validate check test lint build start; do grep -q "\"$k\":" "$PKG" && t30=0; done
+	for k in validate check lint build; do grep -q "\"$k\":" "$PKG" && t30=0; done
 fi
 
 # (2) contract.yml: dev.maps_to == "npm run dev", dev.mode == exec (R17);
-#     boot.maps_to still null (owned by #6); exactly one verify typecheck mapping
-#     -> no drift.
+#     boot.maps_to == "npm run start" (wired by #6); exactly one verify typecheck
+#     mapping -> no drift.
 dev_maps=$(awk '/^  [^ ].*:[ \t]*$/&&/^  /&&!/^    /{h=$0;sub(/^  /,"",h);sub(/:.*/,"",h);gsub(/"/,"",h);cur=h} cur=="dev"&&/^    maps_to:/{v=$0;sub(/^    maps_to:[ \t]*/,"",v);gsub(/"/,"",v);print v;exit}' "$CONTRACT")
 dev_mode=$(awk '/^  [^ ].*:[ \t]*$/&&/^  /&&!/^    /{h=$0;sub(/^  /,"",h);sub(/:.*/,"",h);gsub(/"/,"",h);cur=h} cur=="dev"&&/^    mode:/{v=$0;sub(/^    mode:[ \t]*/,"",v);print v;exit}' "$CONTRACT")
-boot_maps=$(awk '/^  [^ ].*:[ \t]*$/&&/^  /&&!/^    /{h=$0;sub(/^  /,"",h);sub(/:.*/,"",h);gsub(/"/,"",h);cur=h} cur=="boot"&&/^    maps_to:/{v=$0;sub(/^    maps_to:[ \t]*/,"",v);print v;exit}' "$CONTRACT")
+boot_maps=$(awk '/^  [^ ].*:[ \t]*$/&&/^  /&&!/^    /{h=$0;sub(/^  /,"",h);sub(/:.*/,"",h);gsub(/"/,"",h);cur=h} cur=="boot"&&/^    maps_to:/{v=$0;sub(/^    maps_to:[ \t]*/,"",v);gsub(/"/,"",v);print v;exit}' "$CONTRACT")
 [ "$dev_maps" = "npm run dev" ] || t30=0
 [ "$dev_mode" = "exec" ] || t30=0
-[ "$boot_maps" = "null" ] || t30=0
+[ "$boot_maps" = "npm run start" ] || t30=0
 [ "$(grep -c '    maps_to: "npm run typecheck"' "$CONTRACT")" = "1" ] || t30=0
 
 # (3) `./harness help` and `./harness orient` list `dev` as an interactive handoff.
@@ -742,7 +783,7 @@ if [ -n "$NODE" ] && [ "$TC_OK" = "1" ]; then
 	vv=$(HARNESS_FRICTION="$fr" HARNESS_EVIDENCE_DIR="$ev" "$H" verify --json | jget verdict)
 	HARNESS_FRICTION="$fr" HARNESS_EVIDENCE_DIR="$ev" "$H" verify >/dev/null 2>&1; vc=$?
 	{ [ "$vv" != "fail" ] && [ "$vv" != "__ERR__" ] && [ "$vc" = "0" ]; } || t30=0
-	[ "$t30" = "1" ] && ok "TEST-30 #5 dev invokable via ./harness dev (print='$dpr'); verify=$vv non-fail exit $vc; boot null; no drift" || no "TEST-30 #5 dev invokable + validation (verify=$vv exit $vc t30=$t30)"
+	[ "$t30" = "1" ] && ok "TEST-30 #5 dev invokable via ./harness dev (print='$dpr'); verify=$vv non-fail exit $vc; boot wired; no drift" || no "TEST-30 #5 dev invokable + validation (verify=$vv exit $vc t30=$t30)"
 else
 	[ "$t30" = "1" ] && ok "TEST-30 #5 dev invokable via ./harness dev (print='$dpr'); verify exec skipped: node/typecheck unavailable" || no "TEST-30 #5 dev invokable + validation static assertions (t30=$t30)"
 fi
@@ -847,15 +888,217 @@ bgo=$(HARNESS_CONTRACT="$cbo" HARNESS_FRICTION="$(new_friction)" HARNESS_EVIDENC
 [ "$bgc" = "2" ] || { t31=0; printf '  (TEST-31C boot(mode:bogus) exit=%s want 2)\n' "$bgc"; }
 [ "$(printf '%s\n' "$bgo" | grep -c '^Verdict:')" = "0" ] || { t31=0; printf '  (TEST-31C bogus mode emitted a Verdict line)\n'; }
 
-# (D) Regression: the REAL contract still routes by data -- dev(mode:exec) is the
-#     handoff (verdict-free --print), boot(no mode) stays run-to-completion unknown.
+# (D) Regression: the REAL contract still routes by data -- dev(mode:exec) and
+#     boot(mode:exec, wired by #6) are BOTH handoffs. Prove via the verdict-free
+#     --print form; NEVER run bare `./harness boot` here (it would exec
+#     `npm run start`, bind a port and hang).
 rdp=$("$H" dev --print 2>/dev/null); rdpc=$?
 { [ "$rdp" = "npm run dev" ] && [ "$rdpc" = "0" ]; } || { t31=0; printf '  (TEST-31D real dev --print="%s" exit=%s)\n' "$rdp" "$rdpc"; }
-rbo=$(HARNESS_FRICTION="$(new_friction)" HARNESS_EVIDENCE_DIR="$(new_evdir)" "$H" boot 2>/dev/null); rboc=$?
-printf '%s\n' "$rbo" | grep -q '^Verdict: unknown' || { t31=0; printf '  (TEST-31D real boot verdict=%s want unknown)\n' "$(printf '%s\n' "$rbo" | grep '^Verdict:')"; }
-[ "$rboc" = "0" ] || { t31=0; printf '  (TEST-31D real boot exit=%s want 0)\n' "$rboc"; }
+rbp=$("$H" boot --print 2>/dev/null); rbpc=$?
+{ [ "$rbp" = "npm run start" ] && [ "$rbpc" = "0" ]; } || { t31=0; printf '  (TEST-31D real boot --print="%s" exit=%s want "npm run start"/0)\n' "$rbp" "$rbpc"; }
+[ "$(printf '%s\n' "$rbp" | grep -c '^Verdict:')" = "0" ] || { t31=0; printf '  (TEST-31D real boot --print emitted a Verdict line)\n'; }
 
-[ "$t31" = "1" ] && ok "TEST-31 contract mode authoritative: exec->handoff, absent/capability->run-to-completion, unsupported->exit 2 (real dev exec / boot unknown intact)" || no "TEST-31 mode-driven dispatch (t31=$t31)"
+[ "$t31" = "1" ] && ok "TEST-31 contract mode authoritative: exec->handoff, absent/capability->run-to-completion, unsupported->exit 2 (real dev+boot exec handoff intact)" || no "TEST-31 mode-driven dispatch (t31=$t31)"
+
+# ===========================================================================
+# TEST-32: Issue #6 -- application shell + /health wired through the harness
+# ===========================================================================
+# Proves the #6 / ADR-0005 surface end to end (DATA + behavior + docs) WITHOUT
+# binding a port in the durable suite: contract wiring (boot exec ->
+# `npm run start`, test -> `npm test`), package.json start/test scripts +
+# @types/node devDep, the boot --print/--json handoff, `./harness test` -> pass
+# and `verify` degraded/test=pass (gated on the npm test preflight), plus doc
+# coherence across README + .harness/README. A separate, timeout-bounded probe
+# (TEST-32b) exercises a real bind on a high port.
+t32=1
+PKG="$REPO/package.json"
+ROOT_RD="$REPO/README.md"
+HARN_RD="$REPO/.harness/README.md"
+
+# (1) contract: boot -> exec "npm run start"; test -> "npm test" (capability).
+b32m=$(awk '/^  [^ ].*:[ \t]*$/&&/^  /&&!/^    /{h=$0;sub(/^  /,"",h);sub(/:.*/,"",h);gsub(/"/,"",h);cur=h} cur=="boot"&&/^    maps_to:/{v=$0;sub(/^    maps_to:[ \t]*/,"",v);gsub(/"/,"",v);print v;exit}' "$CONTRACT")
+b32mode=$(awk '/^  [^ ].*:[ \t]*$/&&/^  /&&!/^    /{h=$0;sub(/^  /,"",h);sub(/:.*/,"",h);gsub(/"/,"",h);cur=h} cur=="boot"&&/^    mode:/{v=$0;sub(/^    mode:[ \t]*/,"",v);print v;exit}' "$CONTRACT")
+t32m=$(awk '/^  [^ ].*:[ \t]*$/&&/^  /&&!/^    /{h=$0;sub(/^  /,"",h);sub(/:.*/,"",h);gsub(/"/,"",h);cur=h} cur=="test"&&/^    maps_to:/{v=$0;sub(/^    maps_to:[ \t]*/,"",v);gsub(/"/,"",v);print v;exit}' "$CONTRACT")
+[ "$b32m" = "npm run start" ] || { t32=0; printf '  (TEST-32 boot.maps_to="%s")\n' "$b32m"; }
+[ "$b32mode" = "exec" ] || { t32=0; printf '  (TEST-32 boot.mode="%s")\n' "$b32mode"; }
+[ "$t32m" = "npm test" ] || { t32=0; printf '  (TEST-32 test.maps_to="%s")\n' "$t32m"; }
+
+# (2) package.json: start execs the strip-types entrypoint, test wires node:test,
+#     @types/node in devDependencies (ADR-0005 D2/D3/D7).
+if [ -n "$NODE" ]; then
+	st=$("$NODE" -e 'process.stdout.write((require(process.argv[1]).scripts||{}).start||"")' "$PKG")
+	te=$("$NODE" -e 'process.stdout.write((require(process.argv[1]).scripts||{}).test||"")' "$PKG")
+	ty=$("$NODE" -e 'process.stdout.write((require(process.argv[1]).devDependencies||{})["@types/node"]||"")' "$PKG")
+	[ "$st" = "node --experimental-strip-types src/main.ts" ] || { t32=0; printf '  (TEST-32 start="%s")\n' "$st"; }
+	{ printf '%s' "$te" | grep -q 'node --test' && printf '%s' "$te" | grep -q -- '--experimental-strip-types'; } || { t32=0; printf '  (TEST-32 test script="%s")\n' "$te"; }
+	[ -n "$ty" ] || { t32=0; printf '  (TEST-32 @types/node devDep missing)\n'; }
+else
+	grep -q '"start": "node --experimental-strip-types src/main.ts"' "$PKG" || t32=0
+	grep -q '"@types/node":' "$PKG" || t32=0
+fi
+
+# (3) src files exist (T1/T2): server factory + entrypoint.
+[ -f "$REPO/src/server.ts" ] || { t32=0; printf '  (TEST-32 missing src/server.ts)\n'; }
+[ -f "$REPO/src/main.ts" ] || { t32=0; printf '  (TEST-32 missing src/main.ts)\n'; }
+grep -q 'createAppServer' "$REPO/src/server.ts" || { t32=0; printf '  (TEST-32 server.ts lacks createAppServer)\n'; }
+
+# (4) boot --print handoff: resolves `npm run start`, exit 0, NO Verdict, no hang.
+b32pr=$("$H" boot --print 2>/dev/null); b32prc=$?
+{ [ "$b32pr" = "npm run start" ] && [ "$b32prc" = "0" ]; } || { t32=0; printf '  (TEST-32 boot --print="%s" exit=%s)\n' "$b32pr" "$b32prc"; }
+[ "$(printf '%s\n' "$b32pr" | grep -c '^Verdict:')" = "0" ] || { t32=0; printf '  (TEST-32 boot --print emitted a Verdict line)\n'; }
+# boot --json: verdict-free handoff descriptor (mode exec, maps_to, interactive).
+b32j=$("$H" boot --json 2>/dev/null); b32jc=$?
+[ "$b32jc" = "0" ] || { t32=0; printf '  (TEST-32 boot --json exit=%s)\n' "$b32jc"; }
+printf '%s' "$b32j" | grep -q '"mode": "exec"' || { t32=0; printf '  (TEST-32 boot --json mode)\n'; }
+printf '%s' "$b32j" | grep -q '"maps_to": "npm run start"' || { t32=0; printf '  (TEST-32 boot --json maps_to)\n'; }
+printf '%s' "$b32j" | grep -q '"interactive": true' || { t32=0; printf '  (TEST-32 boot --json interactive)\n'; }
+printf '%s' "$b32j" | grep -q '"verdict"' && { t32=0; printf '  (TEST-32 boot --json unexpectedly carries a verdict key)\n'; }
+if [ -n "$NODE" ]; then printf '%s' "$b32j" | json_valid || { t32=0; printf '  (TEST-32 boot --json not valid JSON)\n'; }; fi
+
+# (5) `./harness test` -> pass and verify --json shows test=pass (gated on the npm
+#     test preflight; runs in the REAL repo, no fake root).
+if [ "$TEST_OK" = "1" ]; then
+	fr=$(new_friction); ev=$(new_evdir)
+	tvo=$(HARNESS_FRICTION="$fr" HARNESS_EVIDENCE_DIR="$ev" "$H" test 2>/dev/null); tvc=$?
+	printf '%s\n' "$tvo" | grep -q '^Verdict: pass' || { t32=0; printf '  (TEST-32 ./harness test verdict=%s)\n' "$(printf '%s\n' "$tvo" | grep '^Verdict:')"; }
+	[ "$tvc" = "0" ] || { t32=0; printf '  (TEST-32 ./harness test exit=%s want 0)\n' "$tvc"; }
+	fr=$(new_friction); ev=$(new_evdir)
+	vchecks=$(HARNESS_FRICTION="$fr" HARNESS_EVIDENCE_DIR="$ev" "$H" verify --json | jget checks)
+	printf '%s' "$vchecks" | grep -q 'test=pass' || { t32=0; printf '  (TEST-32 verify checks=%s want test=pass)\n' "$vchecks"; }
+else
+	skip "TEST-32(5) ./harness test verdict + verify test=pass (npm test preflight unavailable)"
+fi
+
+# (6) `./harness verify` degraded + exit 0 (D5/D8); gated on typecheck + test.
+if [ -n "$NODE" ] && [ "$TC_OK" = "1" ] && [ "$TEST_OK" = "1" ]; then
+	fr=$(new_friction); ev=$(new_evdir)
+	vv=$(HARNESS_FRICTION="$fr" HARNESS_EVIDENCE_DIR="$ev" "$H" verify --json | jget verdict)
+	HARNESS_FRICTION="$fr" HARNESS_EVIDENCE_DIR="$ev" "$H" verify >/dev/null 2>&1; vc=$?
+	{ [ "$vv" = "degraded" ] && [ "$vc" = "0" ]; } || { t32=0; printf '  (TEST-32 verify verdict=%s exit=%s want degraded/0)\n' "$vv" "$vc"; }
+fi
+
+# (7) docs coherence: root README documents the boot start command, default port
+#     + PORT, and the /health contract body; .harness/README names `npm run start`.
+for tok in "./harness boot" "npm run start" "/health" "3000" "PORT"; do
+	grep -qF -- "$tok" "$ROOT_RD" || { t32=0; printf '  (TEST-32 README missing token: %s)\n' "$tok"; }
+done
+grep -qF -- '{"status":"ok"}' "$ROOT_RD" || { t32=0; printf '  (TEST-32 README missing health body {"status":"ok"})\n'; }
+grep -qF -- 'npm run start' "$HARN_RD" || { t32=0; printf '  (TEST-32 .harness/README missing npm run start)\n'; }
+
+[ "$t32" = "1" ] && ok "TEST-32 #6 shell+health wired: boot exec->npm run start (--print/--json), test->pass, verify degraded/test=pass, docs coherent" || no "TEST-32 #6 wiring (t32=$t32)"
+
+# ---------------------------------------------------------------------------
+# TEST-32b (guarded live probe): a REAL bind on an OS-chosen EPHEMERAL port,
+# hard-bounded by timeout/gtimeout so it can never hang or leak. Uses the
+# strip-types entrypoint directly (never bare `./harness boot`, never the default
+# port 3000). The port is allocated by asking the OS for a free one (node binds
+# port 0, reports it, releases it) instead of a hard-coded port, and EVERY curl
+# carries a client connect/overall timeout so a hung or foreign listener can
+# neither stall the test nor silently defeat the assertions.
+# ---------------------------------------------------------------------------
+TMO=""
+command -v timeout  >/dev/null 2>&1 && TMO="timeout"
+command -v gtimeout >/dev/null 2>&1 && TMO="gtimeout"
+# free_port: ask the OS for an available ephemeral TCP port on 127.0.0.1 (bind 0,
+# read the assigned port, close). Empty on failure -> the probe skips.
+free_port() {
+	"$NODE" -e 'const net=require("net");const s=net.createServer();s.on("error",()=>process.exit(1));s.listen(0,"127.0.0.1",()=>{const p=s.address().port;s.close(()=>process.stdout.write(String(p)))})' 2>/dev/null
+}
+# per-curl client timeout (POSIX curl): fail fast on connect, cap total time.
+CURL_TMO="--connect-timeout 2 --max-time 5"
+pp=""
+[ -n "$NODE" ] && pp=$(free_port)
+if [ -n "$TMO" ] && [ -n "$NODE" ] && [ -n "$pp" ] && [ "$TEST_OK" = "1" ] && command -v curl >/dev/null 2>&1; then
+	( cd "$REPO" && exec env PORT="$pp" "$TMO" 5 "$NODE" --experimental-strip-types src/main.ts >/dev/null 2>&1 ) &
+	probe_pid=$!
+	up=0; i=0
+	while [ "$i" -lt 50 ]; do
+		if curl $CURL_TMO -fsS "http://127.0.0.1:$pp/health" >/dev/null 2>&1; then up=1; break; fi
+		sleep 0.1; i=$((i + 1))
+	done
+	hb=$(curl $CURL_TMO -fsS "http://127.0.0.1:$pp/health" 2>/dev/null)
+	hs=$(curl $CURL_TMO -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$pp/health" 2>/dev/null)
+	rs=$(curl $CURL_TMO -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$pp/" 2>/dev/null)
+	rb=$(curl $CURL_TMO -fsS "http://127.0.0.1:$pp/" 2>/dev/null)
+	us=$(curl $CURL_TMO -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$pp/does-not-exist" 2>/dev/null)
+	kill "$probe_pid" 2>/dev/null
+	wait "$probe_pid" 2>/dev/null
+	{ [ "$up" = "1" ] && [ "$hb" = '{"status":"ok"}' ] && [ "$hs" = "200" ] && [ "$rs" = "200" ] && [ "$us" = "404" ] && printf '%s' "$rb" | grep -qi '<html'; } \
+		&& ok "TEST-32b live probe: /health 200 {\"status\":\"ok\"}, / 200 HTML, unknown 404 (timeout-bounded, ephemeral port $pp, per-curl timeout, no leak)" \
+		|| no "TEST-32b live probe (up=$up health='$hb' hs=$hs rs=$rs unknown=$us port=$pp)"
+else
+	skip "TEST-32b live probe (no timeout/curl/node, no free ephemeral port, or npm test preflight unavailable)"
+fi
+
+# ---------------------------------------------------------------------------
+# TEST-32c (PR #6 F-02 regression): a `verify` run against the REAL contract
+# with an EMPTY friction log records a TRUTHFUL friction entry -- it names the
+# ACTUAL unknown members (lint/build) and does NOT falsely claim `test` is
+# unwired, nor reference an "Issue #5" wiring of test (test is now `npm test`
+# and passes). Asserted with plain grep (no node needed for the text checks);
+# gated on the typecheck preflight so `verify` is degraded (not fail) and thus
+# writes the aggregate friction record.
+# ---------------------------------------------------------------------------
+if [ "$TC_OK" = "1" ]; then
+	t32c=1
+	frc="$WORK/fr32c.$$"; : > "$frc"; ev=$(new_evdir)
+	HARNESS_FRICTION="$frc" HARNESS_EVIDENCE_DIR="$ev" "$H" verify >/dev/null 2>&1
+	vfl=$(grep '"verb": "verify"' "$frc" 2>/dev/null | tail -n 1)
+	[ -n "$vfl" ] || { t32c=0; printf '  (TEST-32c no verify friction entry recorded on empty log)\n'; }
+	printf '%s' "$vfl" | grep -q 'lint, build' || { t32c=0; printf '  (TEST-32c verify friction does not name the real unknown members lint, build)\n'; }
+	printf '%s' "$vfl" | grep -q 'test' && { t32c=0; printf '  (TEST-32c verify friction FALSELY names test)\n'; }
+	printf '%s' "$vfl" | grep -q 'Issue #5' && { t32c=0; printf '  (TEST-32c verify friction references stale Issue #5 wiring)\n'; }
+	[ "$t32c" = "1" ] && ok "TEST-32c #6 F-02: empty-friction verify records truthful friction (names lint/build; no false test, no Issue #5)" || no "TEST-32c F-02 friction truthfulness (t32c=$t32c)"
+else
+	skip "TEST-32c F-02 friction truthfulness (typecheck preflight unavailable)"
+fi
+
+# ===========================================================================
+# TEST-33 (PR #6 F-01 / ADR-0005 D2): doctor Node minor-floor boundary
+# ===========================================================================
+# Proves the refined `doctor` >=22.6.0 floor WITHOUT depending on this machine's
+# Node: stub a fake `node` on PATH (same seam as TEST-21) reporting a chosen
+# version. Major-22 minor<6 -> `degraded` (exit 0, NEVER fail) with a reason
+# naming the 22.6.0 floor; major-22 minor>=6 -> node check OK (pass). The change
+# is localized to compute_doctor (no CC-0003 amendment). SKIPs cleanly if the
+# stub mechanism is unavailable (no node, or shim dir unwritable).
+if [ -n "$NODE" ]; then
+	shimdir33="$WORK/shim33"; mkdir -p "$shimdir33" 2>/dev/null
+	if [ -d "$shimdir33" ] && [ -w "$shimdir33" ]; then
+		t33=1
+		# (a) below the floor (v22.5.0) -> degraded, exit 0, NEVER fail, node
+		#     check not-ok, and reason names the 22.6.0 floor.
+		printf '#!/bin/sh\necho v22.5.0\n' > "$shimdir33/node"; chmod +x "$shimdir33/node"
+		fr=$(new_friction); ev=$(new_evdir)
+		dj=$(PATH="$shimdir33:$PATH" HARNESS_ROOT="$HEALTHY_ROOT" HARNESS_FRICTION="$fr" HARNESS_EVIDENCE_DIR="$ev" "$H" doctor --json)
+		PATH="$shimdir33:$PATH" HARNESS_ROOT="$HEALTHY_ROOT" HARNESS_FRICTION="$fr" HARNESS_EVIDENCE_DIR="$ev" "$H" doctor >/dev/null 2>&1; dc=$?
+		dv=$(printf '%s' "$dj" | jget verdict)
+		dnotes=$(printf '%s' "$dj" | jget notes)
+		dnodeok=$(printf '%s' "$dj" | jget checks.0.ok)
+		[ "$dv" = "degraded" ] || { t33=0; printf '  (TEST-33 v22.5.0 verdict=%s want degraded)\n' "$dv"; }
+		[ "$dv" != "fail" ] || { t33=0; printf '  (TEST-33 v22.5.0 verdict must NEVER be fail)\n'; }
+		[ "$dc" = "0" ] || { t33=0; printf '  (TEST-33 v22.5.0 exit=%s want 0)\n' "$dc"; }
+		[ "$dnodeok" = "false" ] || { t33=0; printf '  (TEST-33 v22.5.0 node.ok=%s want false)\n' "$dnodeok"; }
+		printf '%s' "$dnotes" | grep -q '22.6.0' || { t33=0; printf '  (TEST-33 v22.5.0 reason does not name the 22.6.0 floor: %s)\n' "$dnotes"; }
+		printf '%s' "$dj" | json_valid || { t33=0; printf '  (TEST-33 v22.5.0 doctor --json not valid JSON)\n'; }
+		# (b) at/above the floor -> node check OK (pass), exit 0.
+		for ver in v22.6.0 v22.17.1; do
+			printf '#!/bin/sh\necho %s\n' "$ver" > "$shimdir33/node"; chmod +x "$shimdir33/node"
+			fr=$(new_friction); ev=$(new_evdir)
+			dj=$(PATH="$shimdir33:$PATH" HARNESS_ROOT="$HEALTHY_ROOT" HARNESS_FRICTION="$fr" HARNESS_EVIDENCE_DIR="$ev" "$H" doctor --json)
+			PATH="$shimdir33:$PATH" HARNESS_ROOT="$HEALTHY_ROOT" HARNESS_FRICTION="$fr" HARNESS_EVIDENCE_DIR="$ev" "$H" doctor >/dev/null 2>&1; dc=$?
+			dv=$(printf '%s' "$dj" | jget verdict)
+			dnodeok=$(printf '%s' "$dj" | jget checks.0.ok)
+			{ [ "$dv" = "pass" ] && [ "$dc" = "0" ] && [ "$dnodeok" = "true" ]; } || { t33=0; printf '  (TEST-33 %s verdict=%s exit=%s node.ok=%s want pass/0/true)\n' "$ver" "$dv" "$dc" "$dnodeok"; }
+		done
+		[ "$t33" = "1" ] && ok "TEST-33 doctor >=22.6.0 floor: v22.5.0->degraded (exit 0, reason names 22.6.0), v22.6.0/v22.17.1->pass" || no "TEST-33 doctor node minor floor (t33=$t33)"
+	else
+		skip "TEST-33 doctor node minor floor (shim dir unavailable)"
+	fi
+else
+	skip "TEST-33 doctor node minor floor (node absent -> cannot stub/validate)"
+fi
+
 
 # ===========================================================================
 # Summary

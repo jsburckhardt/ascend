@@ -341,9 +341,23 @@ node_major() {
 	_nv=${_nv#v}
 	printf '%s' "${_nv%%.*}"
 }
-# Supported Node major: exactly the pinned major (.nvmrc), which matches
-# package.json engines `>=22 <23`. Both below-range and above-range are
-# unsupported (CORE-COMPONENT-0003 R15).
+# node_minor : print the running Node MINOR version (e.g. v22.17.1 -> 17),
+# parsed portably (strip leading `v`, drop the major, take the field before the
+# next dot). Empty if node is absent or the version is unparseable.
+node_minor() {
+	_nv=$(node --version 2>/dev/null)
+	_nv=${_nv#v}
+	case "$_nv" in
+		*.*) _nv=${_nv#*.}; printf '%s' "${_nv%%.*}" ;;
+		*) printf '' ;;
+	esac
+}
+# Supported Node range: `>=22.6.0 <23` (engines.node / .nvmrc major 22). Both
+# below-range and above-range majors are unsupported (CORE-COMPONENT-0003 R15).
+# Within major 22 there is ALSO a minor floor: `--experimental-strip-types`
+# (ADR-0005 D2, Decision #61) first shipped in Node v22.6.0, so a running major
+# 22 with minor < 6 cannot run the app -> doctor reports `degraded` (never fail).
+NODE_MINOR_FLOOR=6
 required_major() {
 	if [ -f "$ROOT/.nvmrc" ]; then
 		tr -dc '0-9' < "$ROOT/.nvmrc" | cut -c1-2
@@ -355,21 +369,31 @@ modules_present() { [ -d "$ROOT/node_modules" ]; }
 
 # compute_doctor : resolve the doctor environment verdict WITHOUT emitting output
 # or friction. Sets DOCTOR_VERDICT, DOCTOR_NODE_OK, DOCTOR_NODE_REASON,
-# DOCTOR_MODS_OK, DOCTOR_MODS_REASON, DOCTOR_MAJ, DOCTOR_REQMAJ.
+# DOCTOR_MODS_OK, DOCTOR_MODS_REASON, DOCTOR_MAJ, DOCTOR_MIN, DOCTOR_REQMAJ.
 compute_doctor() {
 	DOCTOR_REQMAJ=$(required_major)
 	DOCTOR_VERDICT="pass"
 	DOCTOR_NODE_OK="true"; DOCTOR_NODE_REASON=""
 	DOCTOR_MODS_OK="true"; DOCTOR_MODS_REASON=""
-	DOCTOR_MAJ=""
+	DOCTOR_MAJ=""; DOCTOR_MIN=""
 
 	if node_present; then
 		DOCTOR_MAJ=$(node_major)
+		DOCTOR_MIN=$(node_minor)
 		if [ -n "$DOCTOR_MAJ" ] && [ "$DOCTOR_MAJ" -eq "$DOCTOR_REQMAJ" ] 2>/dev/null; then
-			DOCTOR_NODE_OK="true"
+			# major in range; enforce the >=22.6.0 minor floor (ADR-0005 D2 /
+			# Decision #61): --experimental-strip-types is unavailable before
+			# v22.6.0, so major 22 minor < 6 cannot run the app -> degraded.
+			if [ -n "$DOCTOR_MIN" ] && [ "$DOCTOR_MIN" -lt "$NODE_MINOR_FLOOR" ] 2>/dev/null; then
+				DOCTOR_NODE_OK="false"
+				DOCTOR_NODE_REASON="node ${DOCTOR_MAJ}.${DOCTOR_MIN} below supported floor ${DOCTOR_REQMAJ}.${NODE_MINOR_FLOOR}.0 required by --experimental-strip-types (engines >=22.6.0 <23)"
+				DOCTOR_VERDICT="degraded"
+			else
+				DOCTOR_NODE_OK="true"
+			fi
 		else
 			DOCTOR_NODE_OK="false"
-			DOCTOR_NODE_REASON="node major ${DOCTOR_MAJ:-unknown} outside supported range (exactly ${DOCTOR_REQMAJ}, per engines >=22 <23 and .nvmrc)"
+			DOCTOR_NODE_REASON="node major ${DOCTOR_MAJ:-unknown} outside supported range (major ${DOCTOR_REQMAJ}, per engines >=22.6.0 <23 and .nvmrc)"
 			DOCTOR_VERDICT="degraded"
 		fi
 	else
@@ -462,9 +486,10 @@ Verbs:
   orient            Summarize repo stack, setup entry point, and contract
   doctor            Check Node/toolchain environment health
   lint              Run the linter (none configured yet -> unknown)
-  test              Run the test suite (none present yet -> unknown)
+  test              Run the node:test suite (wraps npm test -> pass)
   build             Build/emit artifacts (none; tsc is noEmit -> unknown)
-  boot              Boot/serve the app (no dev/serve command yet -> unknown)
+  boot              Serve the app shell + /health endpoint (interactive
+                    handoff; execs npm run start -> hands off, emits NO verdict)
   dev               Start the local dev inner loop (interactive handoff; execs
                     npm run dev -> hands off, emits NO verdict)
   verify            Aggregate static verification gate (wraps npm run typecheck)
@@ -524,17 +549,17 @@ verb_doctor() {
 		if ! ensure_friction doctor \
 			"Environment health is degraded (${DOCTOR_NODE_REASON}${DOCTOR_NODE_REASON:+; }${DOCTOR_MODS_REASON}); the harness had to infer the expected toolchain state." \
 			"Node/toolchain readiness is not proven by a wrapped setup check; doctor infers it from .nvmrc/engines and node_modules presence." \
-			"Wire an explicit environment/setup proof (e.g. a 'boot'/setup command) in contract.yml when #5/#6 land."; then
+			"Wire an explicit environment/setup proof (e.g. a setup command) in contract.yml when one exists; today doctor infers readiness from .nvmrc/engines and node_modules presence."; then
 			persist_fail doctor "$_json" "required friction record for degraded environment could not be persisted"
 		fi
 	fi
 
 	if [ "$_json" = "1" ]; then
-		json_response doctor "$_verdict" ",\"checks\": [{\"name\": \"node\", \"ok\": $DOCTOR_NODE_OK, \"major\": \"$(json_escape "$DOCTOR_MAJ")\", \"required_major\": \"$DOCTOR_REQMAJ\"}, {\"name\": \"node_modules\", \"ok\": $DOCTOR_MODS_OK}], \"notes\": \"$(json_escape "${DOCTOR_NODE_REASON}${DOCTOR_NODE_REASON:+; }${DOCTOR_MODS_REASON}")\""
+		json_response doctor "$_verdict" ",\"checks\": [{\"name\": \"node\", \"ok\": $DOCTOR_NODE_OK, \"major\": \"$(json_escape "$DOCTOR_MAJ")\", \"minor\": \"$(json_escape "$DOCTOR_MIN")\", \"required_major\": \"$DOCTOR_REQMAJ\", \"required_range\": \">=${DOCTOR_REQMAJ}.${NODE_MINOR_FLOOR}.0 <23\"}, {\"name\": \"node_modules\", \"ok\": $DOCTOR_MODS_OK}], \"notes\": \"$(json_escape "${DOCTOR_NODE_REASON}${DOCTOR_NODE_REASON:+; }${DOCTOR_MODS_REASON}")\""
 	else
 		printf 'Environment doctor\n==================\n'
 		printf 'node present       : %s\n' "$(node_present && node --version 2>/dev/null || echo 'no')"
-		printf 'node major == %s   : %s\n' "$DOCTOR_REQMAJ" "$DOCTOR_NODE_OK"
+		printf 'node >= %s.%s.0     : %s\n' "$DOCTOR_REQMAJ" "$NODE_MINOR_FLOOR" "$DOCTOR_NODE_OK"
 		printf 'node_modules       : %s\n' "$DOCTOR_MODS_OK"
 		[ -n "$DOCTOR_NODE_REASON" ] && printf 'note               : %s\n' "$DOCTOR_NODE_REASON"
 		[ -n "$DOCTOR_MODS_REASON" ] && printf 'note               : %s\n' "$DOCTOR_MODS_REASON"
@@ -564,7 +589,7 @@ verb_capability() {
 					_gap="No wrapped command is mapped for $_name in contract.yml." ;;
 			esac
 			if ! ensure_friction "$_name" "$_inf" "$_gap" \
-				"Issue #5 adds dev/validation commands; wire the $_name verb's maps_to in contract.yml."; then
+				"Wire the $_name verb's maps_to in contract.yml when a backing command exists (ADR-0002 keeps lint/build unwired until a validated need)."; then
 				persist_fail "$_name" "$_json" "required friction record could not be persisted"
 			fi
 			if [ "$_json" = "1" ]; then
@@ -716,9 +741,16 @@ verb_verify() {
 	_verdicts="$_tc_verdict"
 	_checks="[$_tc_check"
 	_rows=""
+	# Collect the ACTUAL unknown members (no backing command) so the friction /
+	# notes text names the real gap dynamically instead of a hard-coded list
+	# (review F-02 truthfulness; CORE-COMPONENT-0003 R4/R9). `test` is wired
+	# (`npm test`), so it never appears here.
+	_unknown_members=""
+	[ "$_tc_verdict" = "unknown" ] && _unknown_members="typecheck"
 	for _m in $_members; do
 		resolve_member "$_m"
 		_verdicts="$_verdicts $MEMBER_VERDICT"
+		[ "$MEMBER_VERDICT" = "unknown" ] && _unknown_members="${_unknown_members}${_unknown_members:+, }$_m"
 		if [ "$MEMBER_MAPS" = "native" ]; then
 			if [ -n "$MEMBER_REASON" ]; then
 				_checks="$_checks, {\"name\": \"$_m\", \"verdict\": \"$MEMBER_VERDICT\", \"reason\": \"$(json_escape "$MEMBER_REASON")\"}"
@@ -744,9 +776,9 @@ verb_verify() {
 	# --- required-capability friction for a non-pass aggregate (R4) ---------
 	if [ "$_overall" = "degraded" ] || [ "$_overall" = "unknown" ]; then
 		if ! ensure_friction verify \
-			"The verify aggregate is $_overall because one or more members (test, lint, build) have no backing command; the agent had to infer the repo's real verification surface is only typecheck." \
-			"Only 'npm run typecheck' is a wrappable check today; test/lint/build are unknown, so verify cannot prove full verification." \
-			"Issue #5 adds dev/validation commands; once wired in contract.yml the aggregate can reach pass."; then
+			"The verify aggregate is $_overall because these members have no backing command: ${_unknown_members:-none}; the agent had to infer that the repo's proven verification surface is the wrapped typecheck plus the already-wired capability verbs." \
+			"typecheck is wrapped ('npm run typecheck') and the wired capability verbs run to real verdicts, but ${_unknown_members:-those members} have no wrapped command, so verify cannot prove full verification." \
+			"${_unknown_members:-Those members} remain intentionally unwired (ADR-0002: no linter/build step yet) pending a validated need; wire their maps_to in contract.yml when a real command exists."; then
 			persist_fail verify "$_json" "required friction record could not be persisted"
 		fi
 	fi
@@ -759,7 +791,7 @@ verb_verify() {
 		"$ROOT"/*) _evrel="${EVIDENCE_DIR#"$ROOT"/}/$_evname" ;;
 		*) _evrel="$EVIDENCE_DIR/$_evname" ;;
 	esac
-	_notes="lint, test, and build are unknown until Issue #5 wires their commands in contract.yml"
+	_notes="${_unknown_members:-No members} unknown until wired in contract.yml (typecheck and test are already wrapped)"
 	_content=$(json_response verify "$_overall" ",\"checks\": $_checks, \"evidence\": \"$(json_escape "$_evrel")\", \"notes\": \"$(json_escape "$_notes")\"")
 
 	if ! persist_atomic "$_content" "$_evabs"; then
@@ -837,7 +869,7 @@ verb_clean() {
 			if ! ensure_friction clean \
 				"There is no project 'clean' command; clean only prunes harness-owned evidence and returns degraded." \
 				"No clean/reset script exists; the harness must not delete node_modules or project artifacts, so the capability is only partially available." \
-				"Issue #5/#6 may add a real clean command; wire the clean verb's maps_to in contract.yml when it exists."; then
+				"A real clean command may be wired later; set the clean verb's maps_to in contract.yml when one exists."; then
 				persist_fail clean "$_json" "required friction record could not be persisted"
 			fi
 			if [ "$_json" = "1" ]; then

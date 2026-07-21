@@ -41,17 +41,18 @@ verbs:
     json: true
     description: "Run the linter (none configured yet)"
   test:
-    maps_to: null
+    maps_to: "npm test"
     json: true
-    description: "Run the test suite (none present yet)"
+    description: "Run the node:test suite (wraps npm test)"
   build:
     maps_to: null
     json: true
     description: "Build/emit artifacts (none; tsc is noEmit)"
   boot:
-    maps_to: null
+    maps_to: "npm run start"
+    mode: exec
     json: true
-    description: "Boot/serve the app (no dev/serve command yet)"
+    description: "Serve the app shell + /health endpoint (interactive handoff; execs npm run start)"
   dev:
     maps_to: "npm run dev"
     mode: exec

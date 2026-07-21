@@ -38,7 +38,7 @@ Every verb returns exactly one verdict:
 not* be read as failures by CI or the verifier. A usage error (bad/missing verb)
 is not a verdict and exits `2`.
 
-## Verbs and current verdicts (Issue #4 baseline)
+## Verbs and current verdicts
 
 | Verb | Backing command today | Current verdict | `--json` |
 |------|-----------------------|-----------------|----------|
@@ -46,9 +46,9 @@ is not a verdict and exits `2`.
 | `orient` | repo metadata / contract (native) | `pass` | yes |
 | `doctor` | Node vs `.nvmrc`/`engines`, `node_modules` presence (native) | `pass` (or `degraded`) | yes |
 | `lint` | none (no ESLint/Prettier) | `unknown` | yes |
-| `test` | none (no runner/script/files) | `unknown` | yes |
+| `test` | `npm test` (`node:test` suites in `tests/app/`) | `pass` | yes |
 | `build` | none (`tsc` is `noEmit`; nothing emits) | `unknown` | yes |
-| `boot` | none (no dev/serve app yet) | `unknown` | yes |
+| `boot` | `npm run start` (`node --experimental-strip-types src/main.ts`) — app-serve handoff (`mode: exec`) | n/a — hands off via `exec`, emits **no verdict** | yes (descriptor) / `--print` |
 | `dev` | `npm run dev` (`tsc --noEmit --watch`) — interactive handoff (`mode: exec`) | n/a — hands off via `exec`, emits **no verdict** | yes (descriptor) / `--print` |
 | `verify` | `npm run typecheck` (aggregate) | `degraded` | yes |
 | `status` | contract + last evidence (native) | `pass` | yes |
@@ -74,9 +74,9 @@ evaluated in this order:
 4. otherwise (a mix of `pass`/`degraded`/`unknown` with no `fail`) **→ `degraded`**.
 
 `doctor` only emits `pass`/`degraded`, so it can move the aggregate toward
-`degraded` but never `fail`. In the Issue #4 baseline `verify` returns
-**`degraded`** (typecheck `pass`; `lint`/`test`/`build` `unknown`; `doctor`
-`pass`). Every run writes a timestamped evidence record under
+`degraded` but never `fail`. Today `verify` returns **`degraded`** (typecheck
+`pass`; `test` `pass`; `lint`/`build` `unknown`; `doctor` `pass`). Every run
+writes a timestamped evidence record under
 `.harness/evidence/`. If that **required evidence record cannot be persisted**,
 `verify` returns **`fail`** and exits non-zero — it never masks a persistence
 failure as `pass`/`degraded`/`unknown` (R14). On a failure path the human output
@@ -92,8 +92,10 @@ it would block forever and never return a verdict. Such a verb is declared in
 (data-driven). Absence of `mode` — or `mode: capability` — selects the default
 run-to-completion behavior, so **every pre-existing verb is unchanged**.
 
-The only interactive/handoff verb today is **`dev`** (backing command
-`npm run dev` = `tsc --noEmit --watch`). A `mode: exec` verb:
+Two interactive/handoff verbs use this category: **`dev`** (backing command
+`npm run dev` = `tsc --noEmit --watch`, the typecheck inner loop) and **`boot`**
+(backing command `npm run start` = `node --experimental-strip-types src/main.ts`,
+the app-serve + `/health` process wired by issue #6). A `mode: exec` verb:
 
 - **Hands off via `exec`.** `./harness dev` replaces the harness process with the
   wrapped command (`cd "$ROOT" && exec sh -c "npm run dev"`), so the harness
@@ -116,10 +118,11 @@ The only interactive/handoff verb today is **`dev`** (backing command
   #  "maps_to":"npm run dev","interactive":true}   ← note: NO "verdict" key
   ```
 
-`help` and `orient` list `dev` as an interactive handoff (`orient` also surfaces
-the resolved `dev` command); the automatic verb count includes it. The regression
-suite (`tests/harness/run.sh`) never `exec`s `dev`; it proves invocability via
-`dev --print`/`--json` (which cannot hang).
+`help` lists both `dev` and `boot` as interactive handoffs (and `orient`
+surfaces the resolved `dev` command); the automatic verb count includes them. The
+regression suite (`tests/harness/run.sh`) never `exec`s `dev` or `boot` — a live
+`boot` would bind a port — so it proves invocability via `dev --print` /
+`boot --print` (and `--json`), which cannot hang.
 
 ## `--json` contract
 
@@ -137,15 +140,16 @@ aggregates, `checks[].verdict`) rather than parsing human text. The
 `pr-review-complement` skill already relies on `./harness orient` and
 `./harness verify --json`.
 
-Interactive/handoff verbs (`mode: exec`, e.g. `dev`) are the one documented
-exception: their `--json` form is a non-exec **descriptor** that is
+Interactive/handoff verbs (`mode: exec`, e.g. `dev` and `boot`) are the one
+documented exception: their `--json` form is a non-exec **descriptor** that is
 verdict-exempt (R17) and therefore **omits** the `verdict` key, carrying
 `mode: "exec"`, `maps_to`, and `interactive: true` instead (see above).
 
 ```sh
 ./harness orient --json
-./harness verify --json      # verdict: degraded (typecheck passes; test/lint/build unknown)
-./harness test  --json       # { "verb": "test", "verdict": "unknown", ... }
+./harness verify --json      # verdict: degraded (typecheck + test pass; lint/build unknown)
+./harness test  --json       # { "verb": "test", "verdict": "pass", "maps_to": "npm test", ... }
+./harness boot  --json       # descriptor: mode exec, maps_to "npm run start", interactive (NO verdict)
 ```
 
 ## Evidence
@@ -182,30 +186,38 @@ to `pass` by editing the verb's `maps_to` in
 [`.harness/contract.yml`](./contract.yml) (data) — **not** by restructuring the
 harness — and then closing the corresponding friction entry.
 
-### Issue #5 status: dev inner loop and validation
+### Issue #5/#6 status: dev inner loop, validation, and app-serve
 
 - **Development inner loop (invokable through the harness):** the Prototype-0
   "start the local development environment" command is **`./harness dev`** — an
   interactive/handoff verb (`mode: exec`) that `exec`s **`npm run dev`**
-  (`tsc --noEmit --watch` — continuous typecheck feedback). It is genuinely
-  invokable through the harness CLI (resolving review finding F-01 / ADR-0004);
-  introspect it without starting the watch via `./harness dev --print` or
-  `./harness dev --json`. See the root [`README.md`](../README.md) and
+  (`tsc --noEmit --watch` — continuous typecheck feedback, **not** a server). It
+  is genuinely invokable through the harness CLI (resolving review finding F-01 /
+  ADR-0004); introspect it without starting the watch via `./harness dev --print`
+  or `./harness dev --json`. See the root [`README.md`](../README.md) and
   [ADR-0004](../project/architecture/ADR/ADR-0004-interactive-handoff-verbs.md).
-- **`boot` stays `unknown` (owned by #6):** `boot` is reserved for the real
-  **app-serve + health** endpoint, a distinct concern from the dev inner loop, so
-  `boot.maps_to` remains `null`. Wrapping app-serve (it may reuse this
-  `mode: exec` handoff pattern or choose readiness-probe + detach) is delivered by
-  **issue #6** (shell + health); #5 does **not** rewire `boot`.
-- **`verify` = `degraded` is the accepted baseline:** `./harness verify` wraps
-  `npm run typecheck` (which passes) and stays `degraded` because `lint`,
-  `test`, and `build` remain `unknown`. `degraded` exits `0` and is the honest,
-  non-blocking Prototype-0 validation state — #5 does **not** add a
-  linter/test-runner/build to force `pass` (ADR-0002, no speculative frameworks).
+- **`boot` now serves the app (wired by #6):** `boot` is the real **app-serve +
+  health** command, delivered by **issue #6** (ADR-0005). It reuses the
+  `mode: exec` handoff — `boot.maps_to: "npm run start"` execs
+  `node --experimental-strip-types src/main.ts`, the `node:http` server that
+  serves the `/` shell and `GET /health` → `200 {"status":"ok"}` (default port
+  3000, `PORT`-overridable). Being a handoff it is verdict-exempt; introspect it
+  without binding a port via `./harness boot --print` / `--json`.
+- **`test` is wired to `pass` (#6):** `test.maps_to: "npm test"` runs the
+  `node:test` suites in `tests/app/` (`node --test --experimental-strip-types`,
+  zero new dependency). It joins the `verify` aggregate, so `verify` now proves
+  the health/shell behaviour.
+- **`verify` = `degraded` (now proving the test suite):** `./harness verify`
+  wraps `npm run typecheck` (which passes) and, since #6 wired `test`, aggregates
+  `test=pass` (`npm test`). It stays `degraded` because `lint` and `build` remain
+  `unknown`; `degraded` exits `0` and is the honest, non-blocking validation
+  state. `verify` turns `fail` only if `tsc --noEmit` **or** `npm test` fails, and
+  needs `node_modules` present so `tsc` can typecheck against `@types/node` (the
+  `node:test` suite itself runs with zero installed packages).
 - **No alias:** `npm run typecheck` is wrapped **only** by `verify`; it is never
   aliased as `lint`, `test`, or `build`, and no redundant `validate`/`check`
-  entry point is introduced. `npm run dev` is the backing script for `./harness
-  dev` and is not aliased elsewhere.
+  entry point is introduced. `npm run dev` backs `./harness dev` and `npm run
+  start` backs `./harness boot`; neither is aliased elsewhere.
 
 ## Agent workflow
 

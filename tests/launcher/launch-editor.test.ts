@@ -154,6 +154,57 @@ function emptyBin(): string {
   return mkTmp("le-empty-");
 }
 
+// A stub `code-server` that SIMULATES a user edit: it logs its argv (as
+// makeStub does) and then writes `newContent` to `$PROJECT_PATH/README.md`
+// (the first positional it receives) before exiting 0. It is a stand-in for a
+// real editor save so the launcher/filesystem MECHANICS can be asserted with
+// code-server absent (ADR-0006 D7). It is NOT the real editor; the real
+// user-edit round trip is proven by the manual demo (TEST-M1/M2), not here.
+function makeEditingStub(newContent: string): { binDir: string; logPath: string } {
+  const binDir = mkTmp("le-editstub-");
+  const logPath = path.join(binDir, "argv.log");
+  // Single-quote the content for POSIX sh (the stub's PATH holds only itself, so
+  // it must rely on the `printf` builtin — no external `cat`). Real newlines are
+  // literal inside single quotes; embedded single quotes are escaped.
+  const sq = "'" + newContent.replace(/'/g, "'\\''") + "'";
+  const stub =
+    "#!/bin/sh\n" +
+    `for a in "$@"; do printf '%s\\n' "$a"; done > ${JSON.stringify(logPath)}\n` +
+    // "$1" is the PROJECT_PATH positional the launcher passes first (TEST-L5).
+    `printf '%s' ${sq} > "$1/README.md"\n` +
+    "exit 0\n";
+  const stubPath = path.join(binDir, "code-server");
+  writeFileSync(stubPath, stub);
+  chmodSync(stubPath, 0o755);
+  return { binDir, logPath };
+}
+
+// Diff two snapshots by relative path. Returns the set of changed paths, and the
+// added/removed path sets, so tests can assert "exactly one entry changed, none
+// added/removed" (path-identity + no-copy + non-mutation).
+function diffSnapshots(
+  before: SnapEntry[],
+  after: SnapEntry[],
+): { changed: string[]; added: string[]; removed: string[] } {
+  const b = new Map(before.map((e) => [e.path, e]));
+  const a = new Map(after.map((e) => [e.path, e]));
+  const changed: string[] = [];
+  const added: string[] = [];
+  const removed: string[] = [];
+  for (const [p, ae] of a) {
+    const be = b.get(p);
+    if (!be) {
+      added.push(p);
+    } else if (JSON.stringify(be) !== JSON.stringify(ae)) {
+      changed.push(p);
+    }
+  }
+  for (const p of b.keys()) {
+    if (!a.has(p)) removed.push(p);
+  }
+  return { changed: changed.sort(), added: added.sort(), removed: removed.sort() };
+}
+
 // Run the launcher with a fully-controlled env (spawnSync REPLACES the env).
 function runLauncher(opts: {
   projectPath?: string | null;
@@ -320,5 +371,135 @@ test("TEST-L8: code-server flags live ONLY in scripts/launch-editor.sh (PRD 5.7)
     surfaces[".harness/contract.yml"],
     /maps_to:\s*"npm run edit"/,
     "the edit verb maps only to the agnostic npm script",
+  );
+});
+
+// ===========================================================================
+// Issue #8 (verify direct filesystem editing) — TEST-L9..L12.
+//
+// These extend the code-server-free snapshot suite to prove, at the LAUNCHER /
+// FILESYSTEM-MECHANICS level, the model behind issue #8's acceptance criteria:
+//   AC1  an edit lands on the ORIGINAL path, in place (not a copy/stage);
+//   AC2  stopping the editor leaves project files unchanged (bar the edit);
+//   AC4  the launcher mutates nothing else and writes no editor state into
+//        PROJECT_PATH (PRD 28.6, ADR-0006 D5).
+//
+// SCOPE CAVEAT (ADR-0006 D7): a STUB code-server stands in for the real binary,
+// so these cases prove launcher/filesystem mechanics only — NOT the real
+// editor's behaviour. The real user-edit round trip (AC1/AC2/AC3) is proven by
+// the MANUAL demo (TEST-M1..M4, project/issues/8/implementation/README.md),
+// pending a code-server-provisioned host.
+// ===========================================================================
+
+// --- TEST-L9: launcher passes the EXACT PROJECT_PATH positional (no copy) ----
+test("TEST-L9: launcher opens the exact PROJECT_PATH in place (no copy/stage)", () => {
+  // Stub stands in for the real editor (ADR-0006 D7): asserts the launch SEAM
+  // hands off the real path, not a copy — the mechanical basis for AC1.
+  // Build the fixture inside a DEDICATED enclosing dir so the parent listing is
+  // controlled (the shared OS temp dir would otherwise churn across tests).
+  const enclosing = mkTmp("le-encl-");
+  const proj = path.join(enclosing, "project");
+  mkdirSync(proj);
+  writeFileSync(path.join(proj, "README.md"), "# fixture project\n");
+  mkdirSync(path.join(proj, "sub"));
+  writeFileSync(path.join(proj, "sub", "a.txt"), "alpha\n");
+  const parent = enclosing;
+  const beforeProj = snapshot(proj);
+  const beforeParent = readdirSync(parent).sort();
+  const { binDir, logPath } = makeStub();
+
+  const r = runLauncher({ projectPath: proj, pathDir: binDir });
+
+  assert.equal(r.status, 0, "valid dir should hand off (stub exits 0)");
+  const argv = stubArgv(logPath);
+  assert.equal(argv[0], proj, "code-server receives the EXACT PROJECT_PATH (no copy/temp/stage)");
+  assert.deepEqual(
+    readdirSync(parent).sort(),
+    beforeParent,
+    "no sibling/staging/copy dir appeared alongside the fixture",
+  );
+  assert.deepEqual(snapshot(proj), beforeProj, "launcher touched nothing in the target (AC1/AC4)");
+});
+
+// --- TEST-L10: simulated edit lands on the same path; nothing else touched ---
+test("TEST-L10: simulated in-place edit lands on README.md; nothing else changes", () => {
+  // Stub simulates a user save to the opened folder (ADR-0006 D7 scope caveat):
+  // the REAL editor round trip is proven manually (TEST-M1).
+  const proj = makeProjectDir();
+  const before = snapshot(proj);
+  const edited = "# fixture project\n\nEDITED THROUGH THE EDITOR\n";
+  const { binDir } = makeEditingStub(edited);
+
+  const r = runLauncher({ projectPath: proj, pathDir: binDir });
+
+  assert.equal(r.status, 0, "stub edits then hands off (exits 0)");
+  const after = snapshot(proj);
+  const { changed, added, removed } = diffSnapshots(before, after);
+
+  assert.deepEqual(changed, ["README.md"], "exactly one entry changed, and it is README.md (path-identity)");
+  assert.deepEqual(added, [], "no new file/dir created (no copy/shadow)");
+  assert.deepEqual(removed, [], "no file/dir removed");
+
+  const afterReadme = after.find((e) => e.path === "README.md");
+  const beforeReadme = before.find((e) => e.path === "README.md");
+  assert.ok(afterReadme && beforeReadme);
+  assert.notEqual(afterReadme.hash, beforeReadme.hash, "README.md content (hash) actually changed");
+  assert.equal(
+    readFileSync(path.join(proj, "README.md"), "utf8"),
+    edited,
+    "the identical change appears at the ORIGINAL path (AC1)",
+  );
+});
+
+// --- TEST-L11: post-stop integrity — only the intended edit persists ---------
+test("TEST-L11: after the editor exits, only the intended edit persists (AC2)", () => {
+  // Edit-then-stop via the exec handoff (ADR-0006 D6). Stub scope caveat as
+  // above: the real process-stop integrity is proven manually (TEST-M2).
+  const proj = makeProjectDir();
+  const before = snapshot(proj);
+  const edited = "# fixture project\n\nSAVED THEN EDITOR STOPPED\n";
+  const { binDir } = makeEditingStub(edited);
+
+  const r = runLauncher({ projectPath: proj, pathDir: binDir });
+
+  assert.equal(r.status, 0, "exit code propagates through the exec handoff (ADR-0006 D6)");
+  const afterStop = snapshot(proj);
+  const { changed, added, removed } = diffSnapshots(before, afterStop);
+
+  assert.deepEqual(changed, ["README.md"], "only the intended edit persists after stop");
+  assert.deepEqual(added, [], "process stop added nothing");
+  assert.deepEqual(removed, [], "process stop removed/reset nothing");
+
+  // Every non-edited entry is byte-for-byte its pre-edit self after the editor stops.
+  for (const be of before) {
+    if (be.path === "README.md") continue;
+    const ae = afterStop.find((e) => e.path === be.path);
+    assert.deepEqual(ae, be, `entry '${be.path}' is unchanged after the editor stops`);
+  }
+});
+
+// --- TEST-L12: launcher writes NO editor workspace-state into PROJECT_PATH ---
+test("TEST-L12: launcher sets no flag placing editor state inside PROJECT_PATH", () => {
+  // Static read of the launcher (like TEST-L8); no launch, code-server absent.
+  // The empirical DEFAULT workspace-state location (e.g. ~/.local/share/
+  // code-server, OUTSIDE PROJECT_PATH) is confirmed by the manual demo (TEST-M3);
+  // this test locks the launcher's own contribution: it introduces no such flag.
+  const launcher = readFileSync(SCRIPT, "utf8");
+
+  assert.ok(
+    !launcher.includes("--user-data-dir"),
+    "launcher must not set --user-data-dir (would place editor state under a chosen dir)",
+  );
+  assert.ok(
+    !launcher.includes("--extensions-dir"),
+    "launcher must not set --extensions-dir",
+  );
+  assert.ok(
+    !/--config[\s"'=]/.test(launcher),
+    "launcher must not pin a --config path rooted under PROJECT_PATH",
+  );
+  assert.ok(
+    !/XDG_(DATA|CONFIG|STATE|CACHE)_HOME[^\n]*PROJECT_PATH/.test(launcher),
+    "launcher must not root any XDG_*_HOME under PROJECT_PATH",
   );
 });

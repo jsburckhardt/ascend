@@ -360,3 +360,123 @@ implementation decisions:
 
 Changes stayed inside ADR-0002/0003/0004/**0005** and CORE-COMPONENT-0003. Commits
 / PR are owned by the Verify stage.
+
+## Review cycle 1 (F-01/F-02/F-03) fixes
+
+Applied the three PR #6 REVIEW findings from
+[`../review/00-review.md`](../review/00-review.md) after the planner refined
+ADR-0005 D2 + DECISION-LOG (Node runtime floor **≥ 22.6.0**; `doctor` →
+`degraded` on major-22 minor < 6). **No ADR/DECISION-LOG edits here** (Plan owns
+those). Code/config/test files changed: `package.json`, `README.md`, `harness`,
+`tests/harness/run.sh`. Re-validation: `npm run typecheck` → exit 0;
+`npm test` → 3/3; `./harness doctor` → **pass** (Node 22.17.1); `./harness verify`
+→ **degraded**, exit 0; `sh tests/harness/run.sh` → **PASS=42 FAIL=0 SKIP=0**.
+
+### F-01 (major) — honest `>=22.6.0` runtime floor
+`--experimental-strip-types` first shipped in Node **v22.6.0**, so Node 22.0–22.5
+cannot run the app. Made the declared range and `doctor` honest:
+
+- **`package.json`** — `engines.node` `>=22 <23` → **`>=22.6.0 <23`**.
+- **`.nvmrc`** — kept `22` (nvm resolves the newest 22.x, i.e. ≥ 22.6.0), per the
+  planner's T3 note.
+- **`README.md`** — Getting Started now states the runtime floor is **Node.js
+  ≥ 22.6.0 (< 23)** and *why* (`--experimental-strip-types` needs ≥ 22.6.0); a new
+  "Runtime floor" callout in the *Run the application* section repeats it and notes
+  `doctor` → `degraded` (never `fail`) below the floor.
+- **`harness`** — refined the `compute_doctor`/node-readiness **logic** (sanctioned
+  by ADR-0005 D2 + Decision #61; not a dispatch/wiring change):
+  - Added a portable `node_minor()` helper (`node -v` → strip `v`, drop the major,
+    take the field before the next dot; empty/guarded if unparseable) and a
+    `NODE_MINOR_FLOOR=6` constant.
+  - `compute_doctor` now, when the running Node is **major 22 but minor < 6**, sets
+    the node check not-OK and verdict **`degraded`** (exit 0, **never `fail`**) with
+    reason *"node 22.<minor> below supported floor 22.6.0 required by
+    --experimental-strip-types (engines >=22.6.0 <23)"*. Node ≥ 22.6.0 within major
+    22 stays OK/`pass`; major ≠ 22 keeps its existing out-of-range `degraded`.
+  - `doctor --json` `checks[node]` now also emits `minor` and `required_range`
+    (`>=22.6.0 <23`) via `json_escape`; the human line reads `node >= 22.6.0 : …`.
+  - Updated the stale ~line-344 comment from `>=22 <23` to `>=22.6.0 <23`.
+  - `verify`'s aggregate is intact: doctor `degraded` folds to `degraded` (R6),
+    never turning `verify` into `fail`. On this machine (Node 22.17.1) `doctor`
+    stays **`pass`**.
+
+**Doctor minor-check logic summary:** if `node` present and `major == required
+(22)`, then if `minor < 6` → node not-OK + `degraded` (floor reason); else node OK.
+Otherwise (major ≠ 22 / node absent) the pre-existing out-of-range/absent
+`degraded` paths are unchanged. All paths remain exit 0 (never `fail`).
+
+### F-02 (minor) — truthful `verify` friction / notes
+The non-pass-aggregate friction claimed members `(test, lint, build)` "have no
+backing command" and that "Issue #5 … can reach pass" — false now that `test` is
+wired (`npm test`) and passes. Fix in `harness` `verb_verify`:
+
+- Derive the unknown members **dynamically** (`_unknown_members`, built from the
+  actual per-member verdicts during aggregation), so the text names only the real
+  gaps — currently **`lint, build`** (never `test`).
+- Rewrote the friction inference/proof-gap/closure to be truthful and
+  issue-agnostic: names `${_unknown_members}`, states typecheck + the wired
+  capability verbs are the proven surface, and that lint/build "remain
+  intentionally unwired (ADR-0002 …) pending a validated need" — **no `test`
+  mention, no `Issue #5`**. The evidence `notes` is likewise dynamic.
+- Re-scanned the whole `harness` for stale `Issue #5`/issue-number prose and
+  corrected the remaining three (unmapped-verb closure, `clean` closure, `doctor`
+  degraded closure) to truthful, issue-agnostic wording. `git grep 'Issue #5'
+  harness` is now empty.
+- **Regression TEST-32c** (`tests/harness/run.sh`): an empty-friction-log `verify`
+  against the REAL contract records a friction entry that names `lint, build`,
+  does **not** contain `test`, and does **not** reference `Issue #5`.
+
+**Truthful friction text (verify, degraded):** inference — *"The verify aggregate
+is degraded because these members have no backing command: lint, build; the agent
+had to infer that the repo's proven verification surface is the wrapped typecheck
+plus the already-wired capability verbs."*; closure — *"lint, build remain
+intentionally unwired (ADR-0002: no linter/build step yet) pending a validated
+need; wire their maps_to in contract.yml when a real command exists."*
+
+### F-03 (minor) — TEST-32b live-probe isolation/timeout
+`tests/harness/run.sh` TEST-32b bound a **fixed** port 39517 with untimed `curl`s.
+Made it robust and deterministic:
+
+- **Ephemeral port** — a `free_port()` helper asks the OS for a free port using the
+  repo `node` (`net.createServer().listen(0,'127.0.0.1')`, read the assigned port,
+  close), passed via `PORT=`. Skips cleanly if no free port is obtained.
+- **Per-curl client timeout** — every `curl` now carries
+  `--connect-timeout 2 --max-time 5` (via `CURL_TMO`), so a hung/foreign listener
+  can neither stall the test nor silently defeat the assertions.
+- Kept the `timeout`/`gtimeout`-guarded server bind, explicit numeric-PID `kill`
+  (not `pkill`/`killall`), and `wait`. Still deterministic; never hangs/leaks
+  (verified: last run used ephemeral port 40987, no leftover `main.ts` process).
+
+### TEST-33 (planner T9) — doctor Node-floor boundary regression
+Added `tests/harness/run.sh` **TEST-33**, independent of this machine's Node: it
+stubs a fake `node` on `PATH` (the same shim seam as TEST-21) and asserts
+`./harness doctor --json` → **`degraded`** (exit 0, never `fail`) for **v22.5.0**
+with a reason naming the **22.6.0** floor and `checks[node].ok=false`, and
+**`pass`** (node-OK) for **v22.6.0** and **v22.17.1**. Guarded to **SKIP** cleanly
+if the stub mechanism is unavailable (no node / unwritable shim dir). **TEST-33
+RAN** (did not skip) in re-validation. Also updated **TEST-21** so its major-22
+stub uses **v22.6.0** (≥ floor) instead of `v22.0.0` (which now correctly
+degrades), keeping the 21/22/23 major-boundary intent.
+
+### Re-validation outputs
+- `npm run typecheck` → **exit 0**.
+- `npm test` → **pass 3 / fail 0** (`tests/app/` health + shell + 404).
+- `./harness doctor` → **Verdict: pass** (`node >= 22.6.0 : true`); `doctor --json`
+  valid JSON (now carries `minor` + `required_range`).
+- `./harness verify` → **Verdict: degraded**, exit 0 (`typecheck=pass`,
+  `lint=unknown`, `test=pass`, `build=unknown`, `doctor=pass`); `verify --json`
+  valid.
+- `sh tests/harness/run.sh` → **Totals: PASS=42 FAIL=0 SKIP=0**, `Verdict: pass`
+  (was 40; +TEST-32c, +TEST-33; TEST-32b now uses an ephemeral port).
+- Sanity: `git grep 'Issue #5' harness` → none; `git grep '>=22 <23' -- harness
+  package.json README.md` → none. (`package-lock.json` retains `>=22 <23` as the
+  documented offline lock drift — it also still lacks `@types/node`/`type: module`;
+  a connected `npm install` reconciles all of it. ADR-0003 / CORE-COMPONENT-0003 /
+  prior-issue history keep their historical `>=22 <23` references — Plan's domain;
+  no CC-0003 amendment required per ADR-0005 D2.)
+
+**Boundaries:** the only `harness` change was the sanctioned `compute_doctor`
+minor-floor **logic** + truthful friction/notes prose; dispatch and
+command-resolution are untouched (regression TEST-31 mode-authoritative still
+green). No `src/server.ts`/`src/main.ts` change (no finding required one). No
+ADR/core-component edited — no deviation required.

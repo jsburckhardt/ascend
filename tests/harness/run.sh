@@ -104,7 +104,7 @@ t01=1
 for k in "^version:" "^entrypoint:" "^verbs:" "^evidence:" "^friction:"; do
 	grep -q "$k" "$c" || t01=0
 done
-for v in help orient doctor lint test build boot dev verify status clean '"friction add"' '"friction list"'; do
+for v in help orient doctor lint test build boot dev edit verify status clean '"friction add"' '"friction list"'; do
 	grep -Eq "^  $v:" "$c" || t01=0
 done
 grep -q '    maps_to: "npm run typecheck"' "$c" || t01=0
@@ -128,6 +128,15 @@ boot_mode=$(awk '/^  [^ ].*:[ \t]*$/&&/^  /&&!/^    /{h=$0;sub(/^  /,"",h);sub(/
 [ "$test_maps" = "npm test" ] || t01=0
 [ "$boot_maps" = "npm run start" ] || t01=0
 [ "$boot_mode" = "exec" ] || t01=0
+# #7 / ADR-0006: edit -> "npm run edit" with mode: exec (code-server launch
+# handoff). The maps_to stays PROVIDER-AGNOSTIC (no code-server flag here, 5.7).
+edit_maps=$(awk '/^  [^ ].*:[ \t]*$/&&/^  /&&!/^    /{h=$0;sub(/^  /,"",h);sub(/:.*/,"",h);gsub(/"/,"",h);cur=h} cur=="edit"&&/^    maps_to:/{v=$0;sub(/^    maps_to:[ \t]*/,"",v);gsub(/"/,"",v);print v;exit}' "$c")
+edit_mode=$(awk '/^  [^ ].*:[ \t]*$/&&/^  /&&!/^    /{h=$0;sub(/^  /,"",h);sub(/:.*/,"",h);gsub(/"/,"",h);cur=h} cur=="edit"&&/^    mode:/{v=$0;sub(/^    mode:[ \t]*/,"",v);print v;exit}' "$c")
+[ "$edit_maps" = "npm run edit" ] || t01=0
+[ "$edit_mode" = "exec" ] || t01=0
+# 5.7 isolation: NO code-server flag may leak into the contract.
+grep -q -- '--bind-addr' "$c" && t01=0
+grep -q -- '--auth' "$c" && t01=0
 grep -q '    aggregate: \[lint, test, build, doctor\]' "$c" || t01=0
 grep -Eq '^  clean:' "$c" && awk '/^  clean:/{f=1} f&&/^    maps_to:/{print;exit}' "$c" | grep -q 'maps_to:' || t01=0
 grep -q '  dir: ".harness/evidence"' "$c" || t01=0
@@ -140,10 +149,10 @@ grep -q 'What did the agent have to infer that the harness should have proved?' 
 # ===========================================================================
 hv=$("$H" help); code=$?
 verbs_ok=1
-for v in help orient doctor lint test build boot dev verify status clean "friction add" "friction list"; do
+for v in help orient doctor lint test build boot dev edit verify status clean "friction add" "friction list"; do
 	printf '%s' "$hv" | grep -q "$v" || verbs_ok=0
 done
-[ "$code" = "0" ] && [ "$verbs_ok" = "1" ] && ok "TEST-02 help lists 13 verbs, exit 0" || no "TEST-02 help lists 13 verbs, exit 0"
+[ "$code" = "0" ] && [ "$verbs_ok" = "1" ] && ok "TEST-02 help lists 14 verbs, exit 0" || no "TEST-02 help lists 14 verbs, exit 0"
 "$H" orient >/dev/null 2>&1; expect_eq "TEST-02 orient human exit 0" 0 "$?"
 if [ -n "$NODE" ]; then
 	oj=$("$H" orient --json); code=$?
@@ -275,7 +284,7 @@ rd="$REPO/.harness/README.md"
 t11=1
 [ -f "$rd" ] || t11=0
 for tok in "pass" "fail" "degraded" "unknown" "--json" "./harness" "What did the agent have to infer"; do grep -qF -- "$tok" "$rd" || t11=0; done
-vc=1; for v in help orient doctor lint test build boot dev verify status clean friction; do grep -q "$v" "$rd" || vc=0; done
+vc=1; for v in help orient doctor lint test build boot dev edit verify status clean friction; do grep -q "$v" "$rd" || vc=0; done
 { [ "$t11" = "1" ] && [ "$vc" = "1" ]; } && ok "TEST-11 README documents verbs, verdicts, exit-code, --json, KEY_QUESTION" || no "TEST-11 README completeness"
 
 # ===========================================================================
@@ -477,7 +486,16 @@ bpr=$("$H" boot --print 2>/dev/null); bprc=$?
 [ "$bpr" = "npm run start" ] || { t20=0; printf '  (boot --print = "%s" exit %s)\n' "$bpr" "$bprc"; }
 [ "$bprc" = "0" ] || t20=0
 [ "$(printf '%s\n' "$bpr" | grep -c '^Verdict:')" = "0" ] || t20=0
-[ "$t20" = "1" ] && ok "TEST-20 exactly one Verdict: line per human verb (help/friction list = pass; dev+boot handoffs excluded, --print no hang)" || no "TEST-20 one Verdict line per verb"
+# edit (#7: mode: exec, execs `npm run edit` -> the code-server launcher) is
+# likewise an interactive/handoff verb. It is EXCLUDED from the run-to-completion
+# loop above (exec'ing it would launch code-server / bind a port). Prove
+# invocability via --print: resolves `npm run edit`, exits 0, no hang, and emits
+# NO `Verdict:` line.
+epr=$("$H" edit --print 2>/dev/null); eprc=$?
+[ "$epr" = "npm run edit" ] || { t20=0; printf '  (edit --print = "%s" exit %s)\n' "$epr" "$eprc"; }
+[ "$eprc" = "0" ] || t20=0
+[ "$(printf '%s\n' "$epr" | grep -c '^Verdict:')" = "0" ] || t20=0
+[ "$t20" = "1" ] && ok "TEST-20 exactly one Verdict: line per human verb (help/friction list = pass; dev+boot+edit handoffs excluded, --print no hang)" || no "TEST-20 one Verdict line per verb"
 
 # ===========================================================================
 # TEST-21: doctor validates full Node range (21/22/23 boundaries)
@@ -1099,6 +1117,96 @@ else
 	skip "TEST-33 doctor node minor floor (node absent -> cannot stub/validate)"
 fi
 
+
+# ===========================================================================
+# TEST-34: Issue #7 -- code-server launcher wired through the `edit` handoff
+# ===========================================================================
+# Proves the #7 / ADR-0006 surface WITHOUT launching code-server or binding a
+# port: contract wiring (edit exec -> `npm run edit`, provider-agnostic),
+# package.json edit script -> the launcher seam, the launcher script exists +
+# executable + owns ALL code-server flags (5.7 isolation), the edit --print/
+# --json handoff (no hang, verdict-exempt), help/orient listing, honest-when-
+# unmapped, and doc coherence. NEVER runs bare `./harness edit`.
+t34=1
+PKG="$REPO/package.json"
+ROOT_RD="$REPO/README.md"
+HARN_RD="$REPO/.harness/README.md"
+LAUNCHER="$REPO/scripts/launch-editor.sh"
+
+# (1) contract: edit -> exec "npm run edit" (agnostic; NO code-server flag).
+e34m=$(awk '/^  [^ ].*:[ \t]*$/&&/^  /&&!/^    /{h=$0;sub(/^  /,"",h);sub(/:.*/,"",h);gsub(/"/,"",h);cur=h} cur=="edit"&&/^    maps_to:/{v=$0;sub(/^    maps_to:[ \t]*/,"",v);gsub(/"/,"",v);print v;exit}' "$CONTRACT")
+e34mode=$(awk '/^  [^ ].*:[ \t]*$/&&/^  /&&!/^    /{h=$0;sub(/^  /,"",h);sub(/:.*/,"",h);gsub(/"/,"",h);cur=h} cur=="edit"&&/^    mode:/{v=$0;sub(/^    mode:[ \t]*/,"",v);print v;exit}' "$CONTRACT")
+[ "$e34m" = "npm run edit" ] || { t34=0; printf '  (TEST-34 edit.maps_to="%s")\n' "$e34m"; }
+[ "$e34mode" = "exec" ] || { t34=0; printf '  (TEST-34 edit.mode="%s")\n' "$e34mode"; }
+
+# (2) package.json: edit script execs the launcher seam (no code-server flag).
+if [ -n "$NODE" ]; then
+	ed=$("$NODE" -e 'process.stdout.write((require(process.argv[1]).scripts||{}).edit||"")' "$PKG")
+	[ "$ed" = "sh scripts/launch-editor.sh" ] || { t34=0; printf '  (TEST-34 edit script="%s")\n' "$ed"; }
+else
+	grep -q '"edit": "sh scripts/launch-editor.sh"' "$PKG" || t34=0
+fi
+
+# (3) launcher script exists, is executable, and is POSIX-parseable.
+[ -f "$LAUNCHER" ] || { t34=0; printf '  (TEST-34 missing %s)\n' "$LAUNCHER"; }
+[ -x "$LAUNCHER" ] || { t34=0; printf '  (TEST-34 launcher not executable)\n'; }
+sh -n "$LAUNCHER" 2>/dev/null || { t34=0; printf '  (TEST-34 launcher not POSIX-parseable)\n'; }
+
+# (4) 5.7 provider-argument isolation: the code-server flags live ONLY in the
+#     launcher -- NOT in the contract, the harness script, or src/.
+grep -q -- '--bind-addr' "$LAUNCHER" || { t34=0; printf '  (TEST-34 launcher lacks --bind-addr)\n'; }
+grep -q -- '--auth' "$LAUNCHER" || { t34=0; printf '  (TEST-34 launcher lacks --auth)\n'; }
+for f in "$CONTRACT" "$H"; do
+	grep -q -- '--bind-addr' "$f" && { t34=0; printf '  (TEST-34 %s leaks --bind-addr)\n' "$f"; }
+	grep -q -- '--auth' "$f" && { t34=0; printf '  (TEST-34 %s leaks --auth)\n' "$f"; }
+done
+for f in "$REPO"/src/*.ts; do
+	[ -e "$f" ] || continue
+	grep -q -- '--bind-addr' "$f" && { t34=0; printf '  (TEST-34 %s leaks --bind-addr)\n' "$f"; }
+	grep -q 'code-server' "$f" && { t34=0; printf '  (TEST-34 %s references code-server)\n' "$f"; }
+done
+
+# (5) help + orient represent edit as an interactive handoff; count includes it.
+"$H" help | grep -qE '^  edit ' || { t34=0; printf '  (TEST-34 help does not list edit)\n'; }
+if [ -n "$NODE" ]; then
+	ev34=$("$H" orient --json 2>/dev/null | jget verbs)
+	[ "$ev34" = "14" ] || { t34=0; printf '  (TEST-34 orient verb count=%s want 14)\n' "$ev34"; }
+fi
+
+# (6) edit --print handoff: resolves `npm run edit`, exit 0, NO Verdict, no hang.
+e34pr=$("$H" edit --print 2>/dev/null); e34prc=$?
+{ [ "$e34pr" = "npm run edit" ] && [ "$e34prc" = "0" ]; } || { t34=0; printf '  (TEST-34 edit --print="%s" exit=%s)\n' "$e34pr" "$e34prc"; }
+[ "$(printf '%s\n' "$e34pr" | grep -c '^Verdict:')" = "0" ] || { t34=0; printf '  (TEST-34 edit --print emitted a Verdict line)\n'; }
+
+# (7) edit --json: verdict-free handoff descriptor (mode exec, maps_to, interactive).
+e34j=$("$H" edit --json 2>/dev/null); e34jc=$?
+[ "$e34jc" = "0" ] || { t34=0; printf '  (TEST-34 edit --json exit=%s)\n' "$e34jc"; }
+printf '%s' "$e34j" | grep -q '"mode": "exec"' || { t34=0; printf '  (TEST-34 edit --json mode)\n'; }
+printf '%s' "$e34j" | grep -q '"maps_to": "npm run edit"' || { t34=0; printf '  (TEST-34 edit --json maps_to)\n'; }
+printf '%s' "$e34j" | grep -q '"interactive": true' || { t34=0; printf '  (TEST-34 edit --json interactive)\n'; }
+printf '%s' "$e34j" | grep -q '"verdict"' && { t34=0; printf '  (TEST-34 edit --json unexpectedly carries a verdict key)\n'; }
+if [ -n "$NODE" ]; then printf '%s' "$e34j" | json_valid || { t34=0; printf '  (TEST-34 edit --json not valid JSON)\n'; }; fi
+
+# (8) honest-when-unmapped (R17.3): isolated contract with edit.maps_to null ->
+#     `./harness edit` returns unknown + friction, exit 0, and execs NOTHING.
+en="$WORK/c34editnull.yml"; set_maps "$CONTRACT" "$en" edit 'null'
+fren="$WORK/fr34editnull.$$"; : > "$fren"
+fb34=$(awk 'NF{n++}END{print n+0}' "$fren")
+eno=$(HARNESS_CONTRACT="$en" HARNESS_FRICTION="$fren" HARNESS_EVIDENCE_DIR="$(new_evdir)" "$H" edit 2>/dev/null); enc=$?
+fa34=$(awk 'NF{n++}END{print n+0}' "$fren")
+printf '%s\n' "$eno" | grep -q '^Verdict: unknown' || { t34=0; printf '  (TEST-34 unmapped edit verdict: %s)\n' "$(printf '%s\n' "$eno" | grep '^Verdict:')"; }
+[ "$enc" = "0" ] || { t34=0; printf '  (TEST-34 unmapped edit exit=%s want 0)\n' "$enc"; }
+[ "$fa34" -gt "$fb34" ] || { t34=0; printf '  (TEST-34 unmapped edit did not record friction: %s->%s)\n' "$fb34" "$fa34"; }
+
+# (9) docs coherence: README documents ./harness edit + config + safety; the
+#     .harness/README lists edit and names `npm run edit`.
+for tok in "./harness edit" "PROJECT_PATH" "EDITOR_PORT" "npm run edit"; do
+	grep -qF -- "$tok" "$ROOT_RD" || { t34=0; printf '  (TEST-34 README missing token: %s)\n' "$tok"; }
+done
+grep -qF -- 'npm run edit' "$HARN_RD" || { t34=0; printf '  (TEST-34 .harness/README missing npm run edit)\n'; }
+grep -qF -- '| `edit`' "$HARN_RD" || { t34=0; printf '  (TEST-34 .harness/README missing edit verb row)\n'; }
+
+[ "$t34" = "1" ] && ok "TEST-34 #7 code-server launcher: edit exec->npm run edit (--print/--json), launcher owns flags (5.7), honest-when-unmapped, docs coherent" || no "TEST-34 #7 launcher wiring (t34=$t34)"
 
 # ===========================================================================
 # Summary

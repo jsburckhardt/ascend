@@ -15,6 +15,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { createHash } from "node:crypto";
 import {
   mkdtempSync,
   mkdirSync,
@@ -22,6 +23,8 @@ import {
   readFileSync,
   readdirSync,
   statSync,
+  lstatSync,
+  readlinkSync,
   existsSync,
   chmodSync,
   rmSync,
@@ -77,21 +80,57 @@ function makeProjectDir(): string {
   return d;
 }
 
-// Byte-for-byte snapshot: sorted "relpath|type|size|mtimeMs" for every entry.
-function snapshot(dir: string): string {
-  const out: string[] = [];
+// Structural no-mutation snapshot (AC5). For every entry in the tree it records
+// the relative path, type (file/dir/symlink/other), permission bits (mode),
+// size, and mtimeMs. Regular files additionally carry a SHA-256 content hash and
+// symlinks their link target. It uses `lstatSync` (never following symlinks) and
+// walks recursively, so — unlike a size+mtime-only snapshot — it detects
+// permission changes, symlink-target changes, and same-size/same-mtime content
+// replacement. Compared with `assert.deepEqual`, so any difference fails loudly.
+type SnapEntry = {
+  path: string;
+  type: "file" | "dir" | "symlink" | "other";
+  mode: number;
+  size: number;
+  mtimeMs: number;
+  hash?: string;
+  target?: string;
+};
+
+function snapshot(dir: string): SnapEntry[] {
+  const out: SnapEntry[] = [];
   const walk = (rel: string) => {
     const abs = rel ? path.join(dir, rel) : dir;
-    const st = statSync(abs);
-    out.push(`${rel || "."}|${st.isDirectory() ? "d" : "f"}|${st.size}|${st.mtimeMs}`);
-    if (st.isDirectory()) {
+    const st = lstatSync(abs);
+    const type: SnapEntry["type"] = st.isSymbolicLink()
+      ? "symlink"
+      : st.isDirectory()
+        ? "dir"
+        : st.isFile()
+          ? "file"
+          : "other";
+    const entry: SnapEntry = {
+      path: rel || ".",
+      type,
+      mode: st.mode & 0o777,
+      size: st.size,
+      mtimeMs: st.mtimeMs,
+    };
+    if (type === "file") {
+      entry.hash = createHash("sha256").update(readFileSync(abs)).digest("hex");
+    } else if (type === "symlink") {
+      entry.target = readlinkSync(abs);
+    }
+    out.push(entry);
+    // Descend into real directories only (never through a symlinked dir).
+    if (type === "dir") {
       for (const name of readdirSync(abs).sort()) {
         walk(rel ? path.join(rel, name) : name);
       }
     }
   };
   walk("");
-  return out.sort().join("\n");
+  return out.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
 }
 
 // A stub `code-server` on PATH: appends each argv item (one per line) to a log
@@ -157,7 +196,7 @@ test("TEST-L1: PROJECT_PATH unset -> fail-fast, no launch, no mutation", () => {
   assert.notEqual(r.status, 0, "unset PROJECT_PATH must exit non-zero");
   assert.match(r.stderr, /PROJECT_PATH/, "stderr must name PROJECT_PATH");
   assert.deepEqual(stubArgv(logPath), [], "code-server must NOT be launched");
-  assert.equal(snapshot(proj), before, "target must be unchanged");
+  assert.deepEqual(snapshot(proj), before, "target must be unchanged");
 });
 
 // --- TEST-L2: PROJECT_PATH empty -> fail-fast --------------------------------
@@ -171,7 +210,7 @@ test("TEST-L2: PROJECT_PATH empty -> fail-fast, no launch, no mutation", () => {
   assert.notEqual(r.status, 0, "empty PROJECT_PATH must exit non-zero");
   assert.match(r.stderr, /PROJECT_PATH/);
   assert.deepEqual(stubArgv(logPath), []);
-  assert.equal(snapshot(proj), before);
+  assert.deepEqual(snapshot(proj), before);
 });
 
 // --- TEST-L3: PROJECT_PATH non-existent -> fail-fast, path NOT created -------
@@ -187,7 +226,7 @@ test("TEST-L3: PROJECT_PATH non-existent -> fail-fast, path not created", () => 
   assert.match(r.stderr, /does not exist/i);
   assert.equal(existsSync(missing), false, "launcher must NOT create the target (no mkdir)");
   assert.deepEqual(stubArgv(logPath), [], "code-server must NOT be launched");
-  assert.equal(snapshot(proj), before);
+  assert.deepEqual(snapshot(proj), before);
 });
 
 // --- TEST-L4: PROJECT_PATH is a file, not a directory -> fail-fast -----------
@@ -222,7 +261,7 @@ test("TEST-L5: valid dir -> single isolated code-server invocation, no mutation"
     [proj, "--bind-addr", "127.0.0.1:8080", "--auth", "none"],
     "exactly one isolated invocation with the PRD 5.7 flags",
   );
-  assert.equal(snapshot(proj), before, "target must be byte-for-byte unchanged (AC5)");
+  assert.deepEqual(snapshot(proj), before, "target must be byte-for-byte unchanged (AC5)");
 });
 
 // --- TEST-L6: valid dir + code-server absent -> clear error, no mutation -----
@@ -234,12 +273,13 @@ test("TEST-L6: valid dir + code-server absent -> clear error, no mutation", () =
 
   assert.notEqual(r.status, 0, "absent code-server must exit non-zero");
   assert.match(r.stderr, /code-server not found/i, "stderr must name the missing prerequisite");
-  assert.equal(snapshot(proj), before, "target unchanged even on the failure path (AC5)");
+  assert.deepEqual(snapshot(proj), before, "target unchanged even on the failure path (AC5)");
 });
 
 // --- TEST-L7: EDITOR_PORT override -> bind-addr reflects the port ------------
 test("TEST-L7: EDITOR_PORT override -> bind-addr reflects the port", () => {
   const proj = makeProjectDir();
+  const before = snapshot(proj);
   const { binDir, logPath } = makeStub();
 
   const r = runLauncher({ projectPath: proj, editorPort: "9443", pathDir: binDir });
@@ -250,6 +290,7 @@ test("TEST-L7: EDITOR_PORT override -> bind-addr reflects the port", () => {
     [proj, "--bind-addr", "127.0.0.1:9443", "--auth", "none"],
     "EDITOR_PORT flows into --bind-addr and stays behind the launcher seam",
   );
+  assert.deepEqual(snapshot(proj), before, "target must be byte-for-byte unchanged (AC5)");
 });
 
 // --- TEST-L8: provider-argument isolation (static, no leakage) ---------------

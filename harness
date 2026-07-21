@@ -462,9 +462,10 @@ Verbs:
   orient            Summarize repo stack, setup entry point, and contract
   doctor            Check Node/toolchain environment health
   lint              Run the linter (none configured yet -> unknown)
-  test              Run the test suite (none present yet -> unknown)
+  test              Run the node:test suite (wraps npm test -> pass)
   build             Build/emit artifacts (none; tsc is noEmit -> unknown)
-  boot              Boot/serve the app (no dev/serve command yet -> unknown)
+  boot              Serve the app shell + /health endpoint (interactive
+                    handoff; execs npm run start -> hands off, emits NO verdict)
   dev               Start the local dev inner loop (interactive handoff; execs
                     npm run dev -> hands off, emits NO verdict)
   verify            Aggregate static verification gate (wraps npm run typecheck)
@@ -759,7 +760,7 @@ verb_verify() {
 		"$ROOT"/*) _evrel="${EVIDENCE_DIR#"$ROOT"/}/$_evname" ;;
 		*) _evrel="$EVIDENCE_DIR/$_evname" ;;
 	esac
-	_notes="lint, test, and build are unknown until Issue #5 wires their commands in contract.yml"
+	_notes="lint and build are unknown until their commands are wired in contract.yml (test is wired to npm test by Issue #6)"
 	_content=$(json_response verify "$_overall" ",\"checks\": $_checks, \"evidence\": \"$(json_escape "$_evrel")\", \"notes\": \"$(json_escape "$_notes")\"")
 
 	if ! persist_atomic "$_content" "$_evabs"; then

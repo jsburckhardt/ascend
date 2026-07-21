@@ -8,10 +8,12 @@ Verification-and-documentation story (PRD §29 Prototype 0 item 5; §28.6 safety
 that editing a file through the `code-server` launcher from issue #7 / ADR-0006 modifies the
 original filesystem path directly and safely. The launcher/filesystem mechanics for AC1, AC2,
 and AC4 are proven by new code-server-free `node:test` cases (TEST-L9..L12), all green, and the
-zero-mutation guarantee (AC4) is fully verified. The real user-edit round trip (AC1–AC3) requires
-a provisioned `code-server` host per ADR-0006 D7 and remains pending because `code-server` is
-absent from this devcontainer/CI; a manual-demo guide and evidence templates are in place and no
-live-editor evidence was fabricated. Scope is `issue`; no new ADR or core-component was created.
+zero-mutation guarantee (AC4) is fully verified. The **real user-edit round trip (AC1–AC3) was
+demonstrated live on 2026-07-21** against a transiently-provisioned code-server 4.129.0 (not a
+repo dependency, per ADR-0006 D7): a real browser drove the running Workbench to edit and save a
+file, a real integrated terminal ran in the project cwd, and before/after-stop snapshots proved
+byte-identity — all four ACs are met with captured evidence (impl README §4.6/§5/§6). Scope is
+`issue`; no new ADR or core-component was created.
 
 ## Branch & PR
 
@@ -33,10 +35,10 @@ live-editor evidence was fabricated. Scope is `issue`; no new ADR or core-compon
 
 | Status | Criterion | Evidence |
 |--------|-----------|----------|
-| ⬜ not verifiable | A file edited in `code-server` shows the identical change in the original filesystem path | Mechanics green via TEST-L9/TEST-L10 (`tests/launcher/launch-editor.test.ts`); real editor round trip (TEST-M1) pending a provisioned code-server host |
-| ⬜ not verifiable | Stopping the editor process leaves project files unchanged | Mechanics green via TEST-L11 (edit-then-stop snapshot); real stop demo (TEST-M2) pending a provisioned host |
-| ⬜ not verifiable | Filesystem permission behaviour is documented | Capture procedure + AC3 record templates in `project/issues/8/implementation/README.md` §4.3/§5; actual values require live capture (TEST-M3) |
-| ✅ passed | The operation must not delete, move, rename, reset, clean, or otherwise modify the project directory unless that filesystem mutation is the explicit purpose of the story | Verified by passing TEST-L9..L12 (in-place open, single-path edit, clean stop, no editor state in `PROJECT_PATH`) plus inherited ADR-0006 D5 read-only guarantee (DECISION-LOG #69) |
+| ✅ passed | A file edited in `code-server` shows the identical change in the original filesystem path | **Live demo 2026-07-21** (code-server 4.129.0, transient): editor edit of `AC1.txt` saved via Ctrl+S landed the marker on the original path `/tmp/demo-proj8/AC1.txt`, inode preserved — impl README §4.6/§6. Mechanics also green via TEST-L9/TEST-L10 |
+| ✅ passed | Stopping the editor process leaves project files unchanged | **Live demo**: pre-stop vs post-stop recursive `lstat`+SHA-256 snapshots byte-identical (incl. mtime+inode); SIGTERM freed the port with no stray process — §4.6/§6. Mechanics also green via TEST-L11 |
+| ✅ passed | Filesystem permission behaviour is documented | **Live demo**: mode `0644` and owner `vscode:vscode` preserved through edit; in-place write (inode unchanged); workspace-state under transient `HOME`, outside `PROJECT_PATH`; `PROJECT_PATH` a real dir — impl README §5 |
+| ✅ passed | The operation must not delete, move, rename, reset, clean, or otherwise modify the project directory unless that filesystem mutation is the explicit purpose of the story | **Live demo**: full-lifecycle diff vs initial snapshot showed 0 added / 0 removed entries and only the intended `AC1.txt` edit, no mode/owner/type change on any entry — §4.6/§6. Also verified by passing TEST-L9..L12 plus inherited ADR-0006 D5 (DECISION-LOG #69) |
 
 ## ADRs & Core-Components
 
@@ -56,4 +58,4 @@ No new ADRs or core-components were created; the DECISION-LOG is unchanged (last
 
 ## Generated At
 
-2026-07-21T07:58:00Z
+2026-07-21T07:58:00Z (updated 2026-07-21T10:50:00Z after the live AC1–AC3 demonstration)

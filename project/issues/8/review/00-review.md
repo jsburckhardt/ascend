@@ -111,3 +111,19 @@ with F1 tracked as a required follow-up to fully close AC1–AC3 end-to-end.
 2. Consider the deferred `./harness doctor` code-server readiness diagnostic
    (degraded, never fail) noted in ADR-0006 D7 and the recorded `edit` friction entry, in a
    future story.
+
+---
+
+## Follow-up Resolution (2026-07-21, post-review)
+
+**F1 is RESOLVED.** The T4 live demonstration (TEST-M1..M4) was executed against a
+transiently-provisioned **code-server 4.129.0** (standalone release on `PATH`, not a repo
+dependency, per ADR-0006 D7). A real browser (Chromium) drove the running Workbench to edit and
+**save** `AC1.txt`, whose marker landed on the original path with the inode preserved (**AC1**); a
+real integrated `zsh` terminal ran in the project cwd `/tmp/demo-proj8` emitting `TERMINAL_OK_42`;
+pre/post-stop recursive `lstat`+SHA-256 snapshots were **byte-identical** (**AC2**); mode `0644`
+and owner `vscode:vscode` were preserved with workspace-state kept outside `PROJECT_PATH`
+(**AC3**); and the full-lifecycle diff showed 0 added/removed entries and only the intended edit
+(**AC4**). Captured evidence is in `project/issues/8/implementation/README.md` §4.6/§5/§6 and the
+`verify/summary.md` acceptance-criteria table. All four ACs are now met with real evidence; the
+verdict stands at **APPROVE** with no remaining blocking follow-ups.

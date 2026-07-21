@@ -4,8 +4,9 @@
 > code-server launcher from issue #7 / **ADR-0006** (`scripts/launch-editor.sh`, harness
 > `edit` verb, `tests/launcher/launch-editor.test.ts`). Scope is `issue`; **no new ADR or
 > core-component** is required (Research/Plan confirmed). This document is both the T1
-> **verification & manual-demo guide** and the T4 **evidence record** (filled on a
-> provisioned host; currently `manual-demo-pending` — see §7).
+> **verification & manual-demo guide** and the T4 **evidence record**. The live demo was
+> **executed on 2026-07-21** against a transiently-provisioned code-server 4.129.0 (NOT a repo
+> dependency); real captured evidence is in §4.6, §5, and §6.
 
 ## 0. Acceptance criteria (from the issue)
 
@@ -28,7 +29,7 @@ the same path holds the edited content. The observed save mechanism is recorded 
 | **T1** | This guide: manual-demo procedure + AC3 permission/ownership/save-semantics/workspace-state templates + AC4 demo-safety rules | Done |
 | **T2** | Automated `node:test` cases **TEST-L9, TEST-L10, TEST-L11** in `tests/launcher/launch-editor.test.ts` (stub-backed, code-server-free) | Done, green |
 | **T3** | Automated static case **TEST-L12** (launcher writes no editor state into `PROJECT_PATH`) | Done, green |
-| **T4** | Manual demo on a provisioned host (TEST-M1..M4), evidence captured in §3–§6 | **manual-demo-pending** (code-server absent here — §7) |
+| **T4** | Manual demo on a provisioned host (TEST-M1..M4), evidence captured in §4.6/§5/§6 | **Done, live** (code-server 4.129.0 provisioned transiently 2026-07-21) |
 | **T5** | Escalation determination against ADR-0006 D5/D7 | **No ADR required** (automated backstop revealed no surprise) — §8 |
 
 ## 2. Verification split (ADR-0006 D7)
@@ -141,54 +142,114 @@ The demo *observes*; it mutates only the single intended edit. Never run, agains
 
 (The launcher itself already honours this by construction — ADR-0006 D5, proven by TEST-L1..L12.)
 
+### 4.6 T4 Live Demonstration Evidence (captured 2026-07-21)
+
+The manual demo was **executed successfully** against a real code-server instance. Results below
+are captured, not simulated.
+
+- **Transient, non-dependency provisioning:** code-server **4.129.0**
+  (`77baee7fe06f7031d45e6acf903c9b4b329e10c4 with Code 1.129.0`, linux-amd64 standalone release)
+  was provisioned **transiently** at `/tmp/cs/bin/code-server` and placed on `PATH` — it was
+  **NOT** added as a repository dependency (honours ADR-0006 D7). Tarball SHA-256
+  `889b09ff3a167a293f53cb68a5a7f38dbab6bd2b50d7a5951c757e56ba51a2b0`.
+  (Note: the configured Microsoft npm proxy tops out at code-server 4.117.0, so exact version
+  4.129.0 was taken from the coder standalone release channel — the same channel and version the
+  issue #7 delivery used; still transient, still not a repo dependency.)
+- **Host:** Linux x86_64, Node `v22.17.1`, user `vscode` (uid/gid 1000). Transient
+  `HOME=/tmp/demo8-home` (VS Code `user-data-dir` `/tmp/demo8-home/.local/share/code-server`).
+- **Fixture (disposable, NOT the repo):** `/tmp/demo-proj8` with `AC1.txt` (32 B), `README.md`
+  (15 B), `src/app.ts` (20 B), all `0644 vscode:vscode`.
+- **Launch via the unmodified repo launcher seam:**
+  `HOME=/tmp/demo8-home PATH=/tmp/cs/bin:$PATH PROJECT_PATH=/tmp/demo-proj8 EDITOR_PORT=8123 sh scripts/launch-editor.sh`,
+  which `exec`'d `code-server /tmp/demo-proj8 --bind-addr 127.0.0.1:8123 --auth none`
+  (`scripts/launch-editor.sh:61`; this is exactly the innermost command that `./harness edit` →
+  `npm run edit` resolves to). Server logged `HTTP server listening on http://127.0.0.1:8123/`
+  and `Authentication is disabled`; `GET /` → `302 …?folder=/tmp/demo-proj8`; `GET /healthz` → `200`.
+- **AC1 (edit lands on the original path):** a real browser (Chromium, provisioned transiently)
+  drove the running Workbench — opened `AC1.txt`, typed the unique marker
+  `EDITED_VIA_CODE_SERVER_4129_1784629650` at end-of-file; the editor tab showed **dirty=true**;
+  **Ctrl+S** → **dirty=false**. The original on-disk path `/tmp/demo-proj8/AC1.txt` then contained
+  the marker line (grep count = 1). See §6.
+- **Integrated terminal in the project cwd:** Command Palette → *Terminal: Create New Terminal*
+  opened a real `zsh` PTY; running `pwd; whoami; echo TERMINAL_OK_$((6*7))` produced
+  `/tmp/demo-proj8` (cwd = the opened project folder) / `vscode` / `TERMINAL_OK_42` — the shell
+  arithmetic evaluated, proving a genuine interactive shell in the project cwd. Output was
+  redirected outside the fixture, so the project tree stayed clean.
+- **AC2 (stop leaves files unchanged):** a full recursive snapshot (`lstat` + SHA-256, including
+  mode/uid/gid/inode/mtime) taken immediately **before** stopping equalled the snapshot taken
+  immediately **after** stopping — **byte-identical**. Stopping (`SIGTERM` to the code-server PID)
+  freed port `8123` with no stray process; nothing on disk changed. See §6.
+- **AC4 (no destructive mutation):** across the full launch→edit→terminal→stop lifecycle, the
+  fixture had **0 removed** entries, **0 added** entries, and the **only** change vs the initial
+  snapshot was `AC1.txt`'s content (the single intended edit) — no delete/move/rename/reset/clean,
+  and no mode/owner/type change on any entry. See §6.
+
 ---
 
-## 5. AC3 record — permissions / ownership / save-semantics / workspace-state (fillable)
+## 5. AC3 record — permissions / ownership / save-semantics / workspace-state
 
-> Fill from the §4.0 baseline and §4.3 captures on the provisioned host. `<PENDING>` until T4 runs.
+> Captured live on 2026-07-21 against code-server 4.129.0 (fixture `/tmp/demo-proj8`, file `AC1.txt`).
 
 | Property | Before edit | After edit |
 |----------|-------------|------------|
-| `ls -l note.txt` (perms, owner, group) | `<PENDING>` | `<PENDING>` |
-| `stat` mode (octal) | `<PENDING>` | `<PENDING>` |
-| `stat` uid / gid | `<PENDING>` | `<PENDING>` |
-| `stat` inode | `<PENDING>` | `<PENDING>` |
-| `stat` mtime | `<PENDING>` | `<PENDING>` |
+| `ls -l` (perms, owner, group) | `-rw-r--r-- vscode vscode` | `-rw-r--r-- vscode vscode` |
+| `stat` mode (octal) | `0644` | `0644` |
+| `stat` uid / gid | `1000 / 1000` (vscode) | `1000 / 1000` (vscode) |
+| `stat` inode | `3395949` | `3395949` (unchanged) |
+| `stat` size | `32` | `71` |
+| `stat` mtime | `2026-07-21 10:25:19` | `2026-07-21 10:44:48` |
 
 | Observation | Value |
 |-------------|-------|
-| uid/username code-server ran as (`id -u` / `id -un`) | `<PENDING>` |
-| Save mechanism (in-place write vs atomic write-temp+rename) | `<PENDING>` |
-| Inode changed on save? (informational; AC1 bar is path-identity) | `<PENDING>` |
-| Mode/owner change on save? (flag for §8 if yes) | `<PENDING>` |
-| code-server workspace-state location | `<PENDING>` (expected `~/.local/share/code-server`, `~/.config/code-server`) |
-| Workspace-state outside `PROJECT_PATH`? | `<PENDING>` (expected **yes**) |
-| `PROJECT_PATH` type (dir / bind-mount / symlink) | `<PENDING>` |
+| uid/username code-server ran as (`id -u` / `id -un`) | `1000` / `vscode` |
+| Save mechanism (in-place write vs atomic write-temp+rename) | **In-place write** — inode preserved (`3395949` → `3395949`) |
+| Inode changed on save? (informational; AC1 bar is path-identity) | **No** (in-place; AC1 satisfied by path-identity regardless) |
+| Mode/owner change on save? (flag for §8 if yes) | **No** — mode `0644` and owner `vscode:vscode` unchanged |
+| code-server workspace-state location | `/tmp/demo8-home/.local/share/code-server`, `/tmp/demo8-home/.config/code-server` (transient `HOME`) |
+| Workspace-state outside `PROJECT_PATH`? | **Yes** — under `HOME`, never inside `/tmp/demo-proj8` |
+| `PROJECT_PATH` type (dir / bind-mount / symlink) | real directory (`/tmp/demo-proj8`) |
 
-## 6. AC1/AC2/AC4 evidence (fillable)
+## 6. AC1/AC2/AC4 evidence (captured live 2026-07-21)
 
-> Paste raw `diff` / `stat` / `find`+`sha256sum` output captured on the provisioned host.
+- **AC1 (TEST-M1)** — edit made in the editor appears at the identical original path:
+  ```
+  # editor tab state driven via the running Workbench:
+  tab dirty before save: true   ->   Ctrl+S   ->   tab dirty after save: false
 
-- **AC1 (TEST-M1)** — edit appears at the identical original path:
+  # on-disk /tmp/demo-proj8/AC1.txt after the editor save (cat -A):
+  line-1 original$
+  line-2 original$
+  $
+  EDITED_VIA_CODE_SERVER_4129_1784629650
+  # grep -c EDITED_VIA_CODE_SERVER_4129_1784629650  ->  1
+
+  # stat before -> after (same path, same inode = in-place write):
+  before: ino=3395949 mode=644 owner=vscode:vscode size=32
+  after : ino=3395949 mode=644 owner=vscode:vscode size=71
   ```
-  <PENDING: diff + stat before/after>
+- **AC2 (TEST-M2)** — post-stop tree equals pre-stop tree; clean shutdown:
   ```
-- **AC2 (TEST-M2)** — post-stop tree equals post-edit tree; propagated exit code:
-  ```
-  <PENDING: find+sha256sum post-edit vs post-stop; exit code>
+  AC2 stop byte-identical (recursive lstat+SHA-256, incl mtime+inode): PASS
+  stop = SIGTERM to code-server PID  ->  port 8123 free, no stray process
   ```
 - **AC4 (TEST-M4)** — only the single intended edit; no destructive command run:
   ```
-  <PENDING: tree diff vs baseline minus the one edit>
+  Lifecycle diff  (initial snapshot S0  ->  after-stop):
+    removed entries : none
+    added entries   : none
+    changed entries : AC1.txt  {"sha256":[68b4b9f4…, 32f9f92a…], "size":[32, 71]}
+    only AC1.txt content changed          : PASS
+    no mode/owner/type change on ANY entry: PASS
   ```
 
 ## 7. Environment limitations & run log
 
-- **`code-server` is ABSENT** in this devcontainer/CI (ADR-0006 D7). The live editor demo
-  (TEST-M1..M3, the real AC1/AC2/AC3 round trip) therefore **cannot be run here** and is marked
-  **manual-demo-pending**; §5/§6 hold `<PENDING>` templates to be filled on a provisioned host.
-  Blocker cross-referenced against `.harness/friction.jsonl` (`verb: edit`). No live evidence is
-  fabricated.
+- **`code-server` was provisioned transiently for the live demo.** It is **absent by default** in
+  this devcontainer/CI (ADR-0006 D7 — a documented prerequisite, not a repo dependency). For the
+  T4 demo it was provisioned transiently (code-server **4.129.0** standalone at `/tmp/cs/bin` on
+  `PATH`) purely to exercise AC1–AC3 live; it is **not** committed and **not** a dependency. The
+  automated launcher suite (§below) remains code-server-free by stubbing `code-server` on `PATH`.
+  No live evidence is fabricated (see §4.6/§5/§6).
 - **`node_modules`** was installed for the test runner (`npm install`); the runner itself uses only
   Node built-ins (`node:test`).
 - **Automated backstop executed here and green:**
@@ -230,10 +291,10 @@ decision record, and record any new harness gap via `./harness friction add`.
 
 | AC | Automated backstop | Manual demo | Status |
 |----|--------------------|-------------|--------|
-| AC1 edit on original path | TEST-L9, TEST-L10 | TEST-M1 (§6) | Backstop green; live demo pending |
-| AC2 stop leaves files unchanged | TEST-L11 | TEST-M2 (§6) | Backstop green; live demo pending |
-| AC3 permission behaviour documented | — | TEST-M3 (§5) | Template ready; live capture pending |
-| AC4 no project-dir mutation (§28.6) | TEST-L9..L12 + ADR-0006 D5 (inherited) | TEST-M4 (§6) | Backstop green; demo-safety rules in §4.5 |
+| AC1 edit on original path | TEST-L9, TEST-L10 | TEST-M1 (§4.6/§6) | **Met (live 2026-07-21)** — marker saved to the original path, inode preserved |
+| AC2 stop leaves files unchanged | TEST-L11 | TEST-M2 (§4.6/§6) | **Met (live)** — pre/post-stop snapshots byte-identical |
+| AC3 permission behaviour documented | — | TEST-M3 (§5) | **Met (live)** — mode/owner preserved; in-place write; workspace-state outside `PROJECT_PATH` |
+| AC4 no project-dir mutation (§28.6) | TEST-L9..L12 + ADR-0006 D5 (inherited) | TEST-M4 (§4.6/§6) | **Met (live)** — 0 added/removed, only the intended edit, no perm/owner change |
 
 ## 10. References
 

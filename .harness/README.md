@@ -46,7 +46,7 @@ is not a verdict and exits `2`.
 | `orient` | repo metadata / contract (native) | `pass` | yes |
 | `doctor` | Node vs `.nvmrc`/`engines`, `node_modules` presence (native) | `pass` (or `degraded`) | yes |
 | `lint` | none (no ESLint/Prettier) | `unknown` | yes |
-| `test` | `npm test` (`node:test` suites in `tests/app/`) | `pass` | yes |
+| `test` | `npm test` (`node:test` suites in `tests/app/` **and** `tests/launcher/`) | `pass` | yes |
 | `build` | none (`tsc` is `noEmit`; nothing emits) | `unknown` | yes |
 | `boot` | `npm run start` (`node --experimental-strip-types src/main.ts`) — app-serve handoff (`mode: exec`) | n/a — hands off via `exec`, emits **no verdict** | yes (descriptor) / `--print` |
 | `dev` | `npm run dev` (`tsc --noEmit --watch`) — interactive handoff (`mode: exec`) | n/a — hands off via `exec`, emits **no verdict** | yes (descriptor) / `--print` |
@@ -213,10 +213,13 @@ harness — and then closing the corresponding friction entry.
   serves the `/` shell and `GET /health` → `200 {"status":"ok"}` (default port
   3000, `PORT`-overridable). Being a handoff it is verdict-exempt; introspect it
   without binding a port via `./harness boot --print` / `--json`.
-- **`test` is wired to `pass` (#6):** `test.maps_to: "npm test"` runs the
-  `node:test` suites in `tests/app/` (`node --test --experimental-strip-types`,
-  zero new dependency). It joins the `verify` aggregate, so `verify` now proves
-  the health/shell behaviour.
+- **`test` is wired to `pass` (#6, extended by #7):** `test.maps_to: "npm test"`
+  runs the `node:test` suites in **both** `tests/app/` (the app shell/health
+  behaviour) **and** `tests/launcher/` (the #7 code-server launcher suite) via
+  `node --test --experimental-strip-types 'tests/{app,launcher}/**/*.test.ts'`,
+  zero new dependency. It joins the `verify` aggregate, so `verify` now proves
+  the health/shell behaviour **and** the launcher's invalid-path (AC4) and
+  no-mutation (AC5) guarantees.
 - **`verify` = `degraded` (now proving the test suite):** `./harness verify`
   wraps `npm run typecheck` (which passes) and, since #6 wired `test`, aggregates
   `test=pass` (`npm test`). It stays `degraded` because `lint` and `build` remain

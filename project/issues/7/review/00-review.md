@@ -6,42 +6,55 @@
 - **Base Branch:** main
 - **Feature Branch:** feat/7-code-server-launcher
 - **Reviewer Model:** GPT-5.6 Sol
-- **Verdict:** REQUEST_CHANGES
-- **Blocking Findings:** 1
+- **Review Cycle:** 2
+- **Verdict:** APPROVE
+- **Blocking Findings:** 0
 
 ## Repository Understanding
-Ascend orchestrates cross-project developer workflows while an external browser-based VS Code provider supplies the IDE. The repository uses the RPIV pipeline, a minimal Node.js and TypeScript baseline, and ./harness as its operating surface. Long-running commands use the ADR-0004 and CORE-COMPONENT-0003 mode: exec handoff contract.
+Ascend orchestrates cross-project developer workflows while an external browser-based VS Code provider supplies the IDE. The repository uses the RPIV pipeline, a minimal Node.js and TypeScript baseline, and `./harness` as its operating surface. Long-running commands use the ADR-0004 and CORE-COMPONENT-0003 `mode: exec` handoff contract.
 
 ## Scope of Change
-The branch adds a POSIX code-server launcher, exposes it through the edit handoff verb, wires launcher tests into npm test, extends the harness regression suite, and adds ADR-0006 plus issue documentation. The changeset contains no package-lock.json or application src/ changes.
+The full branch adds a POSIX code-server launcher, exposes it through the `edit` handoff verb, wires launcher tests into `npm test`, extends the harness regression suite, and records ADR-0006 plus issue documentation.
+
+Cycle 2 changes only `tests/launcher/launch-editor.test.ts`, `.harness/README.md`, and issue implementation, verification, and review artifacts. The launcher, `edit` verb, contract, harness wiring, package manifest, and harness regression suite are unchanged from cycle 1. The branch contains no `package-lock.json` or application `src/` change against `main`.
 
 ## Acceptance Criteria Assessment
 | Criterion | Status | Evidence |
 |-----------|--------|----------|
-| AC1 — documented script launches one instance against a configured path | **Unmet** | The script and stubbed invocation exist, but required manual Task T9 was not performed; the verification summary marks this criterion not verifiable (project/issues/7/verify/summary.md:45-51). |
-| AC2 — browser reaches the editor with the configured folder open | **Unmet** | Only a manual procedure is documented; no completed browser evidence exists (project/issues/7/implementation/README.md:208-241). |
-| AC3 — integrated terminal works in the configured folder | **Unmet** | Only a manual procedure is documented; no completed terminal evidence exists (project/issues/7/implementation/README.md:208-241). |
-| AC4 — invalid-path behavior is documented | **Met** | README documents all required cases (README.md:185-195); launcher validation is fail-fast (scripts/launch-editor.sh:33-55) and automated tests pass. |
-| AC5 — launcher does not mutate the project directory | **Met, with test caveat** | The launcher contains only read-only path tests followed by exec and has no target mutation path (scripts/launch-editor.sh:24-61). See F-002 for snapshot limitations. |
+| AC1 — documented script launches one instance against a configured path | **Met** | The launcher performs one `exec code-server` handoff (`scripts/launch-editor.sh:50-61`). T9 records one loopback listener for the configured folder and measured startup (`project/issues/7/implementation/README.md:247-264`). |
+| AC2 — browser reaches the editor with the configured folder open | **Met** | T9 records the root redirect carrying the configured folder, a successful VS Code Workbench response, and a successful health response (`project/issues/7/implementation/README.md:265-267`). This is adequate reachability and folder-selection evidence in the headless environment. |
+| AC3 — integrated terminal works in the configured folder | **Met** | The live run used the provisioned code-server bundle to spawn a real PTY shell in the configured project working directory, execute commands, and exit successfully (`project/issues/7/implementation/README.md:268-273`). Exercising the actual bundled terminal backend is adequate for this CLI-only Prototype-0 demonstration; lack of a human GUI click is not blocking. |
+| AC4 — invalid-path behavior is documented | **Met** | README documents all required cases (`README.md:185-195`); launcher validation is fail-fast (`scripts/launch-editor.sh:30-55`) and TEST-L1 through TEST-L6 pass. |
+| AC5 — operation does not mutate the project directory | **Met** | The launcher has only validate-only checks before handoff (`scripts/launch-editor.sh:30-61`). Hardened recursive snapshots cover valid launch variants (`tests/launcher/launch-editor.test.ts:83-134,250-294`), and T9 records an identical live before/after byte-and-hash snapshot (`project/issues/7/implementation/README.md:274-277`). |
+
+All five issue checkboxes are checked in the current GitHub issue body.
 
 ## Architecture Conformance
-ADR-0006 is correctly global and registered in the decision log with decisions #62-#72. The implementation follows inherited ADR-0002/0003/0004/0005 boundaries and creates no speculative core-component. Operational provider arguments remain in scripts/launch-editor.sh; the contract, harness dispatch, npm script, and src/ do not carry provider flags.
+The implementation remains within ADR-0006 and inherited ADR-0002 through ADR-0005 boundaries. Provider arguments remain isolated in `scripts/launch-editor.sh`; the contract and harness expose only the provider-agnostic `npm run edit` handoff. The `edit` verb remains `mode: exec`, supports non-executing `--print` and `--json` introspection, and uses only the CORE-COMPONENT-0003-permitted structural dispatch change.
 
-The edit verb is declared mode: exec, exposes non-executing --print and --json forms, is excluded from run-to-completion enumeration, and propagates the provider exit code. The harness code change is limited to structural dispatch and help text. Commit messages and the PR title follow Conventional Commits, all six commits carry the required trailers, and the verifier commit changes only its summary artifact.
+Security and error handling remain appropriate for the local spike: loopback-only binding limits the documented no-auth posture, invalid project paths and a missing provider fail clearly before launch, quoting preserves configured paths as one argument, and provider exit status propagates through `exec`. No dependency, lockfile, or application-source change was introduced.
 
 ## Test Coverage Assessment
-Independent checks passed: TypeScript typecheck, all 11 application and launcher tests, all 43 harness regression checks, and the canonical gate with a non-blocking degraded verdict. A controlled provider exit of 37 propagated through ./harness edit. No live code-server demo was completed, leaving AC1-AC3 unresolved.
+Independent cycle-2 checks all completed successfully:
+
+- `npm run typecheck`: pass, exit 0.
+- `npm test`: 11 tests passed, including all 8 launcher cases.
+- `sh tests/harness/run.sh`: 43 passed, 0 failed, 0 skipped.
+- `./harness verify`: expected `degraded` verdict, exit 0; typecheck and test passed while intentionally absent lint/build capabilities remained unknown.
+
+The revised snapshot records entry type, ordinary permission bits, size, timestamp, SHA-256 file content, and symlink target via `lstat`, and recursively avoids following symlinked directories (`tests/launcher/launch-editor.test.ts:83-134`). It therefore detects ordinary permission changes, symlink retargeting, and same-size content replacement. TEST-L7 now receives the same before/after assertion (`tests/launcher/launch-editor.test.ts:279-294`).
 
 ## Findings
 | ID | Severity | Location | Finding | Recommendation |
 |----|----------|----------|---------|----------------|
-| F-001 | blocking | project/issues/7/implementation/README.md:119-120,208-241; project/issues/7/verify/summary.md:45-51,81-85 | Required manual Task T9 was not executed. There is no evidence that a real code-server instance starts, opens the configured folder in a browser, or provides a working integrated terminal, so AC1-AC3 remain unmet. | Run the documented demo on a provisioned host and record the startup command and duration, single-instance observation, opened folder, terminal command and working directory, and before/after project snapshot. Then update verification evidence and acceptance statuses. |
-| F-002 | minor | tests/launcher/launch-editor.test.ts:80-95,193-253 | The snapshot called byte-for-byte records only entry type, size, and mtime. It cannot detect permission changes, symlink-target changes, or content replacement with preserved size and timestamp; TEST-L7 also has no before/after snapshot. | Hash regular-file contents, use lstat to capture modes and symlink targets, and apply the snapshot assertion to every valid launch variant. |
-| F-003 | minor | .harness/README.md:49,216-219 | Harness documentation still says npm test runs only tests/app/, while the delivered test script also runs tests/launcher/. This conflicts with the same document at lines 245-247. | Update both stale references to describe the application and launcher suites. |
+| F-001 | blocking | `project/issues/7/implementation/README.md:247-283`; `project/issues/7/verify/summary.md:45-70` | **Resolved in cycle 2; no longer active.** T9 now records adequate live evidence for AC1 through AC3 and re-confirms AC5. | None — closed. |
+| F-002 | minor | `tests/launcher/launch-editor.test.ts:83-134,250-294` | **Resolved in cycle 2; no longer active.** The snapshot now uses `lstat`, content hashing, permission metadata, and symlink targets recursively, and TEST-L7 is covered. | None — closed. |
+| F-003 | minor | `.harness/README.md:43-54,216-222` | **Resolved in cycle 2; no longer active.** Both stale references now describe the application and launcher suites consistently. | None — closed. |
+
+No active findings were identified in cycle 2.
 
 ## Verdict Rationale
-**REQUEST_CHANGES.** The implementation and automated checks are otherwise sound, but the issue and its own test plan require manual AC1-AC3 evidence. Those criteria are explicitly still pending, so the delivery cannot be approved.
+**APPROVE.** Every acceptance criterion is met, all cycle-1 findings are resolved, architecture and security boundaries remain intact, and all requested independent checks pass. The headless AC3 demonstration is sufficient for this Prototype-0 CLI environment because it exercises the actual code-server bundled PTY backend in the configured folder.
 
 ## Suggested Follow-ups
-- Complete Task T9 without adding code-server as a repository dependency.
-- Strengthen the no-mutation snapshot and correct the stale harness test documentation.
+No follow-up is required for issue #7. Retain the documented requirement to revisit the loopback no-auth posture before any shared or remote exposure.

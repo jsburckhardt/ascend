@@ -10,6 +10,7 @@ This file is the single registry of all architectural decisions and core-compone
 | ADR-0003 | Adopt a repo-local engineering harness (`./harness`) as the operating surface for humans and agents | Accepted | 2026-07-20 |
 | ADR-0004 | Interactive/handoff verbs in the engineering harness (`./harness dev`) | Accepted | 2026-07-20 |
 | ADR-0005 | Ascend application-serve runtime (HTTP server, TypeScript runtime execution, and `boot` lifecycle) | Accepted (refined 2026-07-21: Node ≥22.6.0 runtime floor) | 2026-07-21 |
+| ADR-0006 | code-server editor-provider launch, argument isolation, and read-only project-path safety | Accepted | 2026-07-21 |
 
 ## Core-Components
 
@@ -85,3 +86,14 @@ Short, actionable statements derived from ADRs and core-components. More than on
 | 59 | Keep the service health/HTTP contract issue-local at Prototype 0; create no core-component | ADR-0005 | 2026-07-21 |
 | 60 | Require Node ≥22.6.0 (<23) as the supported runtime floor; `--experimental-strip-types` is unavailable before 22.6.0 | ADR-0005 | 2026-07-21 |
 | 61 | Report `doctor` degraded (never fail) when running Node is major 22 and minor < 6, since 22.0–22.5 cannot run the app | ADR-0005, CORE-COMPONENT-0003 | 2026-07-21 |
+| 62 | Launch code-server as a host child process via a single POSIX shell launcher script (`scripts/launch-editor.sh`) | ADR-0006 | 2026-07-21 |
+| 63 | Isolate every code-server-specific flag (`<path>`, `--bind-addr`, `--auth none`, config) behind the one launcher seam | ADR-0006 | 2026-07-21 |
+| 64 | Configure the editor's target directory via the `PROJECT_PATH` environment variable | ADR-0006 | 2026-07-21 |
+| 65 | Bind the editor loopback-only at `127.0.0.1:${EDITOR_PORT:-8080}` with `--auth none` for the local spike | ADR-0006 | 2026-07-21 |
+| 66 | Surface the launcher as a new `edit` harness verb declared `mode: exec` in contract data | ADR-0006 | 2026-07-21 |
+| 67 | Register the `edit` verb name in the harness `main()` dispatch allowlist and `verb_help` text | ADR-0006 | 2026-07-21 |
+| 68 | Validate `PROJECT_PATH` and fail-fast with non-zero exit on unset/empty/missing/non-directory paths | ADR-0006 | 2026-07-21 |
+| 69 | Prohibit the launcher from creating, deleting, moving, renaming, resetting, or cleaning the project directory | ADR-0006 | 2026-07-21 |
+| 70 | Propagate code-server's exit code through the `edit` handoff; add no process supervision | ADR-0006 | 2026-07-21 |
+| 71 | Treat code-server as a documented prerequisite; verify AC1–AC3 by manual demonstration, AC4–AC5 by automated tests | ADR-0006 | 2026-07-21 |
+| 72 | Prohibit building a speculative `EditorProvider` abstraction at Prototype 0; create no core-component | ADR-0006 | 2026-07-21 |

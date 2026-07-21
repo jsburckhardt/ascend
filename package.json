@@ -12,7 +12,8 @@
     "dev": "tsc --noEmit --watch",
     "typecheck": "tsc --noEmit",
     "start": "node --experimental-strip-types src/main.ts",
-    "test": "node --test --experimental-strip-types 'tests/app/**/*.test.ts'"
+    "edit": "sh scripts/launch-editor.sh",
+    "test": "node --test --experimental-strip-types 'tests/{app,launcher}/**/*.test.ts'"
   },
   "devDependencies": {
     "@types/node": "^22",

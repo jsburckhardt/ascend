@@ -26,6 +26,7 @@ implementation, and no prior codebase has been migrated into it.
 ├── tsconfig.json      # Minimal TypeScript compiler configuration
 ├── .nvmrc             # Pinned Node.js version
 ├── src/               # Application source (node:http server: shell + /health)
+├── scripts/           # Process-orchestration scripts (e.g. code-server launcher)
 ├── docs/              # Application-specific documentation
 └── project/           # Soft Factory pipeline artifacts (ADRs, core-components, issues)
 ```
@@ -132,6 +133,87 @@ Verify it quickly (in another shell, while `./harness boot` runs):
 curl -s localhost:3000/health   # {"status":"ok"}
 curl -s localhost:3000/         # the application shell HTML
 ```
+
+### Launch the editor (code-server)
+
+Ascend's editing experience is delivered by a browser-based VS Code
+([`code-server`](https://github.com/coder/code-server)) — Ascend orchestrates;
+code-server provides the IDE. Launch **one** code-server instance against a
+configured project folder through the harness:
+
+```bash
+PROJECT_PATH=/path/to/project ./harness edit   # preferred — single operating surface
+npm run edit                                    # the underlying script ./harness edit execs
+```
+
+`./harness edit` is an **interactive handoff** (`mode: exec`, like `./harness
+boot`/`dev`): the harness `exec`s `npm run edit`, which runs
+`sh scripts/launch-editor.sh` — the single, dependency-light **launcher seam**
+that owns every code-server-specific flag (PRD §5.7,
+[ADR-0006](project/architecture/ADR/ADR-0006-code-server-launch-and-project-path-safety.md)).
+Being a handoff it emits **no verdict** and writes no evidence; leave it running
+and press **Ctrl-C** to stop. To resolve the command **without** launching the
+editor, use `./harness edit --print` (prints `npm run edit`) or `./harness edit
+--json` (a JSON handoff descriptor).
+
+**Configuration** (provider-agnostic inputs; every code-server flag stays behind
+the launcher, §5.7):
+
+| Variable | Required | Default | Meaning |
+|----------|----------|---------|---------|
+| `PROJECT_PATH` | **yes** | — | The directory code-server opens. Must be an existing directory. |
+| `EDITOR_PORT` | no | `8080` | Loopback port; the editor binds `127.0.0.1:${EDITOR_PORT}`. |
+
+The instance binds **loopback only** (`127.0.0.1`) and runs with **`--auth
+none`**. That posture is acceptable **only** for this local Prototype-0 spike
+(authentication and non-local exposure are out of scope for #7); it must be
+revisited before any shared or remote exposure.
+
+**Prerequisite — install code-server yourself.** code-server is **not** bundled
+with Node/npm and is absent in this devcontainer/CI. Install it before the demo,
+e.g. the official one-line installer:
+
+```bash
+curl -fsSL https://code-server.dev/install.sh | sh
+```
+
+(or add a devcontainer feature). The launcher **does not install it** — if
+`code-server` is not on `PATH` it fails fast with a clear message and a non-zero
+exit (`code-server not found …`), which is a documented prerequisite, not a repo
+defect.
+
+**Invalid-path behaviour (AC4).** Before launching, the launcher validates
+`PROJECT_PATH` with **read-only** checks and fails fast — printing a clear
+message to **stderr** and exiting **non-zero** — in each of these cases, **before
+any attempt to start code-server**:
+
+| Case | Behaviour |
+|------|-----------|
+| `PROJECT_PATH` unset or empty | error naming `PROJECT_PATH`, exit `1` |
+| `PROJECT_PATH` does not exist | error `… does not exist`, exit `1` (the path is **not** created) |
+| `PROJECT_PATH` is a file, not a directory | error `… is not a directory`, exit `1` |
+| `code-server` not installed | error `code-server not found …`, non-zero exit |
+
+**Read-only safety guarantee (AC5).** The launcher **never** creates, deletes,
+moves, renames, resets, or cleans `PROJECT_PATH` on any code path — validation
+uses only non-mutating tests (no `mkdir`/`rm`/`mv`). Launching, and later
+stopping, the editor does not modify the project directory itself (files you edit
+*inside* the running editor change in place — that is expected editing, not the
+launcher's footprint).
+
+**Manual demo (AC1–AC3), on a code-server-provisioned host.** Because code-server
+is a prerequisite, the browser/terminal acceptance criteria are demonstrated
+manually:
+
+1. Install code-server (above) and export `PROJECT_PATH` to a real local folder.
+2. Run `PROJECT_PATH=<folder> ./harness edit`. **Record the startup command**
+   (`code-server <folder> --bind-addr 127.0.0.1:8080 --auth none`) and **time the
+   startup duration** (PRD §29 evidence).
+3. Open `http://127.0.0.1:8080` in a browser → the editor loads with the
+   **configured folder open** (AC2).
+4. Open the **integrated terminal** and run a command (e.g. `pwd`, `ls`) → it runs
+   in the configured folder (AC3).
+5. Press **Ctrl-C** to stop; confirm the folder is unchanged (AC5).
 
 ### Validate the codebase
 

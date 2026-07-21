@@ -492,6 +492,8 @@ Verbs:
                     handoff; execs npm run start -> hands off, emits NO verdict)
   dev               Start the local dev inner loop (interactive handoff; execs
                     npm run dev -> hands off, emits NO verdict)
+  edit              Launch code-server against \$PROJECT_PATH (interactive
+                    handoff; execs npm run edit -> hands off, emits NO verdict)
   verify            Aggregate static verification gate (wraps npm run typecheck)
   status            Report contract summary and last evidence
   clean             Remove harness-owned ephemeral artifacts (-> degraded)
@@ -1043,7 +1045,7 @@ main() {
 		help|-h|--help) verb_help ;;
 		orient) verb_orient "$JSON" ;;
 		doctor) verb_doctor "$JSON" ;;
-		lint|test|build|boot|dev) dispatch_verb "$_verb" "$JSON" "$@" ;;
+		lint|test|build|boot|dev|edit) dispatch_verb "$_verb" "$JSON" "$@" ;;
 		verify) verb_verify "$JSON" ;;
 		status) verb_status "$JSON" ;;
 		clean) verb_clean "$JSON" ;;

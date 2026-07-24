@@ -37,7 +37,7 @@ You MAY refactor existing code when required by a task.
 <!-- HARNESS:BEGIN -->
 You MUST run deterministic checks through ./harness — lint, test, build, and boot as applicable — instead of calling the wrapped commands directly.
 You MUST use ./harness verify to self-check the implementation against the aggregate gate before handing off, and MAY use ./harness clean to reset build or test state.
-You MAY call a direct command only when the harness lacks the verb or reports unknown or degraded, and MUST then record the gap via ./harness friction add using the harness KEY_QUESTION.
+You MAY call a direct command only when the harness lacks the verb or reports unknown or degraded, and MUST then record the gap via ./harness friction add --agent rpiv-implementer using the harness KEY_QUESTION.
 <!-- HARNESS:END -->
 </instructions>
 

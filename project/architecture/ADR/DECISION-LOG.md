@@ -10,14 +10,16 @@ This file is the single registry of all architectural decisions and core-compone
 | ADR-0003 | Adopt a repo-local engineering harness (`./harness`) as the operating surface for humans and agents | Accepted | 2026-07-20 |
 | ADR-0004 | Interactive/handoff verbs in the engineering harness (`./harness dev`) | Accepted | 2026-07-20 |
 | ADR-0005 | Ascend application-serve runtime (HTTP server, TypeScript runtime execution, and `boot` lifecycle) | Accepted (refined 2026-07-21: Node ≥22.6.0 runtime floor) | 2026-07-21 |
-| ADR-0006 | code-server editor-provider launch, argument isolation, and read-only project-path safety | Accepted | 2026-07-21 |
+| ADR-0006 | code-server editor-provider launch, argument isolation, and read-only project-path safety | Accepted (§7/Decision #71 superseded in part by ADR-0008, 2026-07-23) | 2026-07-21 |
+| ADR-0007 | Agent-attributed friction and issue-scoped retrospect (no persistent improvement store) | Accepted | 2026-07-23 |
+| ADR-0008 | code-server readiness is a required `doctor` check that fails when absent | Accepted | 2026-07-23 |
 
 ## Core-Components
 
 | ID | Title | Status | Date |
 |----|-------|--------|------|
 | CORE-COMPONENT-0002 | Commit Standards | Adopted | 2026-05-05 |
-| CORE-COMPONENT-0003 | Engineering harness contract, verdicts, and evidence/friction conventions | Adopted (amended 2026-07-20, R17) | 2026-07-20 |
+| CORE-COMPONENT-0003 | Engineering harness contract, verdicts, and evidence/friction conventions | Adopted (amended 2026-07-20 R17; 2026-07-23 R18/R19) | 2026-07-20 |
 
 ## Decisions
 
@@ -52,7 +54,7 @@ Short, actionable statements derived from ADRs and core-components. More than on
 | 25 | Commit `contract.yml`, `README.md`, and `friction.jsonl`; git-ignore `.harness/evidence/` run output | CORE-COMPONENT-0003 | 2026-07-20 |
 | 26 | Derive `verify`'s verdict by iterating contract-declared member checks, not a hard-coded list | ADR-0003, CORE-COMPONENT-0003 | 2026-07-20 |
 | 27 | Apply fixed verify aggregate rule: any fail⇒fail, all pass⇒pass, all unknown⇒unknown, else degraded | CORE-COMPONENT-0003 | 2026-07-20 |
-| 28 | Include `doctor` in the verify aggregate; it may degrade but never fail it | ADR-0003, CORE-COMPONENT-0003 | 2026-07-20 |
+| 28 | ~~Include `doctor` in the verify aggregate; it may degrade but never fail it~~ — **SUPERSEDED by ADR-0008 (2026-07-23)** for the code-server case: `doctor` now fails when code-server is absent | ADR-0003, CORE-COMPONENT-0003 | 2026-07-20 |
 | 29 | Read every wrapped command from `maps_to`; prohibit hard-coded verb-to-command wiring | CORE-COMPONENT-0003 | 2026-07-20 |
 | 30 | Wire `clean` via `clean.maps_to`; run a mapped clean command instead of ignoring it | CORE-COMPONENT-0003 | 2026-07-20 |
 | 31 | Emit exactly one terminal `Verdict:` line from every human verb form, including help and friction list | CORE-COMPONENT-0003 | 2026-07-20 |
@@ -95,5 +97,20 @@ Short, actionable statements derived from ADRs and core-components. More than on
 | 68 | Validate `PROJECT_PATH` and fail-fast with non-zero exit on unset/empty/missing/non-directory paths | ADR-0006 | 2026-07-21 |
 | 69 | Prohibit the launcher from creating, deleting, moving, renaming, resetting, or cleaning the project directory | ADR-0006 | 2026-07-21 |
 | 70 | Propagate code-server's exit code through the `edit` handoff; add no process supervision | ADR-0006 | 2026-07-21 |
-| 71 | Treat code-server as a documented prerequisite; verify AC1–AC3 by manual demonstration, AC4–AC5 by automated tests | ADR-0006 | 2026-07-21 |
+| 71 | ~~Treat code-server as a documented prerequisite; verify AC1–AC3 by manual demonstration, AC4–AC5 by automated tests~~ — **SUPERSEDED IN PART by ADR-0008 (2026-07-23)**: code-server is now a required dependency probed by `doctor` and provisioned in the devcontainer | ADR-0006 | 2026-07-21 |
 | 72 | Prohibit building a speculative `EditorProvider` abstraction at Prototype 0; create no core-component | ADR-0006 | 2026-07-21 |
+| 73 | Add an additive `agent` field to the friction record, appended after `severity` | ADR-0007 | 2026-07-23 |
+| 74 | Default the friction `agent` to the `unknown` sentinel for omitted, legacy, and no-agent records; perform no on-disk backfill | ADR-0007 | 2026-07-23 |
+| 75 | Add an `--agent <name>` flag (not positional) to `./harness friction add` | ADR-0007 | 2026-07-23 |
+| 76 | Keep friction dedupe verb-only; add no agent-aware deduplication | ADR-0007 | 2026-07-23 |
+| 77 | Update each RPIV stage agent's HARNESS block to self-attribute friction via `--agent <agent-name>` | ADR-0007 | 2026-07-23 |
+| 78 | Run the friction retrospect as an issue-scoped, delete-on-fix activity; add no new verb or persistent improvement store | ADR-0007 | 2026-07-23 |
+| 79 | Delete the 21 resolved friction records plus #23 on fix (22 total); keep the 9 still-true records | ADR-0007 | 2026-07-23 |
+| 80 | Retain one boot and one test friction anchor so TEST-09 seed coverage stays green after deletions | ADR-0007 | 2026-07-23 |
+| 81 | Probe code-server presence in `doctor`; return `fail` (exit non-zero) when absent, not `degraded` | ADR-0008 | 2026-07-23 |
+| 82 | Fail the `verify` aggregate when `doctor` fails on missing code-server, with no aggregate-logic change | ADR-0008 | 2026-07-23 |
+| 83 | Provision code-server in `.devcontainer/devcontainer.json` so `verify` can pass | ADR-0008 | 2026-07-23 |
+| 84 | Update `verification.yml`'s outdated "degraded/unknown non-blocking" comment for accuracy only (sequence with #27) | ADR-0008 | 2026-07-23 |
+| 85 | Require every friction record to carry an `agent` field read as `unknown` when absent (R18) | CORE-COMPONENT-0003 | 2026-07-23 |
+| 86 | Guarantee the friction `agent` field is additive and backward-compatible per R7/R8 (R18) | CORE-COMPONENT-0003 | 2026-07-23 |
+| 87 | Require `doctor` to fail, not degrade, when code-server is absent (R19) | CORE-COMPONENT-0003 | 2026-07-23 |

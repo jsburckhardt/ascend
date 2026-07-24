@@ -54,7 +54,7 @@ You SHOULD update documentation when implementation changes warrant it.
 <!-- HARNESS:BEGIN -->
 You MUST use ./harness verify as the canonical verification gate (per .github/soft-factory/verification.yml) rather than invoking lint, test, or build directly.
 You SHOULD run ./harness status and ./harness doctor to confirm a clean, healthy state before creating the PR.
-You MAY call a direct command only when the harness lacks the verb or reports unknown or degraded, and MUST then record the gap via ./harness friction add using the harness KEY_QUESTION.
+You MAY call a direct command only when the harness lacks the verb or reports unknown or degraded, and MUST then record the gap via ./harness friction add --agent rpiv-verifier using the harness KEY_QUESTION.
 <!-- HARNESS:END -->
 </instructions>
 

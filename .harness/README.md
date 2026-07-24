@@ -44,7 +44,7 @@ is not a verdict and exits `2`.
 |------|-----------------------|-----------------|----------|
 | `help` | repo metadata (native) | `pass` | no |
 | `orient` | repo metadata / contract (native) | `pass` | yes |
-| `doctor` | Node vs `.nvmrc`/`engines`, `node_modules` presence (native) | `pass` (or `degraded`) | yes |
+| `doctor` | Node vs `.nvmrc`/`engines`, `node_modules` presence, **code-server presence** (native) | `pass` / `degraded` (Node/modules) / **`fail`** (code-server absent) | yes |
 | `lint` | none (no ESLint/Prettier) | `unknown` | yes |
 | `test` | `npm test` (`node:test` suites in `tests/app/` **and** `tests/launcher/`) | `pass` | yes |
 | `build` | none (`tsc` is `noEmit`; nothing emits) | `unknown` | yes |
@@ -74,9 +74,17 @@ evaluated in this order:
 3. else **every member `unknown` → `unknown`**;
 4. otherwise (a mix of `pass`/`degraded`/`unknown` with no `fail`) **→ `degraded`**.
 
-`doctor` only emits `pass`/`degraded`, so it can move the aggregate toward
-`degraded` but never `fail`. Today `verify` returns **`degraded`** (typecheck
-`pass`; `test` `pass`; `lint`/`build` `unknown`; `doctor` `pass`). Every run
+`doctor` emits `pass`/`degraded` for its Node/toolchain checks (which can move the
+aggregate toward `degraded` but never `fail`), **but its code-server readiness
+check is fail-when-absent** (ADR-0008 / CORE-COMPONENT-0003 R19): when
+`command -v code-server` is empty, `doctor` returns **`fail`**, which — because
+`doctor` is a `verify.aggregate` member — makes `./harness verify` return **`fail`
+(exit 1)** via the same fixed rule above (no aggregate-logic change). code-server
+is a **required** editor provider for a stable environment and is provisioned in
+[`.devcontainer/devcontainer.json`](../.devcontainer/devcontainer.json); the probe
+target is overridable for tests via `HARNESS_CODE_SERVER`. With code-server
+present today `verify` returns **`degraded`** (typecheck `pass`; `test` `pass`;
+`lint`/`build` `unknown`; `doctor` `pass`). Every run
 writes a timestamped evidence record under
 `.harness/evidence/`. If that **required evidence record cannot be persisted**,
 `verify` returns **`fail`** and exits non-zero — it never masks a persistence
@@ -179,14 +187,21 @@ Lines). Every entry answers the **KEY_QUESTION** verbatim:
 > **What did the agent have to infer that the harness should have proved?**
 
 Each record carries: `ts`, `verb`, `key_question`, `inference`, `proof_gap`,
-`suggested_closure` (and an optional `severity`). Record and read gaps:
+`suggested_closure`, an optional `severity`, and an **`agent`** field appended
+after `severity` (ADR-0007 / CORE-COMPONENT-0003 R18). The `agent` field is
+**additive and backward-compatible**: a record written without attribution — and
+every legacy record with no `agent` field — reads as the sentinel **`unknown`**.
+`./harness friction add` accepts an **`--agent <name>` flag** (not positional) so
+an agent self-attributes its friction; omitting it defaults to `unknown` (the
+internal auto-recorder also writes `unknown`). Dedupe stays **verb-only**. A
+per-agent view is `friction list` filtered on `agent`. Record and read gaps:
 
 ```sh
-./harness friction add --verb test \
+./harness friction add --agent rpiv-research --verb test \
   --inference "No test runner exists" \
   --proof-gap "No npm test script or test files" \
   --suggested-closure "Wire test verb in contract.yml when #5 lands"
-./harness friction list --json
+./harness friction list --json          # each entry carries an "agent" field
 ```
 
 ## How gaps close later

@@ -54,7 +54,7 @@ You MAY split large tasks into smaller subtasks for clarity.
 You MUST use ./harness orient to enumerate the deterministic verbs the harness exposes so the action plan and test plan reference real harness commands rather than invented ones.
 You SHOULD consult ./harness status to scope tasks against the current repository state.
 You MUST NOT run the execution verbs (lint, test, build, boot, verify, clean); planning does not execute tasks.
-You MUST record any harness capability gap you had to infer via ./harness friction add using the harness KEY_QUESTION.
+You MUST record any harness capability gap you had to infer via ./harness friction add --agent rpiv-planner using the harness KEY_QUESTION.
 <!-- HARNESS:END -->
 </instructions>
 

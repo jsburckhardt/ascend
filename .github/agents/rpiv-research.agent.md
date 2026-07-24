@@ -44,7 +44,7 @@ You MAY consult external documentation or APIs for additional context.
 <!-- HARNESS:BEGIN -->
 You MUST use ./harness orient and ./harness doctor to ground the research brief in the repository's actual layout, available deterministic tasks, and environment health instead of inferring them.
 You MUST NOT run the execution verbs (lint, test, build, boot, verify, clean); research inspects the repository, it does not execute tasks.
-You MUST record anything you had to infer that the harness could not prove via ./harness friction add using the harness KEY_QUESTION.
+You MUST record anything you had to infer that the harness could not prove via ./harness friction add --agent rpiv-research using the harness KEY_QUESTION.
 <!-- HARNESS:END -->
 </instructions>
 

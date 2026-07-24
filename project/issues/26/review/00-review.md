@@ -126,3 +126,57 @@ mutations via `HARNESS_*`, so the committed friction log stays clean at 12 recor
 
 **F-02 (nit) — acknowledged, deferred.** The `--agent … shift 2` last-arg arity edge case is
 pre-existing and shared by other flags; no change made in this issue.
+
+
+---
+
+# Review Cycle 2
+
+## Summary
+- **Issue:** #26
+- **Title:** Retrospect captured harness friction into improvements and attribute friction to an agent
+- **Base Branch:** main
+- **Feature Branch:** issue/26
+- **Reviewer Model:** GPT-5.6 Sol
+- **Review Cycle:** 2
+- **Reviewed Commit:** e07b496d5bef0e35dbec7336b328c0a194a8d699
+- **Last Reviewed Commit (cycle 1):** 3f4bf29a47dfcebf600c70f001f582c52c417c23
+- **Verdict:** APPROVE
+- **Blocking Findings:** 0
+
+## Scope of Re-review
+Scoped to the remediation delta since the cycle-1 reviewed commit (`3f4bf29...e07b496`), which is exactly two commits:
+- `03263cd fix(harness): drop stray empty-closure friction records from retrospect log` — data-only removal of the two stray empty-`suggested_closure` records from `.harness/friction.jsonl`.
+- `e07b496 docs(#26): record local-code-reviewer verdict and F-01 resolution` — adds the cycle-1 review report + resolution note only.
+
+Delta `--stat`: `.harness/friction.jsonl` (2 deletions) and `project/issues/26/review/00-review.md` (128 insertions). **No `harness` source, no `tests/**`, no `src/**`, and no `.github/soft-factory/verification.yml` were touched in the delta** — confirming the fix is data-only and did not weaken or alter any test assertion or harness logic to force a pass.
+
+## Prior Finding Disposition
+| ID | Cycle-1 Severity | Disposition | Evidence |
+|----|------------------|-------------|----------|
+| F-01 | blocking | **Resolved** | `.harness/friction.jsonl` is now exactly 12 records; every line is valid JSONL with a non-empty `suggested_closure` and the verbatim KEY_QUESTION (validated programmatically). The two stray records (ts `2026-07-24T01:40:38Z`, empty inference/proof_gap/closure) are removed by `03263cd`. Authoritative gate `bash tests/harness/run.sh` now reports `Totals: PASS=52 FAIL=0 SKIP=0` / `Verdict: pass`; TEST-09 and TEST-47 both PASS. |
+| F-02 | nit | **Unresolved (accepted / deferred)** | `--agent … shift 2` last-arg arity edge case is pre-existing and shared by sibling flags; intentionally deferred, no change expected. Remains a non-blocking COMMENT follow-up. |
+
+## Re-verification Performed
+- **Friction log integrity:** 12 records; all well-formed; non-empty `suggested_closure` + verbatim KEY_QUESTION on every line; no empty-inference/empty-closure stray records remain.
+- **Authoritative gate:** `bash tests/harness/run.sh` → `PASS=52 FAIL=0 SKIP=0`, `Verdict: pass`. TEST-09 (seed friction covers gaps + verbatim KQ + closures) PASS; TEST-47 (log shrank, 12 records) PASS.
+- **App suite:** `npm test` → 15 pass / 0 fail.
+- **Tree cleanliness:** `git status --porcelain` empty after both suites — the regression suite isolates its mutations via `HARNESS_*` and does not dirty the committed `.harness/friction.jsonl`.
+- **No test/logic weakening:** delta name-only diff touches no `harness`/`tests/`/`src/`/`verification.yml` file; fix is record removal + review doc only.
+- **Cycle-1 solid areas (unchanged in delta, re-spot-checked):** code-server present-path `HARNESS_CODE_SERVER=bash ./harness doctor` exits 0 (present→pass per ADR-0008); R10 one-block invariant holds — exactly one `HARNESS:BEGIN` block in each of the four `rpiv-*` agents and none in any other agent; agent-field additivity/ordering and code-server fail-not-degrade + exit-1 aggregate propagation continue to pass via TEST-40..46. Boundaries intact: no `verification.yml` restructure, no `src` changes, no other issues docs rewritten.
+
+## Acceptance Criteria Assessment (frozen cycle-1 interpretation)
+The cycle-1 interpretation (against the issue ISSUE_ALIGNMENT refined criteria) is reused unchanged. All criteria assessed "Met" in cycle 1 remain Met — none regressed, since the delta only removed malformed data and added the review doc. The single "Partially met (not exercised)" criterion (non-actionable review records "no action needed" with no items) remains documented-but-not-exercised; consistent with the frozen framing and explicitly non-blocking.
+
+## Findings
+| ID | Severity | Location | Finding | Recommendation |
+|----|----------|----------|---------|----------------|
+| — | — | — | No new findings introduced by the remediation delta. | — |
+| F-02 | nit (follow-up) | `harness` (`--agent) _fagent=default unknown; shift 2`) | Carried forward from cycle 1: pre-existing last-arg `shift 2` arity edge case shared across `friction add` flags. Not introduced by this issue; non-blocking. | Address across all `friction add` flags in a future harness cleanup. |
+
+## Verdict Rationale
+Applying the re-review gate: the sole cycle-1 blocking finding (F-01) is genuinely resolved (data-only fix; authoritative gate green at HEAD `e07b496`), no blocking finding exists, and no acceptance criterion that previously passed is now unmet. The only residual item (F-02) is a pre-existing nit tracked as a COMMENT follow-up. Verdict: **APPROVE**.
+
+## Suggested Follow-ups
+- Consider a harness write-time guard (or test) rejecting seed friction records with an empty `suggested_closure`, so this regression class is caught at record time rather than only in TEST-09. (The two stray records were auto-recorded by the harness during the verifier own `./harness` runs — a lightweight guard would prevent recurrence.)
+- Address F-02 `shift` arity nit across all `friction add` flags in a future harness cleanup.

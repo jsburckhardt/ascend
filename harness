@@ -28,6 +28,9 @@
 #   HARNESS_CONTRACT      -> path to contract.yml
 #   HARNESS_EVIDENCE_DIR  -> evidence output directory
 #   HARNESS_FRICTION      -> friction.jsonl path
+#   HARNESS_CODE_SERVER   -> code-server probe target for doctor readiness (R19);
+#                            defaults to 'code-server'. Lets the regression suite
+#                            drive present/absent deterministically.
 
 set -u
 
@@ -259,18 +262,22 @@ append_line() {
 # Friction subsystem (CORE-COMPONENT-0003 R4/R9/R14)
 # ---------------------------------------------------------------------------
 
-# write_friction <verb> <inference> <proof_gap> <suggested_closure> [severity]
-# Returns non-zero if the record could not be appended (R14).
+# write_friction <verb> <inference> <proof_gap> <suggested_closure> [severity] [agent]
+# Returns non-zero if the record could not be appended (R14). The `agent` field
+# (R18, ADR-0007) is appended AFTER `severity` and is additive/backward-compatible:
+# no existing key is renamed, removed, or reordered. It defaults to the `unknown`
+# sentinel when not supplied (legacy/no-agent/internal friction).
 write_friction() {
-	_fverb="$1"; _finf="$2"; _fgap="$3"; _fclose="$4"; _fsev="${5:-info}"
-	_fline=$(printf '{"ts": "%s", "verb": "%s", "key_question": "%s", "inference": "%s", "proof_gap": "%s", "suggested_closure": "%s", "severity": "%s"}' \
+	_fverb="$1"; _finf="$2"; _fgap="$3"; _fclose="$4"; _fsev="${5:-info}"; _fagent="${6:-unknown}"
+	_fline=$(printf '{"ts": "%s", "verb": "%s", "key_question": "%s", "inference": "%s", "proof_gap": "%s", "suggested_closure": "%s", "severity": "%s", "agent": "%s"}' \
 		"$(now_iso)" \
 		"$(json_escape "$_fverb")" \
 		"$(json_escape "$KEY_QUESTION")" \
 		"$(json_escape "$_finf")" \
 		"$(json_escape "$_fgap")" \
 		"$(json_escape "$_fclose")" \
-		"$(json_escape "$_fsev")")
+		"$(json_escape "$_fsev")" \
+		"$(json_escape "$_fagent")")
 	append_line "$_fline" "$FRICTION_PATH"
 }
 
@@ -367,14 +374,23 @@ required_major() {
 }
 modules_present() { [ -d "$ROOT/node_modules" ]; }
 
+# code_server_present : true when the code-server editor provider is resolvable.
+# Uses a testability seam (HARNESS_CODE_SERVER, default 'code-server') so the
+# regression suite can drive present/absent deterministically even after
+# code-server is provisioned in the devcontainer (CORE-COMPONENT-0003 R19,
+# ADR-0008).
+code_server_present() { command -v "${HARNESS_CODE_SERVER:-code-server}" >/dev/null 2>&1; }
+
 # compute_doctor : resolve the doctor environment verdict WITHOUT emitting output
 # or friction. Sets DOCTOR_VERDICT, DOCTOR_NODE_OK, DOCTOR_NODE_REASON,
-# DOCTOR_MODS_OK, DOCTOR_MODS_REASON, DOCTOR_MAJ, DOCTOR_MIN, DOCTOR_REQMAJ.
+# DOCTOR_MODS_OK, DOCTOR_MODS_REASON, DOCTOR_CS_OK, DOCTOR_CS_REASON,
+# DOCTOR_MAJ, DOCTOR_MIN, DOCTOR_REQMAJ.
 compute_doctor() {
 	DOCTOR_REQMAJ=$(required_major)
 	DOCTOR_VERDICT="pass"
 	DOCTOR_NODE_OK="true"; DOCTOR_NODE_REASON=""
 	DOCTOR_MODS_OK="true"; DOCTOR_MODS_REASON=""
+	DOCTOR_CS_OK="true"; DOCTOR_CS_REASON=""
 	DOCTOR_MAJ=""; DOCTOR_MIN=""
 
 	if node_present; then
@@ -409,6 +425,17 @@ compute_doctor() {
 		DOCTOR_MODS_REASON="node_modules missing (run npm install)"
 		DOCTOR_VERDICT="degraded"
 	fi
+
+	# code-server readiness (R19, ADR-0008): code-server is a REQUIRED dependency
+	# for a stable environment, so its absence is a FAIL (not degraded like the
+	# Node/node_modules checks). `fail` takes precedence over any degraded state.
+	if code_server_present; then
+		DOCTOR_CS_OK="true"
+	else
+		DOCTOR_CS_OK="false"
+		DOCTOR_CS_REASON="code-server not found on PATH (required editor provider; provision it in .devcontainer/devcontainer.json)"
+		DOCTOR_VERDICT="fail"
+	fi
 }
 
 # ---------------------------------------------------------------------------
@@ -426,7 +453,11 @@ resolve_member() {
 		compute_doctor
 		MEMBER_VERDICT="$DOCTOR_VERDICT"
 		MEMBER_MAPS="native"
-		[ "$DOCTOR_VERDICT" = "degraded" ] && MEMBER_REASON="${DOCTOR_NODE_REASON}${DOCTOR_NODE_REASON:+; }${DOCTOR_MODS_REASON}"
+		if [ "$DOCTOR_VERDICT" != "pass" ]; then
+			MEMBER_REASON="$DOCTOR_NODE_REASON"
+			[ -n "$DOCTOR_MODS_REASON" ] && MEMBER_REASON="${MEMBER_REASON}${MEMBER_REASON:+; }$DOCTOR_MODS_REASON"
+			[ -n "$DOCTOR_CS_REASON" ] && MEMBER_REASON="${MEMBER_REASON}${MEMBER_REASON:+; }$DOCTOR_CS_REASON"
+		fi
 		return 0
 	fi
 	_rmaps=$(get_maps_to "$_rm")
@@ -498,6 +529,8 @@ Verbs:
   status            Report contract summary and last evidence
   clean             Remove harness-owned ephemeral artifacts (-> degraded)
   friction add      Append a friction entry answering the KEY_QUESTION
+                    (--verb required; --agent <name> self-attributes, default
+                    'unknown')
   friction list     List recorded friction entries
 
 Vocabulary: pass | fail | degraded | unknown
@@ -547,24 +580,32 @@ verb_doctor() {
 	compute_doctor
 	_verdict="$DOCTOR_VERDICT"
 
-	if [ "$_verdict" = "degraded" ]; then
+	# Record friction (R4) for any non-pass environment: a degraded Node/toolchain
+	# state OR an absent code-server (R19 fail). Verb-only dedupe keeps one doctor
+	# record per log. A required-write failure surfaces as fail/exit 1 (R14).
+	if [ "$_verdict" != "pass" ]; then
+		_dreason="$DOCTOR_NODE_REASON"
+		[ -n "$DOCTOR_MODS_REASON" ] && _dreason="${_dreason}${_dreason:+; }$DOCTOR_MODS_REASON"
+		[ -n "$DOCTOR_CS_REASON" ] && _dreason="${_dreason}${_dreason:+; }$DOCTOR_CS_REASON"
 		if ! ensure_friction doctor \
-			"Environment health is degraded (${DOCTOR_NODE_REASON}${DOCTOR_NODE_REASON:+; }${DOCTOR_MODS_REASON}); the harness had to infer the expected toolchain state." \
-			"Node/toolchain readiness is not proven by a wrapped setup check; doctor infers it from .nvmrc/engines and node_modules presence." \
-			"Wire an explicit environment/setup proof (e.g. a setup command) in contract.yml when one exists; today doctor infers readiness from .nvmrc/engines and node_modules presence."; then
-			persist_fail doctor "$_json" "required friction record for degraded environment could not be persisted"
+			"Environment health is ${_verdict} (${_dreason}); the harness had to infer the expected toolchain/editor-provider state." \
+			"Node/toolchain and code-server readiness are not proven by a wrapped setup check; doctor infers Node from .nvmrc/engines and node_modules presence and probes code-server via command -v." \
+			"Wire an explicit environment/setup proof (e.g. a setup command) in contract.yml when one exists, and provision code-server in .devcontainer so the required editor provider is present (ADR-0008); today doctor infers readiness from .nvmrc/engines, node_modules presence, and a code-server probe."; then
+			persist_fail doctor "$_json" "required friction record for non-pass environment could not be persisted"
 		fi
 	fi
 
 	if [ "$_json" = "1" ]; then
-		json_response doctor "$_verdict" ",\"checks\": [{\"name\": \"node\", \"ok\": $DOCTOR_NODE_OK, \"major\": \"$(json_escape "$DOCTOR_MAJ")\", \"minor\": \"$(json_escape "$DOCTOR_MIN")\", \"required_major\": \"$DOCTOR_REQMAJ\", \"required_range\": \">=${DOCTOR_REQMAJ}.${NODE_MINOR_FLOOR}.0 <23\"}, {\"name\": \"node_modules\", \"ok\": $DOCTOR_MODS_OK}], \"notes\": \"$(json_escape "${DOCTOR_NODE_REASON}${DOCTOR_NODE_REASON:+; }${DOCTOR_MODS_REASON}")\""
+		json_response doctor "$_verdict" ",\"checks\": [{\"name\": \"node\", \"ok\": $DOCTOR_NODE_OK, \"major\": \"$(json_escape "$DOCTOR_MAJ")\", \"minor\": \"$(json_escape "$DOCTOR_MIN")\", \"required_major\": \"$DOCTOR_REQMAJ\", \"required_range\": \">=${DOCTOR_REQMAJ}.${NODE_MINOR_FLOOR}.0 <23\"}, {\"name\": \"node_modules\", \"ok\": $DOCTOR_MODS_OK}, {\"name\": \"code_server\", \"ok\": $DOCTOR_CS_OK, \"reason\": \"$(json_escape "$DOCTOR_CS_REASON")\"}], \"notes\": \"$(json_escape "${DOCTOR_NODE_REASON}${DOCTOR_NODE_REASON:+; }${DOCTOR_MODS_REASON}${DOCTOR_MODS_REASON:+; }${DOCTOR_CS_REASON}")\""
 	else
 		printf 'Environment doctor\n==================\n'
 		printf 'node present       : %s\n' "$(node_present && node --version 2>/dev/null || echo 'no')"
 		printf 'node >= %s.%s.0     : %s\n' "$DOCTOR_REQMAJ" "$NODE_MINOR_FLOOR" "$DOCTOR_NODE_OK"
 		printf 'node_modules       : %s\n' "$DOCTOR_MODS_OK"
+		printf 'code-server        : %s\n' "$DOCTOR_CS_OK"
 		[ -n "$DOCTOR_NODE_REASON" ] && printf 'note               : %s\n' "$DOCTOR_NODE_REASON"
 		[ -n "$DOCTOR_MODS_REASON" ] && printf 'note               : %s\n' "$DOCTOR_MODS_REASON"
+		[ -n "$DOCTOR_CS_REASON" ] && printf 'note               : %s\n' "$DOCTOR_CS_REASON"
 		printf 'Verdict: %s\n' "$_verdict"
 	fi
 	finish "$_verdict"
@@ -932,7 +973,7 @@ verb_friction() {
 }
 
 friction_add() {
-	_fverb=""; _finf=""; _fgap=""; _fclose=""; _fsev="info"; _fjson="0"
+	_fverb=""; _finf=""; _fgap=""; _fclose=""; _fsev="info"; _fagent="unknown"; _fjson="0"
 	while [ "$#" -gt 0 ]; do
 		case "$1" in
 			--verb) _fverb="${2:-}"; shift 2 ;;
@@ -940,6 +981,7 @@ friction_add() {
 			--proof-gap) _fgap="${2:-}"; shift 2 ;;
 			--suggested-closure) _fclose="${2:-}"; shift 2 ;;
 			--severity) _fsev="${2:-info}"; shift 2 ;;
+			--agent) _fagent="${2:-unknown}"; shift 2 ;;
 			--json) _fjson="1"; shift ;;
 			*) err "friction add: unknown option '$1'"; exit 2 ;;
 		esac
@@ -949,14 +991,15 @@ friction_add() {
 		exit 2
 	fi
 	# write_friction escapes all inputs as JSON data (no injection) and returns
-	# non-zero if the append could not be persisted (R14).
-	if ! write_friction "$_fverb" "$_finf" "$_fgap" "$_fclose" "$_fsev"; then
+	# non-zero if the append could not be persisted (R14). The agent (R18) is
+	# additive and defaults to the `unknown` sentinel when --agent is omitted.
+	if ! write_friction "$_fverb" "$_finf" "$_fgap" "$_fclose" "$_fsev" "$_fagent"; then
 		persist_fail "friction add" "$_fjson" "friction entry could not be appended to $FRICTION_PATH"
 	fi
 	if [ "$_fjson" = "1" ]; then
-		json_response "friction add" pass ",\"recorded\": 1, \"verb\": \"$(json_escape "$_fverb")\""
+		json_response "friction add" pass ",\"recorded\": 1, \"verb\": \"$(json_escape "$_fverb")\", \"agent\": \"$(json_escape "$_fagent")\""
 	else
-		printf 'friction: recorded 1 entry for verb "%s".\n' "$_fverb"
+		printf 'friction: recorded 1 entry for verb "%s" (agent "%s").\n' "$_fverb" "$_fagent"
 		printf 'Verdict: pass\n'
 	fi
 	finish pass

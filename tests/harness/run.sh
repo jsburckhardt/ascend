@@ -82,6 +82,17 @@ HEALTHY_ROOT="$WORK/healthy-root"; mkdir -p "$HEALTHY_ROOT/node_modules"; printf
 # degraded fake root: .nvmrc=22 but NO node_modules
 DEGRADED_ROOT="$WORK/degraded-root"; mkdir -p "$DEGRADED_ROOT"; printf '22\n' > "$DEGRADED_ROOT/.nvmrc"
 
+# code-server present-case stub (R19 / ADR-0008): a resolvable `code-server` so the
+# ambient-environment verbs (doctor/verify) that do NOT set the seam see it as
+# PRESENT and keep their prior verdicts. This is exported so every `"$H"` run
+# inherits it; the absent-case tests locally override HARNESS_CODE_SERVER to a
+# non-existent target so `command -v` fails deterministically even after code-server
+# is provisioned in the devcontainer.
+CS_STUB_DIR="$WORK/cs-stub"; mkdir -p "$CS_STUB_DIR"
+printf '#!/bin/sh\nexit 0\n' > "$CS_STUB_DIR/code-server"; chmod +x "$CS_STUB_DIR/code-server"
+export HARNESS_CODE_SERVER="$CS_STUB_DIR/code-server"
+CS_ABSENT="$WORK/cs-none/code-server"   # never created -> command -v fails (absent case)
+
 printf '=== harness regression suite (tests/harness/run.sh) ===\n'
 [ -n "$NODE" ] || printf 'NOTE: node not found; JSON-validity assertions will be skipped.\n'
 
@@ -251,6 +262,13 @@ listed=$(HARNESS_FRICTION="$fr" "$H" friction list | grep -c '"verb": "rttest"')
 # ===========================================================================
 # TEST-09: seed friction covers every gap, verbatim KEY_QUESTION + closure
 # ===========================================================================
+# NOTE (#26 / ADR-0007 E): `test` and `boot` are wired to `pass` (by #6), so their
+# only committed friction records are intentionally-RETAINED coverage ANCHORS
+# (records #2 test / #4 boot), rewritten to declare that purpose while keeping the
+# verbatim KEY_QUESTION and a non-empty suggested_closure. The assertion set below
+# is therefore unchanged: {lint,test,build,boot,clean,verify} coverage is still
+# satisfied. (If a future story deletes the anchors, relax this set to
+# {lint,build,clean,verify} first — out of scope for #26.)
 t09=1
 for v in lint test build boot clean verify; do grep -q "\"verb\": \"$v\"" "$SEED_FRICTION" || t09=0; done
 # every seed line: verbatim KQ + non-empty suggested_closure
@@ -786,13 +804,12 @@ grep -qF 'npm run dev' "$HARN_RD" || t30=0
 grep -qF -- '| `dev`' "$HARN_RD" || t30=0
 grep -Eq 'boot.*#6|#6.*boot' "$HARN_RD" || t30=0
 
-# (7) friction closure (T6): a post-#5 `dev` friction entry records that the
-#     interactive-process gap is now handled by the mode: exec handoff / ./harness dev.
-grep '"verb": "dev"' "$SEED_FRICTION" | grep -q './harness dev' || t30=0
-grep '"verb": "dev"' "$SEED_FRICTION" | grep -q 'mode: exec' || t30=0
-# no-drift on the seeded boot/deferral closures (append-only integrity).
-grep -q 'Owned by #6' "$SEED_FRICTION" || t30=0
-[ "$(grep -c 'Deferred beyond #5' "$SEED_FRICTION")" -ge 3 ] || t30=0
+# (7) friction closure (#26 T6 retrospect): the post-#5 `dev`/`boot` closure
+#     records that TEST-30 previously asserted were DELETED by the issue #26
+#     delete-on-fix retrospect (ADR-0007) — those gaps are resolved (dev/boot are
+#     wired via mode: exec), so their friction records are no longer committed.
+#     The live `dev` handoff behaviour is still proven above (dev --print/--json,
+#     mode-driven dispatch in TEST-31); no seed-friction assertion is needed here.
 
 # (8) `./harness verify` runs non-fail + exit 0 = validation "passes" (D5).
 #     Node/typecheck-gated and isolated; NEVER runs `npm run dev`.
@@ -1207,6 +1224,192 @@ grep -qF -- 'npm run edit' "$HARN_RD" || { t34=0; printf '  (TEST-34 .harness/RE
 grep -qF -- '| `edit`' "$HARN_RD" || { t34=0; printf '  (TEST-34 .harness/README missing edit verb row)\n'; }
 
 [ "$t34" = "1" ] && ok "TEST-34 #7 code-server launcher: edit exec->npm run edit (--print/--json), launcher owns flags (5.7), honest-when-unmapped, docs coherent" || no "TEST-34 #7 launcher wiring (t34=$t34)"
+
+# ===========================================================================
+# TEST-40 (#26 T1): friction record carries an additive `agent` field, default unknown
+# ===========================================================================
+# write_friction/friction add with no --agent must emit an `agent` field appended
+# AFTER `severity`, defaulting to the `unknown` sentinel, with all existing keys
+# unchanged in name and order (R7/R8 additive guarantee).
+fr=$(new_friction)
+HARNESS_FRICTION="$fr" "$H" friction add --verb w1 --inference "inf a" --proof-gap "gap b" --suggested-closure "close c" >/dev/null 2>&1
+line40=$(grep '"verb": "w1"' "$fr" | head -1)
+t40=1
+if [ -n "$NODE" ]; then
+	printf '%s' "$line40" | json_valid || { t40=0; printf '  (TEST-40 line not valid JSON)\n'; }
+	ag=$(printf '%s' "$line40" | jget agent)
+	[ "$ag" = "unknown" ] || { t40=0; printf '  (TEST-40 agent=%s want unknown)\n' "$ag"; }
+fi
+# exact ordered key set ending with severity then agent last
+printf '%s' "$line40" | grep -q '"severity": "info", "agent": "unknown"}' || { t40=0; printf '  (TEST-40 agent not appended after severity/last)\n'; }
+for k in ts verb key_question inference proof_gap suggested_closure severity agent; do
+	printf '%s' "$line40" | grep -q "\"$k\"" || { t40=0; printf '  (TEST-40 missing key %s)\n' "$k"; }
+done
+[ "$t40" = "1" ] && ok "TEST-40 friction agent field additive + unknown default, keys ordered severity->agent last" || no "TEST-40 friction agent field (t40=$t40)"
+
+# ===========================================================================
+# TEST-41 (#26 T2): friction add --agent sets the field; omission defaults unknown
+# ===========================================================================
+fr=$(new_friction)
+o41a=$(HARNESS_FRICTION="$fr" "$H" friction add --agent rpiv-research --verb boot --inference i --proof-gap g --suggested-closure c); c41a=$?
+o41b=$(HARNESS_FRICTION="$fr" "$H" friction add --verb boot --inference i --proof-gap g --suggested-closure c); c41b=$?
+t41=1
+[ "$c41a" = "0" ] || { t41=0; printf '  (TEST-41 --agent add exit=%s)\n' "$c41a"; }
+[ "$c41b" = "0" ] || { t41=0; printf '  (TEST-41 default add exit=%s)\n' "$c41b"; }
+# exactly one 'Verdict: pass' line per invocation (R2)
+[ "$(printf '%s\n' "$o41a" | grep -c '^Verdict: pass$')" = "1" ] || { t41=0; printf '  (TEST-41 --agent not exactly one verdict line)\n'; }
+[ "$(printf '%s\n' "$o41b" | grep -c '^Verdict: pass$')" = "1" ] || { t41=0; printf '  (TEST-41 default not exactly one verdict line)\n'; }
+if [ -n "$NODE" ]; then
+	a41=$(grep '"agent": "rpiv-research"' "$fr" | head -1 | jget agent)
+	[ "$a41" = "rpiv-research" ] || { t41=0; printf '  (TEST-41 first agent=%s want rpiv-research)\n' "$a41"; }
+	# second record (the one WITHOUT rpiv-research) must be agent unknown
+	u41=$(grep -v 'rpiv-research' "$fr" | grep '"verb": "boot"' | grep 'agent' | tail -1 | jget agent)
+	[ "$u41" = "unknown" ] || { t41=0; printf '  (TEST-41 default agent=%s want unknown)\n' "$u41"; }
+fi
+[ "$t41" = "1" ] && ok "TEST-41 friction add --agent sets field; omission -> unknown; one Verdict line each" || no "TEST-41 friction add --agent (t41=$t41)"
+
+# ===========================================================================
+# TEST-42 (#26 T2): friction add --json includes agent; single verdict
+# ===========================================================================
+if [ -n "$NODE" ]; then
+	fr=$(new_friction)
+	j42=$(HARNESS_FRICTION="$fr" "$H" friction add --agent rpiv-verifier --verb doctor --inference i --proof-gap g --suggested-closure c --json)
+	t42=1
+	printf '%s' "$j42" | json_valid || { t42=0; printf '  (TEST-42 --json not valid JSON)\n'; }
+	[ "$(printf '%s' "$j42" | jget verdict)" = "pass" ] || { t42=0; printf '  (TEST-42 verdict != pass)\n'; }
+	[ "$(printf '%s' "$j42" | jget agent)" = "rpiv-verifier" ] || { t42=0; printf '  (TEST-42 agent != rpiv-verifier)\n'; }
+	for k in harness_version verb verdict timestamp; do printf '%s' "$j42" | grep -q "\"$k\"" || { t42=0; printf '  (TEST-42 missing key %s)\n' "$k"; }; done
+	[ "$t42" = "1" ] && ok "TEST-42 friction add --json carries agent + verdict pass + required keys" || no "TEST-42 friction add --json agent (t42=$t42)"
+else skip "TEST-42 friction add --json agent (node absent)"; fi
+
+# ===========================================================================
+# TEST-43 (#26 T3): each RPIV stage agent self-attributes via --agent (APS-authored)
+# ===========================================================================
+# The four rpiv-*.agent.md files must instruct `friction add --agent <own-name>`.
+# Because the change MUST be authored through the APS agent (ADR-0007 D5 / T3), and
+# the APS agent is a VS Code chat agent that cannot be invoked from this bash-only
+# suite, this test ASSERTS the attribution when present and SKIPs (never falsely
+# passes, never hand-edits) with the blocker reason when it is not yet applied.
+t43=1; t43applied=1
+for base in rpiv-research rpiv-planner rpiv-implementer rpiv-verifier; do
+	f="$REPO/.github/agents/$base.agent.md"
+	blk=$(awk '/HARNESS:BEGIN/,/HARNESS:END/' "$f")
+	printf '%s' "$blk" | grep -q -- "--agent $base" || t43applied=0
+done
+if [ "$t43applied" = "1" ]; then
+	# assertion mode: exactly one block per file, correct self-attribution
+	for base in rpiv-research rpiv-planner rpiv-implementer rpiv-verifier; do
+		f="$REPO/.github/agents/$base.agent.md"
+		b=$(grep -c '<!-- HARNESS:BEGIN -->' "$f"); e=$(grep -c '<!-- HARNESS:END -->' "$f")
+		{ [ "$b" = "1" ] && [ "$e" = "1" ]; } || { t43=0; printf '  (TEST-43 %s block count b=%s e=%s)\n' "$base" "$b" "$e"; }
+		awk '/HARNESS:BEGIN/,/HARNESS:END/' "$f" | grep -q -- "friction add --agent $base" || { t43=0; printf '  (TEST-43 %s missing self-attribution)\n' "$base"; }
+	done
+	[ "$t43" = "1" ] && ok "TEST-43 RPIV agents self-attribute via --agent (APS-authored), one block each" || no "TEST-43 RPIV self-attribution (t43=$t43)"
+else
+	skip "TEST-43 RPIV self-attribution BLOCKED (T3): APS agent (target:vscode, disable-model-invocation) not invokable from this bash-only suite; RPIV files intentionally NOT hand-edited per ADR-0007 D5. Re-run @aps-v1.2.2 per file to apply --agent, then this test asserts+passes."
+fi
+
+# ===========================================================================
+# TEST-44 (#26 T4): doctor code-server readiness -- present->pass, absent->fail
+# ===========================================================================
+if [ -n "$NODE" ]; then
+	t44=1
+	# present (default stub via exported HARNESS_CODE_SERVER)
+	fr=$(new_friction); ev=$(new_evdir)
+	dpj=$(HARNESS_ROOT="$HEALTHY_ROOT" HARNESS_FRICTION="$fr" HARNESS_EVIDENCE_DIR="$ev" "$H" doctor --json)
+	HARNESS_ROOT="$HEALTHY_ROOT" HARNESS_FRICTION="$fr" HARNESS_EVIDENCE_DIR="$ev" "$H" doctor >/dev/null 2>&1; dpc=$?
+	[ "$(printf '%s' "$dpj" | jget verdict)" = "pass" ] || { t44=0; printf '  (TEST-44 present verdict=%s want pass)\n' "$(printf '%s' "$dpj" | jget verdict)"; }
+	[ "$dpc" = "0" ] || { t44=0; printf '  (TEST-44 present exit=%s want 0)\n' "$dpc"; }
+	printf '%s' "$dpj" | grep -q '"name": "code_server"' || { t44=0; printf '  (TEST-44 present missing code_server check)\n'; }
+	# absent (seam -> non-existent target)
+	fr=$(new_friction); ev=$(new_evdir)
+	daj=$(HARNESS_CODE_SERVER="$CS_ABSENT" HARNESS_ROOT="$HEALTHY_ROOT" HARNESS_FRICTION="$fr" HARNESS_EVIDENCE_DIR="$ev" "$H" doctor --json)
+	HARNESS_CODE_SERVER="$CS_ABSENT" HARNESS_ROOT="$HEALTHY_ROOT" HARNESS_FRICTION="$fr" HARNESS_EVIDENCE_DIR="$ev" "$H" doctor >/dev/null 2>&1; dac=$?
+	[ "$(printf '%s' "$daj" | jget verdict)" = "fail" ] || { t44=0; printf '  (TEST-44 absent verdict=%s want fail)\n' "$(printf '%s' "$daj" | jget verdict)"; }
+	[ "$dac" = "1" ] || { t44=0; printf '  (TEST-44 absent exit=%s want 1)\n' "$dac"; }
+	printf '%s' "$daj" | grep -q '"name": "code_server"' || { t44=0; printf '  (TEST-44 absent missing code_server check)\n'; }
+	printf '%s' "$daj" | json_valid || { t44=0; printf '  (TEST-44 absent --json not valid)\n'; }
+	[ "$t44" = "1" ] && ok "TEST-44 doctor code-server present->pass(0) / absent->fail(1), code_server in checks[]" || no "TEST-44 doctor code-server readiness (t44=$t44)"
+else skip "TEST-44 doctor code-server readiness (node absent)"; fi
+
+# ===========================================================================
+# TEST-45 (#26 T4): doctor records friction when code-server is absent (R4)
+# ===========================================================================
+fr=$(new_friction)
+# strip any seed doctor entry so we prove the absent-case record is (re)written
+grep -v '"verb": "doctor"' "$SEED_FRICTION" > "$fr"
+HARNESS_CODE_SERVER="$CS_ABSENT" HARNESS_ROOT="$HEALTHY_ROOT" HARNESS_FRICTION="$fr" HARNESS_EVIDENCE_DIR="$(new_evdir)" "$H" doctor >/dev/null 2>&1; d45c=$?
+dfc=$(grep -c '"verb": "doctor"' "$fr")
+t45=1
+[ "$d45c" = "1" ] || { t45=0; printf '  (TEST-45 doctor exit=%s want 1)\n' "$d45c"; }
+[ "$dfc" = "1" ] || { t45=0; printf '  (TEST-45 doctor friction count=%s want exactly 1)\n' "$dfc"; }
+grep '"verb": "doctor"' "$fr" | grep -q 'What did the agent have to infer that the harness should have proved?' || { t45=0; printf '  (TEST-45 doctor friction missing verbatim KEY_QUESTION)\n'; }
+if [ -n "$NODE" ]; then
+	sc45=$(grep '"verb": "doctor"' "$fr" | head -1 | jget suggested_closure)
+	{ [ -n "$sc45" ] && [ "$sc45" != "__ERR__" ] && [ "$sc45" != "__UNDEF__" ]; } || { t45=0; printf '  (TEST-45 doctor friction empty suggested_closure)\n'; }
+fi
+[ "$t45" = "1" ] && ok "TEST-45 doctor absent code-server records exactly one doctor friction (verbatim KQ, non-empty closure)" || no "TEST-45 doctor absent friction (t45=$t45)"
+
+# ===========================================================================
+# TEST-46 (#26 T4): verify aggregate -> fail when doctor fails on missing code-server
+# ===========================================================================
+if [ -n "$NODE" ] && [ "$TC_OK" = "1" ]; then
+	t46=1
+	fr=$(new_friction); ev=$(new_evdir)
+	vj=$(HARNESS_CODE_SERVER="$CS_ABSENT" HARNESS_FRICTION="$fr" HARNESS_EVIDENCE_DIR="$ev" "$H" verify --json)
+	HARNESS_CODE_SERVER="$CS_ABSENT" HARNESS_FRICTION="$fr" HARNESS_EVIDENCE_DIR="$ev" "$H" verify >/dev/null 2>&1; vac=$?
+	[ "$(printf '%s' "$vj" | jget verdict)" = "fail" ] || { t46=0; printf '  (TEST-46 absent verify verdict=%s want fail)\n' "$(printf '%s' "$vj" | jget verdict)"; }
+	[ "$vac" = "1" ] || { t46=0; printf '  (TEST-46 absent verify exit=%s want 1)\n' "$vac"; }
+	printf '%s' "$vj" | jget checks | grep -q 'doctor=fail' || { t46=0; printf '  (TEST-46 checks lacks doctor=fail: %s)\n' "$(printf '%s' "$vj" | jget checks)"; }
+	# present-case: verify keeps its prior non-fail verdict (no aggregate regression)
+	fr=$(new_friction); ev=$(new_evdir)
+	vpj=$(HARNESS_FRICTION="$fr" HARNESS_EVIDENCE_DIR="$ev" "$H" verify --json)
+	[ "$(printf '%s' "$vpj" | jget verdict)" != "fail" ] || { t46=0; printf '  (TEST-46 present verify unexpectedly fail)\n'; }
+	[ "$t46" = "1" ] && ok "TEST-46 verify -> fail(1) when doctor fails on missing code-server; present-case non-fail (no aggregate regression)" || no "TEST-46 verify aggregate fail on doctor (t46=$t46)"
+else skip "TEST-46 verify aggregate fail on doctor (node/typecheck unavailable)"; fi
+
+# ===========================================================================
+# TEST-47 (#26 T6): friction-log retrospect keeps the suite green
+# ===========================================================================
+t47=1
+# (a) valid JSONL: every non-empty committed line parses
+if [ -n "$NODE" ]; then
+	while IFS= read -r ln; do
+		[ -n "$ln" ] || continue
+		printf '%s' "$ln" | json_valid || { t47=0; printf '  (TEST-47 invalid JSONL line)\n'; }
+	done < "$SEED_FRICTION"
+fi
+# (b) coverage set for TEST-09 still present (kept + anchors)
+for v in lint test build boot clean verify; do grep -q "\"verb\": \"$v\"" "$SEED_FRICTION" || { t47=0; printf '  (TEST-47 missing coverage verb %s)\n' "$v"; }; done
+# (c) anchors #2 (test) / #4 (boot) retained, verbatim KQ + non-empty closure + retained-anchor intent
+for v in test boot; do
+	al=$(grep "\"verb\": \"$v\"" "$SEED_FRICTION" | grep 'RETAINED SOLELY' | head -1)
+	[ -n "$al" ] || { t47=0; printf '  (TEST-47 %s anchor missing retained-anchor intent)\n' "$v"; }
+	printf '%s' "$al" | grep -q 'What did the agent have to infer that the harness should have proved?' || { t47=0; printf '  (TEST-47 %s anchor missing verbatim KQ)\n' "$v"; }
+	if [ -n "$NODE" ] && [ -n "$al" ]; then
+		sc=$(printf '%s' "$al" | jget suggested_closure)
+		{ [ -n "$sc" ] && [ "$sc" != "__ERR__" ] && [ "$sc" != "__UNDEF__" ]; } || { t47=0; printf '  (TEST-47 %s anchor empty suggested_closure)\n' "$v"; }
+	fi
+done
+# (d) delete-on-fix: resolved verbs `edit` and `dev` are fully removed
+for gone in edit dev; do
+	grep -q "\"verb\": \"$gone\"" "$SEED_FRICTION" && { t47=0; printf '  (TEST-47 resolved verb %s still present)\n' "$gone"; }
+done
+# (e) log shrank to the retrospected set (<= 12 records; was 35 pre-retrospect)
+n47=$(awk 'NF{n++}END{print n+0}' "$SEED_FRICTION")
+[ "$n47" -le 12 ] || { t47=0; printf '  (TEST-47 log has %s records; expected <=12 post-retrospect)\n' "$n47"; }
+[ "$t47" = "1" ] && ok "TEST-47 friction retrospect: valid JSONL, coverage+anchors kept, resolved edit/dev deleted, log shrank ($n47 records)" || no "TEST-47 friction retrospect integrity (t47=$t47)"
+
+# ===========================================================================
+# TEST-48 (#26 T7): README + .harness/README document --agent and the doctor rule
+# ===========================================================================
+t48=1
+ROOT_RD48="$REPO/README.md"; HARN_RD48="$REPO/.harness/README.md"
+for f in "$ROOT_RD48" "$HARN_RD48"; do
+	grep -qF -- 'friction add --agent' "$f" || { t48=0; printf '  (TEST-48 %s missing "friction add --agent")\n' "$(basename "$f")"; }
+	grep -qi 'code-server' "$f" || { t48=0; printf '  (TEST-48 %s missing code-server rule)\n' "$(basename "$f")"; }
+done
+[ "$t48" = "1" ] && ok "TEST-48 README + .harness/README document friction add --agent and the doctor code-server rule" || no "TEST-48 docs for --agent + doctor rule (t48=$t48)"
 
 # ===========================================================================
 # Summary

@@ -28,6 +28,13 @@
         "ghcr.io/jsburckhardt/devcontainer-features/just": {},
         "ghcr.io/devcontainers/features/github-cli": {},
         "ghcr.io/devcontainers/features/copilot-cli": {},
+        // code-server is a REQUIRED editor provider for a stable Ascend
+        // environment (ADR-0008 / CORE-COMPONENT-0003 R19): `./harness doctor`
+        // FAILS when `command -v code-server` is empty, which fails `verify`.
+        // Provisioning it here is the durable replacement for ADR-0006/#9's
+        // transient /tmp installer. No code-server launch flags belong here or in
+        // src/ or the harness (ADR-0006 §5.7 isolation stays in the launcher).
+        "ghcr.io/coder/devcontainer-features/code-server:1": {},
         "ghcr.io/rosstaco/devcontainer-features/copilot-persistence:1": {},
         "ghcr.io/jsburckhardt/devcontainer-features/tmux": {}
     },

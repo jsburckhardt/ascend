@@ -7,6 +7,12 @@ Adopted
 > **Amended 2026-07-20 (issue #5, ADR-0004):** added **R17** (interactive/handoff
 > verbs), the `mode` contract attribute, and the associated verdict/evidence
 > exemption and regression-suite conventions.
+>
+> **Amended 2026-07-23 (issue #26, ADR-0007/ADR-0008):** added the friction
+> record **`agent`** field (additive, `unknown` default/sentinel) and **R18**
+> (agent attribution); added **R19** (code-server readiness is a required
+> `doctor` check that FAILS when absent), which supersedes the R6 "`doctor` never
+> fails the aggregate" note and DECISION-LOG #28 for the code-server case.
 
 ## Purpose
 
@@ -73,8 +79,13 @@ editing `contract.yml` data).
   3. Else if EVERY member is `unknown` → `unknown`.
   4. Otherwise (a mix of `pass`/`degraded`/`unknown` with no `fail`) → `degraded`.
 
-  `doctor` participates in the aggregate; because it only emits `pass`/`degraded` it can move
-  the aggregate toward `degraded` but never `fail`. In the Issue #4 baseline the members are
+  `doctor` participates in the aggregate; because it emits `pass`/`degraded` for the
+  Node/`node_modules` checks it can move the aggregate toward `degraded` but never
+  `fail` for those checks. **Exception (R19, ADR-0008):** the code-server readiness
+  check makes `doctor` emit `fail` when code-server is absent, which — via this same
+  rule — makes the `verify` aggregate `fail`; this supersedes the earlier
+  "`doctor` never fails the aggregate" statement (DECISION-LOG #28) for the
+  code-server case only. In the Issue #4 baseline the members are
   typecheck=`pass`, lint/test/build=`unknown`, doctor=`pass`/`degraded`, so the aggregate is
   `degraded`; once #5 populates `lint`/`test`/`build` `maps_to` and they pass (doctor
   healthy), the SAME rule yields `pass` with no code change.
@@ -179,6 +190,35 @@ editing `contract.yml` data).
      and exits without hanging.
   `help`, `orient`, and `status` MUST represent handoff verbs honestly (listed as interactive,
   emitting no verdict); the automatic verb count includes them.
+- **R18 — Friction agent attribution (ADR-0007).** Every friction record MUST identify exactly
+  one responsible **`agent`**. The record schema carries an `agent` string field, **appended
+  after `severity`**, that is **additive and backward-compatible** (R7/R8): no existing key is
+  renamed, removed, or reordered, and existing `--json`/test consumers keep working. The
+  sentinel **`unknown`** is the single distinct value for "no agent / legacy / internal"
+  friction: a record with no `agent` field on read (every legacy record, and any record written
+  without attribution) MUST be interpreted as `unknown`, and there is NO on-disk backfill.
+  `./harness friction add` MUST accept an **`--agent <name>` flag** (NOT positional); when it is
+  omitted the field defaults to `unknown`. The internal auto-recorder (`ensure_friction`, R4)
+  MUST write `agent: "unknown"` and MUST keep deduping by `verb` ONLY (no agent-aware dedupe).
+  Each RPIV stage agent MUST self-attribute by passing its own name via `--agent` in its
+  `<!-- HARNESS:BEGIN -->` block; because the `.agent.md` files are APS artifacts, that block
+  is changed **through the APS agent** (`.github/agents/aps-v1.2.2.agent.md`, generate + lint),
+  not by hand-editing markers, while preserving the R10-idempotent result. A per-agent view is
+  obtained by filtering `friction list` on `agent`; no persistent improvement store or new verb
+  is added.
+- **R19 — code-server readiness is a required `doctor` check that FAILS when absent
+  (ADR-0008).** `doctor` MUST probe editor-provider (code-server) presence (e.g. `command -v
+  code-server`, with a testability seam that lets the regression suite control the probe target
+  deterministically). When code-server is **present** the check contributes `pass`; when it is
+  **absent** `doctor` MUST return **`fail`** (exit non-zero), NOT `degraded`, because code-server
+  is a REQUIRED dependency for a stable environment. This is an explicit exception to the R6
+  "`doctor` never fails the aggregate" note and **supersedes DECISION-LOG #28 and the ADR-0006
+  §7 documented-but-absent-prerequisite stance** for the code-server case. Because `doctor` is a
+  `verify.aggregate` member (R6), a failing `doctor` makes `./harness verify` `fail` with no
+  aggregate-logic change. The Node/`node_modules` checks are unchanged (still `degraded`, never
+  `fail`, per R15 / Decision #61); only the code-server check is fail-when-absent. A stable
+  environment MUST provision code-server (e.g. in `.devcontainer/devcontainer.json`) so `verify`
+  can pass.
 
 ### Interfaces
 
@@ -252,11 +292,15 @@ editing `contract.yml` data).
     "inference": "There is no test runner or test script; the test verb returns unknown.",
     "proof_gap": "No `npm test` script and no test files exist in the repo.",
     "suggested_closure": "Issue #5 adds dev/validation commands; wire the test verb in contract.yml.",
-    "severity": "info"
+    "severity": "info",
+    "agent": "unknown"
   }
   ```
   Required fields: `ts`, `verb`, `key_question` (verbatim KEY_QUESTION), `inference`,
-  `proof_gap`, `suggested_closure`.
+  `proof_gap`, `suggested_closure`. The **`agent`** field (R18, ADR-0007) is appended after
+  `severity`; it is additive and backward-compatible — a record with no `agent` field on read
+  is interpreted as the `unknown` sentinel. `./harness friction add --agent <name>` sets it;
+  omitting `--agent` (and the internal `ensure_friction` auto-recorder) yields `agent: "unknown"`.
 
 ### Expectations
 
@@ -306,12 +350,12 @@ constraints of ADR-0002 and PRD §28.7.
 ./harness test               # verdict: unknown, exit 0, friction recorded
 ./harness test --json        # { "verb": "test", "verdict": "unknown", ... }
 
-# Record and read a gap the harness could not prove
-./harness friction add --verb test \
+# Record and read a gap the harness could not prove (self-attributed via --agent)
+./harness friction add --agent rpiv-research --verb test \
   --inference "No test runner exists" \
   --proof-gap "No npm test script or test files" \
   --suggested-closure "Wire test verb in contract.yml when #5 lands"
-./harness friction list --json
+./harness friction list --json          # each entry carries an "agent" field ("unknown" if omitted)
 ```
 
 Example `.github/soft-factory/verification.yml` wiring:
@@ -374,4 +418,6 @@ How is compliance with this component verified?
 - [ADR-0003-repo-local-engineering-harness](../ADR/ADR-0003-repo-local-engineering-harness.md)
 - [ADR-0004-interactive-handoff-verbs](../ADR/ADR-0004-interactive-handoff-verbs.md)
 - [ADR-0002-ascend-baseline-stack-and-layout](../ADR/ADR-0002-ascend-baseline-stack-and-layout.md)
+- [ADR-0007-agent-attributed-friction-and-issue-scoped-retrospect](../ADR/ADR-0007-agent-attributed-friction-and-issue-scoped-retrospect.md)
+- [ADR-0008-doctor-code-server-readiness-required](../ADR/ADR-0008-doctor-code-server-readiness-required.md)
 - [CORE-COMPONENT-0002-commit-standards](./CORE-COMPONENT-0002-commit-standards.md)

@@ -237,6 +237,30 @@ if `tsc --noEmit` **or** `npm test` fails. `verify` therefore needs
 `node:test` suite itself runs with zero installed packages. Run directly,
 `npm run typecheck` exits `0`.
 
+> **code-server readiness is required (ADR-0008).** `./harness doctor` also probes
+> the editor provider: when `command -v code-server` is empty it returns
+> **`fail`** (not `degraded`), which makes `./harness verify` **`fail` (exit 1)**
+> because `doctor` is a `verify` aggregate member. code-server is a required
+> dependency for a stable environment and is provisioned in
+> [`.devcontainer/devcontainer.json`](.devcontainer/devcontainer.json); the probe
+> target is overridable for tests via `HARNESS_CODE_SERVER`. Node/`node_modules`
+> checks stay `degraded` (never `fail`) — only code-server is fail-when-absent.
+
+### Recording friction (self-attributed)
+
+When a verb cannot prove something, record a **friction** entry answering the
+KEY_QUESTION. Agents self-attribute with the **`--agent <name>` flag** (additive;
+defaults to the `unknown` sentinel when omitted, which is also how legacy records
+read):
+
+```sh
+./harness friction add --agent rpiv-research --verb test \
+  --inference "No test runner exists" \
+  --proof-gap "No npm test script or test files" \
+  --suggested-closure "Wire the test verb in contract.yml"
+./harness friction list --json          # each entry carries an "agent" field
+```
+
 ## Documentation
 
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — pipeline workflow, how to contribute via GitHub Issues, and where artifacts belong

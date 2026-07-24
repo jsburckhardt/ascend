@@ -5,9 +5,13 @@
 # `unknown` non-blocking (exit 0) while a real failing wrapped command exits
 # non-zero, so the Verify stage is deterministic.
 #
-# In the Issue #4 baseline `./harness verify` returns `degraded` (typecheck
-# passes; test/lint/build are unknown) and exits 0.
+# NOTE (ADR-0008 / issue #26): `./harness verify` can now legitimately return
+# `fail` (exit 1) even with no failing wrapped command — its `doctor` member is
+# fail-when-absent for code-server readiness (a required editor provider,
+# CORE-COMPONENT-0003 R19). So `verify` fails until code-server is provisioned
+# (see `.devcontainer/devcontainer.json`). Node/`node_modules` checks remain
+# `degraded` (non-blocking); only the code-server check blocks.
 verification:
   - name: harness-verify
     command: "./harness verify"
-    description: "Aggregate static verification gate (wraps npm run typecheck); degraded is non-blocking."
+    description: "Aggregate static verification gate (wraps npm run typecheck); degraded is non-blocking, but doctor's code-server readiness check fails verify when code-server is absent (ADR-0008)."

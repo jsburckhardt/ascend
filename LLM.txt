@@ -2,6 +2,12 @@ AGENTS.md                                                   — Agent definition
 CONTRIBUTING.md                                             — Human contribution guide
 LLM.txt                                                     — This file; repo map for AI agents
 README.md                                                   — Project overview
+PRD.md                                                      — Ascend MVP product requirements and acceptance criteria
+package.json                                                — pnpm workspace scripts and shared development dependencies
+pnpm-workspace.yaml                                         — pnpm workspace package declaration
+justfile                                                    — Project setup, operation, and verification command interface
+apps/web/                                                   — React/Vite project-home application
+apps/api/                                                   — Fastify lifecycle API, SQLite/Drizzle, and OpenTelemetry foundation
 .devcontainer/devcontainer.json                             — Dev container configuration
 .devcontainer/post-create.sh                                — One-time container setup for tmux config and GitHub CLI aliases
 .devcontainer/post-start.sh                                 — Per-start shared tmux session and dynamic environment setup
@@ -23,8 +29,9 @@ README.md                                                   — Project overview
 docs/README.md                                              — Application documentation index
 project/README.md                                             — Project documentation index
 project/architecture/README.md                                 — Architecture documentation index
-project/architecture/soft-factory-pipeline.excalidraw          — Pipeline diagram source
+project/architecture/ascend-pipeline.excalidraw          — Pipeline diagram source
 project/architecture/ADR/ADR-260101-template.md                — ADR template (read-only, copy to create date-based artifacts)
+project/architecture/ADR/ADR-260808-typescript-monorepo.md      — Accepted Ascend technology and host-workbench architecture
 project/architecture/ADR/DECISION-LOG.md                       — Registry of all ADR and core-component decisions
 project/architecture/core-components/CORE-COMPONENT-260101-template.md — Core-component template (read-only, copy to create date-based artifacts)
 project/architecture/core-components/CORE-COMPONENT-260505-commit-standards.md — Commit standards (Conventional Commits, Co-authored-by)
@@ -32,5 +39,10 @@ project/architecture/core-components/CORE-COMPONENT-260806-rpiv-stage-contract.m
 project/architecture/core-components/CORE-COMPONENT-260806-project-command-interface.md — Justfile command contract
 project/architecture/core-components/CORE-COMPONENT-260806-agent-executable-acceptance-criteria.md — Agent-executable issue criteria contract
 project/architecture/core-components/CORE-COMPONENT-260806-architecture-artifact-naming.md — Date-based architecture artifact naming contract
+project/architecture/core-components/CORE-COMPONENT-260808-structured-runtime-logging.md — Structured console logging and OpenTelemetry contract
+project/architecture/core-components/CORE-COMPONENT-260808-runtime-lifecycle-error-handling.md — Workbench lifecycle and failure contract
+project/architecture/core-components/CORE-COMPONENT-260808-filesystem-path-safety.md — Canonical project paths and non-destructive close contract
+project/architecture/core-components/CORE-COMPONENT-260808-host-process-environment.md — Host-native process and terminal environment contract
+project/architecture/core-components/CORE-COMPONENT-260808-development-standards.md — TypeScript, test, and validation standards
 project/architecture/core-components/README.md                 — Core-components index
 project/work-items/README.md                                   — Work-items index and canonical structure

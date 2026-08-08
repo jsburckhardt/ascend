@@ -6,8 +6,8 @@ workspace_dir="$PWD"
 config_file="$workspace_dir/.devcontainer/tmux.conf"
 socket_file="$workspace_dir/.devcontainer/.tmux-shared"
 
-if ! tmux -S "$socket_file" has-session -t soft-factory 2>/dev/null; then
-    tmux -S "$socket_file" -f "$config_file" new-session -d -s soft-factory -c "$workspace_dir"
+if ! tmux -S "$socket_file" has-session -t ascend 2>/dev/null; then
+    tmux -S "$socket_file" -f "$config_file" new-session -d -s ascend -c "$workspace_dir"
 fi
 
 tmux -S "$socket_file" source-file "$config_file"

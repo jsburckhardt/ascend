@@ -6,7 +6,7 @@ This file is the single registry of all architectural decisions and core-compone
 
 | ID | Title | Status | Date |
 |----|-------|--------|------|
-| _No ADRs yet. Copy `ADR-260101-template.md` and name it `ADR-yymmdd-short-slug.md`._ | | | |
+| ADR-260808-typescript-monorepo | TypeScript Monorepo and Host Workbench Stack | Accepted | 2026-08-08 |
 
 ## Core-Components
 
@@ -17,6 +17,11 @@ This file is the single registry of all architectural decisions and core-compone
 | CORE-COMPONENT-260806-project-command-interface | Project Command Interface | Adopted | 2026-08-06 |
 | CORE-COMPONENT-260806-agent-executable-acceptance-criteria | Agent-Executable Acceptance Criteria | Adopted | 2026-08-06 |
 | CORE-COMPONENT-260806-architecture-artifact-naming | Architecture Artifact Naming | Adopted | 2026-08-06 |
+| CORE-COMPONENT-260808-structured-runtime-logging | Structured Runtime Logging | Adopted | 2026-08-08 |
+| CORE-COMPONENT-260808-runtime-lifecycle-error-handling | Runtime Lifecycle and Error Handling | Adopted | 2026-08-08 |
+| CORE-COMPONENT-260808-filesystem-path-safety | Filesystem Path Safety | Adopted | 2026-08-08 |
+| CORE-COMPONENT-260808-host-process-environment | Host Process and Environment Handling | Adopted | 2026-08-08 |
+| CORE-COMPONENT-260808-development-standards | TypeScript Development Standards | Adopted | 2026-08-08 |
 
 ## Decisions
 
@@ -49,3 +54,12 @@ Short, actionable statements derived from ADRs and core-components. More than on
 | 23 | Require Implement to update affected application documentation and Verify to inspect it | CORE-COMPONENT-260806-rpiv-stage-contract | 2026-08-06 |
 | 24 | Store RPIV artifacts under stable `project/work-items/<issue-number>-<short-description>/` paths | CORE-COMPONENT-260806-rpiv-stage-contract | 2026-08-07 |
 | 25 | Reuse an existing same-issue work-item directory before creating a new artifact path | CORE-COMPONENT-260806-rpiv-stage-contract | 2026-08-07 |
+| 26 | Build Ascend as a pnpm TypeScript monorepo with React/Vite and Fastify application packages | ADR-260808-typescript-monorepo | 2026-08-08 |
+| 27 | Persist local project metadata with SQLite and Drizzle ORM | ADR-260808-typescript-monorepo | 2026-08-08 |
+| 28 | Run one code-server process directly on the host for each active MVP project | ADR-260808-typescript-monorepo | 2026-08-08 |
+| 29 | Delegate editing, terminals, exploration, previews, Git UI, and extensions to code-server | ADR-260808-typescript-monorepo | 2026-08-08 |
+| 30 | Write simple structured runtime events to standard streams and use OpenTelemetry defaults for observability | CORE-COMPONENT-260808-structured-runtime-logging | 2026-08-08 |
+| 31 | Centralize workbench process ownership and explicit lifecycle errors behind one runtime manager | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-08 |
+| 32 | Canonicalize project paths and prohibit filesystem mutation during project close | CORE-COMPONENT-260808-filesystem-path-safety | 2026-08-08 |
+| 33 | Launch workbenches as least-privilege host processes with deterministic user environments | CORE-COMPONENT-260808-host-process-environment | 2026-08-08 |
+| 34 | Enforce strict TypeScript, automated formatting and linting, Vitest, Playwright, and 80 percent unit coverage | CORE-COMPONENT-260808-development-standards | 2026-08-08 |

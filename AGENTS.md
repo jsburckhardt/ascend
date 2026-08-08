@@ -35,6 +35,15 @@ You MUST mark a PR review comment as resolved via the GitHub API after fixing th
 
 <constants>
 APS_BADGE: "[![APS version](https://img.shields.io/badge/APS-v1.2.2-blue?logo=github)](https://github.com/chris-buckley/agnostic-prompt-standard/releases/tag/v1.2.2)"
+PROJECT: YAML<<
+name: Ascend
+requirements: PRD.md
+stack_decision: project/architecture/ADR/ADR-260808-typescript-monorepo.md
+applications:
+  - apps/web
+  - apps/api
+command_interface: justfile
+>>
 PIPELINE_STAGES: YAML<<
 - id: research
   name: Research
@@ -105,6 +114,7 @@ bootstrap:
     - terminal execution
     - GitHub CLI (gh)
   read_paths:
+    - PRD.md
     - docs/
     - project/
     - project/architecture/ADR/ADR-260101-template.md

@@ -39,12 +39,12 @@ You MUST answer KEY_QUESTION in friction records.
 You MUST update AGENTS.md to require ./harness usage.
 You MUST update .github/agents/*.agent.md to use ./harness after the harness is configured.
 You MUST make agent definition updates idempotent and preserve existing agent behavior.
-You MUST import any existing `.github/soft-factory/verification.yml` commands into the harness command map.
+You MUST import any existing `.github/ascend/verification.yml` commands into the harness command map.
 You MUST include focused and full validation behavior in ./harness and .harness/contract.yml.
 You MUST expose focused validation as ./harness verify-focused.
 You MUST expose full validation as ./harness verify.
 You MUST remove every verification.yml reference from AGENTS.md and repo agent definitions.
-You MUST delete `.github/soft-factory/verification.yml` only after successful harness migration.
+You MUST delete `.github/ascend/verification.yml` only after successful harness migration.
 You MUST verify no verification.yml references remain after deletion.
 You MUST require every RPIV stage to read harness friction before phase work.
 You MUST require every RPIV stage to record harness friction before every success or failure handoff.
@@ -75,7 +75,7 @@ RPIV_PHASES: YAML<<
 - implement
 - verify
 >>
-LEGACY_VERIFICATION_PATH: ".github/soft-factory/verification.yml"
+LEGACY_VERIFICATION_PATH: ".github/ascend/verification.yml"
 
 AGENT_HARNESS_RULES: TEXT<<
 - Once ./harness and .harness/contract.yml exist, agents MUST use ./harness as the first-choice operating surface for supported commands.
@@ -83,7 +83,7 @@ AGENT_HARNESS_RULES: TEXT<<
 - Implement agents MUST run ./harness verify-focused --json while building and ./harness verify --json before handoff.
 - Verify agents MUST run ./harness verify --json independently.
 - Agents MUST treat .harness/contract.yml as the validation contract.
-- Agents MUST NOT read, create, or reference .github/soft-factory/verification.yml.
+- Agents MUST NOT read, create, or reference .github/ascend/verification.yml.
 - Every RPIV stage agent MUST run ./harness friction list --json before phase work.
 - Every RPIV stage agent MUST run ./harness friction add --phase <phase> --file <path> --json before every success or failure handoff.
 - Friction entries MUST include phase, status, inference, missing proof, evidence, and KEY_QUESTION.
@@ -307,7 +307,7 @@ SET AGENT_UPDATE_SUMMARY := <SUMMARY> (from "Agent Inference" using AGENT_FILE_P
 </process>
 
 <process id="verify-agent-migration" name="Verify agents use the harness contract">
-USE `search/textSearch` where: query=".github/soft-factory/verification.yml"
+USE `search/textSearch` where: query=".github/ascend/verification.yml"
 CAPTURE REMAINING_VERIFICATION_REFERENCES from `search/textSearch`
 SET MIGRATION_COMPLETE := <COMPLETE> (from "Agent Inference" using AGENTS_MD_PATH, AGENT_FILES, CONTRACT_PATH, HARNESS_PATH, REMAINING_VERIFICATION_REFERENCES, RPIV_PHASES; require friction list and friction add hooks in every RPIV stage agent and ignore migration-only references inside harness-cli-it.agent.md)
 IF MIGRATION_COMPLETE is false:
@@ -317,7 +317,7 @@ IF MIGRATION_COMPLETE is false:
 
 <process id="remove-legacy-verification" name="Delete the migrated verification config">
 IF VERIFY_VERDICT = "pass" and LEGACY_VERIFICATION_EXISTS is true:
-  USE `execute/runInTerminal` where: command="rm -f .github/soft-factory/verification.yml"
+  USE `execute/runInTerminal` where: command="rm -f .github/ascend/verification.yml"
   CAPTURE REMOVE_OUTPUT from `execute/runInTerminal`
 </process>
 

@@ -54,7 +54,9 @@ Those recommendations are proposal-only by default. They are not applied by this
 
 For this skill package, structural validation is enough:
 
-- `just list-skills` discovers the skill;
+- the committed
+  `.agents/skills/eng-harness-0-harnessability-assessment/SKILL.md` surface and
+  same-named `skills-lock.json` entry expose the repository-local skill;
 - JSON templates parse and the schema validates as a Draft 2020-12 schema;
 - the example JSON validates against the schema;
 - shipped surfaces preserve the boundary sentence;

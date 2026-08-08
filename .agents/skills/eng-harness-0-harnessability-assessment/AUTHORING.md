@@ -86,7 +86,8 @@ The skill may run linearly or fan out across six read-only subsystem subagents (
 
 Run these checks before committing changes to this package:
 
-1. `just list-skills`
+1. Confirm `.agents/skills/eng-harness-0-harnessability-assessment/SKILL.md` and
+   its same-named root `skills-lock.json` entry are present.
 2. Parse all JSON templates and confirm the schema validates as a Draft 2020-12 schema:
    - `templates/assessment-report.schema.json`
    - `templates/assessment-latest.json`

@@ -33,7 +33,7 @@ This component applies to .harness/ governance and extensions, repository-local 
 
 ### Expectations
 - Repeated checks and boot runs at one revision and dependency state produce stable semantic verdict fields while timestamps, durations, and captured output may vary.
-- Error envelopes identify the failed operation, retain diagnostics, and tell the agent which harness command to rerun after correction.
+- Checks error envelopes identify the failed operation, retain the last 20 lines from each non-empty standard-error and standard-output stream in labeled diagnostic details, fall back to an explicit exit-code diagnostic when both streams are empty, and tell the agent to rerun harness checks after correction.
 - The harness does not mutate tracked content during checks, boot, discovery, flow validation, or evidence inspection.
 - Legacy agent-specific harness bootstrap definitions are removed after the governed CLI, skills, and lifecycle integration replace them.
 

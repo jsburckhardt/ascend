@@ -4,7 +4,7 @@ Implementation starts from the existing complete worktree. Do not rebuild or rep
 
 ## Task T-1: Validate and finish the governed harness nucleus
 
-- **Status:** Complete — validated with V-1, V-2, V-3, V-11, V-12, and focused verification
+- **Status:** Complete — verifier correction preserves bounded stdout/stderr failure diagnostics; V-2 stdout-only negative path and focused verification pass
 - **Complexity:** CS-3 (medium)
 - **Dependencies:** None
 - **Acceptance Criteria:** AC-1, AC-2, AC-3, AC-15, AC-18, AC-19, AC-20
@@ -64,7 +64,7 @@ Validate every .harness/reports/harnessability baseline, alias, evidence, summar
 
 ## Task T-3: Validate repository-local skills and installation locks
 
-- **Status:** Complete — validated with V-6 inventory, lock assertions, and focused verification
+- **Status:** Complete — stale skill discovery guidance removed; V-6 inventory, lock assertions, and focused verification pass
 - **Complexity:** CS-2 (small)
 - **Dependencies:** T-1
 - **Acceptance Criteria:** AC-6, AC-23
@@ -151,7 +151,7 @@ Validate .github/agents/rpiv-implementer.agent.md as an executable contract: req
 
 ## Task T-6: Produce consolidated evidence and canonical validation handoff
 
-- **Status:** Complete — consolidated evidence recorded; focused and full validation passed
+- **Status:** Complete — verifier correction evidence recorded; bounded negative path plus focused and full validation pass
 - **Complexity:** CS-4 (large)
 - **Dependencies:** T-2, T-3, T-5
 - **Acceptance Criteria:** AC-2, AC-3, AC-4, AC-5, AC-6, AC-7, AC-8, AC-9, AC-10, AC-11, AC-12, AC-13, AC-14, AC-15, AC-16, AC-17, AC-19, AC-20, AC-21, AC-22, AC-23

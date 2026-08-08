@@ -2,29 +2,29 @@
 
 ## Scope and status
 
-Issue #3 was implemented from the complete existing worktree in dependency order. This record provides Implement-stage evidence only; final acceptance remains owned by Verify.
+Issue #3 was implemented from the complete existing worktree in dependency order. The verifier-owned correction preserves checks diagnostics from both process streams, removes stale skill guidance, and aligns the checks documentation with the corrected behavior. This record provides Implement-stage evidence only; final acceptance remains owned by Verify.
 
 ## Completed tasks
 
 | Task | Result | Focused validation |
 |---|---|---|
-| T-1 | Governed checks and boot nucleus inspected; positive, negative, discovery, determinism, and process behavior validated | just verify-focused passed, 3 files and 3 tests |
+| T-1 | Checks failures now retain bounded labeled stderr/stdout diagnostics with a non-empty exit-code fallback; stdout-only negative path passed | just verify-focused passed, 3 files and 3 tests |
 | T-2 | Immutable reports, flows, generated views, change records, and retros validated | just verify-focused passed, 3 files and 3 tests |
-| T-3 | Nine local skills and both lock surfaces validated | just verify-focused passed, 3 files and 3 tests |
+| T-3 | Nine local skills and both lock surfaces validated; stale `just list-skills` guidance replaced with committed skill/lock inventory guidance | just verify-focused passed, 3 files and 3 tests |
 | T-4 | RPIV lifecycle replacement, canonical request, legacy deletion, and formatting scope validated | just verify-focused passed, 3 files and 3 tests |
 | T-5 | Implementer observation, correction, documentation, commit, and handoff contracts validated | just verify-focused passed, 3 files and 3 tests |
-| T-6 | APS matrix, consolidated evidence, sequential harness checks, and canonical validation completed | just verify-focused passed, 3 files and 3 tests |
+| T-6 | Verifier correction evidence, stdout-only negative path, extension discovery, and canonical validation completed | just verify-focused passed, 3 files and 3 tests |
 
 ## Acceptance evidence catalog
 
 | AC | Concrete repository evidence | Result |
 |---|---|---|
 | AC-1 | .harness/engineering-harness.md lines 7-74 contains boot, checks, health, interaction, observation, evidence, four RPIV fire seams plus coding observation, four back-pressure gaps, and one current L3 marker | Pass |
-| AC-2 | checks extension lines 10-16 delegates to just verify. Success returned command=checks, status=ok, data.command=just verify. Injected exit 17 returned E_WRAP_FAILED with details and rerun action | Pass |
+| AC-2 | `.harness/extensions/checks/extension.ts:12-28` delegates to `just verify`, keeps the last 20 lines of each non-empty stderr/stdout stream with labels, and supplies an exit-code fallback. A temporary stdout-only fake `just` exited 17; `harness checks --json` exited 1 with `E_WRAP_FAILED`, `details=stdout:\nstdout-only-diagnostic`, and the rerun action | Pass |
 | AC-3 | boot extension lines 11-38 composes checks. Success returned ready, harness checks proof, test-backed scaffold mode, just run, exact 5173 and 3000 endpoints, and duration_ms=21886; listener delta was empty | Pass |
 | AC-4 | Report schema validated; canonical/latest SHA-256 pairs match at 0995e8b3261a58f32bc5e88d6794f9353f8adaeec5f62609828cb90809e4dd94 JSON and 209a3c90752ad6637554746cfdb44828624d306fa2f819b5d1fc1c3e41916398 Markdown; scores, GAP-001 through GAP-005, H2, and L2 were asserted | Pass |
 | AC-5 | Flow show and render checks passed for adopt and loop; governance, inject, build-boot, boot, retro-drain, retro-harvest, improve, and improve-boot-duration are done; both change records resolve named evidence; excursion schema remains open | Pass |
-| AC-6 | Skill directory and root lock keys are the same sorted nine names; every computedHash is lowercase 64-hex; installation lock has one project, packaged, github-copilot install | Pass |
+| AC-6 | Skill directory and root lock keys are the same sorted nine names; every computedHash is lowercase 64-hex; installation lock has one project, packaged, github-copilot install. README/AUTHORING guidance now names the committed skill surface and lock entry, and the package contains zero `just list-skills` references | Pass |
 | AC-7 | rpiv.agent.md main route orders branch, pre-flight, Research, Plan, pre-coding, Implement, post-coding, Verify, post-flight; correction repeats pre-coding and post-coding; six HARNESS_RESULT captures are advisory | Pass |
 | AC-8 | Implementer constants list all eight triggers and kinds; record-pending-friction excludes OBSERVED_EVENTS then appends; both validation failures observe difficulty before correction; unsupported kinds are rejected at line 315 before command execution at line 316 | Pass |
 | AC-9 | Coordinator line 305 builds exactly branch_name, issue_number, plan_handoff, verification_feedback, work_item_path; path and stale handoff return to Plan; branch mismatch returns an Implement error | Pass |
@@ -43,13 +43,22 @@ Issue #3 was implemented from the complete existing worktree in dependency order
 | AC-22 | Ajv 2020 accepted the report; both flow show operations and both render --check operations exited zero; cmp accepted both aliases | Pass |
 | AC-23 | The bounded governance, envelope, report, flow, skill, lifecycle, execution-path, APS, legacy, formatting, determinism, and validation tables in this file use repository files only | Pass |
 
+## Verifier correction evidence
+
+| Defect | Concrete correction and proof | Result |
+|---|---|---|
+| Stdout-only failure diagnostics | `.harness/extensions/checks/extension.ts:14-21` builds bounded labeled details from both streams and falls back to the exit code. The bounded fake `just` emitted only `stdout-only-diagnostic` and exited 17; the harness envelope exited 1 with non-empty `error.details` exactly `stdout:\nstdout-only-diagnostic` | Pass |
+| Diagnostics documentation | `.harness/extensions/checks/instructions.md:11-21` and `CORE-COMPONENT-260808-engineering-harness-delivery-contract.md:36` state the same stderr-first, stdout-second, 20-line-per-stream and empty-stream fallback behavior | Pass |
+| Skill guidance | `.agents/skills/eng-harness-0-harnessability-assessment/README.md:53-65` and `AUTHORING.md:85-96` point to the committed `SKILL.md` and root lock entry; bounded grep found no `just list-skills` references | Pass |
+| Extension discovery | `harness doctor --json` reported extensions `2 loaded, 0 failed, 0 conflict(s)` and the checks extension in loaded status; unrelated aggregate degradation remained telemetry-flush-hook only | Pass |
+
 ## Harness command evidence
 
 | Validation | Evidence | Result |
 |---|---|---|
 | V-1 governance | Sections at lines 7, 13, 18, 26, 31, 37, 45, 53, 65, and 73; seam rows at 59-63; one bold L3 match | Pass |
 | V-2 checks success | command=checks, status=ok, data.command=just verify, exit 0 | Pass |
-| V-2 checks failure | Temporary untracked fake just exited 17; E_WRAP_FAILED, injected-just-failure details, non-empty correction and rerun action, exit 1 | Pass |
+| V-2 checks failure | Temporary untracked stdout-only fake `just` exited 17; harness exited 1 with E_WRAP_FAILED, `details=stdout:\nstdout-only-diagnostic`, and a non-empty rerun action | Pass |
 | V-3 boot success | command=boot, status=ok, readiness=ready, proof=harness checks, mode=test-backed scaffold, start_command=just run, exact endpoints, duration_ms=21886 | Pass |
 | V-3 boot failure | Temporary untracked fake child exited 19; E_BOOT_CHECKS_FAILED, elapsed details, rerun boot action, no ready data, exit 1 | Pass |
 | V-11 checks pair | Both normalized to command=checks, status=ok, wrapped_command=just verify | Pass |
@@ -89,6 +98,7 @@ builder, eng-harness-0-harnessability-assessment, eng-harness-flow, eng-harness-
 | the-flow computedHash is lowercase 64-hex | Pass |
 | validate-v2 computedHash is lowercase 64-hex | Pass |
 | One installation: scope=project, source=packaged, targets=[github-copilot] | Pass |
+| Skill README/AUTHORING reference the committed `SKILL.md` and lock entry; stale `just list-skills` references are absent | Pass |
 
 ## RPIV lifecycle and execution-path evidence
 
@@ -173,8 +183,8 @@ Rule text is copied from .github/agents/aps-v1.2.2.agent.md lines 159-184. Evide
 
 | Documentation scope | Disposition |
 |---|---|
-| Harness governance and usage | Added .harness/engineering-harness.md and verb instruction files with boot, checks, interaction, observation, evidence, lifecycle, maturity, and gap guidance |
-| Explanatory architecture | Added ADR-260808-governed-engineering-harness.md and CORE-COMPONENT-260808-engineering-harness-delivery-contract.md; updated DECISION-LOG.md with both artifacts and decisions 35-42 |
+| Harness governance and usage | Updated `.harness/extensions/checks/instructions.md` to specify stderr-first/stdout-second bounded failure excerpts and the non-empty fallback; setup and command delegation remain unchanged |
+| Explanatory architecture | Updated `CORE-COMPONENT-260808-engineering-harness-delivery-contract.md` so its diagnostics contract exactly matches corrected checks behavior; no ADR decision changed |
 | Generated flow and evidence documentation | Added canonical generated flow Markdown, immutable report Markdown and summary, retros, and harness-change records |
 | Root README and docs/README.md | No application impact: tasks alter repository engineering governance and RPIV execution only; application setup remains the root justfile, product behavior, API, configuration, and supported user workflows are unchanged |
 | API references/specifications | No impact: no application endpoint or API contract changed |
@@ -192,6 +202,8 @@ Rule text is copied from .github/agents/aps-v1.2.2.agent.md lines 159-184. Evide
 | Focused T-4 | just verify-focused | Exit 0; 3 files, 3 tests passed |
 | Focused T-5 | just verify-focused | Exit 0; 3 files, 3 tests passed |
 | Focused T-6 | just verify-focused | Exit 0; 3 files, 3 tests passed |
-| Full | just verify | Exit 0; format, lint, typecheck, unit coverage, API/web builds, and Chromium Playwright passed |
+| Correction negative path | Temporary stdout-only fake `just`; `harness checks --json` | Harness exit 1 as required; parsed E_WRAP_FAILED envelope retained labeled stdout diagnostics and rerun action |
+| Correction focused | just verify-focused | Exit 0; 3 files and 3 tests passed |
+| Full (correction) | just verify | Exit 0; format, lint, typecheck, unit coverage, API/web builds, and Chromium Playwright passed |
 
 The implementation commit is created after this evidence file is staged. The handoff reports the resulting SHA from git rev-parse HEAD, confirms the requested branch, and provides clean-tree proof.

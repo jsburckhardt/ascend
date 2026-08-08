@@ -9,12 +9,16 @@ contains the command and the last 20 lines of standard output.
 ## Your role (the inference part)
 
 Treat `status: ok` as evidence that every configured gate passed. On an error,
-fix the first reported failing gate and rerun `harness checks`; do not claim the
-change is ready from a partial or focused test alone.
+`error.details` contains the last 20 lines from each non-empty standard-error and
+standard-output stream, labeled in that order. If both streams are empty, it
+contains an explicit exit-code diagnostic. Fix the first reported failing gate and
+rerun `harness checks`; do not claim the change is ready from a partial or focused
+test alone.
 
 ## Watch out for
 
-- The summary truncates standard output, so inspect the reported failure details.
+- Failure details are bounded per stream but never empty; inspect both labeled
+  excerpts.
 - This command proves the configured repository gates, not unimplemented runtime
   behavior or acceptance criteria that lack a sensor.
 - Playwright starts the web application only; API runtime readiness is separate

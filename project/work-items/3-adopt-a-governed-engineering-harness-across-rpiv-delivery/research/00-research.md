@@ -1,0 +1,104 @@
+# Research Brief: Adopt a governed engineering harness across RPIV delivery
+
+## GitHub Issue
+- **Issue:** #3
+- **Title:** Adopt a governed engineering harness across RPIV delivery
+- **Work Item:** project/work-items/3-adopt-a-governed-engineering-harness-across-rpiv-delivery
+
+## Scope Classification
+- **Scope Type:** issue
+
+## Problem Statement
+Ascend has a canonical repository verification gate, but agents do not yet have one governed repository-local surface for deterministic checks, test-backed readiness, observation evidence, harnessability findings, and continuous improvement. The adoption baseline and current harness state also need durable machine-readable and human-readable records so limitations are visible rather than inferred.
+
+RPIV does not yet call the engineering-harness lifecycle at each delivery seam, and its implementer contract does not fully capture qualifying friction or reliably execute editing, correction, validation, evidence, and handoff behavior. Repository-local skills and their installation state must be inspectable, modified agent definitions must remain valid under the repository APS contract, and the superseded integration agent and formatting noise from generated assets must be removed.
+
+## Acceptance Criteria
+
+**Core**
+- [ ] Repository-local harness governance enumerates boot and checks, interaction and observation methods, evidence locations, the four RPIV seam events, remaining back-pressure gaps, and exactly one L0–L4 maturity level.
+- [ ] When just verify exits zero, harness checks --json exits zero with one JSON envelope where command is checks, status is ok, and data.command is just verify; its nonzero path has status error, an error code and message, diagnostic details, and a non-empty next_action that tells the agent to rerun harness checks after correction.
+- [ ] A successful harness boot --json returns one JSON envelope where command is boot, status is ok, data.readiness is ready, data.proof is harness checks, data.mode is test-backed scaffold, data.start_command is just run, data.endpoints are http://127.0.0.1:5173 and http://127.0.0.1:3000, and data.duration_ms is a non-negative number; boot starts no persistent development server.
+- [ ] The adoption-time harnessability baseline is retained as Markdown, JSON, evidence, and schema artifacts; latest.json is byte-identical to the canonical report JSON; latest.md is byte-identical to the canonical report Markdown; and the report records baseline scores, ordered gaps, and proof ceiling.
+- [ ] Adoption and loop flow JSON mark governance, boot, lifecycle injection, retro drain/harvest, and readiness-duration improvement nodes done; regenerating their Markdown views produces no diff; each harness-change record names the gap or observation it resolves; and the excursion-schema retro entry remains open.
+- [ ] Each committed repository-local skill directory has one same-named root lock entry containing a 64-character lowercase hexadecimal computedHash, with no extra lock entries, and the harness installation lock contains one project-scoped packaged install for the declared agent target.
+- [ ] RPIV calls pre-flight after branch preparation, pre-coding after Plan validation, post-coding after a valid Implement handoff, and post-flight only after successful Verify; these advisory calls do not alter RPIV stage order, and a correction pass repeats pre-coding and post-coding around Implement.
+- [ ] During one implementer run, every configured trigger not already present in the observed-event set emits one harness observation with one configured kind; focused and full validation failures emit difficulty observations before correction; and a kind outside the configured list is rejected before command execution.
+- [ ] The implementer receives one JSON request containing branch_name, issue_number, plan_handoff, verification_feedback, and work_item_path, and has explicit Plan-owned or Implement-owned error outcomes when the uniquely resolved path, committed Plan artifacts, or current branch differs from the request.
+- [ ] For each planned task in dependency order, the implementer applies complete edits to existing or new application and test content, reruns focused validation, performs at most one correction attempt after a failure, and returns an Implement-owned error if focused validation still fails.
+- [ ] The implementer updates affected documentation or records a non-empty no-impact rationale tied to the planned tasks, runs full repository validation, performs at most one correction attempt after failure, and returns an Implement-owned error if full validation still fails.
+- [ ] Before handoff, the implementer records evidence for every acceptance ID and both validation stages, creates implementation notes, constructs staging and commit invocations without interpolating unquoted paths or messages, and reports the requested branch, resulting commit SHA, and clean-tree evidence; no implementation changes or a dirty final tree returns an Implement-owned error.
+- [ ] For both modified VS Code RPIV definitions, verification evaluates every APS LINT_CHECKS item that inspects written target-file content, plus all FIELD_REQUIREMENTS_VSCODE rules; checks that govern only the generator agent’s user-visible response are excluded; the evidence table names each included and excluded check with its rule text and result, and all included checks pass.
+- [ ] The legacy harness integration agent definition is absent, active RPIV definitions reference the engineering-harness lifecycle skill, and the formatting configuration excludes exactly the harness and repository-local skill asset trees added by this work while retaining its prior exclusions.
+
+**Edge Cases**
+- [ ] A nonzero checks result causes boot to return status error with code E_BOOT_CHECKS_FAILED, elapsed duration in diagnostic details, and a non-empty next_action to rerun harness boot; it cannot return data.readiness as ready.
+- [ ] A read-only execution-path matrix traces mismatched work-item path, stale Plan handoff, mismatched branch, unsupported observation kind, exhausted focused correction, exhausted full correction, absent implementation change, and dirty final tree to their explicit non-success branch and stage owner in the modified definitions.
+- [ ] Two sequential checks and boot runs at the same revision and installed dependency state produce identical status, readiness, proof, command, and endpoint values; timestamps, durations, and captured command output may differ; git diff for tracked content is unchanged and boot starts no development server.
+- [ ] Current governance distinguishes implemented test-backed checks and boot from the immutable adoption baseline, and lists database lifecycle, local/CI equivalence, executable architecture checks, and live-service readiness as unimplemented gaps.
+
+**Verification**
+- [ ] Harness discovery reports both boot and checks loaded without extension errors.
+- [ ] Two sequential harness checks --json and harness boot --json runs exit zero and satisfy the exact envelope assertions above; tracked-content diff is unchanged before and after, and process inspection confirms boot started no persistent server.
+- [ ] just verify exits zero and covers formatting, linting, type checking, tests, builds, and browser validation.
+- [ ] Repository-local schema validation accepts the harnessability report and both flow JSON files; byte comparison accepts both latest report aliases; and regenerating both flow Markdown files produces no diff.
+- [ ] One read-only evidence table records every assertion in the APS matrix, execution-path matrix, skill/lock inventory, installation lock, legacy-agent absence, lifecycle references, and formatting-exclusion delta; every assertion passes using repository files only.
+
+## Repository Findings
+- The current branch is feat/3-governed-engineering-harness at f2f15f7. Before this brief, the worktree contained deletion of .github/agents/harness-cli-it.agent.md, modifications to .github/agents/rpiv.agent.md, .github/agents/rpiv-implementer.agent.md, and .prettierignore, plus untracked .agents/, .harness/, and skills-lock.json.
+- .harness/engineering-harness.md is the current Boot/Interact/Observe governance surface. It names harness boot, harness checks, Fastify injection, Testing Library, Playwright, JSON envelopes, coverage and trace locations, lifecycle injection points, four remaining back-pressure gaps, and one current maturity snapshot: L3.
+- .harness/extensions/checks/extension.ts defines checks as a wrapper around just verify, with a 120-second timeout, successful data.command of just verify, and E_WRAP_FAILED on failure. .harness/extensions/boot/extension.ts composes harness checks --json, records elapsed milliseconds, returns test-backed readiness and the web/API endpoints, and maps a failed child process to E_BOOT_CHECKS_FAILED.
+- Installed CLI version 0.13.0 discovers both extension files. harness doctor --json reported both loaded with no extension conflict or load failure, while the overall doctor status was degraded solely because no post-commit telemetry flush hook is installed.
+- The root justfile remains the canonical command interface. Its verify recipe runs format checking, linting, type checking, package tests, builds, and Playwright; playwright.config.ts starts only the Vite web server for browser tests, while API health is exercised in-process through apps/api/test/routes/root.test.ts and apps/api/test/helper.ts.
+- The application remains a scaffold: apps/api/src/routes/root.ts exposes an Ascend OK payload, apps/web/src/App.tsx exposes the project-home shell, and the existing API, component, and Playwright tests cover those boundaries. apps/api/src/db/client.ts and schema.ts define SQLite access and the projects table but no migration, fixture, or reset command.
+- .harness/reports/harnessability/001-ascend/ retains the static adoption baseline from main at f2f15f7: Operate-Today 63% (C), Adaptability 57% (C), index 60% (C), readiness H2, and highest proof level L2. Its ordered gaps are absent checks/boot, absent database lifecycle, absent CI/local equivalence, weak executable architecture enforcement, and partial runtime evidence. The canonical and latest JSON files are byte-identical; the canonical and latest Markdown files are also byte-identical.
+- .harness/adopt.flow.json marks governance, inject, build-boot, and the other adoption nodes done. .harness/loop.flow.json marks boot, retro-drain, retro-harvest, improve, and improve-boot-duration done while backpressure, observe, and drain-gate remain assumed. Their Markdown companions identify themselves as generated views.
+- .harness/records/harness-change/2026-08-08/001-adoption-nucleus.md resolves baseline GAP-001; 002-boot-duration.md resolves the recorded duration observation. .harness/records/retro/2026-08-08/002-improve-excursion-schema.md retains its schema mismatch entry with compound status open.
+- .agents/skills/ contains nine skill directories, and skills-lock.json has exactly the same nine names, each with a 64-character lowercase hexadecimal computedHash. .harness/skills.lock.json records one project-scoped, packaged installation targeting github-copilot.
+- .agents/skills/eng-harness-flow/SKILL.md defines the lifecycle as pre-flight, pre-coding, coding observation, post-coding, and post-flight. It states that the loop is advisory to the user but may not be silently skipped by an agent, and that harness observe is the direct coding-time capture surface. Its configured observation kinds match the eight kinds in references/retro.schema.json.
+- .github/agents/rpiv.agent.md keeps Research → Plan → Implement → Verify order and now invokes pre-flight after branch preparation, pre-coding before Implement, post-coding after the coordinator validates the Implement handoff, and post-flight after successful Verify. Its correction route repeats pre-coding and post-coding around Implement and carries a canonical five-field JSON Implement request.
+- .github/agents/rpiv-implementer.agent.md adds eight observation triggers and eight allowed kinds, plan-artifact/request consistency checks, dependency-ordered edit application, one focused correction branch, one full correction branch, documentation handling, implementation notes, quoted-command inference, final branch comparison, and clean-tree handling. The configured friction scans occur around context loading, task work, documentation, and full validation.
+- .github/agents/aps-v1.2.2.agent.md defines the applicable LINT_CHECKS and FIELD_REQUIREMENTS_VSCODE. Both modified RPIV files have required/recommended frontmatter in declared order, YAML tool arrays, boolean invocation fields, string target, ordered APS sections, no tab characters, no // comment lines, and lexicographically ordered multi-key where clauses. No issue-specific APS or execution-path evidence table exists in the current worktree.
+- .github/agents/harness-cli-it.agent.md is absent from the filesystem and appears as a tracked-file deletion relative to HEAD. Active .github/agents/*.agent.md references to eng-harness-flow occur in rpiv.agent.md; the historical .github/harness-engineering.excalidraw still contains textual references to the deleted agent and its superseded ./harness model.
+- .prettierignore adds exactly .agents and .harness to its prior entries. The pre-existing exclusions, including *.md, .vscode, and .devcontainer, remain unchanged.
+- No existing project/work-items/3-* directory was present, so the stable path was derived from the issue title as project/work-items/3-adopt-a-governed-engineering-harness-across-rpiv-delivery.
+
+## Constraints
+- CORE-COMPONENT-260806-rpiv-stage-contract.md, AGENTS.md, and project/work-items/README.md require the stable issue-prefix work-item path, strict stage ownership, root-justfile validation, committed Implement handoff, and Research-only findings without solution design.
+- CORE-COMPONENT-260806-project-command-interface.md makes the root justfile the default operating surface and prohibits a duplicate standalone verification configuration. The harness may wrap that surface, but the command bodies remain owned by the root recipes.
+- CORE-COMPONENT-260806-agent-executable-acceptance-criteria.md requires bounded, deterministic, repository-accessible acceptance outcomes and inspectable, repeatable validation without unavailable credentials or subjective judgment.
+- CORE-COMPONENT-260808-development-standards.md and ADR-260808-typescript-monorepo.md constrain the repository to strict TypeScript, pnpm workspaces, Vitest, Playwright, formatting/linting, build checks, and the existing React/Vite and Fastify package boundaries.
+- CORE-COMPONENT-260505-commit-standards.md requires Conventional Commits and the configured Copilot co-author trailer for implementation commits; the RPIV Implement stage, not Research, owns commits.
+- The engineering-harness skill contract treats lifecycle calls as advisory and non-gating for the user, while requiring agents to surface the seam. Current RPIV captures HARNESS_RESULT without using it to reorder or block stages.
+- The adoption baseline under .harness/reports/harnessability/001-ascend/ describes the pre-adoption state and branch main; current capability is separately represented by governance, extensions, flows, and change records.
+- CORE-COMPONENT-260808-structured-runtime-logging.md prohibits source, terminal, command-output, prompt, credential, or secret content in runtime logs. Harness telemetry and observation handling remain subject to that repository privacy boundary.
+- CORE-COMPONENT-260808-filesystem-path-safety.md and CORE-COMPONENT-260808-host-process-environment.md prohibit unsafe shell interpolation of paths and arguments. This also constrains inferred staging and commit command construction in the Implement agent.
+- .prettierignore already excludes all Markdown and generated/build trees; the current formatting delta is limited to the two newly added asset roots.
+
+## Relevant ADRs and Core-Components
+- **ADR-260808-typescript-monorepo** — accepted application stack, package boundaries, SQLite, Vitest, and Playwright context consumed by just verify and the test-backed harness.
+- **CORE-COMPONENT-260806-rpiv-stage-contract** — directly governs lifecycle stage order, stable work-item resolution, validation ownership, implementation evidence, and handoffs.
+- **CORE-COMPONENT-260806-project-command-interface** — directly governs justfile ownership and focused/full validation surfaces.
+- **CORE-COMPONENT-260806-agent-executable-acceptance-criteria** — directly governs the deterministic and repository-local nature of Issue #3 criteria.
+- **CORE-COMPONENT-260808-development-standards** — governs formatting, linting, type checking, Vitest, Playwright, coverage, and documentation behavior.
+- **CORE-COMPONENT-260505-commit-standards** — governs Implement-stage commit construction and handoff history.
+- **CORE-COMPONENT-260808-structured-runtime-logging** — governs observation and runtime-data privacy.
+- **CORE-COMPONENT-260808-filesystem-path-safety** and **CORE-COMPONENT-260808-host-process-environment** — govern safe path and process argument handling relevant to the modified implementer contract.
+- **CORE-COMPONENT-260808-runtime-lifecycle-error-handling** — supplies the existing prohibition on silent failures and success-shaped fallbacks, relevant to harness error envelopes and readiness claims.
+- The decision log contains no harness-specific ADR or core-component. Issue #3 changes repository tooling and agent workflow within existing decisions, so the scope is classified as issue rather than an architecture decision or new core-component.
+
+## Risks and Open Questions
+- The worktree is already dirty with the issue implementation before Research. The RPIV coordinator’s initialization contract requires a clean tree, although the requested issue branch already exists.
+- checks builds failure diagnostics from result.stderr; failures reported only on standard output may yield weak or empty diagnostic detail even though the error message and next action are present.
+- boot treats the child process exit status as the checks verdict and does not inspect the child JSON envelope fields. A malformed successful child envelope would not be distinguished by the current source.
+- The 120-second checks timeout is shorter than boot’s 150-second wrapper timeout. Repository validation duration under slower but otherwise valid environments is unknown.
+- harness doctor --json is degraded because the telemetry post-commit flush hook is absent. It is unclear whether the issue’s discovery requirement is intended to consider only extension loading or aggregate doctor status.
+- The immutable baseline says checks and boot were absent, while current governance says they are implemented. Readers must preserve the baseline’s adoption-time meaning rather than treating it as a current-state report.
+- The implementer compares the current branch with the requested branch only during final handoff, after editing, validation, and commit processes. The behavior when execution begins on the wrong branch is therefore not represented as an early guard.
+- Observation scanning is represented through inference over recent implementation work. Event identity, deduplication semantics, and whether qualifying friction during notes, commit, or handoff is included are not explicit in the definition.
+- observe-friction says unsupported kinds are rejected during inference, but it has no explicit error format or stage-owner branch for that rejection. The current repository also has no read-only execution-path matrix resolving this ambiguity.
+- The root skill lock records temporary local source paths under /tmp; those sources may not survive across environments. The acceptance criterion constrains names and hashes but does not state whether source-path reproducibility is required.
+- The repository has no tracked CI workflow, no database lifecycle commands, no executable architecture sensor, and no live-service readiness probe. These remain explicit current governance gaps rather than capabilities of test-backed boot.
+- The generated flow Markdown files state that JSON is canonical, but regeneration equivalence has not been recorded in an issue-specific artifact in the current worktree.
+- Historical references to .github/agents/harness-cli-it.agent.md remain inside .github/harness-engineering.excalidraw. It is unclear whether legacy harness integration agent definition is absent permits retained diagram text naming that deleted definition.
+- The current repository contains no issue-specific APS matrix, execution-path matrix, or combined read-only evidence table, so their final content and location remain unresolved outside the acceptance criteria.

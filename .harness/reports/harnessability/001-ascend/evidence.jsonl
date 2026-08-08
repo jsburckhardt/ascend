@@ -1,0 +1,6 @@
+{"source":"README.md, docs/README.md, apps/api/README.md","provenance":"evidence","claim":"The root justfile is the documented canonical command interface."}
+{"source":"git ls-files .github/workflows/**","provenance":"evidence","claim":"No tracked CI workflow exists."}
+{"source":"apps/api/test, apps/web/src/App.test.tsx, tests/e2e/project-home.spec.ts","provenance":"evidence","claim":"Current tests provide local static and browser proof without remote credentials."}
+{"source":"test-results/.last-run.json and .gitignore","provenance":"evidence","claim":"The last local Playwright result records a passing run, but it is ignored and not durable CI evidence."}
+{"source":".harness/engineering-harness.md","provenance":"evidence","claim":"The harness governance document is seeded at L0 and has no boot, checks, or injection map."}
+{"source":"README.md, PRD.md, current apps source inventory","provenance":"evidence","claim":"Host workbench lifecycle remains a design target rather than implemented behavior."}

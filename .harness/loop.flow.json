@@ -1,0 +1,373 @@
+{
+  "schema_version": 1,
+  "kind": "harness-loop",
+  "slug": "loop",
+  "nav": {
+    "now": "boot",
+    "next": null,
+    "intent": "Begin the next engineering session with pre-flight evidence"
+  },
+  "created_at": "2026-08-08T07:45:40.624Z",
+  "provenance": {
+    "record_kind": "flow",
+    "harness_version": "0.13.0",
+    "branch": "main",
+    "repo": "https://github.com/jsburckhardt/ascend.git",
+    "created_at": "2026-08-08T07:45:40.624Z",
+    "agent": null,
+    "plan_id": null
+  },
+  "events": [
+    {
+      "id": "CRT-001",
+      "kind": "created",
+      "origin": "engine",
+      "fired_at": "2026-08-08T07:45:40.631Z",
+      "details": {
+        "kind": "harness-loop",
+        "slug": "loop"
+      }
+    },
+    {
+      "id": "CUR-001",
+      "kind": "cursor-moved",
+      "origin": "engine",
+      "fired_at": "2026-08-08T07:45:41.036Z",
+      "details": {
+        "from": "boot",
+        "to": "boot"
+      }
+    },
+    {
+      "id": "UPD-001",
+      "kind": "node-updated",
+      "origin": "engine",
+      "fired_at": "2026-08-08T07:47:54.030Z",
+      "details": {
+        "node": "boot",
+        "fields": [
+          "comments"
+        ]
+      }
+    },
+    {
+      "id": "STA-001",
+      "kind": "status-changed",
+      "origin": "engine",
+      "fired_at": "2026-08-08T07:47:54.651Z",
+      "details": {
+        "node": "boot",
+        "from": "assumed",
+        "to": "done"
+      }
+    },
+    {
+      "id": "CUR-002",
+      "kind": "cursor-moved",
+      "origin": "engine",
+      "fired_at": "2026-08-08T07:47:55.283Z",
+      "details": {
+        "from": "boot",
+        "to": "backpressure"
+      }
+    },
+    {
+      "id": "CUR-003",
+      "kind": "cursor-moved",
+      "origin": "engine",
+      "fired_at": "2026-08-08T07:49:47.583Z",
+      "details": {
+        "from": "backpressure",
+        "to": "retro-drain"
+      }
+    },
+    {
+      "id": "UPD-002",
+      "kind": "node-updated",
+      "origin": "engine",
+      "fired_at": "2026-08-08T07:49:48.224Z",
+      "details": {
+        "node": "retro-drain",
+        "fields": [
+          "comments"
+        ]
+      }
+    },
+    {
+      "id": "STA-002",
+      "kind": "status-changed",
+      "origin": "engine",
+      "fired_at": "2026-08-08T07:49:48.656Z",
+      "details": {
+        "node": "retro-drain",
+        "from": "assumed",
+        "to": "done"
+      }
+    },
+    {
+      "id": "CUR-004",
+      "kind": "cursor-moved",
+      "origin": "engine",
+      "fired_at": "2026-08-08T07:49:49.205Z",
+      "details": {
+        "from": "retro-drain",
+        "to": "retro-harvest"
+      }
+    },
+    {
+      "id": "UPD-003",
+      "kind": "node-updated",
+      "origin": "engine",
+      "fired_at": "2026-08-08T07:54:11.945Z",
+      "details": {
+        "node": "retro-harvest",
+        "fields": [
+          "comments"
+        ]
+      }
+    },
+    {
+      "id": "STA-003",
+      "kind": "status-changed",
+      "origin": "engine",
+      "fired_at": "2026-08-08T07:54:12.449Z",
+      "details": {
+        "node": "retro-harvest",
+        "from": "assumed",
+        "to": "done"
+      }
+    },
+    {
+      "id": "CUR-005",
+      "kind": "cursor-moved",
+      "origin": "engine",
+      "fired_at": "2026-08-08T07:54:12.896Z",
+      "details": {
+        "from": "retro-harvest",
+        "to": "improve"
+      }
+    },
+    {
+      "id": "NOD-001",
+      "kind": "node-created",
+      "origin": "engine",
+      "fired_at": "2026-08-08T07:54:54.481Z",
+      "details": {
+        "node": "improve-boot-duration",
+        "type": "improve"
+      }
+    },
+    {
+      "id": "UPD-004",
+      "kind": "node-updated",
+      "origin": "engine",
+      "fired_at": "2026-08-08T07:56:14.023Z",
+      "details": {
+        "node": "improve-boot-duration",
+        "fields": [
+          "comments"
+        ]
+      }
+    },
+    {
+      "id": "STA-004",
+      "kind": "status-changed",
+      "origin": "engine",
+      "fired_at": "2026-08-08T07:56:14.590Z",
+      "details": {
+        "node": "improve-boot-duration",
+        "from": "known",
+        "to": "done"
+      }
+    },
+    {
+      "id": "UPD-005",
+      "kind": "node-updated",
+      "origin": "engine",
+      "fired_at": "2026-08-08T07:56:15.173Z",
+      "details": {
+        "node": "improve",
+        "fields": [
+          "comments"
+        ]
+      }
+    },
+    {
+      "id": "STA-005",
+      "kind": "status-changed",
+      "origin": "engine",
+      "fired_at": "2026-08-08T07:56:15.835Z",
+      "details": {
+        "node": "improve",
+        "from": "assumed",
+        "to": "done"
+      }
+    },
+    {
+      "id": "CUR-006",
+      "kind": "cursor-moved",
+      "origin": "engine",
+      "fired_at": "2026-08-08T07:56:16.352Z",
+      "details": {
+        "from": "improve",
+        "to": "boot"
+      }
+    },
+    {
+      "id": "UPD-006",
+      "kind": "node-updated",
+      "origin": "engine",
+      "fired_at": "2026-08-08T07:58:57.122Z",
+      "details": {
+        "node": "improve",
+        "fields": [
+          "comments"
+        ]
+      }
+    }
+  ],
+  "nodes": [
+    {
+      "id": "boot",
+      "type": "boot",
+      "label": "Boot",
+      "status": "done",
+      "next": [
+        "backpressure"
+      ],
+      "zone": "preflight",
+      "command": "run /eng-harness-flow --hook pre-flight",
+      "comments": [
+        {
+          "at": "2026-08-08T07:47:54.029Z",
+          "text": "decision:route verdict:HEALTHY reason:harness-boot-ok-interact-and-evidence-readable duration_seconds:22 time:2026-08-08T07:47:38Z",
+          "source": "agent",
+          "kind": "validation"
+        }
+      ],
+      "modified_at": "2026-08-08T07:47:54.650Z",
+      "ran_at": "2026-08-08T07:47:54.650Z"
+    },
+    {
+      "id": "backpressure",
+      "type": "backpressure",
+      "label": "Backpressure Check",
+      "status": "assumed",
+      "next": [
+        "observe"
+      ],
+      "zone": "preflight",
+      "command": "run /eng-harness-flow --hook pre-coding"
+    },
+    {
+      "id": "observe",
+      "type": "observe",
+      "label": "Do Work + Observe",
+      "status": "assumed",
+      "next": [
+        "drain-gate"
+      ],
+      "zone": "flight"
+    },
+    {
+      "id": "drain-gate",
+      "type": "decision",
+      "label": "Buffer non-empty?",
+      "status": "assumed",
+      "next": [
+        "retro-drain",
+        "retro-harvest"
+      ],
+      "zone": "flight"
+    },
+    {
+      "id": "retro-drain",
+      "type": "retro",
+      "label": "Retro — drain buffer",
+      "status": "done",
+      "next": [
+        "retro-harvest"
+      ],
+      "zone": "postflight",
+      "command": "run /eng-harness-flow --hook post-coding",
+      "comments": [
+        {
+          "at": "2026-08-08T07:49:48.224Z",
+          "text": "decision:route verdict:saved-all record:.harness/records/retro/2026-08-08/001-adoption-session.md observations:2 time:2026-08-08T07:49:16Z",
+          "source": "agent",
+          "kind": "validation"
+        }
+      ],
+      "modified_at": "2026-08-08T07:49:48.656Z",
+      "ran_at": "2026-08-08T07:49:48.656Z"
+    },
+    {
+      "id": "retro-harvest",
+      "type": "retro",
+      "label": "Retro — harvest",
+      "status": "done",
+      "next": [
+        "improve"
+      ],
+      "zone": "postflight",
+      "command": "run /eng-harness-flow --hook post-flight",
+      "comments": [
+        {
+          "at": "2026-08-08T07:54:11.945Z",
+          "text": "decision:route verdict:harvested records:1 entries:2 open:2 highest_value:SUGG-001 time:2026-08-08T07:53:56Z",
+          "source": "agent",
+          "kind": "validation"
+        }
+      ],
+      "modified_at": "2026-08-08T07:54:12.449Z",
+      "ran_at": "2026-08-08T07:54:12.449Z"
+    },
+    {
+      "id": "improve",
+      "type": "improve",
+      "label": "Improve",
+      "status": "done",
+      "next": [],
+      "zone": "postflight",
+      "comments": [
+        {
+          "at": "2026-08-08T07:56:15.173Z",
+          "text": "decision:encoded verdict:ok improvement:boot-duration maturity:L3 time:2026-08-08T07:55:52Z",
+          "source": "agent",
+          "kind": "validation"
+        },
+        {
+          "at": "2026-08-08T07:58:57.122Z",
+          "text": "decision:upstream-needed verdict:recorded record:.harness/records/retro/2026-08-08/002-improve-excursion-schema.md time:2026-08-08T07:58:32Z",
+          "source": "agent",
+          "kind": "validation"
+        }
+      ],
+      "modified_at": "2026-08-08T07:58:57.122Z",
+      "ran_at": "2026-08-08T07:56:15.834Z"
+    },
+    {
+      "id": "improve-boot-duration",
+      "type": "improve",
+      "label": "Expose boot duration",
+      "status": "done",
+      "next": [
+        "improve"
+      ],
+      "created_at": "2026-08-08T07:54:54.480Z",
+      "modified_at": "2026-08-08T07:56:14.590Z",
+      "command": "harness boot --json",
+      "branch_of": "improve",
+      "comments": [
+        {
+          "at": "2026-08-08T07:56:14.023Z",
+          "text": "decision:encoded verdict:ok evidence:harness-boot-duration_ms-22158 record:.harness/records/harness-change/2026-08-08/002-boot-duration.md time:2026-08-08T07:55:38Z",
+          "source": "agent",
+          "kind": "validation"
+        }
+      ],
+      "ran_at": "2026-08-08T07:56:14.590Z"
+    }
+  ],
+  "title": "harness-loop"
+}

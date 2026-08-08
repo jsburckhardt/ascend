@@ -31,6 +31,8 @@ You MUST validate that the root justfile exposes verify-focused and verify befor
 You MUST treat the root justfile recipes as the validation source.
 You MUST NOT infer, invent, or auto-detect validation commands outside the root justfile.
 You MUST implement tasks in dependency order.
+You MUST capture each OBSERVATION_TRIGGERS event through `observe-friction`.
+You MUST choose each observation kind from OBSERVATION_KINDS.
 You MUST write or update tests required by each task and AC-* mapping.
 You MUST run just verify-focused while building each task.
 You MUST fix focused validation failures before marking a task complete.
@@ -70,7 +72,27 @@ REQUIRED_RECIPES: YAML<<
 ADR_DIR: "project/architecture/ADR"
 CORE_COMPONENT_DIR: "project/architecture/core-components"
 CO_AUTHOR_TRAILER: "Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
-DOCUMENTATION_SEARCH_PATTERN: "README.md,docs/**/*.{md,yaml,yml,json},project/architecture/**/*.md,**/*openapi*.{yaml,yml,json},**/*swagger*.{yaml,yml,json},**/*migration*.md,**/*runbook*.md"
+DOC_SEARCH_PATTERN: "README.md,docs/**/*.{md,yaml,yml,json},project/architecture/**/*.md,**/*openapi*.{yaml,yml,json},**/*swagger*.{yaml,yml,json},**/*migration*.md,**/*runbook*.md"
+OBSERVATION_KINDS: YAML<<
+- coordination
+- confusion
+- difficulty
+- gift
+- improvement-suggestion
+- insight
+- magic-wand
+- win
+>>
+OBSERVATION_TRIGGERS: YAML<<
+- ambiguous failure
+- eyeballed constraint
+- hidden setup
+- magic-wand reflex
+- inferred-only runtime behavior
+- retry or backtrack
+- tool wait over 30 seconds
+- unexpectedly empty search
+>>
 DOCUMENTATION_SCOPE: YAML<<
 - README files
 - API references and API specifications
@@ -139,12 +161,19 @@ WHERE:
 <runtime>
 ISSUE_NUMBER: ""
 WORK_ITEM_PATH: ""
+REQUEST_WORK_ITEM: ""
+REQUEST_PATH_MATCH: false
 ACTION_PLAN_FILE_COUNT: 0
 ACTION_PLAN_PATH: ""
 TASK_BREAKDOWN_PATH: ""
 TEST_PLAN_PATH: ""
 IMPLEMENTATION_DIR: ""
-IMPLEMENTATION_NOTES_PATH: ""
+IMPLEMENT_NOTES_PATH: ""
+IMPLEMENT_REQUEST: {}
+REQUEST_BRANCH: ""
+INPUT_PLAN_HANDOFF: {}
+VERIFY_FEEDBACK: ""
+HANDOFF_VALID: false
 ACTION_PLAN: ""
 TASK_BREAKDOWN: ""
 TEST_PLAN: ""
@@ -154,11 +183,17 @@ RELEVANT_ADRS: []
 RELEVANT_CORE_COMPONENTS: []
 COMPLETED_TASKS: []
 AC_EVIDENCE: []
-DOCUMENTATION_REQUIREMENTS: []
+DOC_REQUIREMENTS: []
 DOCUMENTATION_FILES: []
 DOCUMENTATION_CONTENT: []
 DOCUMENTATION_CHANGES: []
 DOCUMENTATION_EVIDENCE: []
+PENDING_EDITS: []
+OBSERVATION_DESC: ""
+OBSERVATION_KIND: ""
+SAFE_OBSERVATION: ""
+FRICTION_EVENTS: []
+OBSERVED_EVENTS: []
 FOCUSED_RESULTS: []
 FULL_RESULTS: []
 BRANCH_NAME: ""
@@ -174,9 +209,13 @@ COMMAND_INTERFACE_VALID: false
 <processes>
 <process id="implementer-router" name="Implement, validate, document, and commit the plan">
 RUN `load-context`
+RUN `record-pending-friction`
 RUN `implement-tasks`
+RUN `record-pending-friction`
 RUN `update-application-documentation`
+RUN `record-pending-friction`
 RUN `run-full-validation`
+RUN `record-pending-friction`
 RUN `write-implementation-notes`
 RUN `commit-implementation`
 RUN `prepare-handoff`
@@ -184,24 +223,38 @@ RETURN: format="IMPLEMENT_HANDOFF", ac_evidence=AC_EVIDENCE, branch_name=BRANCH_
 </process>
 
 <process id="load-context" name="Load plan, architecture, and project validation commands">
-SET ISSUE_NUMBER := <NUMBER> (from "Agent Inference" using USER_INPUT)
+SET IMPLEMENT_REQUEST := <REQUEST> (from INP)
+SET ISSUE_NUMBER := <NUMBER> (from IMPLEMENT_REQUEST)
+SET REQUEST_WORK_ITEM := <PATH> (from IMPLEMENT_REQUEST)
+SET REQUEST_BRANCH := <BRANCH> (from IMPLEMENT_REQUEST)
+SET INPUT_PLAN_HANDOFF := <HANDOFF> (from IMPLEMENT_REQUEST)
+SET VERIFY_FEEDBACK := <FEEDBACK> (from IMPLEMENT_REQUEST)
 USE `search/fileSearch` where: pattern="project/work-items/<ISSUE_NUMBER>-*/plan/01-action-plan.md"
 CAPTURE ACTION_PLAN_FILES from `search/fileSearch`
 SET ACTION_PLAN_FILE_COUNT := <COUNT> (from "Agent Inference" using ACTION_PLAN_FILES)
 IF ACTION_PLAN_FILE_COUNT != 1:
+  SET OBSERVATION_DESC := "The requested work-item action plan was unexpectedly absent." (from "Agent Inference")
+  SET OBSERVATION_KIND := "confusion" (from "Agent Inference")
+  RUN `observe-friction`
   RETURN: format="IMPLEMENT_ERROR", details=ACTION_PLAN_FILES, error_message="Exactly one work-item action plan must exist", issue_number=ISSUE_NUMBER, return_stage="plan"
 SET WORK_ITEM_PATH := <PATH> (from "Agent Inference" using ACTION_PLAN_FILES; remove /plan/01-action-plan.md)
+SET REQUEST_PATH_MATCH := <MATCHES> (from "Agent Inference" using REQUEST_WORK_ITEM, WORK_ITEM_PATH)
+IF REQUEST_PATH_MATCH is false:
+  RETURN: format="IMPLEMENT_ERROR", details=REQUEST_WORK_ITEM, error_message="The requested work-item path does not match the unique issue-prefix path", issue_number=ISSUE_NUMBER, return_stage="plan"
 SET ACTION_PLAN_PATH := <PATH> (from "Agent Inference" using WORK_ITEM_PATH; append /plan/01-action-plan.md)
 SET TASK_BREAKDOWN_PATH := <PATH> (from "Agent Inference" using WORK_ITEM_PATH; append /plan/02-task-breakdown.md)
 SET TEST_PLAN_PATH := <PATH> (from "Agent Inference" using WORK_ITEM_PATH; append /plan/03-test-plan.md)
 SET IMPLEMENTATION_DIR := <PATH> (from "Agent Inference" using WORK_ITEM_PATH; append /implementation)
-SET IMPLEMENTATION_NOTES_PATH := <PATH> (from "Agent Inference" using IMPLEMENTATION_DIR; append /00-implementation.md)
+SET IMPLEMENT_NOTES_PATH := <PATH> (from "Agent Inference" using IMPLEMENTATION_DIR; append /00-implementation.md)
 USE `read/readFile` where: filePath=ACTION_PLAN_PATH
 CAPTURE ACTION_PLAN from `read/readFile`
 USE `read/readFile` where: filePath=TASK_BREAKDOWN_PATH
 CAPTURE TASK_BREAKDOWN from `read/readFile`
 USE `read/readFile` where: filePath=TEST_PLAN_PATH
 CAPTURE TEST_PLAN from `read/readFile`
+SET HANDOFF_VALID := <VALID> (from "Agent Inference" using ACTION_PLAN, INPUT_PLAN_HANDOFF, TASK_BREAKDOWN, TEST_PLAN; require matching acceptance criteria, tasks, validation, evidence, and architecture references)
+IF HANDOFF_VALID is false:
+  RETURN: format="IMPLEMENT_ERROR", details=INPUT_PLAN_HANDOFF, error_message="The Plan handoff does not match the committed Plan artifacts", issue_number=ISSUE_NUMBER, return_stage="plan"
 USE `search/fileSearch` where: pattern=JUSTFILE_PATH
 CAPTURE JUSTFILE_FILES from `search/fileSearch`
 IF JUSTFILE_FILES is empty:
@@ -225,44 +278,79 @@ SET RELEVANT_CORE_COMPONENTS := <COMPONENTS> (from "Agent Inference" using ACTIO
 
 <process id="implement-tasks" name="Implement tasks in dependency order with focused validation">
 FOREACH task IN TASKS:
+  SET FIX_EDITS := [] (from "Agent Inference")
   SET DEPENDENCIES_COMPLETE := <COMPLETE> (from "Agent Inference" using task, COMPLETED_TASKS)
   IF DEPENDENCIES_COMPLETE is false:
     RETURN: format="IMPLEMENT_ERROR", details=task, error_message="Task dependency order is invalid", issue_number=ISSUE_NUMBER, return_stage="plan"
-  SET TASK_CHANGES := <CHANGES> (from "Agent Inference" using task, TEST_PLAN, RELEVANT_ADRS, RELEVANT_CORE_COMPONENTS)
-  SET TEST_CHANGES := <TESTS> (from "Agent Inference" using task, TEST_PLAN, TASK_CHANGES)
+  SET TASK_EDITS := <EDITS> (from "Agent Inference" using task, TEST_PLAN, RELEVANT_ADRS, RELEVANT_CORE_COMPONENTS, VERIFY_FEEDBACK; include complete application and test file edits)
+  SET PENDING_EDITS := TASK_EDITS (from "Agent Inference")
+  RUN `apply-pending-edits`
   USE `execute/runInTerminal` where: command="just verify-focused"
   CAPTURE FOCUSED_OUTPUT from `execute/runInTerminal`
   SET FOCUSED_PASSED := <PASSED> (from "Agent Inference" using FOCUSED_OUTPUT)
   IF FOCUSED_PASSED is false:
     USE `execute/testFailure`
     CAPTURE FAILURE_DETAILS from `execute/testFailure`
-    SET TASK_FIX := <FIX> (from "Agent Inference" using task, FAILURE_DETAILS, RELEVANT_ADRS, RELEVANT_CORE_COMPONENTS)
+    SET OBSERVATION_DESC := "Focused validation failed and required diagnosis." (from "Agent Inference")
+    SET OBSERVATION_KIND := "difficulty" (from "Agent Inference")
+    RUN `observe-friction`
+    SET FIX_EDITS := <EDITS> (from "Agent Inference" using task, FAILURE_DETAILS, RELEVANT_ADRS, RELEVANT_CORE_COMPONENTS; include complete corrective file edits)
+    SET PENDING_EDITS := FIX_EDITS (from "Agent Inference")
+    RUN `apply-pending-edits`
     USE `execute/runInTerminal` where: command="just verify-focused"
     CAPTURE FOCUSED_OUTPUT from `execute/runInTerminal`
     SET FOCUSED_PASSED := <PASSED> (from "Agent Inference" using FOCUSED_OUTPUT)
   IF FOCUSED_PASSED is false:
     RETURN: format="IMPLEMENT_ERROR", details=FOCUSED_OUTPUT, error_message="Focused validation still fails", issue_number=ISSUE_NUMBER, return_stage="implement"
   SET FOCUSED_RESULTS := FOCUSED_RESULTS + [{task: task.id, command: "just verify-focused", passed: true}] (from "Agent Inference")
-  SET TASK_EVIDENCE := <EVIDENCE> (from "Agent Inference" using task, TASK_CHANGES, TEST_CHANGES, FOCUSED_RESULTS; map evidence to every task AC-* ID)
+  SET TASK_EVIDENCE := <EVIDENCE> (from "Agent Inference" using task, TASK_EDITS, FIX_EDITS, FOCUSED_RESULTS; map evidence to every task AC-* ID)
   SET AC_EVIDENCE := AC_EVIDENCE + TASK_EVIDENCE (from "Agent Inference")
   SET TASK_BREAKDOWN := <UPDATED_BREAKDOWN> (from "Agent Inference" using TASK_BREAKDOWN, task; mark task complete)
   USE `edit/editFiles` where: content=TASK_BREAKDOWN, filePath=TASK_BREAKDOWN_PATH
   SET COMPLETED_TASKS := COMPLETED_TASKS + [task.id] (from "Agent Inference")
 </process>
 
+<process id="observe-friction" name="Capture one qualifying implementation observation">
+SET SAFE_OBSERVATION := <DESCRIPTION> (from "Agent Inference" using OBSERVATION_DESC; escape double quotes and shell metacharacters)
+SET OBSERVATION_KIND := <KIND> (from "Agent Inference" using OBSERVATION_KIND, OBSERVATION_KINDS; reject unsupported kinds)
+USE `execute/runInTerminal` where: command="harness observe \"<SAFE_OBSERVATION>\" --kind <OBSERVATION_KIND>"
+</process>
+
+<process id="record-pending-friction" name="Capture qualifying friction from recent implementation work">
+SET FRICTION_EVENTS := <EVENTS> (from "Agent Inference" using OBSERVATION_TRIGGERS, OBSERVED_EVENTS; include each qualifying event since the previous capture and exclude prior events)
+FOREACH event IN FRICTION_EVENTS:
+  SET OBSERVATION_DESC := <DESCRIPTION> (from "Agent Inference" using event)
+  SET OBSERVATION_KIND := <KIND> (from "Agent Inference" using event, OBSERVATION_KINDS)
+  RUN `observe-friction`
+  SET OBSERVED_EVENTS := OBSERVED_EVENTS + [event] (from "Agent Inference")
+</process>
+
+<process id="apply-pending-edits" name="Apply inferred application, test, or documentation edits">
+FOREACH edit IN PENDING_EDITS:
+  SET EDIT_PATH := <PATH> (from "Agent Inference" using edit)
+  SET EDIT_CONTENT := <CONTENT> (from "Agent Inference" using edit)
+  SET EDIT_DIR := <PATH> (from "Agent Inference" using EDIT_PATH)
+  USE `edit/createDirectory` where: dirPath=EDIT_DIR
+  TRY:
+    USE `read/readFile` where: filePath=EDIT_PATH
+    USE `edit/editFiles` where: content=EDIT_CONTENT, filePath=EDIT_PATH
+  RECOVER (err):
+    USE `edit/createFile` where: content=EDIT_CONTENT, filePath=EDIT_PATH
+</process>
+
 <process id="update-application-documentation" name="Update documentation affected by the implementation">
-SET DOCUMENTATION_REQUIREMENTS := <REQUIREMENTS> (from "Agent Inference" using ACTION_PLAN, TASKS, TEST_PLAN, RELEVANT_ADRS, RELEVANT_CORE_COMPONENTS, DOCUMENTATION_SCOPE; identify only documentation affected by the implemented behavior)
-IF DOCUMENTATION_REQUIREMENTS is empty:
+SET DOC_REQUIREMENTS := <REQUIREMENTS> (from "Agent Inference" using ACTION_PLAN, TASKS, TEST_PLAN, RELEVANT_ADRS, RELEVANT_CORE_COMPONENTS, DOCUMENTATION_SCOPE; identify only documentation affected by the implemented behavior)
+IF DOC_REQUIREMENTS is empty:
   SET DOCUMENTATION_EVIDENCE := [{status: "not-required", rationale: <RATIONALE>}] (from "Agent Inference" using TASKS, ACTION_PLAN; provide a concrete no-impact rationale)
 ELSE:
-  USE `search/fileSearch` where: pattern=DOCUMENTATION_SEARCH_PATTERN
+  USE `search/fileSearch` where: pattern=DOC_SEARCH_PATTERN
   CAPTURE DOCUMENTATION_FILES from `search/fileSearch`
-  SET RELEVANT_DOCUMENTATION_FILES := <FILES> (from "Agent Inference" using DOCUMENTATION_REQUIREMENTS, DOCUMENTATION_FILES)
-  FOREACH existingDocument IN RELEVANT_DOCUMENTATION_FILES:
+  SET RELEVANT_DOC_FILES := <FILES> (from "Agent Inference" using DOC_REQUIREMENTS, DOCUMENTATION_FILES)
+  FOREACH existingDocument IN RELEVANT_DOC_FILES:
     USE `read/readFile` where: filePath=existingDocument
-    CAPTURE EXISTING_DOCUMENT_CONTENT from `read/readFile`
-    SET DOCUMENTATION_CONTENT := DOCUMENTATION_CONTENT + [{path: existingDocument, content: EXISTING_DOCUMENT_CONTENT}] (from "Agent Inference")
-  SET DOCUMENTATION_UPDATES := <UPDATES> (from "Agent Inference" using DOCUMENTATION_REQUIREMENTS, DOCUMENTATION_CONTENT, TASKS, COMPLETED_TASKS; provide path and content for every required document)
+    CAPTURE EXISTING_DOC_CONTENT from `read/readFile`
+    SET DOCUMENTATION_CONTENT := DOCUMENTATION_CONTENT + [{path: existingDocument, content: EXISTING_DOC_CONTENT}] (from "Agent Inference")
+  SET DOCUMENTATION_UPDATES := <UPDATES> (from "Agent Inference" using DOC_REQUIREMENTS, DOCUMENTATION_CONTENT, TASKS, COMPLETED_TASKS; provide path and content for every required document)
   FOREACH document IN DOCUMENTATION_UPDATES:
     SET DOCUMENT_DIRECTORY := <DIR> (from "Agent Inference" using document.path)
     USE `edit/createDirectory` where: dirPath=DOCUMENT_DIRECTORY
@@ -272,7 +360,7 @@ ELSE:
     RECOVER (err):
       USE `edit/createFile` where: content=document.content, filePath=document.path
   SET DOCUMENTATION_CHANGES := <FILES> (from "Agent Inference" using DOCUMENTATION_UPDATES)
-  SET DOCUMENTATION_EVIDENCE := <EVIDENCE> (from "Agent Inference" using DOCUMENTATION_REQUIREMENTS, DOCUMENTATION_CHANGES; map each requirement to its updated file and observable content)
+  SET DOCUMENTATION_EVIDENCE := <EVIDENCE> (from "Agent Inference" using DOC_REQUIREMENTS, DOCUMENTATION_CHANGES; map each requirement to its updated file and observable content)
 </process>
 
 <process id="run-full-validation" name="Run the complete project validation suite">
@@ -282,7 +370,12 @@ SET FULL_PASSED := <PASSED> (from "Agent Inference" using FULL_OUTPUT)
 IF FULL_PASSED is false:
   USE `execute/testFailure`
   CAPTURE FAILURE_DETAILS from `execute/testFailure`
-  SET FULL_FIX := <FIX> (from "Agent Inference" using FAILURE_DETAILS, TASKS, RELEVANT_ADRS, RELEVANT_CORE_COMPONENTS)
+  SET OBSERVATION_DESC := "Full validation failed and required diagnosis." (from "Agent Inference")
+  SET OBSERVATION_KIND := "difficulty" (from "Agent Inference")
+  RUN `observe-friction`
+  SET FIX_EDITS := <EDITS> (from "Agent Inference" using FAILURE_DETAILS, TASKS, RELEVANT_ADRS, RELEVANT_CORE_COMPONENTS; include complete corrective file edits)
+  SET PENDING_EDITS := FIX_EDITS (from "Agent Inference")
+  RUN `apply-pending-edits`
   USE `execute/runInTerminal` where: command="just verify"
   CAPTURE FULL_OUTPUT from `execute/runInTerminal`
   SET FULL_PASSED := <PASSED> (from "Agent Inference" using FULL_OUTPUT)
@@ -298,10 +391,10 @@ IF EVIDENCE_COMPLETE is false:
 SET NOTES_CONTENT := <CONTENT> (from "Agent Inference" using ISSUE_NUMBER, COMPLETED_TASKS, ACCEPTANCE_CATALOG, AC_EVIDENCE, DOCUMENTATION_EVIDENCE, FOCUSED_RESULTS, FULL_RESULTS; include every AC-* ID, documentation evidence or no-impact rationale, and avoid final acceptance claims)
 USE `edit/createDirectory` where: dirPath=IMPLEMENTATION_DIR
 TRY:
-  USE `read/readFile` where: filePath=IMPLEMENTATION_NOTES_PATH
-  USE `edit/editFiles` where: content=NOTES_CONTENT, filePath=IMPLEMENTATION_NOTES_PATH
+  USE `read/readFile` where: filePath=IMPLEMENT_NOTES_PATH
+  USE `edit/editFiles` where: content=NOTES_CONTENT, filePath=IMPLEMENT_NOTES_PATH
 RECOVER (err):
-  USE `edit/createFile` where: content=NOTES_CONTENT, filePath=IMPLEMENTATION_NOTES_PATH
+  USE `edit/createFile` where: content=NOTES_CONTENT, filePath=IMPLEMENT_NOTES_PATH
 </process>
 
 <process id="commit-implementation" name="Commit the completed implementation">
@@ -311,8 +404,10 @@ IF IMPLEMENTATION_STATUS is empty:
   RETURN: format="IMPLEMENT_ERROR", details="No implementation changes are available to commit.", error_message="Implementation commit is missing", issue_number=ISSUE_NUMBER, return_stage="implement"
 SET COMMIT_GROUPS := <GROUPS> (from "Agent Inference" using IMPLEMENTATION_STATUS, TASKS, DOCUMENTATION_CHANGES; include application documentation, issue-related files, and logical atomic groups)
 FOREACH group IN COMMIT_GROUPS:
-  USE `execute/runInTerminal` where: command="git add <group.files>"
-  USE `execute/runInTerminal` where: command="git commit -m '<group.message>' -m '' -m '<CO_AUTHOR_TRAILER>'"
+  SET STAGE_COMMAND := <COMMAND> (from "Agent Inference" using group; build a safely quoted git add command)
+  USE `execute/runInTerminal` where: command=STAGE_COMMAND
+  SET COMMIT_COMMAND := <COMMAND> (from "Agent Inference" using group, CO_AUTHOR_TRAILER; build a safely quoted git commit command)
+  USE `execute/runInTerminal` where: command=COMMIT_COMMAND
 USE `execute/runInTerminal` where: command="git rev-parse HEAD"
 CAPTURE COMMIT_SHA from `execute/runInTerminal`
 </process>
@@ -320,6 +415,8 @@ CAPTURE COMMIT_SHA from `execute/runInTerminal`
 <process id="prepare-handoff" name="Prove the committed handoff is clean">
 USE `execute/runInTerminal` where: command="git branch --show-current"
 CAPTURE BRANCH_NAME from `execute/runInTerminal`
+IF BRANCH_NAME != REQUEST_BRANCH:
+  RETURN: format="IMPLEMENT_ERROR", details=BRANCH_NAME, error_message="The implementation branch does not match the coordinator request", issue_number=ISSUE_NUMBER, return_stage="implement"
 USE `execute/runInTerminal` where: command="git status --porcelain"
 CAPTURE FINAL_STATUS from `execute/runInTerminal`
 SET CLEAN_TREE := <CLEAN> (from "Agent Inference" using FINAL_STATUS)
@@ -329,5 +426,5 @@ IF CLEAN_TREE is false:
 </processes>
 
 <input>
-USER_INPUT contains the issue number and the Plan-to-Implement handoff with AC-* criteria, tasks, test plan, and relevant architecture.
+IMPLEMENT_REQUEST is canonical JSON with branch_name, issue_number, plan_handoff, verification_feedback, and work_item_path fields.
 </input>

@@ -1,9 +1,40 @@
-# Documentation
+# Ascend Documentation
 
-This directory contains application-specific documentation such as API references, user guides, deployment instructions, and operational runbooks.
+Ascend provides a browser project home for existing host directories and persistent code-server workbenches. The product owns navigation and runtime lifecycle; code-server owns editing, terminals, Explorer, previews, Git UI, and extensions.
 
-Add documentation here as the application evolves.
+## MVP Boundaries
 
-The RPIV Implement stage updates every application document affected by a change, including README content, API references, configuration instructions, usage examples, migration notes, explanatory architecture documentation, and operational or deployment instructions. The Verify stage independently checks that committed documentation is complete and accurate.
+- Projects are explicitly opened by filesystem path; Ascend does not scan for repositories.
+- Project metadata is stored in SQLite; source files remain in their original directories.
+- Closing a project removes metadata and stops managed resources without deleting project files.
+- Workbenches run directly on the host as the configured Ascend user.
+- The MVP targets a modern Chromium desktop browser and a single development host.
 
-For project management documentation (architecture decisions, core-components, and work-item pipeline artifacts), see the [`project/`](../project/) directory.
+## Local Development
+
+Use the root command interface:
+
+```text
+just setup
+just run
+just verify
+```
+
+The devcontainer pins Node.js 22, pnpm 10.34.5, and code-server 4.117.0 through features. Its post-create script invokes `just setup` to install workspace and Playwright dependencies reproducibly.
+
+Configuration uses environment variables:
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `ASCEND_HOST` | `127.0.0.1` | API bind address |
+| `ASCEND_PORT` | `3000` | API port |
+| `ASCEND_DATABASE_URL` | `file:ascend.db` | SQLite database URL |
+| Standard `OTEL_*` variables | OpenTelemetry defaults | Optional observability configuration |
+
+Application logs are simple structured console records. Logs and telemetry must not contain source, terminal, clipboard, prompt, credential, or secret content.
+
+## Source Documents
+
+- [`PRD.md`](../PRD.md) defines the MVP requirements and acceptance criteria.
+- [`ADR-260808-typescript-monorepo`](../project/architecture/ADR/ADR-260808-typescript-monorepo.md) defines the initial stack.
+- [`project/architecture/core-components/`](../project/architecture/core-components/) contains cross-cutting contracts.

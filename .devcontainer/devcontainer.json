@@ -1,5 +1,5 @@
 {
-    "name": "soft-factory",
+    "name": "ascend",
     "build": {
         "dockerfile": "Dockerfile",
         "args": {
@@ -10,7 +10,7 @@
     },
     "runArgs": [
         "--name",
-        "soft-factory"
+        "ascend"
     ],
     "features": {
         "ghcr.io/devcontainers/features/common-utils:2": {
@@ -19,18 +19,16 @@
             "installOhMyZshConfig": true
         },
         "ghcr.io/devcontainers/features/docker-outside-of-docker": {},
-        // "ghcr.io/devcontainers/features/python": {},
-        // "ghcr.io/devcontainers/features/node": {
-            // "version": "lts"
-        // },
-        // "ghcr.io/devcontainers/features/go:1": {
-        //     "version": "latest"
-        // },
-        "ghcr.io/devcontainers/features/azure-cli:1": {},
-        // "ghcr.io/jsburckhardt/devcontainer-features/uv:1": {
-        //     "shellautocompletion": true,
-        //     "version": "latest"
-        // },
+        "ghcr.io/devcontainers/features/node:2": {
+            "version": "22",
+            "pnpmVersion": "10.34.5"
+        },
+        "ghcr.io/coder/devcontainer-features/code-server:2": {
+            "version": "4.117.0",
+            "auth": "none",
+            "host": "127.0.0.1",
+            "disableTelemetry": true
+        },
         "ghcr.io/stuartleeks/dev-container-features/shell-history": {},
         "ghcr.io/jsburckhardt/devcontainer-features/just": {},
         "ghcr.io/devcontainers/features/github-cli": {},
@@ -46,20 +44,19 @@
                 "files.insertFinalNewline": true,
                 "files.trimTrailingWhitespace": true,
                 "editor.tabSize": 4,
-                // "python.defaultInterpreterPath": "/home/vscode/.venv/bin/python",
                 "files.autoSave": "onWindowChange",
                 "chat.customAgentInSubagent.enabled": true,
                 "task.allowAutomaticTasks": "on"
             },
             "extensions": [
                 "GitHub.vscode-github-actions",
-                "ms-azuretools.azure-dev",
-                "ms-azuretools.vscode-bicep",
                 "ms-azuretools.vscode-docker",
-                "njpwerner.autodocstring",
+                "ms-playwright.playwright",
+                "oxc.oxc-vscode",
+                "bradlc.vscode-tailwindcss",
+                "esbenp.prettier-vscode",
                 "redhat.vscode-yaml",
                 "shardulm94.trailing-spaces",
-                "tamasfe.even-better-toml",
                 "yzhang.markdown-all-in-one",
                 "bierner.markdown-mermaid",
                 "eamodio.gitlens"
@@ -69,9 +66,6 @@
     "postCreateCommand": "bash .devcontainer/post-create.sh",
     "containerEnv": {
         "DISPLAY": "dummy",
-        "PYTHONUNBUFFERED": "True",
-        "UV_LINK_MODE": "copy",
-        "UV_PROJECT_ENVIRONMENT": "/home/vscode/.venv",
         "HOST_PROJECT_PATH": "${localWorkspaceFolder}",
         "COPILOT_OTEL_ENABLED": "${localEnv:COPILOT_OTEL_ENABLED}",
         "COPILOT_OTEL_EXPORTER_TYPE": "${localEnv:COPILOT_OTEL_EXPORTER_TYPE}",

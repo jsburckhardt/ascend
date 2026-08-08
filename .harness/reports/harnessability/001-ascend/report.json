@@ -1,0 +1,234 @@
+{
+  "schema_version": "harnessability-assessment.v0.2",
+  "run": {
+    "timestamp_utc": "20260808T070846Z",
+    "repo_root": "/workspaces/ascend",
+    "repo_name": "ascend",
+    "branch": "main",
+    "commit": "f2f15f757885f0ba3dddf5c58dc3853953a9a330",
+    "mode": "static",
+    "commands_executed": [
+      "git branch --show-current",
+      "git rev-parse HEAD",
+      "git status --short",
+      "static file and repository inventory"
+    ],
+    "commands_skipped": [
+      "dependency installation",
+      "service boot",
+      "just verify",
+      "database mutation",
+      "external service calls"
+    ],
+    "safety_notes": [
+      "Static assessment only; no product service, test suite, migration, or external system was executed.",
+      "Environment variable names and documented defaults were inspected; secret values were not read."
+    ]
+  },
+  "verdict": {
+    "operate_today_percent": 63,
+    "operate_today_grade": "C",
+    "adaptability_percent": 57,
+    "adaptability_grade": "C",
+    "harnessability_index_percent": 60,
+    "harnessability_index_grade": "C",
+    "final_grade": "C",
+    "readiness_level": "H2",
+    "highest_proof_level": "L2",
+    "target_proof_level": "L4",
+    "confidence": "medium"
+  },
+  "harness_surfaces": [
+    {
+      "name": "Root justfile",
+      "path": "justfile",
+      "kind": "canonical",
+      "status": "configured_unverified",
+      "notes": "README and API documentation direct contributors to setup, run, focused verification, and full verification recipes."
+    },
+    {
+      "name": "Engineering harness governance",
+      "path": ".harness/engineering-harness.md",
+      "kind": "canonical",
+      "status": "seeded",
+      "notes": "The L0 skeleton exists, but checks, boot, health, interaction, observation, and injection-map fields remain TODO."
+    },
+    {
+      "name": "RPIV delivery flow",
+      "path": "CONTRIBUTING.md",
+      "kind": "generic",
+      "status": "documented",
+      "notes": "Research, Plan, Implement, and Verify are documented with durable artifact locations."
+    }
+  ],
+  "topology": {
+    "primary_type": "TypeScript pnpm monorepo",
+    "languages": ["TypeScript", "TSX", "Bash"],
+    "runtimes": ["Node.js 22", "Chromium"],
+    "package_roots": [".", "apps/api", "apps/web"],
+    "service_types": ["Fastify API", "React web application", "future host-managed code-server workbenches"],
+    "frameworks": ["Fastify", "React", "Vite", "Drizzle ORM", "Vitest", "Playwright"],
+    "ci": [],
+    "is_monorepo": true
+  },
+  "axis_a_operate_today": [
+    {"id":"A1","name":"Cold-start orientation and repo map","band":"Strong","points":3,"provenance":"evidence","evidence":["README.md","docs/README.md","CONTRIBUTING.md"],"notes":"Purpose, layout, canonical commands, and RPIV flow are explicit."},
+    {"id":"A2","name":"Setup and environment contract","band":"Partial","points":2,"provenance":"evidence","evidence":[".devcontainer/devcontainer.json",".devcontainer/post-create.sh","docs/README.md"],"notes":"Runtime and tools are pinned and env names are documented, but there is no application doctor or env example file."},
+    {"id":"A3","name":"Locality and external dependency exposure","band":"Partial","points":2,"provenance":"evidence","evidence":["apps/api/src/db/client.ts","project/architecture/ADR/ADR-260808-typescript-monorepo.md"],"notes":"SQLite is local and loopback is the default; future code-server lifecycle proof depends on a host binary and host environment."},
+    {"id":"A4","name":"Harness front door and command discoverability","band":"Partial","points":2,"provenance":"evidence","evidence":["justfile","README.md",".harness/engineering-harness.md"],"notes":"The justfile is canonical, but harness checks and boot verbs are not yet configured."},
+    {"id":"A5","name":"Boot and health/readiness path","band":"Partial","points":2,"provenance":"evidence","evidence":["justfile","apps/api/src/routes/root.ts","playwright.config.ts"],"notes":"Run commands and basic web/API readiness signals exist separately; no deterministic aggregate boot command exists."},
+    {"id":"A6","name":"Seed, fixture, reset, and cleanup state","band":"Weak","points":1,"provenance":"evidence","evidence":["apps/api/src/db/schema.ts","apps/api/drizzle.config.ts"],"notes":"SQLite schema foundations exist without a documented migration, seed, reset, or fixture lifecycle."},
+    {"id":"A7","name":"Supported interaction surfaces","band":"Partial","points":2,"provenance":"evidence","evidence":["apps/api/test/routes/root.test.ts","tests/e2e/project-home.spec.ts"],"notes":"Fastify injection and browser interaction are supported, but only scaffold behavior is implemented."},
+    {"id":"A8","name":"Deterministic back-pressure sensors","band":"Partial","points":2,"provenance":"evidence","evidence":["justfile","apps/web/vite.config.ts","test-results/.last-run.json"],"notes":"Format, lint, typecheck, unit, build, and E2E gates are configured; CI equivalence is absent and API coverage thresholds are not explicit."},
+    {"id":"A9","name":"Observability and evidence artifacts","band":"Partial","points":2,"provenance":"evidence","evidence":["apps/api/src/server.ts","apps/api/src/instrumentation.ts","playwright.config.ts"],"notes":"Structured Fastify logs, OpenTelemetry, coverage, and Playwright traces exist, but artifact paths and runtime diagnostics are not unified."},
+    {"id":"A10","name":"Compounding harness loop","band":"Weak","points":1,"provenance":"evidence","evidence":[".harness/engineering-harness.md","CONTRIBUTING.md"],"notes":"RPIV is explicit and the harness nucleus is seeded, but observe/retro/injection surfaces are not wired."}
+  ],
+  "axis_b_adaptability": [
+    {"id":"B1","name":"Structural coupling and blast radius","band":"Partial","points":2,"provenance":"evidence","evidence":["pnpm-workspace.yaml","apps/api/src/app.ts"],"notes":"Web and API boundaries are clear, but product behavior is still too sparse for strong coupling evidence."},
+    {"id":"B2","name":"Temporal/change coupling","band":"Unknown","points":0,"provenance":"unknown","evidence":[],"notes":"Git-history mining was not enabled in static mode."},
+    {"id":"B3","name":"Cohesion and locality of change","band":"Strong","points":3,"provenance":"evidence","evidence":["apps/api/src","apps/api/test","apps/web/src"],"notes":"Tests and implementation are localized by application and boundary."},
+    {"id":"B4","name":"Seams, substitution, and dependency inversion","band":"Partial","points":2,"provenance":"evidence","evidence":["apps/api/test/helper.ts","apps/api/src/app.ts"],"notes":"Fastify plugins and inject provide useful seams; the database client is a module-global concrete dependency."},
+    {"id":"B5","name":"Hermetic, offline, and isolated testability","band":"Strong","points":3,"provenance":"evidence","evidence":["apps/api/test/helper.ts","apps/web/src/App.test.tsx","playwright.config.ts"],"notes":"Current unit and E2E scaffold tests run locally without remote services or credentials."},
+    {"id":"B6","name":"Side-effect isolation and external-effect sinks","band":"Weak","points":1,"provenance":"evidence","evidence":["apps/api/src/db/client.ts"],"notes":"No explicit fakes or sinks exist yet for future host-process and filesystem effects."},
+    {"id":"B7","name":"State evolution and consequence verification","band":"Weak","points":1,"provenance":"evidence","evidence":["apps/api/src/db/schema.ts","apps/api/drizzle.config.ts"],"notes":"Schema exists, but migration compatibility, reset, and persistent consequence checks are absent."},
+    {"id":"B8","name":"Architecture boundary enforceability","band":"Weak","points":1,"provenance":"evidence","evidence":["project/architecture","justfile"],"notes":"Architecture contracts are rich prose but no executable dependency or boundary rule is configured."},
+    {"id":"B9","name":"Complexity, size, and navigability thresholds","band":"Partial","points":2,"provenance":"evidence","evidence":["apps/api/package.json","apps/web/package.json"],"notes":"Oxlint and strict TypeScript provide static pressure; complexity and size thresholds are not configured."},
+    {"id":"B10","name":"Inner-loop speed and repeatability","band":"Partial","points":2,"provenance":"evidence","evidence":["justfile","vitest.config.ts"],"notes":"Focused and full lanes exist, but durations, clean-state reruns, and flake controls are not recorded."}
+  ],
+  "backpressure_surfaces": [
+    {"category":"static","status":"configured_unverified","command_or_check":"just verify","proof_level":"L2","evidence":"justfile"},
+    {"category":"static","status":"configured_unverified","command_or_check":"just verify-focused <path>","proof_level":"L2","evidence":"justfile"},
+    {"category":"runtime","status":"configured_unverified","command_or_check":"just run","proof_level":"L1","evidence":"justfile"},
+    {"category":"runtime","status":"configured_unverified","command_or_check":"GET / returns {name: ascend, status: ok}","proof_level":"L3","evidence":"apps/api/src/routes/root.ts"},
+    {"category":"consequence","status":"configured_unverified","command_or_check":"Playwright project-home assertion","proof_level":"L4","evidence":"tests/e2e/project-home.spec.ts"},
+    {"category":"observability","status":"configured_unverified","command_or_check":"Fastify structured logs and OpenTelemetry","proof_level":"L1","evidence":"apps/api/src/server.ts and apps/api/src/instrumentation.ts"},
+    {"category":"human_inferential","status":"configured_unverified","command_or_check":"RPIV documentation and architecture contracts","proof_level":"L0","evidence":"CONTRIBUTING.md and project/architecture"}
+  ],
+  "scenario_probes": [
+    {"name":"API health behavior","relevant_surfaces":["Fastify root route","Fastify inject"],"supported_interaction":"app.inject GET /","expected_observable_consequence":"200 JSON status","deterministic_verdict":"apps/api/test/routes/root.test.ts","highest_plausible_proof_level":"L4","what_remains_inferred":"Bound-port server readiness and shutdown behavior"},
+    {"name":"Project-home UI behavior","relevant_surfaces":["React","Testing Library","Playwright"],"supported_interaction":"render or browser navigation","expected_observable_consequence":"Visible heading and Open Project button","deterministic_verdict":"App.test.tsx and project-home.spec.ts","highest_plausible_proof_level":"L4","what_remains_inferred":"No project lifecycle behavior exists yet"},
+    {"name":"SQLite project state","relevant_surfaces":["Drizzle schema","libSQL client"],"supported_interaction":"Not yet exposed","expected_observable_consequence":"projects table row","deterministic_verdict":"None","highest_plausible_proof_level":"L1","what_remains_inferred":"Migration, fixture, reset, and persistence behavior"},
+    {"name":"Host workbench lifecycle","relevant_surfaces":["PRD","host-process architecture contracts"],"supported_interaction":"Not implemented","expected_observable_consequence":"Managed code-server process and reachable workbench","deterministic_verdict":"None","highest_plausible_proof_level":"L0","what_remains_inferred":"Process ownership, readiness, cleanup, and host-shell parity"}
+  ],
+  "command_tiers": [
+    {"command_or_check":"just setup","tier":"bootstrap","status":"configured_unverified","proof_level":"L1"},
+    {"command_or_check":"just run","tier":"boot","status":"configured_unverified","proof_level":"L1"},
+    {"command_or_check":"just verify-focused <path>","tier":"fast","status":"configured_unverified","proof_level":"L2"},
+    {"command_or_check":"just verify","tier":"ci_equivalent","status":"configured_unverified","proof_level":"L2","notes":"No CI workflow was found, so equivalence is aspirational rather than demonstrated."},
+    {"command_or_check":"pnpm test:e2e","tier":"smoke","status":"configured_unverified","proof_level":"L4"},
+    {"command_or_check":"harness checks","tier":"proof","status":"candidate_unverified","proof_level":"L2"},
+    {"command_or_check":"harness boot","tier":"boot","status":"candidate_unverified","proof_level":"L4"}
+  ],
+  "environment_variables": [
+    {"name":"ASCEND_HOST","required":"no","purpose_inferred":"API bind address","source_files":["docs/README.md","apps/api/src/server.ts"],"example_present":"yes","safe_default_present":"yes","secret_like":"no"},
+    {"name":"ASCEND_PORT","required":"no","purpose_inferred":"API port","source_files":["docs/README.md","apps/api/src/server.ts"],"example_present":"yes","safe_default_present":"yes","secret_like":"no"},
+    {"name":"ASCEND_DATABASE_URL","required":"no","purpose_inferred":"SQLite/libSQL URL","source_files":["docs/README.md","apps/api/src/db/client.ts"],"example_present":"yes","safe_default_present":"yes","secret_like":"unknown"},
+    {"name":"OTEL_*","required":"optional","purpose_inferred":"OpenTelemetry export configuration","source_files":["docs/README.md",".devcontainer/devcontainer.json"],"example_present":"yes","safe_default_present":"yes","secret_like":"unknown"}
+  ],
+  "external_dependencies": [
+    {"name":"SQLite/libSQL","type":"database","where_detected":"apps/api/src/db/client.ts","local_option":"native","remote_required":"no","secret_required":"no","mutation_risk":"local_only","proof_blocked_by_dependency":"no","recommended_affordance":"Add deterministic migrate, fixture, and reset commands."},
+    {"name":"code-server","type":"internal_service","where_detected":"README.md and PRD.md","local_option":"native","remote_required":"no","secret_required":"no","mutation_risk":"local_only","proof_blocked_by_dependency":"partial","recommended_affordance":"Add a managed-process fake plus a readiness smoke command before lifecycle implementation expands."},
+    {"name":"OpenTelemetry collector","type":"other","where_detected":".devcontainer/devcontainer.json","local_option":"unknown","remote_required":"optional","secret_required":"no","mutation_risk":"none","proof_blocked_by_dependency":"no","recommended_affordance":"Keep export optional and provide a local structured diagnostic artifact."}
+  ],
+  "gaps": [
+    {"id":"GAP-001","title":"No configured harness checks or boot command","axis":"operate_today","severity":"blocker","status":"absent","provenance":"evidence","confidence":"high","subsystem":"tools","loop_stage":"boot","recommended_next_action":"Wrap the canonical just verification lane in harness checks, then create a boot command that proves web and API readiness and composes checks."},
+    {"id":"GAP-002","title":"No deterministic database migration, fixture, or reset lifecycle","axis":"both","severity":"high","status":"absent","provenance":"evidence","confidence":"high","subsystem":"state","loop_stage":"validate","recommended_next_action":"Expose local-only migrate, fixture, reset, and consequence-check commands."},
+    {"id":"GAP-003","title":"No CI-to-local gate equivalence","axis":"operate_today","severity":"medium","status":"absent","provenance":"evidence","confidence":"high","subsystem":"feedback","loop_stage":"validate","recommended_next_action":"Run the same root just recipes in CI and report their artifacts."},
+    {"id":"GAP-004","title":"Architecture contracts are not executable","axis":"adaptability","severity":"medium","status":"weak","provenance":"evidence","confidence":"high","subsystem":"architecture","loop_stage":"validate","recommended_next_action":"Add a dependency-boundary check for web, API, and host-process boundaries."},
+    {"id":"GAP-005","title":"Runtime evidence paths are diffuse","axis":"operate_today","severity":"medium","status":"partial","provenance":"evidence","confidence":"medium","subsystem":"observability","loop_stage":"observe","recommended_next_action":"Add one structured diagnostics command that reports readiness and artifact locations."}
+  ],
+  "remediations": [
+    {"id":"REM-001","title":"Create harness checks","priority":1,"addresses":["GAP-001","GAP-003"],"action":"Wrap the root deterministic verification surface, with a focused lane retained for development.","estimated_effort":"S","proof_level_unblocked":"L2"},
+    {"id":"REM-002","title":"Create harness boot with readiness evidence","priority":2,"addresses":["GAP-001","GAP-005"],"action":"Start or probe the web and API, capture machine-readable readiness, then compose harness checks.","estimated_effort":"M","proof_level_unblocked":"L4"},
+    {"id":"REM-003","title":"Encode SQLite state lifecycle","priority":3,"addresses":["GAP-002"],"action":"Add local-only migrate, fixture, reset, and assertion commands using an isolated database path.","estimated_effort":"M","proof_level_unblocked":"L4"},
+    {"id":"REM-004","title":"Enforce architecture boundaries","priority":4,"addresses":["GAP-004"],"action":"Add an executable import/dependency rule aligned with the accepted ADR and core-components.","estimated_effort":"M","proof_level_unblocked":"L2"},
+    {"id":"REM-005","title":"Make CI invoke canonical just recipes","priority":5,"addresses":["GAP-003"],"action":"Use root recipes unchanged in CI so local and remote verdicts are equivalent.","estimated_effort":"S","proof_level_unblocked":"L2"}
+  ],
+  "product_code_affordances": [
+    {"status":"proposed","risk_tier":"low","target_layer":"product_code","environment_scope":["local","test"],"environments_where_it_must_not_apply":["production mutation paths"],"safety_requirements":["Use an isolated SQLite file.","Refuse non-local database URLs."],"human_or_security_review_required":false,"which_gap_it_addresses":"GAP-002","title":"Isolated database lifecycle and consequence diagnostic","which_harness_command_or_proof_level_it_unblocks":"state fixture/reset and L4 persistence proof","why_it_is_better_than_more_documentation":"It makes state setup and verification executable and repeatable."},
+    {"status":"proposed","risk_tier":"medium","target_layer":"product_code","environment_scope":["local","test"],"environments_where_it_must_not_apply":["uncontrolled host processes"],"safety_requirements":["Use explicit process ownership.","Bind to loopback.","Use deterministic ports and targeted cleanup."],"human_or_security_review_required":true,"which_gap_it_addresses":"GAP-005","title":"Workbench process fake and diagnostics surface","which_harness_command_or_proof_level_it_unblocks":"host lifecycle smoke and L4 process-state proof","why_it_is_better_than_more_documentation":"It proves process lifecycle without launching arbitrary user workbenches."}
+  ],
+  "harness_recommendations": [
+    {"id":"HR-001","title":"Add checks extension","target":"harness checks","rationale":"Makes the existing root quality gate discoverable and machine-readable."},
+    {"id":"HR-002","title":"Add boot extension","target":"harness boot","rationale":"Turns separate run and health clues into one readiness verdict that composes checks."},
+    {"id":"HR-003","title":"Wire lifecycle hooks into RPIV","target":"governance injection map","rationale":"Makes pre-flight, observation, drain, and harvest structural rather than remembered."}
+  ],
+  "applied_patches": [],
+  "onboarding_consolidation": [
+    {"item":"README, docs/README, CONTRIBUTING, and architecture records","status":"referenced","notes":"The existing onboarding material is coherent and was reused as assessment evidence; no content was moved or edited."}
+  ],
+  "first_safe_session_plan": [
+    "Run the configured focused verification recipe for the file being changed.",
+    "Use Fastify inject or the existing Playwright scaffold for interaction without external services.",
+    "Avoid persistent-state work until an isolated SQLite migrate/fixture/reset path exists.",
+    "Finish adoption by creating harness checks and boot, then record the RPIV injection map."
+  ],
+  "human_questions": [
+    {"id":"HQ-001","question":"Should the initial boot command start both applications or only probe already-running services?","why":"The answer determines process ownership and cleanup semantics."}
+  ],
+  "evidence_log": [
+    {"claim":"The root justfile is the documented canonical command interface.","provenance":"evidence","source":"README.md, docs/README.md, apps/api/README.md"},
+    {"claim":"No tracked CI workflow exists.","provenance":"evidence","source":"git ls-files .github/workflows/**"},
+    {"claim":"Current tests provide local static and browser proof without remote credentials.","provenance":"evidence","source":"apps/api/test, apps/web/src/App.test.tsx, tests/e2e/project-home.spec.ts"},
+    {"claim":"The last local Playwright result records a passing run, but it is ignored and not durable CI evidence.","provenance":"evidence","source":"test-results/.last-run.json and .gitignore"},
+    {"claim":"The harness governance document is seeded at L0 and has no boot, checks, or injection map.","provenance":"evidence","source":".harness/engineering-harness.md"},
+    {"claim":"Host workbench lifecycle remains a design target rather than implemented behavior.","provenance":"evidence","source":"README.md, PRD.md, current apps source inventory"}
+  ],
+  "report_paths": {
+    "run_dir": ".harness/reports/harnessability/001-ascend",
+    "markdown": ".harness/reports/harnessability/001-ascend/report.md",
+    "json": ".harness/reports/harnessability/001-ascend/report.json",
+    "summary": ".harness/reports/harnessability/001-ascend/summary.md",
+    "latest_markdown": ".harness/reports/harnessability/latest.md",
+    "latest_json": ".harness/reports/harnessability/latest.json",
+    "schema": ".harness/reports/harnessability/schema.json"
+  },
+  "assessment_matrix": [
+    {"area":"Orientation and setup","grade":"B","score_percent":75,"rationale":"Strong documentation and pinned devcontainer, but no application doctor."},
+    {"area":"Operate and interact","grade":"C","score_percent":63,"rationale":"Canonical commands and scaffold interactions exist without aggregate boot or state lifecycle."},
+    {"area":"Prove and observe","grade":"C","score_percent":57,"rationale":"Broad local gates exist, but CI equivalence and unified runtime evidence do not."},
+    {"area":"Adapt and compound","grade":"C","score_percent":57,"rationale":"Good package boundaries and RPIV contracts, but few executable architecture or harness-loop sensors."}
+  ],
+  "engineering_flows": [
+    {"name":"Root development flow","kind":"custom","commands":["just setup","just run","just verify-focused","just verify"],"canonical":"yes","where_detected":"README.md and justfile"},
+    {"name":"RPIV delivery flow","kind":"sdd","commands":["rpiv"],"canonical":"yes","where_detected":"CONTRIBUTING.md and AGENTS.md"}
+  ],
+  "pre_commit_gates": [],
+  "ci_local_equivalence": [
+    {"check":"Full verification","equivalence":"local_only","local_command":"just verify","notes":"No tracked CI workflow found."}
+  ],
+  "existing_harness_concepts": [
+    {"name":"Root justfile","kind":"canonical","surfaces":["setup","run","verify-focused","verify"],"coverage":"Partial","notes":"Primary current front door."},
+    {"name":"Engineering harness","kind":"canonical","surfaces":[],"coverage":"Weak","notes":"Governance exists at L0; extensions are absent."}
+  ],
+  "deterministic_encoding_opportunities": [
+    {"title":"RPIV stage requirements","current_encoding":"context_file","proposed_encoding":"workflow/schema validation over required work-item artifacts","proof_level":"L2"},
+    {"title":"Architecture boundaries","current_encoding":"doc","proposed_encoding":"dependency boundary check","proof_level":"L2"},
+    {"title":"Host process safety","current_encoding":"doc","proposed_encoding":"process-manager contract tests with a fake executable","proof_level":"L4"}
+  ],
+  "test_mechanisms": [
+    {"type":"integration","name":"Fastify inject","deterministic":"yes","where_detected":"apps/api/test/helper.ts and root.test.ts"},
+    {"type":"unit","name":"Testing Library with jsdom","deterministic":"yes","where_detected":"apps/web/src/App.test.tsx"},
+    {"type":"e2e","name":"Playwright managed Vite server","deterministic":"optional","where_detected":"playwright.config.ts and tests/e2e/project-home.spec.ts"}
+  ],
+  "external_dependency_pressure": [
+    {"dependency":"SQLite/libSQL","pressure":"low","local_substitute":"native","proof_impact":"State lifecycle commands are missing, not the dependency itself."},
+    {"dependency":"code-server","pressure":"medium","local_substitute":"none","proof_impact":"Future lifecycle proof is blocked until process seams are implemented."},
+    {"dependency":"OpenTelemetry collector","pressure":"low","local_substitute":"unknown","proof_impact":"Does not block local correctness proof."}
+  ],
+  "code_composition": [
+    {"area":"Web and API packages","kind":"package","test_seam":"yes","coupling":"low in current scaffold"},
+    {"area":"Fastify application","kind":"plugin","test_seam":"yes","coupling":"partial"},
+    {"area":"Database client","kind":"seam","test_seam":"no","coupling":"moderate"}
+  ],
+  "candidate_first_harness_surfaces": [
+    {"surface":"checks","rationale":"Wraps the existing canonical verification gates.","proof_level":"L2","already_exists":"no","priority":"high"},
+    {"surface":"boot","rationale":"Combines readiness, orientation, and checks into one verdict.","proof_level":"L4","already_exists":"no","priority":"high"},
+    {"surface":"db-state","rationale":"Provides isolated migration, fixture, reset, and consequence proof.","proof_level":"L4","already_exists":"no","priority":"medium"},
+    {"surface":"architecture","rationale":"Turns documented package and host-process boundaries into an executable rule.","proof_level":"L2","already_exists":"no","priority":"medium"}
+  ],
+  "manual_operation_signals": [
+    {"signal":"Project opening and workbench lifecycle are currently PRD-only behavior.","kind":"manual_step","influences":["A5","A7","A9","B5","B10"],"penalize":"yes"},
+    {"signal":"No manual-only IDE build or test entrypoint was detected.","kind":"undocumented","influences":["A4","A8"],"penalize":"no"}
+  ]
+}

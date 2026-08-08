@@ -1,0 +1,213 @@
+{
+  "schema_version": 1,
+  "kind": "harness-adopt",
+  "slug": "adopt",
+  "nav": {
+    "now": "bridge",
+    "next": "build-boot",
+    "intent": "Cross into the engineering loop"
+  },
+  "created_at": "2026-08-08T07:03:18.415Z",
+  "provenance": {
+    "record_kind": "flow",
+    "harness_version": "0.13.0",
+    "branch": "main",
+    "repo": "https://github.com/jsburckhardt/ascend.git",
+    "created_at": "2026-08-08T07:03:18.415Z",
+    "agent": null,
+    "plan_id": null
+  },
+  "events": [
+    {
+      "id": "CRT-001",
+      "kind": "created",
+      "origin": "engine",
+      "fired_at": "2026-08-08T07:03:18.421Z",
+      "details": {
+        "kind": "harness-adopt",
+        "slug": "adopt"
+      }
+    },
+    {
+      "id": "CUR-001",
+      "kind": "cursor-moved",
+      "origin": "engine",
+      "fired_at": "2026-08-08T07:03:18.706Z",
+      "details": {
+        "from": "install",
+        "to": "governance"
+      }
+    },
+    {
+      "id": "STA-001",
+      "kind": "status-changed",
+      "origin": "engine",
+      "fired_at": "2026-08-08T07:08:20.826Z",
+      "details": {
+        "node": "install",
+        "from": "assumed",
+        "to": "done"
+      }
+    },
+    {
+      "id": "STA-002",
+      "kind": "status-changed",
+      "origin": "engine",
+      "fired_at": "2026-08-08T07:08:21.131Z",
+      "details": {
+        "node": "governance",
+        "from": "assumed",
+        "to": "done"
+      }
+    },
+    {
+      "id": "CUR-002",
+      "kind": "cursor-moved",
+      "origin": "engine",
+      "fired_at": "2026-08-08T07:08:21.513Z",
+      "details": {
+        "from": "governance",
+        "to": "governance"
+      }
+    },
+    {
+      "id": "STA-003",
+      "kind": "status-changed",
+      "origin": "engine",
+      "fired_at": "2026-08-08T07:14:32.844Z",
+      "details": {
+        "node": "scout",
+        "from": "assumed",
+        "to": "done"
+      }
+    },
+    {
+      "id": "STA-004",
+      "kind": "status-changed",
+      "origin": "engine",
+      "fired_at": "2026-08-08T07:35:28.191Z",
+      "details": {
+        "node": "inject",
+        "from": "assumed",
+        "to": "done"
+      }
+    },
+    {
+      "id": "CUR-003",
+      "kind": "cursor-moved",
+      "origin": "engine",
+      "fired_at": "2026-08-08T07:35:28.654Z",
+      "details": {
+        "from": "governance",
+        "to": "build-boot"
+      }
+    },
+    {
+      "id": "STA-005",
+      "kind": "status-changed",
+      "origin": "engine",
+      "fired_at": "2026-08-08T07:45:39.054Z",
+      "details": {
+        "node": "build-boot",
+        "from": "assumed",
+        "to": "done"
+      }
+    },
+    {
+      "id": "CUR-004",
+      "kind": "cursor-moved",
+      "origin": "engine",
+      "fired_at": "2026-08-08T07:45:39.701Z",
+      "details": {
+        "from": "build-boot",
+        "to": "bridge"
+      }
+    },
+    {
+      "id": "STA-006",
+      "kind": "status-changed",
+      "origin": "engine",
+      "fired_at": "2026-08-08T07:45:40.218Z",
+      "details": {
+        "node": "bridge",
+        "from": "assumed",
+        "to": "done"
+      }
+    }
+  ],
+  "nodes": [
+    {
+      "id": "install",
+      "type": "install",
+      "label": "Install harness",
+      "status": "done",
+      "next": [
+        "governance"
+      ],
+      "zone": "preflight",
+      "modified_at": "2026-08-08T07:08:20.826Z",
+      "ran_at": "2026-08-08T07:08:20.826Z"
+    },
+    {
+      "id": "governance",
+      "type": "governance",
+      "label": "Governance + boot contract",
+      "status": "done",
+      "next": [
+        "build-boot"
+      ],
+      "zone": "flight",
+      "modified_at": "2026-08-08T07:08:21.131Z",
+      "ran_at": "2026-08-08T07:08:21.131Z"
+    },
+    {
+      "id": "build-boot",
+      "type": "build-boot",
+      "label": "Build + run boot (last)",
+      "status": "done",
+      "next": [
+        "bridge"
+      ],
+      "zone": "postflight",
+      "modified_at": "2026-08-08T07:45:39.054Z",
+      "ran_at": "2026-08-08T07:45:39.054Z"
+    },
+    {
+      "id": "bridge",
+      "type": "decision",
+      "label": "Bridge → harness loop?",
+      "status": "done",
+      "next": [],
+      "zone": "postflight",
+      "modified_at": "2026-08-08T07:45:40.218Z",
+      "ran_at": "2026-08-08T07:45:40.218Z"
+    },
+    {
+      "id": "scout",
+      "type": "scout",
+      "label": "Scout (harnessability)",
+      "status": "done",
+      "next": [
+        "governance"
+      ],
+      "zone": "preflight",
+      "branch_of": "install",
+      "modified_at": "2026-08-08T07:14:32.844Z",
+      "ran_at": "2026-08-08T07:14:32.844Z"
+    },
+    {
+      "id": "inject",
+      "type": "inject",
+      "label": "Inject (wire seams)",
+      "status": "done",
+      "next": [
+        "build-boot"
+      ],
+      "zone": "flight",
+      "branch_of": "governance",
+      "modified_at": "2026-08-08T07:35:28.191Z",
+      "ran_at": "2026-08-08T07:35:28.191Z"
+    }
+  ],
+  "title": "adopt"
+}

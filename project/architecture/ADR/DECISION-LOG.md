@@ -7,6 +7,7 @@ This file is the single registry of all architectural decisions and core-compone
 | ID | Title | Status | Date |
 |----|-------|--------|------|
 | ADR-260808-typescript-monorepo | TypeScript Monorepo and Host Workbench Stack | Accepted | 2026-08-08 |
+| ADR-260808-governed-engineering-harness | Governed Repository-Local Engineering Harness | Accepted | 2026-08-08 |
 
 ## Core-Components
 
@@ -22,6 +23,7 @@ This file is the single registry of all architectural decisions and core-compone
 | CORE-COMPONENT-260808-filesystem-path-safety | Filesystem Path Safety | Adopted | 2026-08-08 |
 | CORE-COMPONENT-260808-host-process-environment | Host Process and Environment Handling | Adopted | 2026-08-08 |
 | CORE-COMPONENT-260808-development-standards | TypeScript Development Standards | Adopted | 2026-08-08 |
+| CORE-COMPONENT-260808-engineering-harness-delivery-contract | Engineering Harness Delivery Contract | Adopted | 2026-08-08 |
 
 ## Decisions
 
@@ -63,3 +65,11 @@ Short, actionable statements derived from ADRs and core-components. More than on
 | 32 | Canonicalize project paths and prohibit filesystem mutation during project close | CORE-COMPONENT-260808-filesystem-path-safety | 2026-08-08 |
 | 33 | Launch workbenches as least-privilege host processes with deterministic user environments | CORE-COMPONENT-260808-host-process-environment | 2026-08-08 |
 | 34 | Enforce strict TypeScript, automated formatting and linting, Vitest, Playwright, and 80 percent unit coverage | CORE-COMPONENT-260808-development-standards | 2026-08-08 |
+| 35 | Adopt .harness as the repository-local engineering-harness governance and evidence root | ADR-260808-governed-engineering-harness | 2026-08-08 |
+| 36 | Delegate harness checks to the root just verify recipe | ADR-260808-governed-engineering-harness | 2026-08-08 |
+| 37 | Use non-persistent test-backed readiness until live-service lifecycle support exists | ADR-260808-governed-engineering-harness | 2026-08-08 |
+| 38 | Preserve adoption baselines separately from current harness capability | ADR-260808-governed-engineering-harness | 2026-08-08 |
+| 39 | Require harness checks and boot to return actionable machine-readable envelopes | CORE-COMPONENT-260808-engineering-harness-delivery-contract | 2026-08-08 |
+| 40 | Inject advisory harness lifecycle calls at RPIV stage seams without reordering stages | CORE-COMPONENT-260808-engineering-harness-delivery-contract | 2026-08-08 |
+| 41 | Capture configured implementation friction once and reject unsupported observation kinds | CORE-COMPONENT-260808-engineering-harness-delivery-contract | 2026-08-08 |
+| 42 | Preserve harness evidence, flow, and skill-installation records as repository-local artifacts | CORE-COMPONENT-260808-engineering-harness-delivery-contract | 2026-08-08 |

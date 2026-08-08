@@ -29,7 +29,7 @@ You MUST read project/architecture/ADR/DECISION-LOG.md before starting.
 You MUST inspect existing documentation under docs/ and project/ before dispatching any stage.
 You MUST validate that the root justfile exposes verify-focused and verify before dispatching any stage.
 You MUST use the GitHub issue number as the pipeline identifier.
-You MUST use project/work-items/<ISSUE_NUMBER>-<SHORT_DESCRIPTION>/ for pipeline artifacts.
+You MUST use the resolved work-item directory for pipeline artifacts.
 You MUST resolve an existing work-item directory by issue-number prefix before deriving a new path.
 You MUST preserve an existing work-item directory name when the GitHub Issue title changes.
 You MUST fail when more than one work-item directory uses the issue-number prefix.
@@ -38,6 +38,11 @@ You MUST create or confirm the issue feature branch before dispatching Research.
 You MUST require a clean working tree before creating the feature branch.
 You MUST execute Research, Plan, Implement, and Verify in strict order.
 You MUST NOT skip any pipeline stage.
+You MUST invoke `/eng-harness-flow --hook pre-flight` after feature-branch preparation and before Research.
+You MUST invoke `/eng-harness-flow --hook pre-coding` after Plan validation and before Implement.
+You MUST invoke `/eng-harness-flow --hook post-coding` after the Implement handoff and before Verify.
+You MUST invoke `/eng-harness-flow --hook post-flight` after successful Verify completion.
+You MUST treat `eng-harness-flow` as the host skill identifier for lifecycle seam calls.
 You MUST delegate each stage to its corresponding RPIV agent.
 You MUST enforce this boundary: Research investigates.
 You MUST enforce this boundary: Plan proves acceptance coverage.
@@ -63,7 +68,7 @@ DECISION_LOG_PATH: "project/architecture/ADR/DECISION-LOG.md"
 WORK_ITEMS_DIR: "project/work-items"
 WORK_ITEM_PATTERN: "project/work-items/<ISSUE_NUMBER>-*"
 JUSTFILE_PATH: "justfile"
-BRANCH_PATTERN: "<TYPE>/<ISSUE_NUMBER>-<SHORT_SLUG>"
+BRANCH_PATTERN: "feat/<ISSUE_NUMBER>-<SHORT_SLUG>"
 REQUIRED_RECIPES: YAML<<
 - verify-focused
 - verify
@@ -74,19 +79,19 @@ PROTECTED_BRANCHES: YAML<<
 >>
 STAGE_AGENTS: YAML<<
 - agent: rpiv-research
-  output: project/work-items/<ISSUE_NUMBER>-<SHORT_DESCRIPTION>/research/00-research.md
+  output: project/work-items/<ISSUE_NUMBER>-<SHORT_SLUG>/research/00-research.md
   purpose: Record constraints, risks, relevant architecture, and repository findings
   stage: research
 - agent: rpiv-planner
-  output: project/work-items/<ISSUE_NUMBER>-<SHORT_DESCRIPTION>/plan/
+  output: project/work-items/<ISSUE_NUMBER>-<SHORT_SLUG>/plan/
   purpose: Assign stable acceptance IDs and prove task, validation, and evidence coverage
   stage: plan
 - agent: rpiv-implementer
-  output: project/work-items/<ISSUE_NUMBER>-<SHORT_DESCRIPTION>/implementation/00-implementation.md
+  output: project/work-items/<ISSUE_NUMBER>-<SHORT_SLUG>/implementation/00-implementation.md
   purpose: Implement tasks, run configured validation, record evidence, and commit
   stage: implement
 - agent: rpiv-verifier
-  output: project/work-items/<ISSUE_NUMBER>-<SHORT_DESCRIPTION>/verify/summary.md
+  output: project/work-items/<ISSUE_NUMBER>-<SHORT_SLUG>/verify/summary.md
   purpose: Verify the handoff commit, decide acceptance, push, and create the pull request
   stage: verify
 >>
@@ -144,6 +149,9 @@ IMPLEMENT_RESULT: ""
 VERIFY_RESULT: ""
 PLAN_HANDOFF: {}
 IMPLEMENT_HANDOFF: {}
+IMPLEMENT_REQUEST: {}
+IMPLEMENT_NOTES_PATH: ""
+HARNESS_RESULT: ""
 COMMAND_INTERFACE_READY: false
 FAILURE_OWNER: ""
 PIPELINE_STATUS: ""
@@ -164,20 +172,28 @@ IF PIPELINE_STATUS = "error":
 RUN `prepare-feature-branch`
 IF PIPELINE_STATUS = "error":
   RETURN: format="PIPELINE_ERROR", details=VERIFY_RESULT, error_message="Feature branch preparation failed", failed_stage=CURRENT_STAGE, issue_number=ISSUE_NUMBER, return_stage="input"
+USE `eng-harness-flow` where: hook="pre-flight"
+CAPTURE HARNESS_RESULT from `eng-harness-flow`
 RUN `dispatch-research`
 IF PIPELINE_STATUS = "error":
   RETURN: format="PIPELINE_ERROR", details=RESEARCH_RESULT, error_message="Research failed", failed_stage=CURRENT_STAGE, issue_number=ISSUE_NUMBER, return_stage="research"
 RUN `dispatch-plan`
 IF PIPELINE_STATUS = "error":
   RETURN: format="PIPELINE_ERROR", details=PLAN_RESULT, error_message="Plan failed", failed_stage=CURRENT_STAGE, issue_number=ISSUE_NUMBER, return_stage="plan"
+USE `eng-harness-flow` where: hook="pre-coding"
+CAPTURE HARNESS_RESULT from `eng-harness-flow`
 RUN `dispatch-implement`
 IF PIPELINE_STATUS = "error":
   RETURN: format="PIPELINE_ERROR", details=IMPLEMENT_RESULT, error_message="Implement failed", failed_stage=CURRENT_STAGE, issue_number=ISSUE_NUMBER, return_stage="implement"
+USE `eng-harness-flow` where: hook="post-coding"
+CAPTURE HARNESS_RESULT from `eng-harness-flow`
 RUN `dispatch-verify`
 IF PIPELINE_STATUS = "error":
   RUN `route-verification-failure`
 IF PIPELINE_STATUS = "error":
   RETURN: format="PIPELINE_ERROR", details=VERIFY_RESULT, error_message="Verification failed after correction", failed_stage=CURRENT_STAGE, issue_number=ISSUE_NUMBER, return_stage=FAILURE_OWNER
+USE `eng-harness-flow` where: hook="post-flight"
+CAPTURE HARNESS_RESULT from `eng-harness-flow`
 RETURN: format="COMPLETION_REPORT", branch_name=BRANCH_NAME, commit_sha=IMPLEMENT_HANDOFF.commit_sha, issue_number=ISSUE_NUMBER, pr_url=PR_URL, stage_results=STAGE_RESULTS
 </process>
 
@@ -201,14 +217,14 @@ ELSE:
     SET VERIFY_RESULT := "The root justfile must expose verify-focused and verify before RPIV starts." (from "Agent Inference")
     SET PIPELINE_STATUS := "error" (from "Agent Inference")
 IF PIPELINE_STATUS = "error":
-  RETURN
+  RETURN: PIPELINE_STATUS
 USE `execute/runInTerminal` where: command="gh issue view <ISSUE_NUMBER> --json title,body,labels"
 CAPTURE ISSUE_JSON from `execute/runInTerminal`
 SET TASK_DESCRIPTION := <DESCRIPTION> (from "Agent Inference" using ISSUE_JSON)
 SET SHORT_SLUG := <SLUG> (from "Agent Inference" using ISSUE_JSON)
 USE `search/fileSearch` where: pattern="project/work-items/<ISSUE_NUMBER>-*/**"
 CAPTURE EXISTING_WORK_ITEM_FILES from `search/fileSearch`
-SET EXISTING_WORK_ITEM_PATHS := <PATHS> (from "Agent Inference" using EXISTING_WORK_ITEM_FILES; extract unique project/work-items/<ISSUE_NUMBER>-<SHORT_DESCRIPTION> directory paths)
+SET EXISTING_WORK_ITEM_PATHS := <PATHS> (from "Agent Inference" using EXISTING_WORK_ITEM_FILES; extract unique directories matching the issue-number prefix without filtering by title slug)
 SET EXISTING_WORK_ITEM_COUNT := <COUNT> (from "Agent Inference" using EXISTING_WORK_ITEM_PATHS)
 IF EXISTING_WORK_ITEM_COUNT > 1:
   SET VERIFY_RESULT := "More than one work-item directory uses the issue-number prefix." (from "Agent Inference")
@@ -219,7 +235,7 @@ ELSE:
   ELSE:
     SET WORK_ITEM_PATH := <PATH> (from "Agent Inference" using WORK_ITEMS_DIR, ISSUE_NUMBER, SHORT_SLUG; format project/work-items/<ISSUE_NUMBER>-<SHORT_SLUG>)
 IF PIPELINE_STATUS = "error":
-  RETURN
+  RETURN: PIPELINE_STATUS
 SET HAS_ACCEPTANCE_CRITERIA := <HAS_CRITERIA> (from "Agent Inference" using ISSUE_JSON)
 IF HAS_ACCEPTANCE_CRITERIA is false:
   SET VERIFY_RESULT := "The issue must contain structured markdown acceptance criteria." (from "Agent Inference")
@@ -286,11 +302,12 @@ IF PIPELINE_STATUS != "error":
 
 <process id="dispatch-implement" name="Dispatch Implement and validate committed handoff">
 SET CURRENT_STAGE := "implement" (from "Agent Inference")
-SET IMPLEMENT_PROMPT := <PROMPT> (from "Agent Inference" using ISSUE_NUMBER, WORK_ITEM_PATH, BRANCH_NAME, PLAN_HANDOFF, VERIFY_RESULT)
+SET IMPLEMENT_REQUEST := {"branch_name": BRANCH_NAME, "issue_number": ISSUE_NUMBER, "plan_handoff": PLAN_HANDOFF, "verification_feedback": VERIFY_RESULT, "work_item_path": WORK_ITEM_PATH} (from "Agent Inference")
+SET IMPLEMENT_PROMPT := <PROMPT> (from "Agent Inference" using IMPLEMENT_REQUEST; serialize as canonical JSON without prose or omitted fields)
 USE `agent/runSubagent` where: agent="rpiv-implementer", prompt=IMPLEMENT_PROMPT
 CAPTURE IMPLEMENT_RESULT from `agent/runSubagent`
-SET IMPLEMENTATION_NOTES_PATH := <PATH> (from "Agent Inference" using WORK_ITEM_PATH; append /implementation/00-implementation.md)
-USE `read/readFile` where: filePath=IMPLEMENTATION_NOTES_PATH
+SET IMPLEMENT_NOTES_PATH := <PATH> (from "Agent Inference" using WORK_ITEM_PATH; append /implementation/00-implementation.md)
+USE `read/readFile` where: filePath=IMPLEMENT_NOTES_PATH
 CAPTURE IMPLEMENTATION_EVIDENCE from `read/readFile`
 USE `execute/runInTerminal` where: command="git branch --show-current"
 CAPTURE HANDOFF_BRANCH from `execute/runInTerminal`
@@ -323,11 +340,15 @@ IF RETRY_COUNT > 1:
 ELSE:
   IF FAILURE_OWNER = "plan":
     RUN `dispatch-plan`
-    IF PIPELINE_STATUS != "error":
-      RUN `dispatch-implement`
   ELSE:
+    SET PIPELINE_STATUS := "running" (from "Agent Inference")
+  IF PIPELINE_STATUS != "error":
+    USE `eng-harness-flow` where: hook="pre-coding"
+    CAPTURE HARNESS_RESULT from `eng-harness-flow`
     RUN `dispatch-implement`
   IF PIPELINE_STATUS != "error":
+    USE `eng-harness-flow` where: hook="post-coding"
+    CAPTURE HARNESS_RESULT from `eng-harness-flow`
     RUN `dispatch-verify`
 </process>
 </processes>

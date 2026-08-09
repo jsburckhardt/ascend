@@ -1,4 +1,7 @@
+import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
+import path from 'node:path'
 import {
+  INTEGRATED_COMMAND_IDENTITIES,
   INTEGRATED_RAW_EVIDENCE,
   canonicalFixturePath,
 } from '../workbench-proof-contract.js'
@@ -6,14 +9,59 @@ import {
   TerminalProofError,
   captureTerminalContext,
   writeJsonAtomic,
+  type TrackedTerminalCommandIdentity,
 } from '../workbench-proof-terminal.js'
+
+interface IntegratedCommandTracker {
+  version: 1
+  owner: TrackedTerminalCommandIdentity
+  processGroupLeader: TrackedTerminalCommandIdentity
+  commands: TrackedTerminalCommandIdentity[]
+}
+
+const readIdentity = (
+  pid: number,
+  command: string
+): TrackedTerminalCommandIdentity => {
+  const stat = readFileSync('/proc/' + String(pid) + '/stat', 'utf8')
+  const fields = stat.slice(stat.lastIndexOf(')') + 2).split(' ')
+  return {
+    pid,
+    pgid: Number(fields[2]),
+    startTimeTicks: fields[19],
+    command,
+    context: 'integrated',
+  }
+}
+
+const writeTracker = (tracker: IntegratedCommandTracker): void => {
+  mkdirSync(path.dirname(INTEGRATED_COMMAND_IDENTITIES), { recursive: true })
+  const temporary = INTEGRATED_COMMAND_IDENTITIES + '.tmp'
+  writeFileSync(temporary, JSON.stringify(tracker) + '\n', { mode: 0o600 })
+  renameSync(temporary, INTEGRATED_COMMAND_IDENTITIES)
+}
 
 export const runIntegratedTerminalCapture = async (): Promise<number> => {
   try {
+    const owner = readIdentity(process.pid, 'proof-terminal-integrated')
+    const tracker: IntegratedCommandTracker = {
+      version: 1,
+      owner,
+      processGroupLeader: readIdentity(
+        owner.pgid,
+        'proof-terminal-integrated process group'
+      ),
+      commands: [],
+    }
+    writeTracker(tracker)
     const cwd = await canonicalFixturePath()
     const evidence = await captureTerminalContext({
       context: 'integrated',
       cwd,
+      onProcessStarted: (identity) => {
+        tracker.commands.push(identity)
+        writeTracker(tracker)
+      },
     })
     await writeJsonAtomic(INTEGRATED_RAW_EVIDENCE, evidence)
     return 0

@@ -137,12 +137,21 @@ export const preflightFixedExecutables = async (
   return resolutions
 }
 
+export interface TrackedTerminalCommandIdentity {
+  pid: number
+  pgid: number
+  startTimeTicks: string
+  command: string
+  context: TerminalContext
+}
+
 export interface RunTerminalCommandOptions {
   context: TerminalContext
   command: TerminalCommandSpec
   cwd: string
   environment?: NodeJS.ProcessEnv
   timeoutMs?: number
+  onProcessStarted?: (identity: TrackedTerminalCommandIdentity) => void
 }
 
 export const runTerminalCommand = async (
@@ -202,6 +211,26 @@ export const runTerminalCommand = async (
       'terminal-command-spawn',
       'Terminal command start identity is unavailable',
       { command: options.command.command, context: options.context }
+    )
+  }
+  try {
+    options.onProcessStarted?.({
+      pid,
+      pgid: pid,
+      startTimeTicks,
+      command: options.command.command,
+      context: options.context,
+    })
+  } catch (error) {
+    await terminateExactProcessGroup(pid, Math.min(timeoutMs, 1_000))
+    throw new TerminalProofError(
+      'terminal-artifact-write',
+      'Terminal command identity could not be tracked',
+      {
+        command: options.command.command,
+        context: options.context,
+        reason: error instanceof Error ? error.message : 'unknown',
+      }
     )
   }
 
@@ -301,6 +330,7 @@ export interface CaptureTerminalContextOptions {
   environment?: NodeJS.ProcessEnv
   timeoutMs?: number
   commands?: readonly TerminalCommandSpec[]
+  onProcessStarted?: (identity: TrackedTerminalCommandIdentity) => void
 }
 
 export const captureTerminalContext = async (
@@ -318,6 +348,7 @@ export const captureTerminalContext = async (
         cwd: options.cwd,
         environment,
         timeoutMs: options.timeoutMs,
+        onProcessStarted: options.onProcessStarted,
       })
     )
   }

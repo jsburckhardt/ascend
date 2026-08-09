@@ -37,6 +37,10 @@ export const INTEGRATED_RAW_EVIDENCE = path.join(
   TERMINAL_PARITY_ROOT,
   'integrated.raw.json'
 )
+export const INTEGRATED_COMMAND_IDENTITIES = path.join(
+  TERMINAL_PARITY_ROOT,
+  'integrated-command-identities.json'
+)
 export const TERMINAL_EPISODE_EVIDENCE = path.join(
   TERMINAL_PARITY_ROOT,
   'episode.json'

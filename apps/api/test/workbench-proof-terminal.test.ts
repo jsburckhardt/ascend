@@ -10,12 +10,14 @@ import {
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { BL001_FIXTURE, BL001_ROOT } from '../src/workbench-proof-contract.js'
+import { readProcessStartTime } from '../src/workbench-proof-runtime.js'
 import {
   TerminalProofError,
   captureTerminalContext,
   preflightFixedExecutables,
   runTerminalCommand,
   writeJsonAtomic,
+  type TrackedTerminalCommandIdentity,
 } from '../src/workbench-proof-terminal.js'
 
 let root = ''
@@ -66,19 +68,37 @@ describe('BL-002 shared terminal executor', () => {
       args: ['status', '--short'],
       command: 'git status --short',
     }
+    const started: TrackedTerminalCommandIdentity[] = []
     const direct = await captureTerminalContext({
       context: 'direct',
       cwd: BL001_FIXTURE,
       environment,
       commands: [command],
+      onProcessStarted: (identity) => started.push(identity),
     })
     const integrated = await captureTerminalContext({
       context: 'integrated',
       cwd: BL001_FIXTURE,
       environment,
       commands: [command],
+      onProcessStarted: (identity) => started.push(identity),
     })
 
+    expect(started).toHaveLength(2)
+    expect(
+      started.map(({ context, command: text, pgid, pid }) => ({
+        context,
+        command: text,
+        exactGroup: pgid === pid,
+      }))
+    ).toEqual([
+      { context: 'direct', command: 'git status --short', exactGroup: true },
+      {
+        context: 'integrated',
+        command: 'git status --short',
+        exactGroup: true,
+      },
+    ])
     expect(JSON.parse(await readFile(captureFile, 'utf8'))).toEqual({
       argv: ['status', '--short'],
       cwd: BL001_FIXTURE,
@@ -166,6 +186,57 @@ describe('BL-002 shared terminal executor', () => {
         details: { command: 'git --version', context, timeoutMs: 50 },
       })
     }
+  })
+
+  it('terminates the exact command when identity tracking fails', async () => {
+    let started: TrackedTerminalCommandIdentity | null = null
+    await expect(
+      runTerminalCommand({
+        context: 'integrated',
+        command: {
+          key: 'git-version',
+          executable: 'git',
+          args: ['--version'],
+          command: 'git --version',
+        },
+        cwd: BL001_FIXTURE,
+        environment: { ...process.env, PATH: fakePath() },
+        onProcessStarted: (identity) => {
+          started = identity
+          throw new Error('tracker write failed')
+        },
+      })
+    ).rejects.toMatchObject({
+      code: 'terminal-artifact-write',
+      details: {
+        command: 'git --version',
+        context: 'integrated',
+        reason: 'tracker write failed',
+      },
+    })
+    expect(started).not.toBeNull()
+    await expect(readProcessStartTime(started!.pid)).resolves.not.toBe(
+      started!.startTimeTicks
+    )
+    await expect(
+      runTerminalCommand({
+        context: 'direct',
+        command: {
+          key: 'git-version',
+          executable: 'git',
+          args: ['--version'],
+          command: 'git --version',
+        },
+        cwd: BL001_FIXTURE,
+        environment: { ...process.env, PATH: fakePath() },
+        onProcessStarted: () => {
+          throw Object.create(null)
+        },
+      })
+    ).rejects.toMatchObject({
+      code: 'terminal-artifact-write',
+      details: { reason: 'unknown' },
+    })
   })
 
   it('reports atomic artifact failures without leaving a temporary file', async () => {

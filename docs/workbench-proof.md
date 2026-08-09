@@ -56,7 +56,7 @@ Other explicit lifecycle codes cover unreadable projects, root execution, spawn 
 
 The only disposable boundary is `test-results/bl-001`. Per-run state, logs, user data, and extensions stay below `test-results/bl-001/runs/<runId>` and that exact run directory is removed by stop or startup-failure cleanup. `test-results/bl-001/injection-sentinel` must remain absent. The tracked fixture is never removed or modified.
 
-The Chromium proof writes `test-results/bl-001/episode.json` with host facts, handle, readiness exits, process identities, NUL-delimited argv represented as arrays, loopback listeners, fixture hashes, browser observations, and cleanup results. Playwright traces and screenshots are failure-only artifacts. Generated evidence is ignored; the safe retained AC mapping is the issue implementation record.
+The passing Chromium parity proof writes `test-results/bl-001/terminal-parity/episode.json` with host facts, handle, readiness exits, process identities, NUL-delimited argv represented as arrays, loopback listeners, fixture hashes, browser observations, and cleanup results. Playwright traces and screenshots are failure-only artifacts. Generated evidence is ignored; the safe retained AC mapping is the issue implementation record.
 
 If a prior run directory exists, do not delete its state until its exact handle is proven absent. Never kill by process name and never sweep unrelated listeners; the host may run unrelated VS Code Remote processes.
 
@@ -68,7 +68,7 @@ just test-e2e
 just verify
 ```
 
-The configured full gate runs exactly five fake startup failures and one real code-server Chromium lifecycle, alongside existing checks. Its BL-001 full-gate target is 120 seconds. During native Markdown Preview initialization, VS Code may replace its webview frame; the proof retries only that detached-frame transition within the existing 15-second exact rendered-text poll, while all other browser errors still fail. Every browser path places exact-handle stop in `finally`, repeats stop for idempotence, and audits PID, listener, fixture, injection sentinel, and disposable state.
+The configured full gate runs exactly five fake startup failures and two real code-server Chromium lifecycle scenarios: one forced overall-timeout cleanup and one passing parity episode, alongside existing checks. Its BL-001 full-gate target is 120 seconds. During native Markdown Preview initialization, VS Code may replace its webview frame; the proof retries only that detached-frame transition within the existing 15-second exact rendered-text poll, while all other browser errors still fail. After either Chromium scenario starts a workbench, the shared episode coordinator performs cleanup in `finally`; the passing scenario repeats exact-handle stop for idempotence and audits PID, listener, fixture, injection sentinel, and disposable state.
 
 ## Troubleshooting
 
@@ -118,7 +118,7 @@ Each raw command row records cwd, argv, 5,000 ms bound, exit result, separate ra
 
 ### Cleanup
 
-Every started path attempts, in order, tracked-command cancellation, explicit browser-context close, exact BL-001 process-group stop, and PID/listener/command absence audits. Cleanup never uses process-name killing or listener sweeps, and cleanup failures remain failure-shaped. A missing-executable preflight creates no handle or browser context.
+Every path that starts owned resources uses the shared episode coordinator to attempt, in order, exact tracked-command-group cancellation, explicit browser-context close, exact BL-001 process-group stop, and separate command-identity, workbench-PID, and listener absence audits. The real timeout scenario publishes the in-progress integrated command PID/start identity, reaches the overall deadline, cancels that exact group, and asserts all four absence results. Cleanup never uses process-name killing or listener sweeps, and cleanup failures remain failure-shaped. A missing-executable preflight creates no handle or browser context.
 
 ### Observed designated-host result
 

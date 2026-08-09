@@ -12,6 +12,7 @@ import {
   CODE_SERVER_VERSION,
   DIRECT_RAW_EVIDENCE,
   EXPLORER_SENTINEL,
+  INTEGRATED_COMMAND_IDENTITIES,
   INTEGRATED_RAW_EVIDENCE,
   MARKDOWN_FIXTURE,
   MARKDOWN_RENDERED_SENTINEL,
@@ -27,20 +28,24 @@ import {
 } from '../../apps/api/src/workbench-proof-contract.js'
 import {
   auditHandleAbsent,
+  auditHandleCleanup,
   readManagedListeners,
   readManagedProcesses,
 } from '../../apps/api/src/workbench-proof-audit.js'
 import {
   parseProofHandle,
+  readProcessStartTime,
   stopWorkbenchProof,
+  terminateExactProcessGroup,
   type ProofHandle,
 } from '../../apps/api/src/workbench-proof-runtime.js'
 import {
   captureTerminalContext,
+  preflightFixedExecutables,
   writeJsonAtomic,
   type TerminalRawEvidence,
 } from '../../apps/api/src/workbench-proof-terminal.js'
-import { withTerminalEpisodeTimeout } from '../../apps/api/src/workbench-proof-terminal-episode.js'
+import { runTerminalParityEpisode } from '../../apps/api/src/workbench-proof-terminal-episode.js'
 
 interface CommandResult {
   code: number
@@ -141,7 +146,238 @@ const commandByKey = (evidence: TerminalRawEvidence, key: string) => {
   return command
 }
 
+interface TrackedCommandIdentity {
+  pid: number
+  pgid: number
+  startTimeTicks: string
+  command: string
+}
+
+interface OwnedBrowserContext {
+  browserContext: BrowserContext
+  close: () => Promise<void>
+}
+
+const integratedCaptureScript = path.join(
+  REPOSITORY_ROOT,
+  'apps/api/src/cli/proof-terminal-integrated.ts'
+)
+const timeoutCommandPidFile = path.join(
+  BL001_ROOT,
+  'timeout-terminal-command.json'
+)
+
+const rememberCompletedCommands = (
+  tracked: Map<number, TrackedCommandIdentity>,
+  evidence: TerminalRawEvidence | null
+): void => {
+  for (const command of evidence?.commands ?? []) {
+    tracked.set(command.process.pid, {
+      pid: command.process.pid,
+      pgid: command.process.pid,
+      startTimeTicks: command.process.startTimeTicks,
+      command: command.command,
+    })
+  }
+}
+
+const discoverValidationTerminalCommands = async (
+  handle: ProofHandle,
+  tracked: Map<number, TrackedCommandIdentity>
+): Promise<void> => {
+  const rows = await readManagedProcesses(handle.pid)
+  const validationPids = new Set(
+    rows
+      .filter((row) => row.argv.includes(integratedCaptureScript))
+      .map((row) => row.pid)
+  )
+  let changed = true
+  while (changed) {
+    changed = false
+    for (const row of rows) {
+      if (validationPids.has(row.ppid) && !validationPids.has(row.pid)) {
+        validationPids.add(row.pid)
+        changed = true
+      }
+    }
+  }
+  for (const row of rows) {
+    if (!validationPids.has(row.pid)) continue
+    const startTimeTicks = await readProcessStartTime(row.pid)
+    if (!startTimeTicks) continue
+    tracked.set(row.pid, {
+      pid: row.pid,
+      pgid: row.pgid,
+      startTimeTicks,
+      command: row.argv.join(' '),
+    })
+  }
+}
+
+const cancelAndAuditTrackedCommands = async (
+  handle: ProofHandle | null,
+  tracked: Map<number, TrackedCommandIdentity>,
+  evidence: Array<TerminalRawEvidence | null>
+): Promise<boolean> => {
+  for (const record of evidence) rememberCompletedCommands(tracked, record)
+  if (await pathExists(INTEGRATED_COMMAND_IDENTITIES)) {
+    const published = JSON.parse(
+      await readFile(INTEGRATED_COMMAND_IDENTITIES, 'utf8')
+    ) as {
+      owner: TrackedCommandIdentity
+      processGroupLeader: TrackedCommandIdentity
+      commands: TrackedCommandIdentity[]
+    }
+    for (const identity of [
+      published.owner,
+      published.processGroupLeader,
+      ...published.commands,
+    ])
+      tracked.set(identity.pid, identity)
+  }
+  if (handle) await discoverValidationTerminalCommands(handle, tracked)
+
+  const groups = new Map<number, TrackedCommandIdentity>()
+  for (const identity of tracked.values()) {
+    if (identity.pid === identity.pgid) groups.set(identity.pgid, identity)
+  }
+  for (const identity of [...groups.values()].reverse()) {
+    if ((await readProcessStartTime(identity.pid)) !== identity.startTimeTicks)
+      continue
+    await terminateExactProcessGroup(identity.pgid, 1_000)
+  }
+
+  const deadline = Date.now() + 2_000
+  while (Date.now() < deadline) {
+    const states = await Promise.all(
+      [...tracked.values()].map(
+        async (identity) =>
+          (await readProcessStartTime(identity.pid)) === identity.startTimeTicks
+      )
+    )
+    if (states.every((live) => !live)) return true
+    await new Promise((resolve) => setTimeout(resolve, 25))
+  }
+  return false
+}
+
+const waitForAbort = async (signal: AbortSignal): Promise<void> => {
+  if (signal.aborted) return
+  await new Promise<void>((resolve) =>
+    signal.addEventListener('abort', () => resolve(), { once: true })
+  )
+}
+
 test.describe.configure({ mode: 'serial' })
+
+test('cancels an in-progress real integrated command on overall timeout', async ({
+  browser,
+}) => {
+  test.setTimeout(35_000)
+  await removeAbsentPriorRuns()
+  const tracked = new Map<number, TrackedCommandIdentity>()
+  let handle: ProofHandle | null = null
+  let contextClosed = false
+  let terminalCommandsAbsent = false
+  let exactProcessAbsent = false
+  let listenerAbsent = false
+
+  await expect(
+    runTerminalParityEpisode<ProofHandle, OwnedBrowserContext>({
+      timeoutMs: 20_000,
+      preflight: async () => {
+        await preflightFixedExecutables(process.env.PATH ?? '')
+      },
+      startWorkbench: async () => {
+        const result = await runJust('proof-start')
+        expect(result.code).toBe(0)
+        handle = parseProofHandle(result.stdout.trim())
+        return handle
+      },
+      openBrowser: async (startedHandle) => {
+        const browserContext = await browser.newContext()
+        return {
+          browserContext,
+          close: async () => {
+            await browserContext.close()
+            contextClosed = true
+          },
+        }
+      },
+      run: async (startedHandle, ownedContext, signal) => {
+        const page = await ownedContext.browserContext.newPage()
+        await page.goto(startedHandle.url, { waitUntil: 'domcontentloaded' })
+        await expect(page.locator('.monaco-workbench')).toBeVisible({
+          timeout: 15_000,
+        })
+        signal.throwIfAborted()
+        await page.keyboard.press('Control+Shift+E')
+        await expect(
+          page.getByText(EXPLORER_SENTINEL, { exact: true }).first()
+        ).toBeVisible()
+        await page.keyboard.press('Control+Shift+Backquote')
+        await expect(page.locator('.terminal.xterm').first()).toBeVisible({
+          timeout: 10_000,
+        })
+        await page.keyboard.insertText(
+          '/usr/local/bin/node /workspaces/ascend/tests/e2e/fixtures/terminal-timeout-command.mjs'
+        )
+        await page.keyboard.press('Enter')
+        await expect
+          .poll(() => pathExists(timeoutCommandPidFile), { timeout: 5_000 })
+          .toBe(true)
+        const identity = JSON.parse(
+          await readFile(timeoutCommandPidFile, 'utf8')
+        ) as TrackedCommandIdentity
+        expect(await readProcessStartTime(identity.pid)).toBe(
+          identity.startTimeTicks
+        )
+        tracked.set(identity.pid, {
+          ...identity,
+          command: '/usr/bin/sleep 60',
+        })
+        await waitForAbort(signal)
+      },
+      cancelTrackedCommands: async () => {
+        terminalCommandsAbsent = await cancelAndAuditTrackedCommands(
+          handle,
+          tracked,
+          []
+        )
+        if (!terminalCommandsAbsent)
+          throw new Error('A timeout validation command remains live')
+      },
+      stopWorkbench: async (startedHandle) => {
+        const firstStop = await runJust(
+          'proof-stop',
+          JSON.stringify(startedHandle)
+        )
+        const repeatedStop = await runJust(
+          'proof-stop',
+          JSON.stringify(startedHandle)
+        )
+        if (firstStop.code !== 0 || repeatedStop.code !== 0)
+          throw new Error('Timeout workbench stop failed')
+      },
+      auditWorkbenchAbsent: async (startedHandle) => {
+        const audit = await auditHandleCleanup(startedHandle)
+        exactProcessAbsent = audit.exactProcessAbsent
+        listenerAbsent = audit.listenerAbsent
+        return exactProcessAbsent && listenerAbsent
+      },
+    })
+  ).rejects.toMatchObject({
+    code: 'terminal-episode-timeout',
+    details: { timeoutMs: 20_000 },
+  })
+
+  expect(tracked.size).toBeGreaterThan(0)
+  expect(terminalCommandsAbsent).toBe(true)
+  expect(contextClosed).toBe(true)
+  expect(exactProcessAbsent).toBe(true)
+  expect(listenerAbsent).toBe(true)
+  if (handle) await expect(auditHandleAbsent(handle)).resolves.toBe(true)
+})
 
 test('proves one designated-host workbench with terminal parity', async ({
   browser,
@@ -186,6 +422,10 @@ test('proves one designated-host workbench with terminal parity', async ({
   let terminalCreationActions = 0
   let browserObserved = false
   let cleanupAbsent = false
+  let exactProcessAbsent = false
+  let listenerAbsent = false
+  let commandCleanup = false
+  const trackedCommands = new Map<number, TrackedCommandIdentity>()
   let testError: unknown = null
   let processes: Awaited<ReturnType<typeof readManagedProcesses>> = []
   let listeners: Awaited<ReturnType<typeof readManagedListeners>> = []
@@ -197,154 +437,186 @@ test('proves one designated-host workbench with terminal parity', async ({
   }> = []
 
   try {
-    await withTerminalEpisodeTimeout(async () => {
-      direct = await captureTerminalContext({
-        context: 'direct',
-        cwd: canonicalPath,
-      })
-      await writeJsonAtomic(DIRECT_RAW_EVIDENCE, direct)
-
-      start = await runJust('proof-start')
-      expect(start.code).toBe(0)
-      const stdoutLines = start.stdout.trim().split('\n').filter(Boolean)
-      expect(stdoutLines).toHaveLength(1)
-      handle = parseProofHandle(stdoutLines[0])
-      processes = await readManagedProcesses(handle.pid)
-      listeners = await readManagedListeners(
-        processes.map((entry) => entry.pid)
-      )
-      expect(processes.length).toBeGreaterThan(0)
-      expect(
-        processes.some(
-          (entry) =>
-            entry.argv.filter((argument) => argument === BL001_FIXTURE)
-              .length === 1
-        )
-      ).toBe(true)
-      expect(
-        listeners.some(
-          (entry) => entry.port === Number(new URL(handle.url).port)
-        )
-      ).toBe(true)
-
-      context = await browser.newContext()
-      const page = await context.newPage()
-      await page.goto(handle.url, { waitUntil: 'domcontentloaded' })
-      await expect(page.locator('.monaco-workbench')).toBeVisible({
-        timeout: 15_000,
-      })
-      await page.keyboard.press('Control+Shift+E')
-      await expect(
-        page.getByText(EXPLORER_SENTINEL, { exact: true }).first()
-      ).toBeVisible()
-      await page.getByText(MARKDOWN_FIXTURE, { exact: true }).first().click()
-      await page
-        .getByRole('button', { name: /^Open Preview to the Side/u })
-        .click()
-      await expect
-        .poll(() => renderedPreviewIsVisible(page), { timeout: 15_000 })
-        .toBe(true)
-      browserObserved = true
-
-      await page.keyboard.press('Control+Shift+Backquote')
-      terminalCreationActions += 1
-      await expect(page.locator('.terminal.xterm').first()).toBeVisible({
-        timeout: 10_000,
-      })
-      const integratedCommand =
-        '/workspaces/ascend/node_modules/.bin/tsx /workspaces/ascend/apps/api/src/cli/proof-terminal-integrated.ts && printf BL002_TERMINAL_COMPLETE\\n'
-      await page.keyboard.insertText(integratedCommand)
-      await page.keyboard.press('Enter')
-      await expect
-        .poll(() => pathExists(INTEGRATED_RAW_EVIDENCE), { timeout: 45_000 })
-        .toBe(true)
-      await expect
-        .poll(() => page.locator('.xterm-rows').last().innerText(), {
-          timeout: 5_000,
+    await runTerminalParityEpisode<ProofHandle, OwnedBrowserContext>({
+      timeoutMs: TERMINAL_EPISODE_TIMEOUT_MS,
+      preflight: async () => {
+        await preflightFixedExecutables(process.env.PATH ?? '')
+      },
+      startWorkbench: async () => {
+        direct = await captureTerminalContext({
+          context: 'direct',
+          cwd: canonicalPath,
         })
-        .toContain('BL002_TERMINAL_COMPLETE')
-      integrated = JSON.parse(
-        await readFile(INTEGRATED_RAW_EVIDENCE, 'utf8')
-      ) as TerminalRawEvidence
+        await writeJsonAtomic(DIRECT_RAW_EVIDENCE, direct)
 
-      expect(terminalCreationActions).toBe(1)
-      expect(commandByKey(direct, 'hostname').normalized.stdout).toBe(
-        commandByKey(integrated, 'hostname').normalized.stdout
-      )
-      expect(commandByKey(direct, 'user').normalized.stdout).toBe('vscode\n')
-      expect(commandByKey(integrated, 'user').normalized.stdout).toBe(
-        'vscode\n'
-      )
-      expect(commandByKey(integrated, 'cwd').normalized.stdout).toBe(
-        canonicalPath + '\n'
-      )
-
-      for (const specification of TERMINAL_TOOL_COMMANDS) {
-        const directResult = commandByKey(direct, specification.key)
-        const integratedResult = commandByKey(integrated, specification.key)
-        const row = {
-          command: specification.command,
-          exitEqual: directResult.exitResult === integratedResult.exitResult,
-          stdoutEqual:
-            directResult.normalized.stdout ===
-            integratedResult.normalized.stdout,
-          stderrEqual:
-            directResult.normalized.stderr ===
-            integratedResult.normalized.stderr,
+        start = await runJust('proof-start')
+        expect(start.code).toBe(0)
+        const stdoutLines = start.stdout.trim().split('\n').filter(Boolean)
+        expect(stdoutLines).toHaveLength(1)
+        handle = parseProofHandle(stdoutLines[0])
+        processes = await readManagedProcesses(handle.pid)
+        listeners = await readManagedListeners(
+          processes.map((entry) => entry.pid)
+        )
+        expect(processes.length).toBeGreaterThan(0)
+        expect(
+          processes.some(
+            (entry) =>
+              entry.argv.filter((argument) => argument === BL001_FIXTURE)
+                .length === 1
+          )
+        ).toBe(true)
+        expect(
+          listeners.some(
+            (entry) => entry.port === Number(new URL(handle.url).port)
+          )
+        ).toBe(true)
+        return handle
+      },
+      openBrowser: async () => {
+        const browserContext = await browser.newContext()
+        context = browserContext
+        return {
+          browserContext,
+          close: async () => {
+            await browserContext.close()
+            browserContextClosed = true
+          },
         }
-        parityRows.push(row)
-        expect(row).toMatchObject({
-          exitEqual: true,
-          stdoutEqual: true,
-          stderrEqual: true,
+      },
+      run: async (startedHandle, ownedContext, signal) => {
+        signal.throwIfAborted()
+        const page = await ownedContext.browserContext.newPage()
+        await page.goto(startedHandle.url, { waitUntil: 'domcontentloaded' })
+        await expect(page.locator('.monaco-workbench')).toBeVisible({
+          timeout: 15_000,
         })
-      }
+        await page.keyboard.press('Control+Shift+E')
+        await expect(
+          page.getByText(EXPLORER_SENTINEL, { exact: true }).first()
+        ).toBeVisible()
+        await page.getByText(MARKDOWN_FIXTURE, { exact: true }).first().click()
+        await page
+          .getByRole('button', { name: /^Open Preview to the Side/u })
+          .click()
+        await expect
+          .poll(() => renderedPreviewIsVisible(page), { timeout: 15_000 })
+          .toBe(true)
+        browserObserved = true
 
-      const classification = classifyPathEnvironment(
-        direct.environment.PATH,
-        integrated.environment.PATH,
-        direct.environment.resolutions,
-        integrated.environment.resolutions
-      )
-      environment = {
-        variable: 'PATH',
-        direct: direct.environment.PATH,
-        integrated: integrated.environment.PATH,
-        classification,
-        directResolutions: direct.environment.resolutions,
-        integratedResolutions: integrated.environment.resolutions,
-      }
-      expect(classification).not.toBe('unexplained failure-causing difference')
-    }, TERMINAL_EPISODE_TIMEOUT_MS)
+        await page.keyboard.press('Control+Shift+Backquote')
+        terminalCreationActions += 1
+        await expect(page.locator('.terminal.xterm').first()).toBeVisible({
+          timeout: 10_000,
+        })
+        const integratedCommand =
+          'setsid /workspaces/ascend/node_modules/.bin/tsx /workspaces/ascend/apps/api/src/cli/proof-terminal-integrated.ts && printf BL002_TERMINAL_COMPLETE\\n'
+        signal.throwIfAborted()
+        await page.keyboard.insertText(integratedCommand)
+        await page.keyboard.press('Enter')
+        await expect
+          .poll(() => pathExists(INTEGRATED_RAW_EVIDENCE), { timeout: 45_000 })
+          .toBe(true)
+        await expect
+          .poll(() => page.locator('.xterm-rows').last().innerText(), {
+            timeout: 5_000,
+          })
+          .toContain('BL002_TERMINAL_COMPLETE')
+        signal.throwIfAborted()
+        integrated = JSON.parse(
+          await readFile(INTEGRATED_RAW_EVIDENCE, 'utf8')
+        ) as TerminalRawEvidence
+
+        expect(terminalCreationActions).toBe(1)
+        expect(commandByKey(direct, 'hostname').normalized.stdout).toBe(
+          commandByKey(integrated, 'hostname').normalized.stdout
+        )
+        expect(commandByKey(direct, 'user').normalized.stdout).toBe('vscode\n')
+        expect(commandByKey(integrated, 'user').normalized.stdout).toBe(
+          'vscode\n'
+        )
+        expect(commandByKey(integrated, 'cwd').normalized.stdout).toBe(
+          canonicalPath + '\n'
+        )
+
+        for (const specification of TERMINAL_TOOL_COMMANDS) {
+          const directResult = commandByKey(direct, specification.key)
+          const integratedResult = commandByKey(integrated, specification.key)
+          const row = {
+            command: specification.command,
+            exitEqual: directResult.exitResult === integratedResult.exitResult,
+            stdoutEqual:
+              directResult.normalized.stdout ===
+              integratedResult.normalized.stdout,
+            stderrEqual:
+              directResult.normalized.stderr ===
+              integratedResult.normalized.stderr,
+          }
+          parityRows.push(row)
+          expect(row).toMatchObject({
+            exitEqual: true,
+            stdoutEqual: true,
+            stderrEqual: true,
+          })
+        }
+
+        const classification = classifyPathEnvironment(
+          direct.environment.PATH,
+          integrated.environment.PATH,
+          direct.environment.resolutions,
+          integrated.environment.resolutions
+        )
+        environment = {
+          variable: 'PATH',
+          direct: direct.environment.PATH,
+          integrated: integrated.environment.PATH,
+          classification,
+          directResolutions: direct.environment.resolutions,
+          integratedResolutions: integrated.environment.resolutions,
+        }
+        expect(classification).not.toBe(
+          'unexplained failure-causing difference'
+        )
+      },
+      cancelTrackedCommands: async () => {
+        commandCleanup = await cancelAndAuditTrackedCommands(
+          handle,
+          trackedCommands,
+          [direct, integrated]
+        )
+        if (!commandCleanup)
+          throw new Error('A terminal command identity remains live')
+      },
+      stopWorkbench: async (startedHandle) => {
+        stop = await runJust('proof-stop', JSON.stringify(startedHandle))
+        repeatedStop = await runJust(
+          'proof-stop',
+          JSON.stringify(startedHandle)
+        )
+        let audit = await auditHandleCleanup(startedHandle)
+        if (!audit.exactProcessAbsent || !audit.listenerAbsent) {
+          await stopWorkbenchProof(startedHandle)
+          audit = await auditHandleCleanup(startedHandle)
+        }
+        exactProcessAbsent = audit.exactProcessAbsent
+        listenerAbsent = audit.listenerAbsent
+        cleanupAbsent = exactProcessAbsent && listenerAbsent
+        if (stop.code !== 0 || repeatedStop.code !== 0 || !cleanupAbsent)
+          throw new Error('Exact workbench cleanup failed')
+      },
+      auditWorkbenchAbsent: async (startedHandle) => {
+        const audit = await auditHandleCleanup(startedHandle)
+        exactProcessAbsent = audit.exactProcessAbsent
+        listenerAbsent = audit.listenerAbsent
+        cleanupAbsent = exactProcessAbsent && listenerAbsent
+        return cleanupAbsent
+      },
+    })
   } catch (error) {
     testError = error
   } finally {
-    if (context) {
-      try {
-        await context.close()
-        browserContextClosed = true
-      } catch (error) {
-        testError ??= error
-      }
-    }
-    if (handle) {
-      stop = await runJust('proof-stop', JSON.stringify(handle))
-      cleanupAbsent = await auditHandleAbsent(handle)
-      repeatedStop = await runJust('proof-stop', JSON.stringify(handle))
-      if (!cleanupAbsent) {
-        await stopWorkbenchProof(handle).catch((error) => {
-          testError ??= error
-        })
-        cleanupAbsent = await auditHandleAbsent(handle)
-      }
-    }
-
     const fixtureAfter = await snapshotFixture()
     const injectionAfter = await pathExists(BL001_INJECTION_SENTINEL)
-    const commandCleanup = [
-      ...(direct?.commands ?? []),
-      ...(integrated?.commands ?? []),
-    ].every((command) => command.cleanup.exactProcessAbsent)
     if (
       handle &&
       (stop?.code !== 0 || repeatedStop?.code !== 0 || !cleanupAbsent)
@@ -429,8 +701,8 @@ test('proves one designated-host workbench with terminal parity', async ({
       cleanup: {
         browserContextClosed,
         terminalCommandsAbsent: commandCleanup,
-        exactHandleAbsent: cleanupAbsent,
-        listenerAbsent: cleanupAbsent,
+        exactHandleAbsent: exactProcessAbsent,
+        listenerAbsent,
         firstStopExit: stop?.code ?? -1,
         repeatedStopExit: repeatedStop?.code ?? -1,
       },

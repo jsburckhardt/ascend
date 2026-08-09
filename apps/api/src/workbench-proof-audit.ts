@@ -158,9 +158,14 @@ export const readManagedListeners = async (
     .sort((left, right) => left.port - right.port)
 }
 
-export const auditHandleAbsent = async (
+export interface HandleCleanupAudit {
+  exactProcessAbsent: boolean
+  listenerAbsent: boolean
+}
+
+export const auditHandleCleanup = async (
   handle: ProofHandle
-): Promise<boolean> => {
+): Promise<HandleCleanupAudit> => {
   let sameProcess = false
   try {
     const stat = await readFile(
@@ -176,5 +181,15 @@ export const auditHandleAbsent = async (
   const listenerExists = (await readProcListeners()).some(
     (listener) => listener.port === port
   )
-  return !sameProcess && !listenerExists
+  return {
+    exactProcessAbsent: !sameProcess,
+    listenerAbsent: !listenerExists,
+  }
+}
+
+export const auditHandleAbsent = async (
+  handle: ProofHandle
+): Promise<boolean> => {
+  const audit = await auditHandleCleanup(handle)
+  return audit.exactProcessAbsent && audit.listenerAbsent
 }

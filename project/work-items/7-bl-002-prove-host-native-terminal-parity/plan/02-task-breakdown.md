@@ -138,6 +138,11 @@ Every diagnostic must be typed and include only safe command/context/timeout/exi
 - Captured nonzero diagnostics containing executable/command/context/timeout facts.
 - Cleanup assertions for success and every started named-failure path.
 
+### Verify correction evidence
+
+- The real Chromium timeout scenario runs an in-progress integrated-terminal fixture under a 20,000 ms injected episode bound, hands its exact PID/start identity to the shared cleanup coordinator, while the production integrated helper publishes its launcher group and every started child identity, and proves the command group is absent after cancellation. (AC-1, AC-8)
+- The same coordinator closes the owned browser context, stops the exact BL-001 process group, and records separate workbench-PID and listener absence results; just proof-terminal-parity passes both timeout-cleanup and parity scenarios. (AC-8)
+
 ## Task T-5: Expose, document, retain, and validate the sensor
 
 - **Status:** Complete

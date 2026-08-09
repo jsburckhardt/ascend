@@ -9,8 +9,15 @@ Implemented Issue #5 on the designated host within the approved direct-host code
 - **T-1:** Added the tracked space/semicolon fixture, recursive membership and sentinel-hash contract, fixed host prerequisites, disposable boundary, and 4.131.0 declaration.
 - **T-2:** Added the API-owned direct-spawn runtime, thin start/stop CLIs, root recipes, versioned handle, redirect-aware HTTP readiness, exact process identity, bounded group termination, and structured diagnostics.
 - **T-3:** Added fake-process, five-failure, argument, environment, process/listener attribution, escalation, unrelated-process survival, idempotence, and cleanup tests.
-- **T-4:** Added one serial real Chromium lifecycle with Explorer, native Markdown Preview, host/process/listener/argv evidence, fixture integrity, and unconditional exact-handle cleanup.
+- **T-4:** Added one serial real Chromium lifecycle with Explorer, native Markdown Preview, host/process/listener/argv evidence, fixture integrity, unconditional exact-handle cleanup, and a Verify correction that tolerates only the transient Markdown webview detached-frame transition inside the existing bounded exact-text poll.
 - **T-5:** Integrated unit and E2E coverage into the canonical gate, documented operation and governance, retained this evidence, and ran the full gate.
+
+## Verify Correction (2026-08-09)
+
+- Root cause: VS Code replaces the native Markdown Preview webview frame during initialization. The prior helper enumerated a frame and then called `locator.count()` after that frame could detach, causing the transient Playwright error to escape the bounded readiness poll and record `browser.observed: false`.
+- Correction: the helper skips frames already detached and treats only `Frame was detached` as not-ready for that poll iteration. It refreshes `page.frames()` on the next iteration; unexpected browser errors still propagate, and the exact visible rendered-sentinel assertion remains unchanged.
+- Stability evidence: five consecutive standalone `just test-e2e` runs passed (10/10 Playwright tests total), followed by `just verify-focused` and the complete `just verify` gate. Each run passed the browser and exact-handle cleanup assertions; the final episode retained `browser.observed: true`, `observedResult: passed`, and exact-handle cleanup success.
+- Scope: no lifecycle, API, fixture, configuration, timeout, assertion, architecture, or acceptance contract changed.
 
 ## Designated Host and Bounds
 
@@ -31,6 +38,8 @@ Implemented Issue #5 on the designated host within the approved direct-host code
 | T-3 focused | `just verify-focused apps/api/test/workbench-proof-runtime.test.ts apps/api/test/workbench-proof-failures.test.ts apps/api/test/workbench-proof-contract.test.ts` | 0; failure and cleanup tests passed |
 | T-4 focused | `just verify-focused` with all proof Vitest files | 0 |
 | T-4 browser | `just test-e2e` | 0; 2 tests passed, including one real lifecycle |
+| Verify correction standalone stability | five consecutive `just test-e2e` runs | 0 for every run; 10 Playwright tests passed, including five real lifecycles |
+| Verify correction focused | `just verify-focused` | 0; 7 files and 13 tests passed |
 | T-5 focused | `just verify-focused` with all four proof Vitest files | 0; 10 tests passed |
 | Full gate | `just verify` | 0; format, lint, typecheck, 13 unit/integration tests, build, and 2 Playwright tests passed |
 
@@ -66,7 +75,7 @@ The generated final episode was `test-results/bl-001/episode.json` (ignored). It
 
 - Command/result: `just test-e2e` and the E2E portion of `just verify` exited 0.
 - Artifact: `tests/e2e/workbench-proof.spec.ts` and episode `browser`.
-- Observed result: Chromium found `EXPLORER-SENTINEL-BL-001.txt`, opened `WORKBENCH-PREVIEW.md`, invoked the native accessible Preview action, and observed `BL-001 Markdown Preview Rendered Sentinel`.
+- Observed result: Chromium found `EXPLORER-SENTINEL-BL-001.txt`, opened `WORKBENCH-PREVIEW.md`, invoked the native accessible Preview action, and observed `BL-001 Markdown Preview Rendered Sentinel`. The Verify correction produced five consecutive standalone passes plus the full-gate pass while retaining the exact visible-text assertion.
 
 ### AC-6 — Argument-array metacharacter safety
 
@@ -84,7 +93,7 @@ The generated final episode was `test-results/bl-001/episode.json` (ignored). It
 
 - Command/result: every fake row, stop integration, browser `finally`, and full-gate E2E cleanup audit passed.
 - Artifact: runtime error cleanup, exact-handle audit helper, E2E `finally`, episode `cleanup`, and runbook cleanup section.
-- Observed result: final exact PID/start identity and URL listener were absent, stop/repeated-stop exits were 0, fixture/injection state was unchanged, and disposable membership contained only allowed `runs`/episode artifacts. No process-name kill or broad listener sweep exists.
+- Observed result: final exact PID/start identity and URL listener were absent, stop/repeated-stop exits were 0, fixture/injection state was unchanged, and disposable membership contained only allowed `runs`/episode artifacts across all five standalone correction runs and the final full gate. No process-name kill or broad listener sweep exists.
 
 ### AC-9 — Retained evidence
 
@@ -103,11 +112,11 @@ The generated final episode was `test-results/bl-001/episode.json` (ignored). It
 - `README.md`: added the user-facing proof commands and linked the operational runbook.
 - `apps/api/README.md`: documented the CLI handle/readiness/stop/failure contract and explicitly records that no HTTP API route changed.
 - `docs/README.md`: added the designated-host validation capability while preserving non-persistent harness boot ownership.
-- `docs/workbench-proof.md`: added setup prerequisites, fixed configuration, usage examples, timeouts, diagnostics, artifacts, cleanup, validation, and troubleshooting.
+- `docs/workbench-proof.md`: added setup prerequisites, fixed configuration, usage examples, timeouts, diagnostics, artifacts, cleanup, validation, and troubleshooting; the Verify correction documents the narrow bounded detached-webview retry without weakening browser failures.
 - `.devcontainer/devcontainer.json`: reconciled the declared code-server version to 4.131.0.
 - `.harness/engineering-harness.md` and `.harness/records/harness-change/2026-08-09/001-bl-001-host-process-sensor.md`: documented the new bounded host-process sensor and evidence without changing boot endpoints or persistence.
 - Architecture impact: no ADR or core-component contract changed; implementation stays within existing direct-host, lifecycle, path, environment, logging, command, RPIV, and harness contracts. Harness governance explanatory documentation was updated.
-- Migration impact: none. The proof is additive, introduces no data migration, HTTP API change, breaking configuration change, or deployment migration.
+- README impact for this correction: none; setup, commands, and user-facing capability are unchanged. API/configuration/migration impact: none; the correction changes only Playwright readiness handling and introduces no API, default, data, or deployment change.
 - Operational/deployment impact: the runbook documents designated-host operation and cleanup; production deployment procedures are otherwise unchanged.
 
 This record reports implementation evidence only. Independent final acceptance remains owned by Verify.

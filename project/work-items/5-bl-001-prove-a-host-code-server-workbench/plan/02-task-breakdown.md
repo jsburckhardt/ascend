@@ -143,7 +143,7 @@
 
 ### Test Coverage
 
-- One Playwright test against actual code-server 4.131.0.
+- One Playwright test against actual code-server 4.131.0. The completed Verify correction retries only the transient detached-frame transition while the Markdown Preview webview is replaced, within the existing bounded exact-text poll; other browser errors still fail.
 - Host audit assertions for OS, hostname, user, binary/version, `/proc` tree, argv, and TCP addresses.
 - Before/after fixture/disposable/injection assertions and unconditional exact-handle cleanup.
 

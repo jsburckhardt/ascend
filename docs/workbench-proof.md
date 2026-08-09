@@ -68,7 +68,7 @@ just test-e2e
 just verify
 ```
 
-The configured full gate runs exactly five fake startup failures and one real code-server Chromium lifecycle, alongside existing checks. Its BL-001 full-gate target is 120 seconds. Every browser path places exact-handle stop in `finally`, repeats stop for idempotence, and audits PID, listener, fixture, injection sentinel, and disposable state.
+The configured full gate runs exactly five fake startup failures and one real code-server Chromium lifecycle, alongside existing checks. Its BL-001 full-gate target is 120 seconds. During native Markdown Preview initialization, VS Code may replace its webview frame; the proof retries only that detached-frame transition within the existing 15-second exact rendered-text poll, while all other browser errors still fail. Every browser path places exact-handle stop in `finally`, repeats stop for idempotence, and audits PID, listener, fixture, injection sentinel, and disposable state.
 
 ## Troubleshooting
 

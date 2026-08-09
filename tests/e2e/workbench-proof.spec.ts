@@ -125,15 +125,26 @@ const codeServerVersion = async (): Promise<string> =>
     })
   })
 
+const isDetachedFrameError = (error: unknown): boolean =>
+  error instanceof Error && error.message.includes('Frame was detached')
+
 const renderedPreviewIsVisible = async (
   page: import('@playwright/test').Page
 ): Promise<boolean> => {
   for (const frame of page.frames()) {
-    const sentinel = frame.getByText(MARKDOWN_RENDERED_SENTINEL, {
-      exact: true,
-    })
-    if ((await sentinel.count()) > 0 && (await sentinel.first().isVisible()))
-      return true
+    if (frame.isDetached()) continue
+
+    try {
+      const sentinel = frame.getByText(MARKDOWN_RENDERED_SENTINEL, {
+        exact: true,
+      })
+      if (await sentinel.first().isVisible()) return true
+    } catch (error) {
+      // VS Code replaces the Markdown webview frame while Preview initializes.
+      // Retry only that bounded transition through the enclosing expect.poll.
+      if (isDetachedFrameError(error)) continue
+      throw error
+    }
   }
   return false
 }

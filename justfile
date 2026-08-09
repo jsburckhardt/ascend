@@ -25,6 +25,12 @@ type-check:
 build:
     pnpm build
 
+proof-start:
+    pnpm --filter @ascend/api exec tsx src/cli/proof-start.ts
+
+proof-stop:
+    pnpm --filter @ascend/api exec tsx src/cli/proof-stop.ts
+
 verify-focused *args:
     pnpm exec vitest run {{args}}
 

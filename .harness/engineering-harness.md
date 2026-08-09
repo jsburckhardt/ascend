@@ -13,7 +13,7 @@ development servers running.
 ## Checks command
 
 `harness checks` wraps the root `just verify` recipe and gates formatting, linting,
-typechecking, unit tests, builds, and Playwright E2E tests.
+typechecking, unit tests, builds, and Playwright E2E tests. On the designated host, the gate includes five bounded fake BL-001 failures and one real code-server Chromium lifecycle with exact-handle cleanup.
 
 ## Health check
 
@@ -41,12 +41,15 @@ artifacts under each application package.
 - `just verify-focused <path>`: focused Vitest feedback during implementation
 - API root test: in-process health interaction and JSON consequence
 - Project-home Playwright test: browser interaction and visible UI consequence
+- BL-001 host-process sensor: one real loopback code-server process tree, Explorer and Markdown Preview consequence, and zero-leak cleanup audit
 
 ## Evidence paths
 
 - Harness command envelopes: standard output
 - Unit coverage: `apps/*/coverage/`
 - Playwright artifacts: `test-results/` and `playwright-report/`
+- BL-001 machine episode: `test-results/bl-001/episode.json` (generated, ignored)
+- BL-001 retained AC evidence: `project/work-items/5-bl-001-prove-a-host-code-server-workbench/implementation/00-implementation.md`
 - Harnessability reports: `.harness/reports/harnessability/`
 - Harness retrospectives: `.harness/records/retro/`
 
@@ -67,7 +70,7 @@ artifacts under each application package.
 - Live API/web service startup is not yet part of boot; current readiness is
   test-backed and points to `just run` for interactive servers.
 - SQLite has no supported migrate, fixture, reset, or consequence-check command.
-- Architecture and host-process safety contracts are not yet executable checks.
+- Architecture contracts beyond the BL-001 host-process lifecycle are not yet executable checks.
 - No tracked CI workflow proves equivalence with the local `just verify` gate.
 
 ## Current maturity snapshot

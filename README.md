@@ -27,12 +27,18 @@ The root `justfile` is the command interface:
 just setup
 just run
 just verify-focused apps/web/src/App.test.tsx
+just proof-start
+just proof-stop
 just verify
 ```
 
 `just run` starts the web application and API together. The web application uses `http://localhost:5173`; the API uses `http://127.0.0.1:3000`.
 
 The devcontainer provides Node.js 22, pnpm, just, and code-server. Its post-create script runs `just setup`, including Playwright's Chromium dependencies, so no manually installed host tools are required for repository development.
+
+## Host Workbench Proof
+
+On the designated Ubuntu devcontainer, `just proof-start` starts one isolated code-server 4.131.0 against the tracked BL-001 fixture and writes one versioned JSON handle to stdout. Pipe that exact handle to `just proof-stop`; repeated cleanup is safe. The full gate runs the five bounded fake failure cases and one real Chromium lifecycle. See [the workbench proof runbook](docs/workbench-proof.md) for prerequisites, timeouts, diagnostics, evidence, and cleanup boundaries.
 
 ## Repository Layout
 

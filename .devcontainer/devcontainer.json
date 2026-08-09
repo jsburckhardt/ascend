@@ -24,7 +24,7 @@
             "pnpmVersion": "10.34.5"
         },
         "ghcr.io/coder/devcontainer-features/code-server:2": {
-            "version": "4.117.0",
+            "version": "4.131.0",
             "auth": "none",
             "host": "127.0.0.1",
             "disableTelemetry": true

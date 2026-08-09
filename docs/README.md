@@ -20,7 +20,7 @@ just run
 just verify
 ```
 
-The devcontainer pins Node.js 22, pnpm 10.34.5, and code-server 4.117.0 through features. Its post-create script invokes `just setup` to install workspace and Playwright dependencies reproducibly.
+The devcontainer pins Node.js 22, pnpm 10.34.5, and code-server 4.131.0 through features. Its post-create script invokes `just setup` to install workspace and Playwright dependencies reproducibly.
 
 Configuration uses environment variables:
 
@@ -32,6 +32,10 @@ Configuration uses environment variables:
 | Standard `OTEL_*` variables | OpenTelemetry defaults | Optional observability configuration |
 
 Application logs are simple structured console records. Logs and telemetry must not contain source, terminal, clipboard, prompt, credential, or secret content.
+
+## Designated-host workbench proof
+
+The repository exposes `just proof-start` and `just proof-stop` for one bounded standalone code-server 4.131.0 lifecycle. `just verify` includes five fake failure cases and one real Chromium Explorer/Markdown Preview episode, with exact-handle cleanup. See [`workbench-proof.md`](workbench-proof.md) for the fixed host prerequisites, handle contract, readiness and stop bounds, disposable artifacts, diagnostics, evidence, and troubleshooting. Harness boot remains non-persistent and test-backed.
 
 ## Source Documents
 

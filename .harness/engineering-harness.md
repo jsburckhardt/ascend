@@ -13,7 +13,7 @@ development servers running.
 ## Checks command
 
 `harness checks` wraps the root `just verify` recipe and gates formatting, linting,
-typechecking, unit tests, builds, and Playwright E2E tests. On the designated host, the gate includes five bounded fake BL-001 failures and one real code-server Chromium lifecycle with exact-handle cleanup.
+typechecking, unit tests, builds, and Playwright E2E tests. On the designated host, the gate includes bounded BL-001 lifecycle and terminal-parity failures plus one real code-server Chromium episode with exact-handle, terminal-command, browser-context, and listener cleanup.
 
 ## Health check
 
@@ -39,16 +39,17 @@ artifacts under each application package.
 - `harness checks`: format, lint, typecheck, unit tests, builds, and Playwright E2E
 - `harness boot --json`: aggregate test-backed readiness verdict
 - `just verify-focused <path>`: focused Vitest feedback during implementation
+- `just proof-terminal-parity`: 90-second designated-host direct-vs-integrated terminal sensor
 - API root test: in-process health interaction and JSON consequence
 - Project-home Playwright test: browser interaction and visible UI consequence
-- BL-001 host-process sensor: one real loopback code-server process tree, Explorer and Markdown Preview consequence, and zero-leak cleanup audit
+- BL-001/BL-002 host-process sensor: one real loopback code-server process tree, Explorer, Markdown Preview, one integrated terminal, direct-vs-integrated fixed-tool parity, and zero-leak cleanup audit
 
 ## Evidence paths
 
 - Harness command envelopes: standard output
 - Unit coverage: `apps/*/coverage/`
 - Playwright artifacts: `test-results/` and `playwright-report/`
-- BL-001 machine episode: `test-results/bl-001/episode.json` (generated, ignored)
+- BL-001 terminal-parity episode: `test-results/bl-001/terminal-parity/episode.json` with direct/integrated raw references (generated, ignored)
 - BL-001 retained AC evidence: `project/work-items/5-bl-001-prove-a-host-code-server-workbench/implementation/00-implementation.md`
 - Harnessability reports: `.harness/reports/harnessability/`
 - Harness retrospectives: `.harness/records/retro/`

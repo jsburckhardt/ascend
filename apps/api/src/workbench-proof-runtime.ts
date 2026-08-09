@@ -244,7 +244,7 @@ const readinessStatus = async (url: string): Promise<number | null> => {
   }
 }
 
-const terminateGroup = async (
+export const terminateExactProcessGroup = async (
   pgid: number,
   timeoutMs: number
 ): Promise<void> => {
@@ -411,7 +411,7 @@ export const startWorkbenchProof = async (
       }
     )
   } catch (error) {
-    if (child.pid) await terminateGroup(child.pid, STOP_TIMEOUT_MS)
+    if (child.pid) await terminateExactProcessGroup(child.pid, STOP_TIMEOUT_MS)
     await rm(runDirectory, { recursive: true, force: true })
     throw error
   }
@@ -464,7 +464,10 @@ export const stopWorkbenchProof = async (
 
   const matches = await identityMatches(handle)
   if (matches) {
-    await terminateGroup(handle.pid, options.stopTimeoutMs ?? STOP_TIMEOUT_MS)
+    await terminateExactProcessGroup(
+      handle.pid,
+      options.stopTimeoutMs ?? STOP_TIMEOUT_MS
+    )
   }
   await rm(runDirectory, { recursive: true, force: true })
   return {

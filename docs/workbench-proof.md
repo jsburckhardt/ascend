@@ -76,3 +76,50 @@ The configured full gate runs exactly five fake startup failures and one real co
 - `root-user-forbidden`: run as `vscode`, not through privilege elevation.
 - `readiness-timeout`: inspect the structured condition and rerun only after confirming no exact handle is live.
 - Browser sentinel failure: retain Playwright failure artifacts; cleanup still runs against the emitted handle.
+
+## Terminal parity episode
+
+The designated-host paved command is:
+
+```text
+just proof-terminal-parity
+```
+
+It reuses the one BL-001 launcher, canonical metacharacter fixture, explicit Chromium context, and exact-handle cleanup. The episode is bounded to **90,000 ms** overall. It preflights the six fixed executables before workbench or browser startup, captures direct results, opens exactly one integrated terminal, and captures integrated results from the same canonical fixture directory. Every command is bounded to **5,000 ms**.
+
+The fixed tool command list is exactly:
+
+1. `git --version`
+2. `git status --short`
+3. `gh --version`
+4. `tmux -V`
+5. `docker --version`
+6. `copilot --version`
+
+The proof also compares `hostname` and `id -un` in both contexts (both users must be `vscode`), and requires integrated `pwd -P` to equal the canonical launch path. Direct and integrated commands use executable/argument arrays; the fixture path is never shell-interpolated.
+
+### Normalization and environment policy
+
+One content-preserving normalization is applied identically to stdout and stderr in both contexts: CRLF and lone CR become LF. It does not trim, sort, merge streams, strip control bytes, rewrite URLs/versions, or otherwise change content. Both untouched raw records remain referenced by the episode.
+
+Only `PATH` is retained and compared. Its result is `equal`; `allowed difference` when the text differs but all five unique fixed executables resolve to identical canonical paths; or `unexplained failure-causing difference`, which fails the command. No non-allowlisted environment values are retained.
+
+### Terminal diagnostics and evidence
+
+A missing fixed executable fails before browser/workbench startup as `terminal-executable-missing` and names the executable. Existing commands that return nonzero fail as `terminal-command-nonzero` and name the command, direct/integrated context, and exit result. Per-command timeouts fail as `terminal-command-timeout` and name command, context, and timeout. The overall deadline reports `terminal-episode-timeout`. Atomic evidence write failures report `terminal-artifact-write`.
+
+Current-run generated evidence is ignored by Git and written to:
+
+- `test-results/bl-001/terminal-parity/direct.raw.json`
+- `test-results/bl-001/terminal-parity/integrated.raw.json`
+- `test-results/bl-001/terminal-parity/episode.json`
+
+Each raw command row records cwd, argv, 5,000 ms bound, exit result, separate raw and normalized streams, PID/start identity, and absence after completion. The episode maps host facts, code-server/tool observations, comparisons, raw references, cleanup, and disposition. Raw terminal output remains in these proof artifacts and is not written to lifecycle logs.
+
+### Cleanup
+
+Every started path attempts, in order, tracked-command cancellation, explicit browser-context close, exact BL-001 process-group stop, and PID/listener/command absence audits. Cleanup never uses process-name killing or listener sweeps, and cleanup failures remain failure-shaped. A missing-executable preflight creates no handle or browser context.
+
+### Observed designated-host result
+
+On Ubuntu 24.04.4 LTS host `03f809395a5d` as `vscode` with shell `/bin/zsh` and code-server 4.131.0, `just proof-terminal-parity` passed. Hostname/user/canonical cwd and all six command exits/stdout/stderr matched. The differing `PATH` was classified `allowed difference` because Git, GitHub CLI, tmux, Docker CLI, and Copilot CLI resolved identically. Browser context, terminal commands, exact workbench PID, and listener were absent after cleanup.

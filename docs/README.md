@@ -42,3 +42,7 @@ The repository exposes `just proof-start` and `just proof-stop` for one bounded 
 - [`PRD.md`](../PRD.md) defines the MVP requirements and acceptance criteria.
 - [`ADR-260808-typescript-monorepo`](../project/architecture/ADR/ADR-260808-typescript-monorepo.md) defines the initial stack.
 - [`project/architecture/core-components/`](../project/architecture/core-components/) contains cross-cutting contracts.
+
+## Host-native terminal parity
+
+Run `just proof-terminal-parity` on the designated Ubuntu 24.04.4 LTS devcontainer as `vscode` with code-server 4.131.0, Chromium, and the fixed Git, GitHub CLI, tmux, Docker CLI, and Copilot CLI executables installed. The single BL-001 workbench/Chromium sensor compares direct and integrated `hostname`, `id -un`, `pwd -P`, and the exact six-command tool list. It has a 90,000 ms episode bound and 5,000 ms per-command bounds. See [the operational runbook](workbench-proof.md).

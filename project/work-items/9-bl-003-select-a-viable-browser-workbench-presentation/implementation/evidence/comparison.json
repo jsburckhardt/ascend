@@ -1,0 +1,111 @@
+{
+  "version": 1,
+  "comparisonId": "b1000003-0000-4000-8000-000000000009",
+  "prerequisites": [
+    {
+      "name": "ubuntu-24.04",
+      "passed": true,
+      "detail": "24.04"
+    },
+    {
+      "name": "non-root-vscode-user",
+      "passed": true,
+      "detail": "vscode/1000"
+    },
+    {
+      "name": "merged-bl-001-bl-002-proof",
+      "passed": true,
+      "detail": "canonical fixture, lifecycle, and terminal parity capabilities present"
+    },
+    {
+      "name": "code-server-4.131.0",
+      "passed": true,
+      "detail": "4.131.0"
+    },
+    {
+      "name": "repository-chromium-desktop-build",
+      "passed": true,
+      "detail": "chromium/151.0.7922.34"
+    },
+    {
+      "name": "viewport-1440x900",
+      "passed": true,
+      "detail": "1440x900"
+    }
+  ],
+  "host": {
+    "ubuntuVersion": "Ubuntu 24.04.4 LTS",
+    "hostname": "03f809395a5d",
+    "user": "vscode",
+    "chromiumName": "chromium",
+    "chromiumVersion": "151.0.7922.34",
+    "codeServerVersion": "4.131.0",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    }
+  },
+  "slots": [
+    {
+      "candidate": "embedded",
+      "attempt": 1,
+      "status": "started",
+      "runId": "3319c8f9-2d01-4f4e-9dc1-26d3a8d99f14",
+      "recordReference": "project/work-items/9-bl-003-select-a-viable-browser-workbench-presentation/implementation/evidence/attempts/embedded-1.json"
+    },
+    {
+      "candidate": "embedded",
+      "attempt": 2,
+      "status": "started",
+      "runId": "08dac856-3b78-46a2-ba73-c2d73f2be5de",
+      "recordReference": "project/work-items/9-bl-003-select-a-viable-browser-workbench-presentation/implementation/evidence/attempts/embedded-2.json"
+    },
+    {
+      "candidate": "embedded",
+      "attempt": 3,
+      "status": "started",
+      "runId": "8e67b95d-63d1-4697-adae-6f53bbcf6640",
+      "recordReference": "project/work-items/9-bl-003-select-a-viable-browser-workbench-presentation/implementation/evidence/attempts/embedded-3.json"
+    },
+    {
+      "candidate": "full-page",
+      "attempt": 1,
+      "status": "started",
+      "runId": "44076a1f-b2a5-4ad1-bc61-59e76de6a779",
+      "recordReference": "project/work-items/9-bl-003-select-a-viable-browser-workbench-presentation/implementation/evidence/attempts/full-page-1.json"
+    },
+    {
+      "candidate": "full-page",
+      "attempt": 2,
+      "status": "started",
+      "runId": "33acc2d7-21b1-4d99-9f51-ee2e58088f37",
+      "recordReference": "project/work-items/9-bl-003-select-a-viable-browser-workbench-presentation/implementation/evidence/attempts/full-page-2.json"
+    },
+    {
+      "candidate": "full-page",
+      "attempt": 3,
+      "status": "started",
+      "runId": "e0efd542-fb90-435f-a8c7-d97d37b2b95b",
+      "recordReference": "project/work-items/9-bl-003-select-a-viable-browser-workbench-presentation/implementation/evidence/attempts/full-page-3.json"
+    }
+  ],
+  "candidates": {
+    "embedded": {
+      "eligible": true,
+      "blockingCount": 3,
+      "nonBlockingCount": 30,
+      "elapsedMs": [12258, 12737, 12787],
+      "medianElapsedMs": 12737
+    },
+    "full-page": {
+      "eligible": true,
+      "blockingCount": 0,
+      "nonBlockingCount": 36,
+      "elapsedMs": [12072, 13568, 13347],
+      "medianElapsedMs": 13347
+    }
+  },
+  "stopReason": null,
+  "selectedCandidate": "full-page",
+  "disposition": "full-page selected"
+}

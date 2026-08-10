@@ -46,3 +46,7 @@ The repository exposes `just proof-start` and `just proof-stop` for one bounded 
 ## Host-native terminal parity
 
 Run `just proof-terminal-parity` on the designated Ubuntu 24.04.4 LTS devcontainer as `vscode` with code-server 4.131.0, Chromium, and the fixed Git, GitHub CLI, tmux, Docker CLI, and Copilot CLI executables installed. The BL-001 workbench/Chromium sensor runs both real scenarios; its passing terminal-parity scenario compares direct and integrated `hostname`, `id -un`, `pwd -P`, and the exact six-command tool list. It has a 90,000 ms episode bound and 5,000 ms per-command bounds. See [the operational runbook](workbench-proof.md).
+
+## Browser workbench presentation proof
+
+The designated comparison command is just proof-workbench-presentation. It compares only embedded code-server and full-page code-server with a minimal Ascend header, using three fresh no-retry attempts per candidate and a 1440 by 900 repository Chromium context. The retained authoritative desktop result selected full-page because it had fewer blocking browser protocol violations, 0 versus 3. Both candidates were eligible. Tablet validation remains a separate non-authoritative follow-up, and this proof adds no product routing or lifecycle behavior. The operational and evidence contract is documented in workbench-proof.md.

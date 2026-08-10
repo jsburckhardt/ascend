@@ -34,6 +34,13 @@ proof-stop:
 proof-terminal-parity:
     pnpm exec playwright test tests/e2e/workbench-proof.spec.ts --project=chromium
 
+proof-workbench-presentation:
+    BL003_DESIGNATED=1 pnpm exec playwright test tests/e2e/workbench-presentation.spec.ts --project=chromium --workers=1 --retries=0
+    just materialize-workbench-presentation
+
+materialize-workbench-presentation:
+    pnpm --filter @ascend/api exec tsx src/cli/materialize-workbench-presentation.ts
+
 verify-focused *args:
     pnpm exec vitest run {{args}}
 

@@ -1,0 +1,85 @@
+{
+  "version": 1,
+  "candidate": "embedded",
+  "attempt": 2,
+  "runId": "08dac856-3b78-46a2-ba73-c2d73f2be5de",
+  "chromiumVersion": "151.0.7922.34",
+  "startStatus": "started",
+  "finalStatus": "passed",
+  "failedAssertions": [],
+  "timing": {
+    "navigationStartMs": 15226,
+    "scenarioCompletionMs": 27963
+  },
+  "assertions": {
+    "functional": {
+      "document-navigation": true,
+      "explorer-sentinel": true,
+      "markdown-open": true,
+      "preview-rendered": true,
+      "keyboard-explorer-focus": true,
+      "keyboard-preview-enter": true,
+      "keyboard-preview-leave": true,
+      "terminal-open": true,
+      "clipboard-round-trip": true,
+      "terminal-identity-parity": true,
+      "terminal-path-parity": true,
+      "terminal-tool-parity": true,
+      "workbench-websocket-usable": true,
+      "browser-event-evidence": true,
+      "fixture-tree-integrity": true,
+      "fixture-sentinel-integrity": true,
+      "cleanup-context": true,
+      "cleanup-terminal-commands": true,
+      "cleanup-process-group": true,
+      "cleanup-process": true,
+      "cleanup-listener": true,
+      "cleanup-disposable": true,
+      "cleanup-fixture-present": true
+    },
+    "requiredEvidence": true,
+    "cleanup": true,
+    "integrity": true
+  },
+  "evidence": {
+    "rawBrowserEvents": "project/work-items/9-bl-003-select-a-viable-browser-workbench-presentation/implementation/evidence/browser-events/embedded-2.json",
+    "terminalDirect": "test-results/bl-003/raw/08dac856-3b78-46a2-ba73-c2d73f2be5de/direct.raw.json",
+    "terminalIntegrated": "test-results/bl-003/raw/08dac856-3b78-46a2-ba73-c2d73f2be5de/integrated.raw.json"
+  },
+  "warningCounts": {
+    "blocking": 1,
+    "nonBlocking": 10
+  },
+  "freshness": {
+    "workbenchRunId": "75488edc-4fc3-4e3e-9ff7-24e6c71f0232",
+    "processPid": 345961,
+    "processGroup": 345961,
+    "browserContextId": "fa8014e6-1ef4-49ac-9969-dd36ce748328",
+    "disposableArea": "test-results/bl-003/disposable/08dac856-3b78-46a2-ba73-c2d73f2be5de",
+    "priorStateAbsent": true
+  },
+  "cleanup": {
+    "browserContextClosed": true,
+    "terminalCommandsAbsent": true,
+    "processGroupAbsent": true,
+    "exactProcessAbsent": true,
+    "listenerAbsent": true,
+    "disposableRemoved": true,
+    "fixturePresentUnchanged": true
+  },
+  "integrity": {
+    "fixturePresent": true,
+    "treeMembershipEqual": true,
+    "sentinelBytesEqual": true
+  },
+  "sharedInputs": {
+    "fixture": "/workspaces/ascend/tests/fixtures/bl-001/workbench project;BL-001",
+    "codeServerVersion": "4.131.0",
+    "chromiumName": "chromium",
+    "chromiumVersion": "151.0.7922.34",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    }
+  }
+}

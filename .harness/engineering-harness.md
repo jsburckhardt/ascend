@@ -40,6 +40,7 @@ artifacts under each application package.
 - `harness boot --json`: aggregate test-backed readiness verdict
 - `just verify-focused <path>`: focused Vitest feedback during implementation
 - `just proof-terminal-parity`: 90-second designated-host direct-vs-integrated terminal sensor
+- just proof-workbench-presentation: six-attempt designated-host BL-003 presentation comparison and conditional ADR materialization
 - API root test: in-process health interaction and JSON consequence
 - Project-home Playwright test: browser interaction and visible UI consequence
 - BL-001/BL-002 host-process sensor: two real loopback code-server Chromium scenarios—forced integrated-terminal timeout cleanup and passing Explorer, Markdown Preview, and direct-vs-integrated terminal parity—with zero-leak cleanup audits
@@ -52,6 +53,8 @@ artifacts under each application package.
 - BL-001 terminal-parity episode: `test-results/bl-001/terminal-parity/episode.json` with direct/integrated raw references (generated, ignored)
 - BL-001 retained AC evidence: `project/work-items/5-bl-001-prove-a-host-code-server-workbench/implementation/00-implementation.md`
 - BL-002 retained AC evidence: `project/work-items/7-bl-002-prove-host-native-terminal-parity/implementation/00-implementation.md`
+- BL-003 retained comparison and browser events: project/work-items/9-bl-003-select-a-viable-browser-workbench-presentation/implementation/evidence/
+- BL-003 retained terminal artifacts: `test-results/bl-003/raw/` (twelve comparison-referenced JSON files)
 - Harnessability reports: `.harness/reports/harnessability/`
 - Harness retrospectives: `.harness/records/retro/`
 
@@ -72,7 +75,7 @@ artifacts under each application package.
 - Live API/web service startup is not yet part of boot; current readiness is
   test-backed and points to `just run` for interactive servers.
 - SQLite has no supported migrate, fixture, reset, or consequence-check command.
-- Architecture contracts beyond the BL-001 host-process lifecycle are not yet executable checks.
+- Architecture contracts are not comprehensively executable; BL-003 checks only its evidence-backed presentation decision.
 - No tracked CI workflow proves equivalence with the local `just verify` gate.
 
 ## Current maturity snapshot

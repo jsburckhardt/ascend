@@ -12,6 +12,11 @@ import {
   type TrackedTerminalCommandIdentity,
 } from '../workbench-proof-terminal.js'
 
+const integratedRawEvidence =
+  process.env.ASCEND_PROOF_INTEGRATED_EVIDENCE ?? INTEGRATED_RAW_EVIDENCE
+const integratedCommandIdentities =
+  process.env.ASCEND_PROOF_COMMAND_IDENTITIES ?? INTEGRATED_COMMAND_IDENTITIES
+
 interface IntegratedCommandTracker {
   version: 1
   owner: TrackedTerminalCommandIdentity
@@ -35,10 +40,10 @@ const readIdentity = (
 }
 
 const writeTracker = (tracker: IntegratedCommandTracker): void => {
-  mkdirSync(path.dirname(INTEGRATED_COMMAND_IDENTITIES), { recursive: true })
-  const temporary = INTEGRATED_COMMAND_IDENTITIES + '.tmp'
+  mkdirSync(path.dirname(integratedCommandIdentities), { recursive: true })
+  const temporary = integratedCommandIdentities + '.tmp'
   writeFileSync(temporary, JSON.stringify(tracker) + '\n', { mode: 0o600 })
-  renameSync(temporary, INTEGRATED_COMMAND_IDENTITIES)
+  renameSync(temporary, integratedCommandIdentities)
 }
 
 export const runIntegratedTerminalCapture = async (): Promise<number> => {
@@ -63,7 +68,7 @@ export const runIntegratedTerminalCapture = async (): Promise<number> => {
         writeTracker(tracker)
       },
     })
-    await writeJsonAtomic(INTEGRATED_RAW_EVIDENCE, evidence)
+    await writeJsonAtomic(integratedRawEvidence, evidence)
     return 0
   } catch (error) {
     const diagnostic =

@@ -37,6 +37,7 @@ export const renderCapacityComparison = (
   samples: CapacitySamplesEvidence,
   workloads: CapacityWorkloadsEvidence
 ): string => {
+  const splitCompleteness = Boolean(run.finalCleanup)
   const lines = [
     '# Workbench capacity baseline ' + run.runId,
     '',
@@ -45,8 +46,12 @@ export const renderCapacityComparison = (
       '**',
     'Overall disposition: **' + run.overallDisposition + '**',
     '',
-    '| Cohort | Requested | Ready | Failed | Unstarted | Workload pass/fail | Samples retained/absent | Host load avg/max | Host available KiB min | Process CPU avg/max % | Process RSS KiB avg/max | Responsiveness | Cleanup / integrity | Findings | Gate |',
-    '|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|---|---|',
+    splitCompleteness
+      ? '| Cohort | Requested | Ready | Failed | Unstarted | Workload pass/fail | Host retained/absent | Process trees retained/absent | Missing reasons | Host load avg/max | Host available KiB min | Process CPU avg/max % | Process RSS KiB avg/max | Responsiveness | Cleanup / integrity | Findings | Gate |'
+      : '| Cohort | Requested | Ready | Failed | Unstarted | Workload pass/fail | Samples retained/absent | Host load avg/max | Host available KiB min | Process CPU avg/max % | Process RSS KiB avg/max | Responsiveness | Cleanup / integrity | Findings | Gate |',
+    splitCompleteness
+      ? '|---:|---:|---:|---:|---:|---:|---:|---:|---|---:|---:|---:|---:|---|---|---|---|'
+      : '|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|---|---|---|',
   ]
   for (const cohort of run.cohorts) {
     const cohortSamples = samples.samples.filter(
@@ -75,11 +80,34 @@ export const renderCapacityComparison = (
     )
     const cpu = processSamples.map(({ cpuPercent }) => cpuPercent)
     const rss = processSamples.map(({ rssKiB }) => rssKiB)
-    const retained = cohortSamples.filter(({ host }) => host).length
+    const hostRetained = cohortSamples.filter(({ host }) => host).length
+    const processEntries = cohortSamples.flatMap(
+      ({ processTrees }) => processTrees
+    )
+    const processRetained = processEntries.filter(({ sample }) => sample).length
+    const missingReasons = [
+      ...cohortSamples.flatMap(({ absentReason }) =>
+        absentReason ? [absentReason] : []
+      ),
+      ...processEntries.flatMap(({ absentReason }) =>
+        absentReason ? [absentReason] : []
+      ),
+    ]
     const responsive =
       cohort.preProbe.passed &&
       cohort.postCleanupProbe.passed &&
       hostSamples.every(({ responsiveness }) => responsiveness.passed)
+    const completenessColumns = splitCompleteness
+      ? hostRetained +
+        '/' +
+        (cohortSamples.length - hostRetained) +
+        ' | ' +
+        processRetained +
+        '/' +
+        (processEntries.length - processRetained) +
+        ' | ' +
+        ([...new Set(missingReasons)].join('; ') || 'none')
+      : hostRetained + '/' + (cohortSamples.length - hostRetained)
     lines.push(
       '| ' +
         cohort.requested +
@@ -96,9 +124,7 @@ export const renderCapacityComparison = (
         '/' +
         (cohortWorkloads.length - counts.passed) +
         ' | ' +
-        retained +
-        '/' +
-        (cohortSamples.length - retained) +
+        completenessColumns +
         ' | ' +
         average(load) +
         '/' +

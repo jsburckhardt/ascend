@@ -36,6 +36,7 @@ import {
   startWorkbenchProof,
   stopWorkbenchProof,
   terminateExactProcessIdentity,
+  ProofError,
   type ProofHandle,
   type StartProofResult,
 } from './workbench-proof-runtime.js'
@@ -48,36 +49,43 @@ import {
   type WorkloadController,
 } from './workbench-capacity-sampling.js'
 
-interface ReadyMember {
+interface ManagedMember {
   slot: CapacitySlot
-  handle: ProofHandle
+  handle: ProofHandle | null
   processes: Map<string, ProcessIdentity>
   listeners: Map<string, ManagedListenerRow>
   controller?: WorkloadController
 }
 export interface CapacityCoordinatorDependencies {
   clock: CapacityClock
-  start: (slot: number, cohort: number) => Promise<StartProofResult>
+  start: (
+    slot: number,
+    cohort: number,
+    signal: AbortSignal
+  ) => Promise<StartProofResult>
   stop: (handle: ProofHandle) => Promise<void>
   cleanupIdentity: (identity: ProcessIdentity) => Promise<void>
-  probe: (clock: CapacityClock) => Promise<ProbeResult>
-  snapshot: () => Promise<FixtureSnapshot>
+  probe: (clock: CapacityClock, signal?: AbortSignal) => Promise<ProbeResult>
+  snapshot: (signal?: AbortSignal) => Promise<FixtureSnapshot>
   inspect: typeof inspectCapacityProcessTree
-  listeners: typeof readManagedListeners
+  listeners: (pids: number[]) => Promise<ManagedListenerRow[]>
   audit: typeof auditAttributedResources
   sample: typeof sampleCapacityWindow
   workload: typeof startCapacityWorkload
   timedOut: () => boolean
+  signal: AbortSignal
 }
 const realDependencies = (
-  startedMonotonicMs: number
+  startedMonotonicMs: number,
+  signal: AbortSignal
 ): CapacityCoordinatorDependencies => ({
   clock: realCapacityClock,
-  start: async () =>
+  start: async (_slot, _cohort, operationSignal) =>
     startWorkbenchProof({
       projectPath: CAPACITY_FIXTURE,
       runRoot: CAPACITY_MEMBER_STATE_ROOT,
       startupTimeoutMs: CAPACITY_MEMBER_TIMEOUT_MS,
+      signal: operationSignal,
     }),
   stop: async (handle) => {
     await stopWorkbenchProof(handle, { runRoot: CAPACITY_MEMBER_STATE_ROOT })
@@ -88,12 +96,13 @@ const realDependencies = (
   probe: runResponsivenessProbe,
   snapshot: snapshotFixture,
   inspect: inspectCapacityProcessTree,
-  listeners: readManagedListeners,
+  listeners: (pids) => readManagedListeners(pids, { strict: true }),
   audit: auditAttributedResources,
   sample: sampleCapacityWindow,
   workload: startCapacityWorkload,
   timedOut: () =>
     performance.now() - startedMonotonicMs >= CAPACITY_OVERALL_TIMEOUT_MS,
+  signal,
 })
 const emptyCleanup = (): CleanupResult => ({
   complete: false,
@@ -169,7 +178,8 @@ const cancelledWorkload = (
   cohort: number,
   slot: number,
   reason: string,
-  clock: CapacityClock
+  clock: CapacityClock,
+  status: WorkloadResult['status'] = 'cancelled'
 ): WorkloadResult => ({
   runId,
   cohort,
@@ -187,10 +197,27 @@ const cancelledWorkload = (
   startMonotonicMs: clock.now(),
   endMonotonicMs: clock.now(),
   exitCode: null,
-  status: 'cancelled',
+  status,
   stdout: '',
   stderr: reason,
 })
+const failedProbe = (clock: CapacityClock, reason: string): ProbeResult => ({
+  command: '/usr/bin/true',
+  timeoutMs: 1_000,
+  startedAt: clock.wall().toISOString(),
+  endedAt: clock.wall().toISOString(),
+  passed: false,
+  exitCode: null,
+  reason,
+})
+const incompleteIntegrity = (reason: string): IntegrityResult => ({
+  complete: false,
+  passed: false,
+  treeMembershipEqual: false,
+  sentinelHashesEqual: false,
+  details: [reason],
+})
+
 const fixtureIntegrity = (
   before: FixtureSnapshot,
   after: FixtureSnapshot
@@ -216,7 +243,7 @@ const processKey = ({ pid, startTimeTicks }: ProcessIdentity) =>
 const listenerKey = ({ address, port, pid, inode }: ListenerIdentity) =>
   address + ':' + port + ':' + pid + ':' + inode
 const recordAttribution = (
-  member: ReadyMember,
+  member: ManagedMember,
   processes: ProcessIdentity[],
   listeners: ListenerIdentity[]
 ) => {
@@ -445,16 +472,22 @@ export interface CoordinatedCapacity {
   safetyStopReason: string | null
   threeMemberGate: { passed: boolean; blockers: string[] }
   exitReasons: string[]
+  finalCleanup: CleanupResult
 }
 export const coordinateCapacityRun = async (
   runId: string,
   overrides: Partial<CapacityCoordinatorDependencies> = {}
 ): Promise<CoordinatedCapacity> => {
   const started = performance.now()
-  const deps = { ...realDependencies(started), ...overrides }
+  const fallbackController = new AbortController()
+  const signal = overrides.signal ?? fallbackController.signal
+  const deps = { ...realDependencies(started, signal), ...overrides, signal }
   const allSamples: ScheduledSample[] = []
   const allWorkloads: WorkloadResult[] = []
   const cohorts: CapacityCohortRecord[] = []
+  const allStartedProcesses = new Map<string, ProcessIdentity>()
+  const allStartedListeners = new Map<string, ManagedListenerRow>()
+  const allWorkloadProcesses = new Map<string, ProcessIdentity>()
   let safetyStopReason: string | null = null
   let deadlineBreached = false
   let frozenGate = {
@@ -465,7 +498,7 @@ export const coordinateCapacityRun = async (
     safetyStopReason ??= 'responsiveness-safety-stop:' + reason
   }
   const checkDeadline = () => {
-    if (!deps.timedOut()) return false
+    if (!deps.timedOut() && !deps.signal.aborted) return false
     deadlineBreached = true
     safetyStopReason ??= 'overall-timeout'
     return true
@@ -473,14 +506,32 @@ export const coordinateCapacityRun = async (
 
   for (const requested of CAPACITY_COHORTS) {
     checkDeadline()
-    const before = await deps.snapshot()
+    let before: FixtureSnapshot = { paths: [], sentinelHashes: {} }
+    let beforeFailure: string | null = null
+    try {
+      before = await deps.snapshot(deps.signal)
+    } catch (error) {
+      beforeFailure =
+        'before-fixture-inspection-failed:' +
+        (error instanceof Error ? error.message : 'unknown')
+      safetyStopReason ??= beforeFailure
+    }
     checkDeadline()
-    const preProbe = await deps.probe(deps.clock)
+    let preProbe: ProbeResult
+    try {
+      preProbe = await deps.probe(deps.clock, deps.signal)
+    } catch (error) {
+      preProbe = failedProbe(
+        deps.clock,
+        'pre-cohort-probe-execution-failed:' +
+          (error instanceof Error ? error.message : 'unknown')
+      )
+    }
     checkDeadline()
     if (!preProbe.passed)
       latchProbe(preProbe.reason ?? 'pre-cohort probe failed')
     const slots: CapacitySlot[] = []
-    const members: ReadyMember[] = []
+    const members: ManagedMember[] = []
     const usedPorts = new Set<number>()
     const usedRootPids = new Set<number>()
     const usedListenerOwnerPids = new Set<number>()
@@ -494,25 +545,72 @@ export const coordinateCapacityRun = async (
       }
       const attemptedAt = deps.clock.wall().toISOString()
       try {
-        const startedMember = await deps.start(slotNumber, requested)
-        checkDeadline()
-        const inspected = await deps.inspect(startedMember.handle.pid)
-        if (!inspected.ok) {
-          await deps.stop(startedMember.handle).catch(() => undefined)
-          slots.push(
-            failedSlot(
-              runId,
-              requested,
-              slotNumber,
-              attemptedAt,
-              'process-inspection-failed:' + inspected.reason
-            )
-          )
+        const startedMember = await deps.start(
+          slotNumber,
+          requested,
+          deps.signal
+        )
+        const rootIdentity = {
+          pid: startedMember.handle.pid,
+          startTimeTicks: startedMember.handle.startTimeTicks,
+        }
+        const slot: CapacitySlot = {
+          ...failedSlot(
+            runId,
+            requested,
+            slotNumber,
+            attemptedAt,
+            'capacity-attribution-pending'
+          ),
+          runtimeRunId: startedMember.handle.runId,
+          pid: startedMember.handle.pid,
+          startTimeTicks: startedMember.handle.startTimeTicks,
+          url: startedMember.handle.url,
+          readinessStatus: startedMember.readinessStatus,
+          processIdentities: [rootIdentity],
+        }
+        const member: ManagedMember = {
+          slot,
+          handle: startedMember.handle,
+          processes: new Map([[processKey(rootIdentity), rootIdentity]]),
+          listeners: new Map(),
+        }
+        slots.push(slot)
+        members.push(member)
+        if (checkDeadline()) {
+          slot.reason = 'overall-timeout-during-member-start'
           continue
         }
-        const listeners = await deps.listeners(
-          inspected.rows.map(({ pid }) => pid)
-        )
+
+        let inspected: Awaited<ReturnType<typeof deps.inspect>>
+        try {
+          inspected = await deps.inspect(startedMember.handle.pid)
+        } catch (error) {
+          slot.reason =
+            'process-inspection-failed:' +
+            (error instanceof Error ? error.message : 'unknown')
+          continue
+        }
+        if (!inspected.ok) {
+          slot.reason = 'process-inspection-failed:' + inspected.reason
+          continue
+        }
+        const identities = inspected.rows.map(({ pid, startTimeTicks }) => ({
+          pid,
+          startTimeTicks,
+        }))
+        recordAttribution(member, identities, [])
+
+        let listeners: ManagedListenerRow[]
+        try {
+          listeners = await deps.listeners(inspected.rows.map(({ pid }) => pid))
+        } catch (error) {
+          slot.reason =
+            'listener-attribution-failed:' +
+            (error instanceof Error ? error.message : 'unknown')
+          continue
+        }
+        recordAttribution(member, [], listeners)
         const port = Number(new URL(startedMember.handle.url).port)
         const matchingListeners = listeners.filter(
           (entry) => entry.port === port
@@ -526,67 +624,70 @@ export const coordinateCapacityRun = async (
           usedListenerOwnerPids.has(listener.pid) ||
           !inspected.rows.some(({ pid }) => pid === listener.pid)
         ) {
-          await deps.stop(startedMember.handle).catch(() => undefined)
-          slots.push(
-            failedSlot(
-              runId,
-              requested,
-              slotNumber,
-              attemptedAt,
-              'listener-attribution-or-distinctness-failed'
-            )
-          )
+          slot.reason = 'listener-attribution-or-distinctness-failed'
           continue
         }
         usedPorts.add(port)
         usedRootPids.add(startedMember.handle.pid)
         usedListenerOwnerPids.add(listener.pid)
-        const identities = inspected.rows.map(({ pid, startTimeTicks }) => ({
-          pid,
-          startTimeTicks,
-        }))
-        const slot: CapacitySlot = {
-          runId,
-          cohort: requested,
-          slot: slotNumber,
-          state: 'ready',
+        Object.assign(slot, {
+          state: 'ready' as const,
           reason: null,
-          attemptStartedAt: attemptedAt,
           attemptEndedAt: deps.clock.wall().toISOString(),
-          readinessTimeoutMs: CAPACITY_MEMBER_TIMEOUT_MS,
-          runtimeRunId: startedMember.handle.runId,
-          pid: startedMember.handle.pid,
-          startTimeTicks: startedMember.handle.startTimeTicks,
-          url: startedMember.handle.url,
-          readinessStatus: startedMember.readinessStatus,
           listener,
           readinessAchieved: true,
-          processIdentities: identities,
-          attributedListeners: listeners,
-          unexpectedExit: false,
-        }
-        const member: ReadyMember = {
-          slot,
-          handle: startedMember.handle,
-          processes: new Map(
-            identities.map((identity) => [processKey(identity), identity])
-          ),
-          listeners: new Map(
-            listeners.map((identity) => [listenerKey(identity), identity])
-          ),
-        }
-        slots.push(slot)
-        members.push(member)
+        })
       } catch (error) {
-        slots.push(
-          failedSlot(
-            runId,
-            requested,
-            slotNumber,
-            attemptedAt,
-            error instanceof Error ? error.message : 'member-start-failed'
-          )
+        const slot = failedSlot(
+          runId,
+          requested,
+          slotNumber,
+          attemptedAt,
+          error instanceof Error ? error.message : 'member-start-failed'
         )
+        const discovered =
+          error instanceof ProofError ? error.discoveredIdentity : null
+        if (discovered) {
+          slot.runtimeRunId = discovered.runId
+          slot.pid = discovered.pid
+          slot.startTimeTicks = discovered.startTimeTicks
+          slot.url = discovered.url
+          if (discovered.pid && discovered.startTimeTicks)
+            slot.processIdentities = [
+              {
+                pid: discovered.pid,
+                startTimeTicks: discovered.startTimeTicks,
+              },
+            ]
+          const handle =
+            discovered.pid && discovered.startTimeTicks && discovered.url
+              ? {
+                  version: 1 as const,
+                  runId: discovered.runId,
+                  pid: discovered.pid,
+                  startTimeTicks: discovered.startTimeTicks,
+                  url: discovered.url,
+                }
+              : null
+          members.push({
+            slot,
+            handle,
+            processes: new Map(
+              slot.processIdentities.map((identity) => [
+                processKey(identity),
+                identity,
+              ])
+            ),
+            listeners: new Map(),
+          })
+        }
+        if (
+          error instanceof ProofError &&
+          typeof error.details.cleanupFailure === 'string'
+        )
+          slot.reason += ':start-cleanup-failed:' + error.details.cleanupFailure
+        slots.push(slot)
+        checkDeadline()
       }
     }
     const targets = slots.filter(({ readinessAchieved }) => readinessAchieved)
@@ -616,26 +717,41 @@ export const coordinateCapacityRun = async (
       )
       idleEnd = idleAnchor + 5_000
     } else {
-      const idle = await deps.sample({
-        runId,
-        cohort: requested,
-        window: 'idle',
-        slots,
-        clock: deps.clock,
-        stopReason: () => safetyStopReason,
-        onProbeFailure: latchProbe,
-        probe: deps.probe,
-        inspectTree: deps.inspect,
-        inspectListeners: deps.listeners,
-        onAttribution,
-      })
+      try {
+        const idle = await deps.sample({
+          runId,
+          cohort: requested,
+          window: 'idle',
+          slots,
+          clock: deps.clock,
+          stopReason: () => safetyStopReason,
+          onProbeFailure: latchProbe,
+          probe: deps.probe,
+          inspectTree: deps.inspect,
+          inspectListeners: deps.listeners,
+          onAttribution,
+          signal: deps.signal,
+        })
+        idleAnchor = idle.anchorMonotonicMs
+        idleEnd = idle.endedMonotonicMs
+        allSamples.push(...idle.samples)
+      } catch (error) {
+        const reason =
+          'idle-sampling-failed:' +
+          (error instanceof Error ? error.message : 'unknown')
+        safetyStopReason ??= reason
+        idleAnchor = deps.clock.now()
+        idleEnd = idleAnchor
+        allSamples.push(
+          ...absentWindow(runId, requested, 'idle', targets, reason, idleAnchor)
+        )
+      }
       checkDeadline()
-      idleAnchor = idle.anchorMonotonicMs
-      idleEnd = idle.endedMonotonicMs
-      allSamples.push(...idle.samples)
     }
     if (!safetyStopReason) {
-      for (const member of members) {
+      for (const member of members.filter(
+        ({ slot }) => slot.readinessAchieved
+      )) {
         try {
           member.controller = await deps.workload({
             runId,
@@ -643,6 +759,7 @@ export const coordinateCapacityRun = async (
             slot: member.slot.slot,
             cwd: CAPACITY_FIXTURE,
             clock: deps.clock,
+            signal: deps.signal,
           })
           checkDeadline()
         } catch (error) {
@@ -652,33 +769,54 @@ export const coordinateCapacityRun = async (
               requested,
               member.slot.slot,
               error instanceof Error ? error.message : 'workload-spawn-failed',
-              deps.clock
+              deps.clock,
+              deps.signal.aborted ? 'cancelled' : 'spawn-failed'
             )
           )
         }
       }
       activeAnchor = deps.clock.now()
-      const active = await deps.sample({
-        runId,
-        cohort: requested,
-        window: 'active',
-        slots,
-        clock: deps.clock,
-        stopReason: () => safetyStopReason,
-        onProbeFailure: latchProbe,
-        probe: deps.probe,
-        inspectTree: deps.inspect,
-        inspectListeners: deps.listeners,
-        onAttribution,
-        workloadRunning: (slot, at) =>
-          members
-            .find((member) => member.slot.slot === slot)
-            ?.controller?.isRunning(at) ?? false,
-      })
+      try {
+        const active = await deps.sample({
+          runId,
+          cohort: requested,
+          window: 'active',
+          slots,
+          clock: deps.clock,
+          stopReason: () => safetyStopReason,
+          onProbeFailure: latchProbe,
+          probe: deps.probe,
+          inspectTree: deps.inspect,
+          inspectListeners: deps.listeners,
+          onAttribution,
+          signal: deps.signal,
+          workloadRunning: (slot, at) =>
+            members
+              .find((member) => member.slot.slot === slot)
+              ?.controller?.isRunning(at) ?? false,
+        })
+        activeAnchor = active.anchorMonotonicMs
+        activeEnd = active.endedMonotonicMs
+        allSamples.push(...active.samples)
+      } catch (error) {
+        const reason =
+          'active-sampling-failed:' +
+          (error instanceof Error ? error.message : 'unknown')
+        safetyStopReason ??= reason
+        activeAnchor = deps.clock.now()
+        activeEnd = activeAnchor
+        allSamples.push(
+          ...absentWindow(
+            runId,
+            requested,
+            'active',
+            targets,
+            reason,
+            activeAnchor
+          )
+        )
+      }
       checkDeadline()
-      activeAnchor = active.anchorMonotonicMs
-      activeEnd = active.endedMonotonicMs
-      allSamples.push(...active.samples)
     } else {
       activeAnchor = deps.clock.now()
       activeEnd = activeAnchor + 5_000
@@ -692,7 +830,7 @@ export const coordinateCapacityRun = async (
           activeAnchor
         )
       )
-      for (const member of members)
+      for (const member of members.filter(({ slot }) => slot.readinessAchieved))
         allWorkloads.push(
           cancelledWorkload(
             runId,
@@ -705,41 +843,88 @@ export const coordinateCapacityRun = async (
     }
     for (const member of members)
       if (member.controller) {
-        allWorkloads.push(await member.controller.finish())
+        try {
+          allWorkloads.push(await member.controller.finish())
+        } catch (error) {
+          allWorkloads.push(
+            cancelledWorkload(
+              runId,
+              requested,
+              member.slot.slot,
+              'workload-result-failed:' +
+                (error instanceof Error ? error.message : 'unknown'),
+              deps.clock,
+              deps.signal.aborted ? 'cancelled' : 'spawn-failed'
+            )
+          )
+        }
         checkDeadline()
       }
+    const cleanup = emptyCleanup()
+    const cleanupDetails: string[] = []
     for (const member of members) {
+      if (!member.handle) continue
       try {
         const inspected = await deps.inspect(member.handle.pid)
         if (!inspected.ok) {
-          member.slot.state = 'failed'
-          member.slot.unexpectedExit =
-            inspected.reason === 'root-process-absent'
-          member.slot.reason = member.slot.unexpectedExit
-            ? 'unexpected-exit:root-process-absent'
-            : 'process-tree-inspection-failed:' + inspected.reason
+          cleanupDetails.push(
+            'post-start-process-inspection:' +
+              member.slot.slot +
+              ':' +
+              inspected.reason
+          )
+          if (member.slot.readinessAchieved) {
+            member.slot.state = 'failed'
+            member.slot.unexpectedExit =
+              inspected.reason === 'root-process-absent'
+            member.slot.reason = member.slot.unexpectedExit
+              ? 'unexpected-exit:root-process-absent'
+              : 'process-tree-inspection-failed:' + inspected.reason
+          }
           continue
         }
-        const listeners = await deps.listeners(
-          inspected.rows.map(({ pid }) => pid)
-        )
         recordAttribution(
           member,
           inspected.rows.map(({ pid, startTimeTicks }) => ({
             pid,
             startTimeTicks,
           })),
-          listeners
+          []
         )
+        try {
+          const listeners = await deps.listeners(
+            inspected.rows.map(({ pid }) => pid)
+          )
+          recordAttribution(member, [], listeners)
+        } catch (error) {
+          cleanupDetails.push(
+            'post-start-listener-attribution:' +
+              member.slot.slot +
+              ':' +
+              (error instanceof Error ? error.message : 'unknown')
+          )
+          if (member.slot.readinessAchieved) {
+            member.slot.state = 'failed'
+            member.slot.reason =
+              'listener-attribution-failed:' +
+              (error instanceof Error ? error.message : 'unknown')
+          }
+        }
       } catch (error) {
-        member.slot.state = 'failed'
-        member.slot.reason =
-          'process-tree-inspection-failed:' +
-          (error instanceof Error ? error.message : 'unknown')
+        cleanupDetails.push(
+          'post-start-process-inspection:' +
+            member.slot.slot +
+            ':' +
+            (error instanceof Error ? error.message : 'unknown')
+        )
+        if (member.slot.readinessAchieved) {
+          member.slot.state = 'failed'
+          member.slot.reason =
+            'process-tree-inspection-failed:' +
+            (error instanceof Error ? error.message : 'unknown')
+        }
       }
     }
-    const cleanup = emptyCleanup()
-    const cleanupDetails: string[] = []
     for (const member of [...members].reverse()) {
       if (member.controller)
         await member.controller
@@ -747,11 +932,12 @@ export const coordinateCapacityRun = async (
           .catch((error) =>
             cleanupDetails.push('workload-cleanup:' + String(error))
           )
-      await deps
-        .stop(member.handle)
-        .catch((error) =>
-          cleanupDetails.push('member-cleanup:' + String(error))
-        )
+      if (member.handle)
+        await deps
+          .stop(member.handle)
+          .catch((error) =>
+            cleanupDetails.push('member-cleanup:' + String(error))
+          )
       for (const identity of [...member.processes.values()].reverse())
         await deps
           .cleanupIdentity(identity)
@@ -761,39 +947,98 @@ export const coordinateCapacityRun = async (
             )
           )
     }
-    const audits = await Promise.all(
-      members.map((member) =>
-        deps.audit(
-          [...member.processes.values()],
-          [...member.listeners.values()]
+    let auditsComplete = true
+    const audits: Array<{
+      processIdentitiesAbsent: boolean
+      listenersAbsent: boolean
+    }> = []
+    for (const member of members) {
+      try {
+        audits.push(
+          await deps.audit(
+            [...member.processes.values()],
+            [...member.listeners.values()]
+          )
         )
+      } catch (error) {
+        auditsComplete = false
+        cleanupDetails.push(
+          'cleanup-audit-failed:' +
+            member.slot.slot +
+            ':' +
+            (error instanceof Error ? error.message : 'unknown')
+        )
+      }
+    }
+    cleanup.processIdentitiesAbsent =
+      auditsComplete &&
+      audits.every(({ processIdentitiesAbsent }) => processIdentitiesAbsent)
+    cleanup.listenersAbsent =
+      auditsComplete && audits.every(({ listenersAbsent }) => listenersAbsent)
+    const workloadAudits: Array<{
+      processIdentitiesAbsent: boolean
+      listenersAbsent: boolean
+    }> = []
+    for (const member of members) {
+      if (!member.controller?.identity) continue
+      try {
+        workloadAudits.push(await deps.audit([member.controller.identity], []))
+      } catch (error) {
+        auditsComplete = false
+        cleanupDetails.push(
+          'workload-audit-failed:' +
+            member.slot.slot +
+            ':' +
+            (error instanceof Error ? error.message : 'unknown')
+        )
+      }
+    }
+    cleanup.workloadIdentitiesAbsent =
+      auditsComplete &&
+      workloadAudits.every(
+        ({ processIdentitiesAbsent }) => processIdentitiesAbsent
       )
-    )
-    cleanup.complete = true
-    cleanup.processIdentitiesAbsent = audits.every(
-      ({ processIdentitiesAbsent }) => processIdentitiesAbsent
-    )
-    cleanup.listenersAbsent = audits.every(
-      ({ listenersAbsent }) => listenersAbsent
-    )
-    const workloadAudits = await Promise.all(
-      members.flatMap((member) =>
-        member.controller?.identity
-          ? [deps.audit([member.controller.identity], [])]
-          : []
-      )
-    )
-    cleanup.workloadIdentitiesAbsent = workloadAudits.every(
-      ({ processIdentitiesAbsent }) => processIdentitiesAbsent
-    )
+    cleanup.complete = auditsComplete
     cleanup.details = cleanupDetails
     cleanup.passed =
+      cleanup.complete &&
       cleanup.processIdentitiesAbsent &&
       cleanup.listenersAbsent &&
       cleanup.workloadIdentitiesAbsent &&
       cleanupDetails.length === 0
-    const integrity = fixtureIntegrity(before, await deps.snapshot())
-    const postCleanupProbe = await deps.probe(deps.clock)
+    for (const member of members) {
+      for (const identity of member.processes.values())
+        allStartedProcesses.set(processKey(identity), identity)
+      for (const listener of member.listeners.values())
+        allStartedListeners.set(listenerKey(listener), listener)
+      if (member.controller?.identity)
+        allWorkloadProcesses.set(
+          processKey(member.controller.identity),
+          member.controller.identity
+        )
+    }
+    let integrity: IntegrityResult
+    if (beforeFailure) integrity = incompleteIntegrity(beforeFailure)
+    else {
+      try {
+        integrity = fixtureIntegrity(before, await deps.snapshot())
+      } catch (error) {
+        integrity = incompleteIntegrity(
+          'after-fixture-inspection-failed:' +
+            (error instanceof Error ? error.message : 'unknown')
+        )
+      }
+    }
+    let postCleanupProbe: ProbeResult
+    try {
+      postCleanupProbe = await deps.probe(deps.clock, deps.signal)
+    } catch (error) {
+      postCleanupProbe = failedProbe(
+        deps.clock,
+        'post-cleanup-probe-execution-failed:' +
+          (error instanceof Error ? error.message : 'unknown')
+      )
+    }
     checkDeadline()
     if (!postCleanupProbe.passed)
       latchProbe(postCleanupProbe.reason ?? 'post-cleanup probe failed')
@@ -846,6 +1091,31 @@ export const coordinateCapacityRun = async (
     cohorts.push(cohort)
   }
   checkDeadline()
+  const finalCleanup = emptyCleanup()
+  try {
+    const resourceAudit = await deps.audit(
+      [...allStartedProcesses.values()],
+      [...allStartedListeners.values()]
+    )
+    const workloadAudit = await deps.audit(
+      [...allWorkloadProcesses.values()],
+      []
+    )
+    finalCleanup.complete = true
+    finalCleanup.processIdentitiesAbsent = resourceAudit.processIdentitiesAbsent
+    finalCleanup.listenersAbsent = resourceAudit.listenersAbsent
+    finalCleanup.workloadIdentitiesAbsent =
+      workloadAudit.processIdentitiesAbsent
+    finalCleanup.passed =
+      finalCleanup.processIdentitiesAbsent &&
+      finalCleanup.listenersAbsent &&
+      finalCleanup.workloadIdentitiesAbsent
+  } catch (error) {
+    finalCleanup.details.push(
+      'final-cleanup-audit-failed:' +
+        (error instanceof Error ? error.message : 'unknown')
+    )
+  }
   const exitReasons = [
     ...(!frozenGate.passed ? ['three-member-gate-failed'] : []),
     ...cohorts
@@ -857,6 +1127,7 @@ export const coordinateCapacityRun = async (
     ...cohorts
       .filter(({ integrity }) => !integrity.passed)
       .map(({ requested }) => 'integrity-failed:' + requested),
+    ...(!finalCleanup.passed ? ['final-cleanup-failed'] : []),
     ...(deadlineBreached ? ['overall-timeout'] : []),
   ]
   return {
@@ -866,6 +1137,7 @@ export const coordinateCapacityRun = async (
     safetyStopReason,
     threeMemberGate: frozenGate,
     exitReasons: [...new Set(exitReasons)],
+    finalCleanup,
   }
 }
 

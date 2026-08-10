@@ -32,20 +32,31 @@ export type ProofErrorCode =
   | 'invalid-handle'
   | 'state-mismatch'
   | 'stop-timeout'
+  | 'cancelled'
+
+export interface DiscoveredProofIdentity {
+  runId: string
+  pid: number | null
+  startTimeTicks: string | null
+  url: string | null
+}
 
 export class ProofError extends Error {
   readonly code: ProofErrorCode
   readonly details: Record<string, number | string>
+  readonly discoveredIdentity: DiscoveredProofIdentity | null
 
   constructor(
     code: ProofErrorCode,
     message: string,
-    details: Record<string, number | string> = {}
+    details: Record<string, number | string> = {},
+    discoveredIdentity: DiscoveredProofIdentity | null = null
   ) {
     super(message)
     this.name = 'ProofError'
     this.code = code
     this.details = details
+    this.discoveredIdentity = discoveredIdentity
   }
 }
 
@@ -67,6 +78,7 @@ export interface StartProofOptions {
   runRoot?: string
   startupTimeoutMs?: number
   environmentOverrides?: NodeJS.ProcessEnv
+  signal?: AbortSignal
 }
 
 export interface StopProofOptions {
@@ -87,8 +99,38 @@ export interface StopProofResult {
   elapsedMs: number
 }
 
-const delay = async (milliseconds: number): Promise<void> =>
-  new Promise((resolve) => setTimeout(resolve, milliseconds))
+const abortReason = (signal?: AbortSignal): string =>
+  signal?.reason instanceof Error
+    ? signal.reason.message
+    : typeof signal?.reason === 'string'
+      ? signal.reason
+      : 'operation-cancelled'
+
+const throwIfAborted = (signal?: AbortSignal): void => {
+  if (signal?.aborted) throw new ProofError('cancelled', abortReason(signal))
+}
+
+const delay = async (
+  milliseconds: number,
+  signal?: AbortSignal
+): Promise<void> =>
+  new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new ProofError('cancelled', abortReason(signal)))
+      return
+    }
+    const timer = setTimeout(finish, milliseconds)
+    const onAbort = () => {
+      clearTimeout(timer)
+      signal?.removeEventListener('abort', onAbort)
+      reject(new ProofError('cancelled', abortReason(signal)))
+    }
+    function finish() {
+      signal?.removeEventListener('abort', onAbort)
+      resolve()
+    }
+    signal?.addEventListener('abort', onAbort, { once: true })
+  })
 
 const statePath = (runRoot: string, runId: string): string =>
   path.join(runRoot, runId, 'state.json')
@@ -264,9 +306,12 @@ const buildEnvironment = (
   }
 }
 
-const readinessStatus = async (url: string): Promise<number | null> => {
+const readinessStatus = async (
+  url: string,
+  signal?: AbortSignal
+): Promise<number | null> => {
   try {
-    const response = await fetch(url, { redirect: 'manual' })
+    const response = await fetch(url, { redirect: 'manual', signal })
     return response.status
   } catch {
     return null
@@ -310,6 +355,7 @@ export const terminateExactProcessGroup = async (
 export const startWorkbenchProof = async (
   options: StartProofOptions = {}
 ): Promise<StartProofResult> => {
+  throwIfAborted(options.signal)
   const startedAt = Date.now()
   const executablePath = options.executablePath ?? CODE_SERVER_PATH
   const projectPath = await validateProjectPath(
@@ -368,13 +414,30 @@ export const startWorkbenchProof = async (
   })
   child.unref()
 
+  let discovered: DiscoveredProofIdentity = {
+    runId,
+    pid: child.pid ?? null,
+    startTimeTicks: null,
+    url: null,
+  }
+  let cancellationCleanup: Promise<void> | null = null
+  const cancelChild = () => {
+    if (child.pid)
+      cancellationCleanup ??= terminateExactProcessGroup(
+        child.pid,
+        STOP_TIMEOUT_MS
+      )
+  }
+  options.signal?.addEventListener('abort', cancelChild, { once: true })
+
   try {
     let startTimeTicks: string | null = null
     const identityDeadline = Date.now() + 1_000
     while (!startTimeTicks && Date.now() < identityDeadline) {
       startTimeTicks = await readProcessStartTime(child.pid ?? -1)
-      if (!startTimeTicks) await delay(10)
+      if (!startTimeTicks) await delay(10, options.signal)
     }
+    discovered = { ...discovered, startTimeTicks }
     if (!child.pid || !startTimeTicks) {
       throw new ProofError(
         'spawn-failed',
@@ -385,6 +448,7 @@ export const startWorkbenchProof = async (
     const deadline = startedAt + timeoutMs
     let url: string | null = null
     while (Date.now() < deadline) {
+      throwIfAborted(options.signal)
       if (spawnError instanceof Error) {
         throw new ProofError('spawn-failed', 'code-server spawn failed', {
           reason: spawnError.message,
@@ -403,6 +467,7 @@ export const startWorkbenchProof = async (
       const output = await readFile(launchLog, 'utf8')
       url = parseLoopbackUrl(output)
       if (url) {
+        discovered = { ...discovered, url }
         const handle: ProofHandle = {
           version: 1,
           pid: child.pid,
@@ -418,7 +483,7 @@ export const startWorkbenchProof = async (
             mode: 0o600,
           }
         )
-        const status = await readinessStatus(url)
+        const status = await readinessStatus(url, options.signal)
         if (status !== null && status >= 200 && status < 400) {
           return {
             handle,
@@ -429,7 +494,7 @@ export const startWorkbenchProof = async (
           }
         }
       }
-      await delay(50)
+      await delay(50, options.signal)
     }
 
     throw new ProofError(
@@ -440,9 +505,44 @@ export const startWorkbenchProof = async (
       }
     )
   } catch (error) {
-    if (child.pid) await terminateExactProcessGroup(child.pid, STOP_TIMEOUT_MS)
-    await rm(runDirectory, { recursive: true, force: true })
-    throw error
+    let cleanupError: unknown
+    if (child.pid)
+      await (
+        cancellationCleanup ??
+        terminateExactProcessGroup(child.pid, STOP_TIMEOUT_MS)
+      ).catch((failure) => {
+        cleanupError = failure
+      })
+    await rm(runDirectory, { recursive: true, force: true }).catch(
+      (failure) => {
+        cleanupError ??= failure
+      }
+    )
+    const original =
+      error instanceof ProofError
+        ? error
+        : new ProofError(
+            'spawn-failed',
+            error instanceof Error ? error.message : 'code-server start failed'
+          )
+    throw new ProofError(
+      original.code,
+      original.message,
+      {
+        ...original.details,
+        ...(cleanupError
+          ? {
+              cleanupFailure:
+                cleanupError instanceof Error
+                  ? cleanupError.message
+                  : String(cleanupError),
+            }
+          : {}),
+      },
+      discovered
+    )
+  } finally {
+    options.signal?.removeEventListener('abort', cancelChild)
   }
 }
 

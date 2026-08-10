@@ -243,6 +243,7 @@ export interface CapacityRunRecord {
   threeMemberGate: { passed: boolean; blockers: string[] }
   overallDisposition: 'passed' | 'failed'
   exitReasons: string[]
+  finalCleanup: CleanupResult
   evidence: {
     run: string
     samples: string
@@ -353,9 +354,19 @@ export const validateCapacityEvidence = (
       )
     )
       throw new Error('Cohort workload evidence is incomplete')
-    if (!cohort.cleanup.complete || !cohort.integrity.complete)
-      throw new Error('Cohort final audit is incomplete')
+    if (
+      (!cohort.cleanup.complete && cohort.cleanup.details.length === 0) ||
+      (!cohort.integrity.complete && cohort.integrity.details.length === 0) ||
+      (cohort.complete &&
+        (!cohort.cleanup.complete || !cohort.integrity.complete))
+    )
+      throw new Error('Cohort final audit is not honestly represented')
   }
+  if (
+    !run.finalCleanup ||
+    (!run.finalCleanup.complete && run.finalCleanup.details.length === 0)
+  )
+    throw new Error('Final cleanup audit is not honestly represented')
 }
 
 export const relativeEvidencePaths = (runId: string) => {

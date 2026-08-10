@@ -13,7 +13,7 @@ development servers running.
 ## Checks command
 
 `harness checks` wraps the root `just verify` recipe and gates formatting, linting,
-typechecking, unit tests, builds, and Playwright E2E tests. On the designated host, the gate includes bounded BL-001 lifecycle and terminal-parity failures plus two real code-server Chromium scenarios: forced integrated-terminal timeout cleanup and passing terminal parity, each with exact-handle, terminal-command, browser-context, and listener cleanup. The gate ends with the bounded BL-004 retained-evidence, exact-resource, active-guard, and BL-001 fixture-integrity audit; it does not rerun the 1/3/5/10 episode.
+typechecking, unit tests, builds, and Playwright E2E tests. On the designated host, the gate includes bounded BL-001 lifecycle and terminal-parity failures plus two real code-server Chromium scenarios: forced integrated-terminal timeout cleanup and passing terminal parity, each with exact-handle, terminal-command, browser-context, and listener cleanup. The gate ends with the bounded BL-004 retained-evidence, all-discovered-identity, active-guard, and BL-001 fixture-integrity audit; it does not rerun the 1/3/5/10 episode. The designated command uses cooperative deadline cancellation and holds its guard until cleanup, final audit, partial evidence retention, and release finish.
 
 ## Health check
 
@@ -57,7 +57,7 @@ artifacts under each application package.
 - BL-002 retained AC evidence: `project/work-items/7-bl-002-prove-host-native-terminal-parity/implementation/00-implementation.md`
 - BL-003 retained comparison and browser events: project/work-items/9-bl-003-select-a-viable-browser-workbench-presentation/implementation/evidence/
 - BL-003 retained terminal artifacts: `test-results/bl-003/raw/` (twelve comparison-referenced JSON files)
-- BL-004 retained run: `project/work-items/11-bl-004-establish-the-workbench-capacity-baseline/implementation/evidence/532abfdb-c970-4979-9da2-ec9ef99a295a/`
+- BL-004 retained run: `project/work-items/11-bl-004-establish-the-workbench-capacity-baseline/implementation/evidence/853037e6-5dab-43cf-bcf8-61f1e8bbdb18/`
 - Harnessability reports: `.harness/reports/harnessability/`
 - Harness retrospectives: `.harness/records/retro/`
 

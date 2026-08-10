@@ -6,6 +6,7 @@ import {
   auditAttributedResources,
   inspectCapacityProcessTree,
   readManagedListeners,
+  requireMissingProcEntry,
 } from '../src/workbench-proof-audit.js'
 import {
   startWorkbenchProof,
@@ -92,5 +93,14 @@ describe('capacity process attribution', () => {
       rootPid: -1,
       reason: 'root-process-absent',
     })
+  })
+
+  it('distinguishes missing proc entries from audit inspection failures', () => {
+    expect(requireMissingProcEntry({ code: 'ENOENT' })).toBe(true)
+    expect(() =>
+      requireMissingProcEntry(
+        Object.assign(new Error('denied'), { code: 'EACCES' })
+      )
+    ).toThrow('denied')
   })
 })

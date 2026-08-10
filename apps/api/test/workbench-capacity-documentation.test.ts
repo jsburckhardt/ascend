@@ -15,7 +15,7 @@ import {
   readCapacityEvidence,
 } from '../src/workbench-capacity-evidence.js'
 
-const DESIGNATED_RUN_ID = '532abfdb-c970-4979-9da2-ec9ef99a295a'
+const DESIGNATED_RUN_ID = '853037e6-5dab-43cf-bcf8-61f1e8bbdb18'
 
 describe('capacity baseline documentation', () => {
   it('matches source constants, retained result, command surface, and scope', async () => {
@@ -61,6 +61,11 @@ describe('capacity baseline documentation', () => {
       'samples.json',
       'workloads.json',
       'comparison.md',
+      'cooperatively cancels',
+      'does not return until coordination has stopped',
+      'all started or discovered identities',
+      'Host retained/absent',
+      'process-tree retained/absent',
     ])
       expect(docs).toContain(expected)
     expect(docs).toContain(

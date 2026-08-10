@@ -28,9 +28,14 @@ const readTrimmed = async (target: string): Promise<string> =>
 const runBounded = async (
   executable: string,
   args: string[],
-  timeoutMs: number
+  timeoutMs: number,
+  signal?: AbortSignal
 ): Promise<{ code: number | null; stdout: string; stderr: string }> =>
-  new Promise((resolve) => {
+  new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(signal.reason)
+      return
+    }
     const child = spawn(executable, args, { stdio: ['ignore', 'pipe', 'pipe'] })
     let stdout = ''
     let stderr = ''
@@ -43,6 +48,11 @@ const runBounded = async (
     child.stderr.on('data', (value: string) => {
       stderr += value
     })
+    const onAbort = () => {
+      if (child.pid) child.kill('SIGKILL')
+      reject(signal?.reason)
+    }
+    signal?.addEventListener('abort', onAbort, { once: true })
     const timer = setTimeout(() => {
       if (child.pid) child.kill('SIGKILL')
     }, timeoutMs)
@@ -50,6 +60,7 @@ const runBounded = async (
       if (!settled) {
         settled = true
         clearTimeout(timer)
+        signal?.removeEventListener('abort', onAbort)
         resolve({ code: null, stdout, stderr: error.message })
       }
     })
@@ -57,6 +68,7 @@ const runBounded = async (
       if (!settled) {
         settled = true
         clearTimeout(timer)
+        signal?.removeEventListener('abort', onAbort)
         resolve({ code, stdout, stderr })
       }
     })
@@ -103,152 +115,160 @@ export interface PrerequisiteCheck {
   host: CapacityHostContext | null
   stopReason: string | null
 }
-export const checkCapacityPrerequisites =
-  async (): Promise<PrerequisiteCheck> => {
-    const records: PrerequisiteRecord[] = []
-    let host: CapacityHostContext | null = null
-    const facts = new Map<
-      CapacityPrerequisite,
-      { passed: boolean; detail: string }
-    >()
-    let osRelease = ''
-    try {
-      osRelease = await readTrimmed('/etc/os-release')
-    } catch {
-      osRelease = 'unreadable'
-    }
-    facts.set('ubuntu-24.04.4', {
-      passed:
-        /VERSION_ID="24[.]04"/u.test(osRelease) &&
-        /VERSION="24[.]04[.]4 LTS/u.test(osRelease),
-      detail:
-        osRelease.match(/^PRETTY_NAME=(.*)$/mu)?.[1]?.replaceAll('"', '') ??
-        'unavailable',
-    })
-    facts.set('hostname-03f809395a5d', {
-      passed: os.hostname() === '03f809395a5d',
-      detail: os.hostname(),
-    })
-    const user = os.userInfo()
-    facts.set('non-root-vscode-uid-1000', {
-      passed: user.username === 'vscode' && user.uid === 1000,
-      detail: user.username + ':' + user.uid,
-    })
-    let repository = 'unavailable'
-    try {
-      repository = await realpath(REPOSITORY_ROOT)
-    } catch {
-      /* recorded below */
-    }
-    facts.set('repository-workspaces-ascend', {
-      passed: repository === '/workspaces/ascend',
-      detail: repository,
-    })
-    let codeVersion = 'unavailable'
-    try {
-      await access(CAPACITY_CODE_SERVER_PATH, constants.X_OK)
-      const result = await runBounded(
-        CAPACITY_CODE_SERVER_PATH,
-        ['--version'],
-        5_000
-      )
-      codeVersion = result.stdout.trim().split(/\s+/u)[0] ?? ''
-    } catch {
-      /* recorded below */
-    }
-    facts.set('code-server-4.131.0', {
-      passed: codeVersion === CAPACITY_CODE_SERVER_VERSION,
-      detail: codeVersion,
-    })
-    let fixture = 'unreadable'
-    try {
-      fixture = await realpath(CAPACITY_FIXTURE)
-      await access(fixture, constants.R_OK)
-    } catch {
-      /* recorded below */
-    }
-    facts.set('fixture-readable', {
-      passed: fixture === CAPACITY_FIXTURE,
-      detail: fixture,
-    })
-    let procReadable = true
-    try {
-      await Promise.all(
-        [
-          '/proc/self/stat',
-          '/proc/net/tcp',
-          '/proc/meminfo',
-          '/proc/loadavg',
-        ].map((target) => readFile(target))
-      )
-    } catch {
-      procReadable = false
-    }
-    facts.set('proc-readable', {
-      passed: procReadable,
-      detail: procReadable
-        ? 'required /proc files readable'
-        : 'required /proc file unavailable',
-    })
-    const cgroupFiles = {
-      cpuMax: 'cpu.max',
-      cpusetEffective: 'cpuset.cpus.effective',
-      memoryMax: 'memory.max',
-      memoryHigh: 'memory.high',
-      swapMax: 'memory.swap.max',
-      pidsMax: 'pids.max',
-    } as const
-    const cgroupValues: Record<keyof typeof cgroupFiles, string> = {
-      cpuMax: '',
-      cpusetEffective: '',
-      memoryMax: '',
-      memoryHigh: '',
-      swapMax: '',
-      pidsMax: '',
-    }
-    let cgroupReadable = true
-    try {
-      for (const [key, file] of Object.entries(cgroupFiles) as Array<
-        [keyof typeof cgroupFiles, string]
-      >)
-        cgroupValues[key] = await readTrimmed(path.join('/sys/fs/cgroup', file))
-    } catch {
-      cgroupReadable = false
-    }
-    facts.set('cgroup-v2-readable', {
-      passed:
-        cgroupReadable &&
-        (await readTrimmed('/proc/self/cgroup').catch(() => '')) === '0::/',
-      detail: cgroupReadable
-        ? JSON.stringify(cgroupValues)
-        : 'cgroup-v2 context unavailable',
-    })
-    for (const name of CAPACITY_PREREQUISITES) {
-      const result = facts.get(name) ?? {
-        passed: false,
-        detail: 'check missing',
-      }
-      records.push({ name, ...result })
-      if (!result.passed)
-        return {
-          records,
-          host: null,
-          stopReason: 'prerequisite-failed:' + name,
-        }
-    }
-    host = {
-      ubuntuVersion: records[0].detail,
-      hostname: os.hostname(),
-      user: user.username,
-      uid: user.uid,
-      repository,
-      codeServerPath: CAPACITY_CODE_SERVER_PATH,
-      codeServerVersion: codeVersion,
-      procReadable,
-      cgroup: { version: 'v2', path: '/', ...cgroupValues },
-    }
-    return { records, host, stopReason: null }
+const throwIfCancelled = (signal?: AbortSignal): void => {
+  if (signal?.aborted) throw signal.reason
+}
+
+export const checkCapacityPrerequisites = async (
+  signal?: AbortSignal
+): Promise<PrerequisiteCheck> => {
+  throwIfCancelled(signal)
+  const records: PrerequisiteRecord[] = []
+  let host: CapacityHostContext | null = null
+  const facts = new Map<
+    CapacityPrerequisite,
+    { passed: boolean; detail: string }
+  >()
+  let osRelease = ''
+  try {
+    osRelease = await readTrimmed('/etc/os-release')
+  } catch {
+    osRelease = 'unreadable'
   }
+  facts.set('ubuntu-24.04.4', {
+    passed:
+      /VERSION_ID="24[.]04"/u.test(osRelease) &&
+      /VERSION="24[.]04[.]4 LTS/u.test(osRelease),
+    detail:
+      osRelease.match(/^PRETTY_NAME=(.*)$/mu)?.[1]?.replaceAll('"', '') ??
+      'unavailable',
+  })
+  facts.set('hostname-03f809395a5d', {
+    passed: os.hostname() === '03f809395a5d',
+    detail: os.hostname(),
+  })
+  const user = os.userInfo()
+  facts.set('non-root-vscode-uid-1000', {
+    passed: user.username === 'vscode' && user.uid === 1000,
+    detail: user.username + ':' + user.uid,
+  })
+  let repository = 'unavailable'
+  try {
+    repository = await realpath(REPOSITORY_ROOT)
+  } catch {
+    /* recorded below */
+  }
+  facts.set('repository-workspaces-ascend', {
+    passed: repository === '/workspaces/ascend',
+    detail: repository,
+  })
+  let codeVersion = 'unavailable'
+  try {
+    await access(CAPACITY_CODE_SERVER_PATH, constants.X_OK)
+    const result = await runBounded(
+      CAPACITY_CODE_SERVER_PATH,
+      ['--version'],
+      5_000,
+      signal
+    )
+    codeVersion = result.stdout.trim().split(/\s+/u)[0] ?? ''
+  } catch {
+    /* recorded below */
+  }
+  facts.set('code-server-4.131.0', {
+    passed: codeVersion === CAPACITY_CODE_SERVER_VERSION,
+    detail: codeVersion,
+  })
+  let fixture = 'unreadable'
+  try {
+    fixture = await realpath(CAPACITY_FIXTURE)
+    await access(fixture, constants.R_OK)
+  } catch {
+    /* recorded below */
+  }
+  facts.set('fixture-readable', {
+    passed: fixture === CAPACITY_FIXTURE,
+    detail: fixture,
+  })
+  let procReadable = true
+  try {
+    await Promise.all(
+      [
+        '/proc/self/stat',
+        '/proc/net/tcp',
+        '/proc/meminfo',
+        '/proc/loadavg',
+      ].map((target) => readFile(target))
+    )
+  } catch {
+    procReadable = false
+  }
+  facts.set('proc-readable', {
+    passed: procReadable,
+    detail: procReadable
+      ? 'required /proc files readable'
+      : 'required /proc file unavailable',
+  })
+  const cgroupFiles = {
+    cpuMax: 'cpu.max',
+    cpusetEffective: 'cpuset.cpus.effective',
+    memoryMax: 'memory.max',
+    memoryHigh: 'memory.high',
+    swapMax: 'memory.swap.max',
+    pidsMax: 'pids.max',
+  } as const
+  const cgroupValues: Record<keyof typeof cgroupFiles, string> = {
+    cpuMax: '',
+    cpusetEffective: '',
+    memoryMax: '',
+    memoryHigh: '',
+    swapMax: '',
+    pidsMax: '',
+  }
+  let cgroupReadable = true
+  try {
+    for (const [key, file] of Object.entries(cgroupFiles) as Array<
+      [keyof typeof cgroupFiles, string]
+    >)
+      cgroupValues[key] = await readTrimmed(path.join('/sys/fs/cgroup', file))
+  } catch {
+    cgroupReadable = false
+  }
+  facts.set('cgroup-v2-readable', {
+    passed:
+      cgroupReadable &&
+      (await readTrimmed('/proc/self/cgroup').catch(() => '')) === '0::/',
+    detail: cgroupReadable
+      ? JSON.stringify(cgroupValues)
+      : 'cgroup-v2 context unavailable',
+  })
+  throwIfCancelled(signal)
+  for (const name of CAPACITY_PREREQUISITES) {
+    const result = facts.get(name) ?? {
+      passed: false,
+      detail: 'check missing',
+    }
+    records.push({ name, ...result })
+    if (!result.passed)
+      return {
+        records,
+        host: null,
+        stopReason: 'prerequisite-failed:' + name,
+      }
+  }
+  host = {
+    ubuntuVersion: records[0].detail,
+    hostname: os.hostname(),
+    user: user.username,
+    uid: user.uid,
+    repository,
+    codeServerPath: CAPACITY_CODE_SERVER_PATH,
+    codeServerVersion: codeVersion,
+    procReadable,
+    cgroup: { version: 'v2', path: '/', ...cgroupValues },
+  }
+  return { records, host, stopReason: null }
+}
 
 export const ensureEvidenceRoot = async (): Promise<void> => {
   await mkdir(CAPACITY_EVIDENCE_ROOT, { recursive: true })

@@ -35,6 +35,14 @@ const coordinated = (exitReasons: string[] = []): CoordinatedCapacity => ({
     blockers: exitReasons,
   },
   exitReasons,
+  finalCleanup: {
+    complete: true,
+    passed: true,
+    processIdentitiesAbsent: true,
+    listenersAbsent: true,
+    workloadIdentitiesAbsent: true,
+    details: [],
+  },
 })
 const dependencies = (): Partial<CapacityCliDependencies> => ({
   runId: () => runId,
@@ -115,7 +123,14 @@ describe('capacity command setup and overall deadline', () => {
       ...dependencies(),
       overallTimeoutMs: 25,
       releaseGuard,
-      coordinate: async () => new Promise<never>(() => undefined),
+      coordinate: async (_runId, signal) =>
+        new Promise<CoordinatedCapacity>((resolve) => {
+          signal.addEventListener(
+            'abort',
+            () => resolve(coordinated(['overall-timeout'])),
+            { once: true }
+          )
+        }),
     })
     expect(performance.now() - started).toBeLessThan(250)
     expect(result).toBe(4)
@@ -253,7 +268,12 @@ describe('capacity command setup and overall deadline', () => {
     const result = await runCapacityCli(output.value, {
       ...dependencies(),
       overallTimeoutMs: 20,
-      prerequisites: async () => new Promise<never>(() => undefined),
+      prerequisites: async (signal) =>
+        new Promise<never>((_resolve, reject) => {
+          signal.addEventListener('abort', () => reject(signal.reason), {
+            once: true,
+          })
+        }),
       releaseGuard,
     })
     expect(result).toBe(4)
@@ -306,5 +326,58 @@ describe('capacity command setup and overall deadline', () => {
     expect(evidenceOutput.stderr.some((line) => line.includes('unknown'))).toBe(
       true
     )
+  })
+
+  it('holds the guard through cooperative deadline cleanup and retained partial evidence', async () => {
+    const output = io()
+    const events: string[] = []
+    let backgroundMutations = 0
+    const write = vi.fn(async (run) => {
+      events.push('write:' + run.overallDisposition)
+      expect(run.exitReasons).toContain('overall-timeout')
+      expect(run.finalCleanup.passed).toBe(true)
+      return '/evidence'
+    })
+    const releaseGuard = vi.fn(async () => {
+      events.push('release')
+      expect(events).toContain('coordination-stopped')
+      expect(events.some((event) => event.startsWith('write:'))).toBe(true)
+    })
+    const started = performance.now()
+    const result = await runCapacityCli(output.value, {
+      ...dependencies(),
+      overallTimeoutMs: 20,
+      releaseGuard,
+      write,
+      coordinate: async (_runId, signal) =>
+        new Promise<CoordinatedCapacity>((resolve) => {
+          signal.addEventListener(
+            'abort',
+            () => {
+              events.push('abort')
+              setTimeout(() => {
+                backgroundMutations += 1
+                events.push('coordination-stopped')
+                resolve(coordinated(['overall-timeout']))
+              }, 30)
+            },
+            { once: true }
+          )
+        }),
+    })
+    expect(result).toBe(4)
+    expect(performance.now() - started).toBeGreaterThanOrEqual(45)
+    expect(events).toEqual([
+      'abort',
+      'coordination-stopped',
+      'write:failed',
+      'release',
+    ])
+    expect(write).toHaveBeenCalledOnce()
+    expect(releaseGuard).toHaveBeenCalledOnce()
+    expect(backgroundMutations).toBe(1)
+    await new Promise((resolve) => setTimeout(resolve, 30))
+    expect(backgroundMutations).toBe(1)
+    expect(output.stderr.join('\n')).toContain('partialEvidenceRetained')
   })
 })

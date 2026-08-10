@@ -1,5 +1,7 @@
+import { spawn } from 'node:child_process'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { processIdentityAbsent } from '../src/workbench-proof-audit.js'
 import {
   BL001_FIXTURE,
   REPOSITORY_ROOT,
@@ -10,6 +12,7 @@ import {
   type ProbeResult,
 } from '../src/workbench-capacity-contract.js'
 import {
+  runResponsivenessProbe,
   sampleCapacityWindow,
   startCapacityWorkload,
   type CapacityClock,
@@ -320,5 +323,156 @@ describe('capacity sampling and workload', () => {
     expect(
       Buffer.byteLength(result.stdout) + Buffer.byteLength(result.stderr)
     ).toBe(4_096)
+  })
+
+  it('returns spawn failure and cancellation as complete workload results', async () => {
+    const spawnFailure = await startCapacityWorkload({
+      runId,
+      cohort: 1,
+      slot: 1,
+      cwd: BL001_FIXTURE,
+      spawnProcess: (() => {
+        throw new Error('controlled-workload-spawn-failure')
+      }) as typeof spawn,
+    })
+    await expect(spawnFailure.finish()).resolves.toMatchObject({
+      status: 'spawn-failed',
+      pid: null,
+      stderr: 'controlled-workload-spawn-failure',
+    })
+
+    const controller = new AbortController()
+    const workload = await startCapacityWorkload({
+      runId,
+      cohort: 1,
+      slot: 1,
+      cwd: BL001_FIXTURE,
+      durationMs: 5_000,
+      timeoutMs: 6_000,
+      signal: controller.signal,
+    })
+    expect(workload.identity).not.toBeNull()
+    controller.abort(new Error('overall-timeout'))
+    const result = await workload.finish()
+    expect(result.status).toBe('cancelled')
+    expect(result.pid).toBe(workload.identity?.pid)
+    await expect(processIdentityAbsent(workload.identity!)).resolves.toBe(true)
+  })
+
+  it('returns all explicit sample absences when aborted during a scheduled probe', async () => {
+    const controller = new AbortController()
+    let probes = 0
+    const result = await sampleCapacityWindow({
+      runId,
+      cohort: 3,
+      window: 'idle',
+      slots: [readySlot()],
+      clock: new FakeClock(),
+      signal: controller.signal,
+      stopReason: () => null,
+      onProbeFailure: () => undefined,
+      probe: async (clock) => {
+        if (++probes === 1) controller.abort(new Error('overall-timeout'))
+        return {
+          ...(await passedProbe(clock)),
+          passed: false,
+          exitCode: null,
+          reason: 'probe-cancelled:overall-timeout',
+        }
+      },
+      readHost: host,
+      inspectTree: inspect,
+    })
+    expect(result.samples).toHaveLength(5)
+    expect(
+      result.samples.every(
+        ({ host: sample, absentReason, processTrees }) =>
+          sample === null &&
+          absentReason === 'overall-timeout' &&
+          processTrees[0].absentReason === 'overall-timeout'
+      )
+    ).toBe(true)
+  })
+
+  it('cancels responsiveness probes and pre-aborted workloads cooperatively', async () => {
+    const probeController = new AbortController()
+    probeController.abort(new Error('overall-timeout'))
+    await expect(
+      runResponsivenessProbe(new FakeClock(), probeController.signal)
+    ).resolves.toMatchObject({
+      passed: false,
+      exitCode: null,
+      reason: 'probe-cancelled:overall-timeout',
+    })
+
+    const workloadController = new AbortController()
+    workloadController.abort('overall-timeout')
+    const workload = await startCapacityWorkload({
+      runId,
+      cohort: 1,
+      slot: 1,
+      cwd: BL001_FIXTURE,
+      signal: workloadController.signal,
+    })
+    await expect(workload.finish()).resolves.toMatchObject({
+      status: 'cancelled',
+      pid: null,
+      stderr: 'overall-timeout',
+    })
+  })
+
+  it('retains nonzero workload and host/process inspection absences', async () => {
+    const nonzero = await startCapacityWorkload({
+      runId,
+      cohort: 1,
+      slot: 1,
+      cwd: BL001_FIXTURE,
+      timeoutMs: 1_000,
+      scriptPath: path.join(
+        REPOSITORY_ROOT,
+        'apps/api/test/fixtures/workbench-capacity-nonzero.mjs'
+      ),
+    })
+    await expect(nonzero.finish()).resolves.toMatchObject({
+      status: 'nonzero',
+      exitCode: 7,
+      stderr: 'controlled-nonzero\n',
+    })
+
+    let inspections = 0
+    const sampled = await sampleCapacityWindow({
+      runId,
+      cohort: 3,
+      window: 'idle',
+      slots: [readySlot()],
+      clock: new FakeClock(),
+      stopReason: () => null,
+      onProbeFailure: () => undefined,
+      probe: passedProbe,
+      readHost: async () => {
+        throw new Error('controlled-host-inspection-failure')
+      },
+      inspectTree: async (pid) => {
+        if (++inspections === 1)
+          return {
+            ok: false as const,
+            rootPid: pid,
+            reason: 'controlled-baseline-failure',
+          }
+        return inspect(pid)
+      },
+      inspectListeners: async () => {
+        throw new Error('controlled-listener-attribution-failure')
+      },
+    })
+    expect(sampled.samples.every(({ host: sample }) => sample === null)).toBe(
+      true
+    )
+    expect(sampled.samples[0].absentReason).toBe(
+      'controlled-host-inspection-failure'
+    )
+    expect(sampled.samples[0].processTrees[0].absentReason).toContain(
+      'controlled-listener-attribution-failure'
+    )
   })
 })

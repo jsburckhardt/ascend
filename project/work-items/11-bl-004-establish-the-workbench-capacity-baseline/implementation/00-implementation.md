@@ -2,71 +2,70 @@
 
 ## Scope
 
-Corrected the Issue #11 sensor contract returned by Verify at 41183a1. The correction remains an issue-local diagnostic extension of BL-001 and does not introduce product runtime management, scheduling, quotas, sleeping, multi-host behavior, BL-010 or BL-013 outcomes, or a presentation architecture change.
+This correction resolves the defects returned against commit 29707d3 while remaining inside the accepted direct-host diagnostic architecture. It does not add product scheduling, quotas, sleep policy, multi-host behavior, BL-010 or BL-013 outcomes, or change the browser presentation decision.
 
 ## Completed Tasks
 
-- T-1: corrected command-wide deadline, setup failure classification, records, completeness, and run isolation.
-- T-2: corrected readiness and later process/listener attribution plus exact identity cleanup.
-- T-3: corrected exact-offset 5,000 ms windows and one combined workload output bound.
-- T-4: corrected ready-state transitions, listener-owner gate uniqueness, findings, completeness, and overall disposition.
-- T-5: retained corrected raw evidence and comparison through the existing paved commands.
-- T-6: added the missing controlled negative matrix and cleanup assertions.
-- T-7: regenerated the designated 1/3/5/10 baseline as run 532abfdb-c970-4979-9da2-ec9ef99a295a.
-- T-8: aligned README, runbook, harness inventory, consistency tests, and the full-gate audit.
+- T-1: replaced detached deadline races with one cooperative AbortSignal and guard-held command finalization.
+- T-2: retained failed-start, process-tree, and listener identities and made inspection failures explicit.
+- T-3: propagated cancellation through probe, scheduled sleeps, workload spawn/run/finish, and exact workload cleanup.
+- T-4: cleaned and audited all started/discovered members, retained cleanup failures, and added a run-wide final audit.
+- T-5: retained honest timeout/partial evidence and split host/tree comparison completeness with missing reasons.
+- T-6: added controlled spawn, early exit, attribution, stop/audit, cancellation, guard-lifetime, partial-evidence, and no-background-work tests.
+- T-7: retained fresh designated run 853037e6-5dab-43cf-bcf8-61f1e8bbdb18.
+- T-8: aligned README, runbook, harness inventory, task claims, consistency tests, and the final bounded audit.
 
 ## Acceptance Evidence
 
-- **AC-1:** proof-workbench-capacity.ts starts one absolute 1,200,000 ms deadline before ownership acquisition and bounds prerequisites, fixture snapshots, coordination, evidence writing, and guard release. Eleven CLI controls prove prerequisite result 2, fixture result 3, deadline result 4, isolation result 5, and zero starts for setup failures.
-- **AC-2:** coordinator controls retain exact 1/3/5/10 order and synthesize terminal unstarted slots after a latched stop; the corrected run contains four ordered records.
-- **AC-3:** starts remain sequential with 30,000 ms readiness bounds and ordinary start failure continuation. Unexpected exits now transition readiness-achieved slots to failed instead of remaining counted ready.
-- **AC-4:** the fixed /usr/bin/true 1,000 ms probe remains at pre-cohort, scheduled host positions, and post-cleanup boundaries. Findings now include every failed pre, scheduled, and post probe.
-- **AC-5:** sleepUntil prevents early timer wakeups. Unit and designated evidence prove all actual starts are at or after targets 0/1/2/3/4 and every idle end is at least anchor plus 5,000 ms.
-- **AC-6:** all members retain the same seven-second workload contract. The combined-output fixture proves stdout plus stderr together retain at most 4,096 bytes and overflow is failure-shaped.
-- **AC-7:** active anchors remain after all workload start attempts, every active end is at least anchor plus 5,000 ms, overlap is required, and zero-ready positions remain explicit absences.
-- **AC-8:** raw Linux /proc host and process-tree fields and formulas remain unchanged; scheduled process timestamps now report their actual collection time rather than the pre-probe position time.
-- **AC-9:** corrected evidence run 532abfdb-c970-4979-9da2-ec9ef99a295a contains run.json, samples.json, workloads.json, and reproducible comparison.md with one run ID and complete host/member/listener metadata.
-- **AC-10:** validation now requires each host and every readiness-achieved slot tree at every target to be a sample or explicit absence. Missing tree entries and strict deadline breach make cohort completeness false.
-- **AC-11:** each slot accumulates every PID/start identity and listener inode/owner/port discovered at readiness, baselines, scheduled sampling, and final inspection. Cleanup applies exact identity checks and audits every accumulated process, workload, descendant, and listener owner.
-- **AC-12:** the corrected one-member row remains not-applicable for gate authority.
-- **AC-13:** the three-member gate now explicitly requires distinct root PIDs, listener-owner PIDs, and ports. The repeated-owner control fails readiness/gate, while the corrected run records 3/3 ready and gate passed.
-- **AC-14:** five/ten complete failures remain findings and do not rewrite the frozen three-member result; controlled tests retain this separation.
-- **AC-15:** strict deadline breach, incomplete tree evidence, gate failure, cleanup/integrity failure, fixture failure, and evidence-write failure all remain nonzero independently. The corrected run has no exit reasons.
-- **AC-16:** findings now include failed/unstarted slots, workloads, unexpected exits, host/sample absences, missing tree records, process-tree failures, every probe failure, cleanup/integrity failure, incomplete evidence, and timeout. No unexpected-exit member remains ready.
-- **AC-17:** active ownership remains exclusive and historical evidence remains separate. The final audit reports activeGuardAbsent true across two retained immutable runs.
-- **AC-18:** the complete focused capacity suite passes 42 tests across audit, CLI, contract, coordinator, designated evidence, documentation, evidence validation, and sampling. Added negative controls cover prerequisite/fixture failures, immediate/in-flight/whole-command deadlines, combined output, explicit and missing trees, later identities, listener-owner uniqueness, unexpected exits, missing evidence, and probe/process failures.
-- **AC-19:** the designated paved run completed in about 71 seconds with ready results 1/1, 3/3, 5/5, and 10/10; workload pass results 1/1, 3/3, 5/5, and 10/10; 40/40 host positions and all 190 readiness-achieved tree positions retained; no findings; gate passed; overall passed. The post-run audit reports no attributed resource and unchanged fixture.
-- **AC-20:** README.md, docs/workbench-proof.md, and .harness/engineering-harness.md now describe strict command scope and classifications, at-or-after timing and both 5,000 ms windows, combined output, readiness-achieved completeness, accumulated attribution, owner-PID gate uniqueness, findings, state transitions, and corrected observed run.
-- **AC-21:** just verify exits zero with formatting, lint, strict types, 130 API tests at 80.40 percent branch coverage, web tests, builds, three passing and one skipped Playwright scenarios, and a final passing BL-004 audit with two retained runs and no leak or fixture change.
+- **AC-1:** The CLI creates one 1,200,000 ms AbortController before guard acquisition, passes its signal through prerequisites and coordination, retains one run ID, and keeps prerequisite/fixture/isolation-specific nonzero paths with zero starts.
+- **AC-2:** Coordinator controls and fresh evidence retain exact cohort order 1/3/5/10; later slots become explicit unstarted records after safety or unsafe cleanup stops.
+- **AC-3:** Starts remain sequential with the 30,000 ms override. Ordinary failures continue; failed started slots retain runtime/PID/start/URL metadata when discovered.
+- **AC-4:** The fixed /usr/bin/true 1,000 ms probe receives the shared abort signal at pre-cohort, scheduled, and post-cleanup boundaries; failures latch one safety reason.
+- **AC-5:** Sampling controls retain exact five-position idle schedules, target/actual monotonic times, explicit misses/cancellation, and the normal anchor-plus-5,000 ms end.
+- **AC-6:** Workload controls prove identical seven-second commands, ten-second bounds, one 4,096-byte combined stream cap, spawn/nonzero/timeout/overflow/cancelled results, and PID/start identity retention.
+- **AC-7:** Active sampling anchors after every permitted workload start attempt, requires overlap, and retains five explicit zero-ready or cancellation absences.
+- **AC-8:** Raw evidence retains Linux /proc host and process-tree fields/formulas; inspection and listener-attribution failures are explicit rather than success-shaped.
+- **AC-9:** Fresh run 853037e6-5dab-43cf-bcf8-61f1e8bbdb18 contains run.json, samples.json, workloads.json, and comparison.md with one run ID, all slot identities, separate host/tree completeness, missing reasons, summaries, findings, gate, and disposition.
+- **AC-10:** Structural validation accepts explicit incomplete cleanup only with details and a failed cohort, rejects omitted positions/results/audits, and requires a represented final cleanup audit.
+- **AC-11:** Cohort cleanup covers every started/discovered failed or ready member plus workload identities; the run-wide final audit covers their union. Exact PID/start and listener inode/owner/port checks leave unrelated resources untouched.
+- **AC-12:** One-member evidence remains plumbing with not-applicable gate status.
+- **AC-13:** The fresh three-member cohort has 3/3 ready, distinct root/listener-owner PIDs and ports, 3/3 workloads, complete 10/0 host and 30/0 tree positions, passed probes/cleanup/integrity, and gate passed.
+- **AC-14:** Controlled five/ten failures remain findings and do not rewrite the frozen three-member decision.
+- **AC-15:** Timeout, incomplete cohort, cleanup/integrity/final-audit failure, gate failure, and evidence failure remain independently nonzero; timeout evidence retains overall-timeout and partialEvidenceRetained.
+- **AC-16:** Spawn/early-exit, start inspection, listener attribution, scheduled inspection, stop, identity cleanup, and audit controls preserve prior evidence and produce failed states, findings, or cleanup details.
+- **AC-17:** Exclusive ownership remains before starts; the deadline guard-lifetime test proves release occurs only after stopped coordination and evidence retention. Final audit reports the guard absent across three immutable runs.
+- **AC-18:** The focused suite covers the named positive/negative matrix, including cooperative cancellation during start/sample/workload, strict in-flight cleanup, guard held through completion, honest partial evidence, and no delayed background mutation after return.
+- **AC-19:** The fresh paved run completed all four cohorts in about 73 seconds: 19/19 ready, 19/19 workloads passed, host counts 10/0 each, tree counts 10/0, 30/0, 50/0, and 100/0, no missing reasons/findings, passing gate/disposition, and passing post-run audit.
+- **AC-20:** README.md, docs/workbench-proof.md, and .harness/engineering-harness.md document cooperative cancellation, guard lifetime, failed identity retention, all-identity cleanup, failure semantics, split completeness counts, fresh run identity/results, and diagnostic-only exclusions.
+- **AC-21:** The canonical full gate passes formatting, lint, strict type checks, 145 API tests at 80.03% branch coverage, web tests, builds, three passing/one skipped Playwright scenarios, and a final audit with no guard/resource/fixture failure.
 
-## Corrected Designated Baseline
+## Fresh Designated Baseline
 
-| Cohort | Ready | Failed | Unstarted | Workloads pass/fail | Host positions | Minimum available KiB | Gate |
-|---:|---:|---:|---:|---:|---:|---:|---|
-| 1 | 1 | 0 | 0 | 1/0 | 10/0 | 21,992,676 | not-applicable |
-| 3 | 3 | 0 | 0 | 3/0 | 10/0 | 21,851,460 | passed |
-| 5 | 5 | 0 | 0 | 5/0 | 10/0 | 21,841,364 | not-applicable |
-| 10 | 10 | 0 | 0 | 10/0 | 10/0 | 21,585,816 | not-applicable |
+| Cohort | Ready | Failed | Unstarted | Workloads pass/fail | Host retained/absent | Trees retained/absent | Minimum available KiB | Gate |
+|---:|---:|---:|---:|---:|---:|---:|---:|---|
+| 1 | 1 | 0 | 0 | 1/0 | 10/0 | 10/0 | 19,103,172 | not-applicable |
+| 3 | 3 | 0 | 0 | 3/0 | 10/0 | 30/0 | 18,952,508 | passed |
+| 5 | 5 | 0 | 0 | 5/0 | 10/0 | 50/0 | 18,602,712 | not-applicable |
+| 10 | 10 | 0 | 0 | 10/0 | 10/0 | 100/0 | 18,467,380 | not-applicable |
 
-Cgroup-v2 context remains cpu.max=max 100000, effective CPUs 0-19, and max memory, memory-high, swap, and PID limits. Raw values and honest timing remain in retained JSON.
+The retained run reports no missing reasons or findings and finalCleanup complete/passed with process, listener, and workload identities absent.
 
 ## Validation Evidence
 
-- Focused controlled and designated suite: just verify-focused over all eight capacity test files passed 42 tests after the correction set.
-- Designated command: just proof-workbench-capacity retained run 532abfdb-c970-4979-9da2-ec9ef99a295a with passed gate and overall disposition.
-- Cleanup audit: just proof-workbench-capacity-audit passed with retainedRuns 2, activeGuardAbsent true, attributedResourcesAbsent true, and fixtureIntegrityUnchanged true.
-- Full gate: just verify passed with 130 API tests, 80.40 percent branch coverage, builds, browser tests, and the final cleanup audit.
-- E2E stabilization: the existing terminal sensors now open the same integrated terminal through the command palette, wait for shell readiness, focus it, and then perform their unchanged timeout/parity workflows.
+- Focused: just verify-focused over the eight capacity files plus the runtime lifecycle file passed 60 tests.
+- Designated: just proof-workbench-capacity retained run 853037e6-5dab-43cf-bcf8-61f1e8bbdb18 with passing gate and disposition.
+- Audit: just proof-workbench-capacity-audit passed with retainedRuns 3, activeGuardAbsent true, attributedResourcesAbsent true, and fixtureIntegrityUnchanged true.
+- Full: just verify passed all configured stages and ended with the passing BL-004 audit.
 
 ## Documentation Evidence
 
-- README.md: corrected user-facing deadline, timing, output, attribution, findings, readiness, and observed-run summary.
-- docs/workbench-proof.md: corrected operational setup classifications, both window contracts, combined output, per-target completeness, findings, exact cleanup attribution, gate semantics, and retained baseline interpretation.
-- .harness/engineering-harness.md: points the governed evidence inventory to the corrected designated run; harness checks still delegate to just verify and do not rerun the cohort episode.
-- API references/specifications: no impact; no HTTP API was added or changed.
-- Configuration/migration guides: no impact; no product configuration, default, data, or migration contract changed.
-- Architecture documentation: no contract change; all corrections remain within the cited ADR and core-component boundaries.
-- Deployment/runbooks: docs/workbench-proof.md is the affected operational runbook; no deployed runtime procedure changed.
-- Existing terminal-proof documentation: no semantic impact; the stabilization changes only how the sensor invokes the already documented single integrated terminal.
+- README.md: user-facing cancellation, guard, cleanup, comparison, audit, and observed baseline behavior.
+- docs/workbench-proof.md: operational prerequisites, cancellation/deadline procedure, sampling/workload rules, partial evidence, all-identity cleanup, failure semantics, and fresh results.
+- .harness/engineering-harness.md: governed checks/evidence inventory points to the fresh run and all-identity final audit.
+- Task breakdown: Complete claims now explicitly include the returned correction and controlled matrix.
+- API references/specifications: no impact; no HTTP API contract changed.
+- Configuration and migration guides: no impact; no product option, default, data format, or migration changed.
+- Architecture documentation: no contract change; implementation stays inside the cited ADR and core-component boundaries.
+- Deployment instructions: no impact. The affected operational procedure is the workbench proof runbook above.
 
 Implementation evidence is recorded for Verify. Final acceptance remains owned by Verify.

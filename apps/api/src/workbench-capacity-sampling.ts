@@ -30,33 +30,61 @@ import {
 export interface CapacityClock {
   now(): number
   wall(): Date
-  sleep(milliseconds: number): Promise<void>
+  sleep(milliseconds: number, signal?: AbortSignal): Promise<void>
 }
 export const realCapacityClock: CapacityClock = {
   now: () => performance.now(),
   wall: () => new Date(),
-  sleep: (milliseconds) =>
-    new Promise((resolve) => setTimeout(resolve, Math.max(0, milliseconds))),
+  sleep: (milliseconds, signal) =>
+    new Promise((resolve) => {
+      if (signal?.aborted) {
+        resolve()
+        return
+      }
+      const timer = setTimeout(finish, Math.max(0, milliseconds))
+      const onAbort = () => {
+        clearTimeout(timer)
+        signal?.removeEventListener('abort', onAbort)
+        resolve()
+      }
+      function finish() {
+        signal?.removeEventListener('abort', onAbort)
+        resolve()
+      }
+      signal?.addEventListener('abort', onAbort, { once: true })
+    }),
+}
+
+const capacityCancellationReason = (signal?: AbortSignal): string | null => {
+  if (!signal?.aborted) return null
+  return signal.reason instanceof Error
+    ? signal.reason.message
+    : typeof signal.reason === 'string'
+      ? signal.reason
+      : 'operation-cancelled'
 }
 
 export const runResponsivenessProbe = async (
-  clock: CapacityClock = realCapacityClock
+  clock: CapacityClock = realCapacityClock,
+  signal?: AbortSignal
 ): Promise<ProbeResult> => {
   const startedAt = clock.wall().toISOString()
   return new Promise((resolve) => {
     let settled = false
     let timedOut = false
-    const child = spawn(CAPACITY_PROBE.executable, CAPACITY_PROBE.args, {
-      stdio: 'ignore',
-    })
-    const timer = setTimeout(() => {
-      timedOut = true
-      if (child.pid) child.kill('SIGKILL')
-    }, CAPACITY_PROBE.timeoutMs)
+    let cancellation: string | null = null
+    let child: ReturnType<typeof spawn> | null = null
+    let timer: NodeJS.Timeout | null = null
+    const onAbort = () => {
+      cancellation = 'probe-cancelled:' + capacityCancellationReason(signal)
+      if (child?.pid) child.kill('SIGKILL')
+      else finish(null, cancellation)
+    }
     const finish = (exitCode: number | null, reason: string | null) => {
       if (settled) return
       settled = true
-      clearTimeout(timer)
+      if (timer) clearTimeout(timer)
+      signal?.removeEventListener('abort', onAbort)
       resolve({
         command: CAPACITY_PROBE.command,
         timeoutMs: CAPACITY_PROBE.timeoutMs,
@@ -67,17 +95,30 @@ export const runResponsivenessProbe = async (
         reason,
       })
     }
+    if (signal?.aborted) {
+      finish(null, 'probe-cancelled:' + capacityCancellationReason(signal))
+      return
+    }
+    child = spawn(CAPACITY_PROBE.executable, CAPACITY_PROBE.args, {
+      stdio: 'ignore',
+    })
+    signal?.addEventListener('abort', onAbort, { once: true })
+    timer = setTimeout(() => {
+      timedOut = true
+      if (child?.pid) child.kill('SIGKILL')
+    }, CAPACITY_PROBE.timeoutMs)
     child.once('error', (error) =>
       finish(null, 'probe-spawn-failed:' + error.message)
     )
     child.once('close', (code) =>
       finish(
         code,
-        timedOut
-          ? 'probe-timeout'
-          : code === 0
-            ? null
-            : 'probe-nonzero:' + String(code)
+        cancellation ??
+          (timedOut
+            ? 'probe-timeout'
+            : code === 0
+              ? null
+              : 'probe-nonzero:' + String(code))
       )
     )
   })
@@ -117,10 +158,11 @@ interface CpuBaseline {
 }
 const sleepUntil = async (
   clock: CapacityClock,
-  targetMonotonicMs: number
+  targetMonotonicMs: number,
+  signal?: AbortSignal
 ): Promise<void> => {
-  while (clock.now() < targetMonotonicMs)
-    await clock.sleep(targetMonotonicMs - clock.now())
+  while (clock.now() < targetMonotonicMs && !signal?.aborted)
+    await clock.sleep(targetMonotonicMs - clock.now(), signal)
 }
 export interface SampleWindowOptions {
   runId: string
@@ -129,11 +171,12 @@ export interface SampleWindowOptions {
   slots: CapacitySlot[]
   clock?: CapacityClock
   stopReason: () => string | null
-  probe?: (clock: CapacityClock) => Promise<ProbeResult>
+  probe?: (clock: CapacityClock, signal?: AbortSignal) => Promise<ProbeResult>
   onProbeFailure: (reason: string) => void
   workloadRunning?: (slot: number, atMonotonicMs: number) => boolean
   inspectTree?: typeof inspectCapacityProcessTree
   inspectListeners?: typeof readManagedListeners
+  signal?: AbortSignal
   onAttribution?: (
     slot: number,
     processes: ProcessIdentity[],
@@ -164,17 +207,15 @@ export const sampleCapacityWindow = async (
   const inspectAttributed = async (slot: CapacitySlot) => {
     const inspected = await inspectTree(slot.pid ?? -1)
     if (!inspected.ok) return inspected
+    const processes = inspected.rows.map(({ pid, startTimeTicks }) => ({
+      pid,
+      startTimeTicks,
+    }))
+    options.onAttribution?.(slot.slot, processes, [])
     const listeners = await inspectListeners(
       inspected.rows.map(({ pid }) => pid)
     )
-    options.onAttribution?.(
-      slot.slot,
-      inspected.rows.map(({ pid, startTimeTicks }) => ({
-        pid,
-        startTimeTicks,
-      })),
-      listeners
-    )
+    options.onAttribution?.(slot.slot, [], listeners)
     return inspected
   }
 
@@ -200,9 +241,10 @@ export const sampleCapacityWindow = async (
   for (let index = 0; index < CAPACITY_SAMPLE_OFFSETS_MS.length; index += 1) {
     const targetOffsetMs = CAPACITY_SAMPLE_OFFSETS_MS[index]
     const target = anchor + targetOffsetMs
-    await sleepUntil(clock, target)
+    await sleepUntil(clock, target, options.signal)
     const positionStarted = clock.now()
-    const stop = options.stopReason()
+    const stop =
+      options.stopReason() ?? capacityCancellationReason(options.signal)
     const noReadyWorkload = options.window === 'active' && ready.length === 0
     if (stop || noReadyWorkload || positionStarted >= target + 1_000) {
       const reason =
@@ -227,11 +269,32 @@ export const sampleCapacityWindow = async (
       continue
     }
 
-    const probeResult = await probe(clock)
+    const probeResult = await probe(clock, options.signal)
     if (!probeResult.passed)
       options.onProbeFailure(
         probeResult.reason ?? 'responsiveness probe failed'
       )
+    const afterProbeStop =
+      options.stopReason() ?? capacityCancellationReason(options.signal)
+    if (afterProbeStop) {
+      samples.push({
+        runId: options.runId,
+        cohort: options.cohort,
+        window: options.window,
+        position: index as 0 | 1 | 2 | 3 | 4,
+        targetOffsetMs,
+        targetMonotonicMs: target,
+        actualMonotonicMs: null,
+        host: null,
+        processTrees: ready.map(({ slot }) => ({
+          slot,
+          sample: null,
+          absentReason: afterProbeStop,
+        })),
+        absentReason: afterProbeStop,
+      })
+      continue
+    }
     let host: HostSample | null = null
     let hostFailure: string | null = null
     try {
@@ -328,7 +391,7 @@ export const sampleCapacityWindow = async (
       absentReason: hostFailure,
     })
   }
-  await sleepUntil(clock, anchor + 5_000)
+  await sleepUntil(clock, anchor + 5_000, options.signal)
   return { anchorMonotonicMs: anchor, endedMonotonicMs: clock.now(), samples }
 }
 
@@ -337,8 +400,19 @@ export interface WorkloadController {
   startedMonotonicMs: number
   isRunning(atMonotonicMs: number): boolean
   finish(): Promise<WorkloadResult>
-  cancel(): Promise<void>
+  cancel(reason?: string): Promise<void>
 }
+
+const immediateWorkloadController = (
+  result: WorkloadResult
+): WorkloadController => ({
+  identity: null,
+  startedMonotonicMs: result.startMonotonicMs,
+  isRunning: () => false,
+  finish: async () => result,
+  cancel: async () => undefined,
+})
+
 export const startCapacityWorkload = async (input: {
   runId: string
   cohort: number
@@ -349,6 +423,8 @@ export const startCapacityWorkload = async (input: {
   timeoutMs?: number
   outputLimitBytes?: number
   scriptPath?: string
+  signal?: AbortSignal
+  spawnProcess?: typeof spawn
 }): Promise<WorkloadController> => {
   const clock = input.clock ?? realCapacityClock
   const startedAt = clock.wall().toISOString()
@@ -358,17 +434,60 @@ export const startCapacityWorkload = async (input: {
   const outputLimit =
     input.outputLimitBytes ?? CAPACITY_WORKLOAD_OUTPUT_LIMIT_BYTES
   const scriptPath = input.scriptPath ?? CAPACITY_WORKLOAD_SCRIPT
-  const child = spawn(process.execPath, [scriptPath, String(durationMs)], {
+  const baseResult = (
+    status: WorkloadResult['status'],
+    stderr: string
+  ): WorkloadResult => ({
+    runId: input.runId,
+    cohort: input.cohort,
+    slot: input.slot,
+    command: process.execPath + ' ' + scriptPath,
+    executable: process.execPath,
+    args: [scriptPath, String(durationMs)],
     cwd: input.cwd,
-    detached: true,
-    stdio: ['ignore', 'pipe', 'pipe'],
+    timeoutMs,
+    outputLimitBytes: outputLimit,
+    pid: null,
+    startTimeTicks: null,
+    startedAt,
+    endedAt: clock.wall().toISOString(),
+    startMonotonicMs: startedMonotonicMs,
+    endMonotonicMs: clock.now(),
+    exitCode: null,
+    status,
+    stdout: '',
+    stderr,
   })
-  const pid = child.pid ?? null
-  let startTimeTicks = pid ? await readProcessStartTime(pid) : null
-  for (let index = 0; pid && !startTimeTicks && index < 20; index += 1) {
-    await clock.sleep(5)
-    startTimeTicks = await readProcessStartTime(pid)
+  if (input.signal?.aborted)
+    return immediateWorkloadController(
+      baseResult(
+        'cancelled',
+        capacityCancellationReason(input.signal) ?? 'operation-cancelled'
+      )
+    )
+
+  let child: ReturnType<typeof spawn>
+  try {
+    child = (input.spawnProcess ?? spawn)(
+      process.execPath,
+      [scriptPath, String(durationMs)],
+      {
+        cwd: input.cwd,
+        detached: true,
+        stdio: ['ignore', 'pipe', 'pipe'],
+      }
+    )
+  } catch (error) {
+    return immediateWorkloadController(
+      baseResult(
+        'spawn-failed',
+        error instanceof Error ? error.message : 'workload spawn failed'
+      )
+    )
   }
+
+  const pid = child.pid ?? null
+  let startTimeTicks: string | null = null
   let stdout = Buffer.alloc(0)
   let stderr = Buffer.alloc(0)
   let capturedBytes = 0
@@ -376,7 +495,23 @@ export const startCapacityWorkload = async (input: {
   let timedOut = false
   let cancelled = false
   let spawnFailure: string | null = pid ? null : 'workload pid unavailable'
+  let terminationFailure: string | null = null
   let endedMonotonicMs: number | null = null
+  let termination: Promise<void> | null = null
+  const terminate = (): Promise<void> => {
+    if (!pid) return Promise.resolve()
+    termination ??= terminateExactProcessGroup(pid, 500).catch((error) => {
+      terminationFailure =
+        error instanceof Error ? error.message : 'workload cleanup failed'
+      throw error
+    })
+    return termination
+  }
+  const onAbort = () => {
+    cancelled = true
+    void terminate().catch(() => undefined)
+  }
+  input.signal?.addEventListener('abort', onAbort, { once: true })
   const capture = (stream: 'stdout' | 'stderr', value: Buffer | string) => {
     const chunk = Buffer.isBuffer(value) ? value : Buffer.from(value)
     const remaining = Math.max(0, outputLimit - capturedBytes)
@@ -386,7 +521,7 @@ export const startCapacityWorkload = async (input: {
     capturedBytes += retained.length
     if (retained.length < chunk.length) {
       overflow = true
-      if (pid) void terminateExactProcessGroup(pid, 500)
+      void terminate().catch(() => undefined)
     }
   }
   child.stdout?.on('data', (chunk: Buffer) => capture('stdout', chunk))
@@ -398,45 +533,48 @@ export const startCapacityWorkload = async (input: {
   const resultPromise = new Promise<WorkloadResult>((resolve) => {
     const timer = setTimeout(() => {
       timedOut = true
-      if (pid) void terminateExactProcessGroup(pid, 500)
+      void terminate().catch(() => undefined)
     }, timeoutMs)
     child.once('close', (code) => {
       clearTimeout(timer)
+      input.signal?.removeEventListener('abort', onAbort)
       endedMonotonicMs = clock.now()
-      const status = cancelled
-        ? 'cancelled'
-        : overflow
-          ? 'output-overflow'
-          : timedOut
-            ? 'timeout'
-            : spawnFailure
-              ? 'spawn-failed'
+      const status = overflow
+        ? 'output-overflow'
+        : timedOut
+          ? 'timeout'
+          : spawnFailure
+            ? 'spawn-failed'
+            : cancelled
+              ? 'cancelled'
               : code === 0
                 ? 'passed'
                 : 'nonzero'
       resolve({
-        runId: input.runId,
-        cohort: input.cohort,
-        slot: input.slot,
-        command: process.execPath + ' ' + scriptPath,
-        executable: process.execPath,
-        args: [scriptPath, String(durationMs)],
-        cwd: input.cwd,
-        timeoutMs,
-        outputLimitBytes: outputLimit,
+        ...baseResult(status, stderr.toString('utf8')),
         pid,
         startTimeTicks,
-        startedAt,
         endedAt: clock.wall().toISOString(),
-        startMonotonicMs: startedMonotonicMs,
         endMonotonicMs: endedMonotonicMs,
         exitCode: code,
-        status,
         stdout: stdout.toString('utf8'),
-        stderr: stderr.toString('utf8'),
+        stderr:
+          stderr.toString('utf8') +
+          (terminationFailure ? '\ncleanup-failed:' + terminationFailure : ''),
       })
     })
   })
+
+  for (
+    let index = 0;
+    pid && !startTimeTicks && index < 20 && !input.signal?.aborted;
+    index += 1
+  ) {
+    startTimeTicks = await readProcessStartTime(pid)
+    if (!startTimeTicks) await clock.sleep(5, input.signal)
+  }
+  if (input.signal?.aborted) onAbort()
+
   return {
     identity: pid && startTimeTicks ? { pid, startTimeTicks } : null,
     startedMonotonicMs,
@@ -445,7 +583,7 @@ export const startCapacityWorkload = async (input: {
     finish: () => resultPromise,
     cancel: async () => {
       cancelled = true
-      if (pid) await terminateExactProcessGroup(pid, 500).catch(() => undefined)
+      await terminate()
       await resultPromise
     },
   }

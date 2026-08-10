@@ -6,7 +6,7 @@ import {
 } from '../src/workbench-capacity-evidence.js'
 import { validateCapacityEvidence } from '../src/workbench-capacity-contract.js'
 
-const DESIGNATED_RUN_ID = '532abfdb-c970-4979-9da2-ec9ef99a295a'
+const DESIGNATED_RUN_ID = '853037e6-5dab-43cf-bcf8-61f1e8bbdb18'
 describe('designated-host workbench capacity baseline', () => {
   it('recomputes complete 1/3/5/10 evidence, gate, findings, and disposition', async () => {
     const directories = await listRetainedCapacityRuns()
@@ -68,6 +68,16 @@ describe('designated-host workbench capacity baseline', () => {
     expect(evidence.run.overallDisposition).toBe('passed')
     expect(evidence.run.exitReasons).toEqual([])
     expect(evidence.run.fixture.unchanged).toBe(true)
+    expect(evidence.run.finalCleanup).toMatchObject({
+      complete: true,
+      passed: true,
+      processIdentitiesAbsent: true,
+      listenersAbsent: true,
+      workloadIdentitiesAbsent: true,
+    })
+    expect(evidence.comparison).toContain('Host retained/absent')
+    expect(evidence.comparison).toContain('Process trees retained/absent')
+    expect(evidence.comparison).toContain('Missing reasons')
     expect(evidence.run.host?.cgroup).toMatchObject({
       cpuMax: 'max 100000',
       memoryMax: 'max',

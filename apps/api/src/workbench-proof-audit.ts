@@ -3,6 +3,11 @@ import os from 'node:os'
 import path from 'node:path'
 import type { ProofHandle } from './workbench-proof-runtime.js'
 
+export const requireMissingProcEntry = (error: unknown): true => {
+  if ((error as NodeJS.ErrnoException).code === 'ENOENT') return true
+  throw error
+}
+
 export interface ManagedProcessRow {
   pid: number
   ppid: number
@@ -130,14 +135,22 @@ const readProcListeners = async (): Promise<ProcListener[]> => {
 }
 
 export const readManagedListeners = async (
-  pids: number[]
+  pids: number[],
+  options: { strict?: boolean } = {}
 ): Promise<ManagedListenerRow[]> => {
   const owners = new Map<string, number>()
   for (const pid of pids) {
     let descriptors: string[] = []
     try {
       descriptors = await readdir(path.join('/proc', String(pid), 'fd'))
-    } catch {
+    } catch (error) {
+      if (options.strict)
+        throw new Error(
+          'listener-owner-inspection-failed:' +
+            pid +
+            ':' +
+            (error instanceof Error ? error.message : 'unknown')
+        )
       continue
     }
     for (const descriptor of descriptors) {
@@ -147,8 +160,15 @@ export const readManagedListeners = async (
         )
         const match = target.match(/^socket:\[([0-9]+)\]$/u)
         if (match) owners.set(match[1], pid)
-      } catch {
-        // File descriptors can close while they are inspected.
+      } catch (error) {
+        if (
+          options.strict &&
+          (error as NodeJS.ErrnoException).code !== 'ENOENT'
+        )
+          throw new Error(
+            'listener-descriptor-inspection-failed:' + pid + ':' + descriptor
+          )
+        // ENOENT means the descriptor closed during attribution.
       }
     }
   }
@@ -298,8 +318,8 @@ export const processIdentityAbsent = async (identity: {
       (await readCapacityProcessRow(identity.pid)).startTimeTicks !==
       identity.startTimeTicks
     )
-  } catch {
-    return true
+  } catch (error) {
+    return requireMissingProcEntry(error)
   }
 }
 
@@ -325,12 +345,13 @@ export const listenerIdentityAbsent = async (
           'socket:[' + identity.inode + ']'
         )
           return false
-      } catch {
-        /* descriptor raced */
+      } catch (error) {
+        requireMissingProcEntry(error)
+        /* descriptor raced closed */
       }
     }
-  } catch {
-    return true
+  } catch (error) {
+    return requireMissingProcEntry(error)
   }
   return true
 }

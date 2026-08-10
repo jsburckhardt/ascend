@@ -2,6 +2,11 @@
 
 Tasks are dependency ordered. Completion requires the listed acceptance outcomes, explicit test coverage, and expected evidence.
 
+
+## Implementation correction after 29707d3
+
+The Complete statuses below include the returned defect correction: one cooperative AbortSignal now reaches member start/readiness, probe, sampling, workload, and coordination; the active guard remains held through stopped coordination, all-started cleanup, run-wide audit, partial evidence retention, and release. Failed-start and failed-attribution slots preserve discovered metadata and participate in cleanup. Stop, inspection, listener-attribution, and audit failures are explicit. Comparison evidence separates host and process-tree retained/absent counts with missing reasons. Controlled coverage now includes spawn and early-exit identity, inspection/listener attribution, stop/audit failure, cancellation during start/sample/workload, deadline cleanup/guard lifetime, partial evidence, and no background work after return. T-7 and T-8 use retained run 853037e6-5dab-43cf-bcf8-61f1e8bbdb18.
+
 ## Task T-1: Define the capacity contract, prerequisites, records, and run isolation
 
 - **Status:** Complete

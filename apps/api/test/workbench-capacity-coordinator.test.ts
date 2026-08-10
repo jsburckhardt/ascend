@@ -5,6 +5,7 @@ import type {
   CapacityClock,
   WorkloadController,
 } from '../src/workbench-capacity-sampling.js'
+import { ProofError } from '../src/workbench-proof-runtime.js'
 import type {
   ProbeResult,
   ScheduledSample,
@@ -461,5 +462,302 @@ describe('capacity cohort coordinator', () => {
     expect(findings).toContain('incomplete-evidence')
     expect(result.cohorts[2].complete).toBe(false)
     expect(result.exitReasons).toContain('cohort-incomplete:5')
+  })
+
+  it('retains and audits started identities when inspection or listener attribution fails', async () => {
+    const inspection = dependencies()
+    const inspectionAudits: number[][] = []
+    inspection.deps.inspect = async (pid) => ({
+      ok: false,
+      rootPid: pid,
+      reason: 'controlled-inspection-failure',
+    })
+    inspection.deps.audit = async (processes) => {
+      inspectionAudits.push(processes.map(({ pid }) => pid))
+      return { processIdentitiesAbsent: true, listenersAbsent: true }
+    }
+    const inspectionResult = await coordinateCapacityRun(runId, inspection.deps)
+    expect(inspectionResult.cohorts[0].slots[0]).toMatchObject({
+      state: 'failed',
+      pid: 101,
+      processIdentities: [{ pid: 101, startTimeTicks: '10' }],
+    })
+    expect(inspectionAudits.some((pids) => pids.includes(101))).toBe(true)
+
+    const listener = dependencies()
+    const listenerAudits: number[][] = []
+    listener.deps.listeners = async () => {
+      throw new Error('controlled-listener-inspection-failure')
+    }
+    listener.deps.audit = async (processes) => {
+      listenerAudits.push(processes.map(({ pid }) => pid))
+      return { processIdentitiesAbsent: true, listenersAbsent: true }
+    }
+    const listenerResult = await coordinateCapacityRun(runId, listener.deps)
+    expect(listenerResult.cohorts[0].slots[0]).toMatchObject({
+      state: 'failed',
+      pid: 101,
+      reason:
+        'listener-attribution-failed:controlled-listener-inspection-failure',
+    })
+    expect(listenerResult.cohorts[0].slots[0].processIdentities).toContainEqual(
+      {
+        pid: 101,
+        startTimeTicks: '10',
+      }
+    )
+    expect(listenerAudits.some((pids) => pids.includes(101))).toBe(true)
+  })
+
+  it('retains stop and audit failures and fails cleanup completeness honestly', async () => {
+    const stopped = dependencies()
+    stopped.deps.stop = async () => {
+      throw new Error('controlled-stop-failure')
+    }
+    const stopResult = await coordinateCapacityRun(runId, stopped.deps)
+    expect(stopResult.cohorts[0].cleanup).toMatchObject({
+      complete: true,
+      passed: false,
+    })
+    expect(stopResult.cohorts[0].cleanup.details.join('\n')).toContain(
+      'controlled-stop-failure'
+    )
+    expect(stopResult.exitReasons).toContain('cleanup-failed:1')
+
+    const audited = dependencies()
+    audited.deps.audit = async () => {
+      throw new Error('controlled-audit-inspection-failure')
+    }
+    const auditResult = await coordinateCapacityRun(runId, audited.deps)
+    expect(auditResult.cohorts[0].cleanup).toMatchObject({
+      complete: false,
+      passed: false,
+    })
+    expect(auditResult.cohorts[0].cleanup.details.join('\n')).toContain(
+      'cleanup-audit-failed'
+    )
+    expect(auditResult.finalCleanup).toMatchObject({
+      complete: false,
+      passed: false,
+    })
+  })
+
+  it('cooperatively cancels an in-flight start and retains its discovered identity', async () => {
+    const controlled = dependencies()
+    const controller = new AbortController()
+    const audited: number[][] = []
+    controlled.deps.signal = controller.signal
+    controlled.deps.timedOut = () => controller.signal.aborted
+    controlled.deps.start = async (_slot, _cohort, signal) =>
+      new Promise((_resolve, reject) => {
+        signal.addEventListener(
+          'abort',
+          () =>
+            reject(
+              new ProofError(
+                'cancelled',
+                'overall-timeout',
+                {},
+                {
+                  runId: '00000000-0000-4000-8000-000000000099',
+                  pid: 9901,
+                  startTimeTicks: '99',
+                  url: null,
+                }
+              )
+            ),
+          { once: true }
+        )
+        setTimeout(() => controller.abort(new Error('overall-timeout')), 5)
+      })
+    controlled.deps.audit = async (processes) => {
+      audited.push(processes.map(({ pid }) => pid))
+      return { processIdentitiesAbsent: true, listenersAbsent: true }
+    }
+    const result = await coordinateCapacityRun(runId, controlled.deps)
+    expect(result.exitReasons).toContain('overall-timeout')
+    expect(result.cohorts[0].slots[0]).toMatchObject({
+      state: 'failed',
+      pid: 9901,
+      startTimeTicks: '99',
+    })
+    expect(audited.some((pids) => pids.includes(9901))).toBe(true)
+    expect(result.cohorts).toHaveLength(4)
+  })
+
+  it('retains explicit evidence when cancellation occurs during sampling or workload start', async () => {
+    const sampling = dependencies()
+    const samplingController = new AbortController()
+    sampling.deps.signal = samplingController.signal
+    sampling.deps.timedOut = () => samplingController.signal.aborted
+    sampling.deps.sample = async (input) => {
+      if (input.cohort === 1 && input.window === 'idle') {
+        samplingController.abort(new Error('overall-timeout'))
+        throw new Error('controlled-sample-cancelled')
+      }
+      return sampleRows(input)
+    }
+    const sampled = await coordinateCapacityRun(runId, sampling.deps)
+    expect(sampled.samples.samples).toHaveLength(40)
+    expect(sampled.cohorts[0].findings.join('\n')).toContain(
+      'controlled-sample-cancelled'
+    )
+
+    const workload = dependencies()
+    const workloadController = new AbortController()
+    workload.deps.signal = workloadController.signal
+    workload.deps.timedOut = () => workloadController.signal.aborted
+    workload.deps.workload = async (input) => {
+      workloadController.abort(new Error('overall-timeout'))
+      const result = workloadResult(input.cohort, input.slot, 'cancelled')
+      return {
+        identity: { pid: result.pid!, startTimeTicks: result.startTimeTicks! },
+        startedMonotonicMs: 0,
+        isRunning: () => false,
+        finish: async () => result,
+        cancel: async () => undefined,
+      }
+    }
+    const worked = await coordinateCapacityRun(runId, workload.deps)
+    expect(worked.workloads.workloads[0].status).toBe('cancelled')
+    expect(worked.exitReasons).toContain('overall-timeout')
+  })
+
+  it('retains fixture, probe, workload, and result-operation failures', async () => {
+    const beforeFixture = dependencies()
+    beforeFixture.deps.snapshot = async () => {
+      throw new Error('controlled-before-fixture-failure')
+    }
+    const beforeResult = await coordinateCapacityRun(runId, beforeFixture.deps)
+    expect(beforeResult.cohorts[0].integrity).toMatchObject({
+      complete: false,
+      passed: false,
+    })
+    expect(beforeResult.cohorts[0].integrity.details.join(' ')).toContain(
+      'controlled-before-fixture-failure'
+    )
+
+    const afterFixture = dependencies()
+    let snapshots = 0
+    afterFixture.deps.snapshot = async () => {
+      if (++snapshots === 2) throw new Error('controlled-after-fixture-failure')
+      return snapshot
+    }
+    const afterResult = await coordinateCapacityRun(runId, afterFixture.deps)
+    expect(afterResult.cohorts[0].integrity).toMatchObject({
+      complete: false,
+      passed: false,
+    })
+    expect(afterResult.cohorts[0].integrity.details.join(' ')).toContain(
+      'controlled-after-fixture-failure'
+    )
+
+    const probes = dependencies()
+    let probeCalls = 0
+    probes.deps.probe = async () => {
+      if (++probeCalls === 1) throw new Error('controlled-pre-probe-failure')
+      if (probeCalls === 2) throw new Error('controlled-post-probe-failure')
+      return probe()
+    }
+    const probeResult = await coordinateCapacityRun(runId, probes.deps)
+    expect(probeResult.cohorts[0].preProbe.reason).toContain(
+      'controlled-pre-probe-failure'
+    )
+    expect(probeResult.cohorts[0].postCleanupProbe.reason).toContain(
+      'controlled-post-probe-failure'
+    )
+
+    const workloadStart = dependencies()
+    workloadStart.deps.workload = async () => {
+      throw new Error('controlled-workload-start-failure')
+    }
+    const workloadStartResult = await coordinateCapacityRun(
+      runId,
+      workloadStart.deps
+    )
+    expect(workloadStartResult.workloads.workloads[0]).toMatchObject({
+      status: 'spawn-failed',
+      stderr: 'controlled-workload-start-failure',
+    })
+
+    const workloadFinish = dependencies()
+    workloadFinish.deps.workload = async (_input) => ({
+      identity: null,
+      startedMonotonicMs: 0,
+      isRunning: () => false,
+      finish: async () => {
+        throw new Error('controlled-workload-result-failure')
+      },
+      cancel: async () => undefined,
+    })
+    const workloadFinishResult = await coordinateCapacityRun(
+      runId,
+      workloadFinish.deps
+    )
+    expect(workloadFinishResult.workloads.workloads[0]).toMatchObject({
+      status: 'spawn-failed',
+      stderr: expect.stringContaining('controlled-workload-result-failure'),
+    })
+  })
+
+  it('retains post-start inspection, identity cleanup, and workload cancel failures', async () => {
+    const postInspect = dependencies()
+    const inspectCalls = new Map<number, number>()
+    postInspect.deps.inspect = async (pid) => {
+      const call = (inspectCalls.get(pid) ?? 0) + 1
+      inspectCalls.set(pid, call)
+      if (call === 2)
+        throw new Error('controlled-post-start-inspection-failure')
+      return {
+        ok: true,
+        rootPid: pid,
+        rows: [
+          {
+            pid,
+            ppid: 1,
+            startTimeTicks: '10',
+            cpuTicks: 1,
+            rssKiB: 10,
+          },
+        ],
+      }
+    }
+    postInspect.deps.cleanupIdentity = async () => {
+      throw new Error('controlled-identity-cleanup-failure')
+    }
+    postInspect.deps.workload = async (input) => {
+      const result = workloadResult(input.cohort, input.slot)
+      return {
+        identity: { pid: result.pid!, startTimeTicks: result.startTimeTicks! },
+        startedMonotonicMs: 0,
+        isRunning: () => true,
+        finish: async () => result,
+        cancel: async () => {
+          throw new Error('controlled-workload-cancel-failure')
+        },
+      }
+    }
+    const result = await coordinateCapacityRun(runId, postInspect.deps)
+    const details = result.cohorts[0].cleanup.details.join(' ')
+    expect(details).toContain('controlled-post-start-inspection-failure')
+    expect(details).toContain('controlled-identity-cleanup-failure')
+    expect(details).toContain('controlled-workload-cancel-failure')
+    expect(result.cohorts[0].cleanup.passed).toBe(false)
+  })
+
+  it('fails the run-wide final audit when any discovered identity remains', async () => {
+    const controlled = dependencies()
+    controlled.deps.audit = async (processes) => ({
+      processIdentitiesAbsent: processes.length < 2,
+      listenersAbsent: true,
+    })
+    const result = await coordinateCapacityRun(runId, controlled.deps)
+    expect(result.cohorts.every(({ cleanup }) => cleanup.passed)).toBe(true)
+    expect(result.finalCleanup).toMatchObject({
+      complete: true,
+      passed: false,
+      processIdentitiesAbsent: false,
+    })
+    expect(result.exitReasons).toContain('final-cleanup-failed')
   })
 })

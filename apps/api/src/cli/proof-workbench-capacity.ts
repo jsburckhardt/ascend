@@ -36,12 +36,13 @@ export interface CapacityCliDependencies {
   runId: () => string
   now: () => number
   overallTimeoutMs: number
-  acquireGuard: (runId: string) => Promise<void>
+  acquireGuard: (runId: string, signal: AbortSignal) => Promise<void>
   releaseGuard: (runId: string) => Promise<void>
-  prerequisites: () => Promise<PrerequisiteCheck>
-  snapshot: () => Promise<FixtureSnapshot>
+  prerequisites: (signal: AbortSignal) => Promise<PrerequisiteCheck>
+  snapshot: (signal?: AbortSignal) => Promise<FixtureSnapshot>
   coordinate: (
     runId: string,
+    signal: AbortSignal,
     timedOut: () => boolean
   ) => Promise<CoordinatedCapacity>
   write: typeof writeCapacityEvidence
@@ -54,11 +55,12 @@ const defaultDependencies: CapacityCliDependencies = {
   runId: randomUUID,
   now: () => performance.now(),
   overallTimeoutMs: CAPACITY_OVERALL_TIMEOUT_MS,
-  acquireGuard: acquireCapacityGuard,
+  acquireGuard: async (runId, _signal) => acquireCapacityGuard(runId),
   releaseGuard: releaseCapacityGuard,
   prerequisites: checkCapacityPrerequisites,
-  snapshot: snapshotFixture,
-  coordinate: (runId, timedOut) => coordinateCapacityRun(runId, { timedOut }),
+  snapshot: async (_signal) => snapshotFixture(),
+  coordinate: (runId, signal, timedOut) =>
+    coordinateCapacityRun(runId, { signal, timedOut }),
   write: writeCapacityEvidence,
 }
 class CapacityDeadlineError extends Error {
@@ -100,6 +102,14 @@ const failureRun = (
   threeMemberGate: { passed: false, blockers: [reason] },
   overallDisposition: 'failed',
   exitReasons: [reason],
+  finalCleanup: {
+    complete: true,
+    passed: true,
+    processIdentitiesAbsent: true,
+    listenersAbsent: true,
+    workloadIdentitiesAbsent: true,
+    details: [],
+  },
   evidence: relativeEvidencePaths(runId),
 })
 export const runCapacityCli = async (
@@ -110,33 +120,35 @@ export const runCapacityCli = async (
   const runId = deps.runId()
   const startedAt = new Date().toISOString()
   const deadlineAt = deps.now() + deps.overallTimeoutMs
-  const timedOut = () => deps.now() >= deadlineAt
-  const bounded = async <T>(operation: () => Promise<T>): Promise<T> => {
-    const remaining = deadlineAt - deps.now()
-    if (remaining <= 0) throw new CapacityDeadlineError()
-    let timer: NodeJS.Timeout | undefined
-    try {
-      return await Promise.race([
-        operation(),
-        new Promise<T>((_resolve, reject) => {
-          timer = setTimeout(
-            () => reject(new CapacityDeadlineError()),
-            remaining
-          )
-        }),
-      ])
-    } finally {
-      if (timer) clearTimeout(timer)
+  const controller = new AbortController()
+  const deadlineError = new CapacityDeadlineError()
+  const deadlineTimer = setTimeout(
+    () => controller.abort(deadlineError),
+    Math.max(0, deps.overallTimeoutMs)
+  )
+  const timedOut = () => controller.signal.aborted || deps.now() >= deadlineAt
+  const checkDeadline = () => {
+    if (timedOut()) {
+      if (!controller.signal.aborted) controller.abort(deadlineError)
+      throw deadlineError
     }
   }
   let guarded = false
+  let releaseFailed = false
+  let result = 1
   let prerequisiteRecords: CapacityRunRecord['prerequisites'] = []
+  let retained = false
+  let fixtureBefore = failureFixture()
+  let coordinated: CoordinatedCapacity | null = null
+
   try {
+    checkDeadline()
     try {
-      await bounded(() => deps.acquireGuard(runId))
+      await deps.acquireGuard(runId, controller.signal)
+      checkDeadline()
       guarded = true
     } catch (error) {
-      if (error instanceof CapacityDeadlineError) throw error
+      if (timedOut() || error instanceof CapacityDeadlineError) throw error
       io.stderr(
         JSON.stringify({
           event: 'workbench.capacity.isolation.failed',
@@ -144,26 +156,39 @@ export const runCapacityCli = async (
           reason: error instanceof Error ? error.message : 'unknown',
         })
       )
-      return 5
+      result = 5
+      return result
     }
 
     let prerequisites: PrerequisiteCheck
     try {
-      prerequisites = await bounded(deps.prerequisites)
+      prerequisites = await deps.prerequisites(controller.signal)
+      checkDeadline()
       prerequisiteRecords = prerequisites.records
     } catch (error) {
-      if (error instanceof CapacityDeadlineError) throw error
+      if (timedOut() || error instanceof CapacityDeadlineError) throw error
+      const reason =
+        'prerequisite-check-failed:' +
+        (error instanceof Error ? error.message : 'unknown')
+      const run = failureRun(runId, startedAt, prerequisiteRecords, reason)
+      await deps.write(
+        run,
+        { version: 1, runId, samples: [] },
+        { version: 1, runId, workloads: [] },
+        false
+      )
+      retained = true
       io.stderr(
         JSON.stringify({
           event: 'workbench.capacity.prerequisite.failed',
           runId,
-          reason:
-            'prerequisite-check-failed:' +
-            (error instanceof Error ? error.message : 'unknown'),
+          reason,
         })
       )
-      return 2
+      result = 2
+      return result
     }
+
     if (prerequisites.stopReason) {
       const fixtureFailure = prerequisites.stopReason.includes('fixture')
       const run = failureRun(
@@ -172,14 +197,13 @@ export const runCapacityCli = async (
         prerequisites.records,
         prerequisites.stopReason
       )
-      await bounded(() =>
-        deps.write(
-          run,
-          { version: 1, runId, samples: [] },
-          { version: 1, runId, workloads: [] },
-          false
-        )
+      await deps.write(
+        run,
+        { version: 1, runId, samples: [] },
+        { version: 1, runId, workloads: [] },
+        false
       )
+      retained = true
       io.stderr(
         JSON.stringify({
           event: fixtureFailure
@@ -189,26 +213,26 @@ export const runCapacityCli = async (
           reason: prerequisites.stopReason,
         })
       )
-      return fixtureFailure ? 3 : 2
+      result = fixtureFailure ? 3 : 2
+      return result
     }
 
-    let fixtureBefore: FixtureSnapshot
     try {
-      fixtureBefore = await bounded(deps.snapshot)
+      fixtureBefore = await deps.snapshot(controller.signal)
+      checkDeadline()
     } catch (error) {
-      if (error instanceof CapacityDeadlineError) throw error
+      if (timedOut() || error instanceof CapacityDeadlineError) throw error
       const reason =
         'fixture-prerequisite-failed:' +
         (error instanceof Error ? error.message : 'unknown')
       const run = failureRun(runId, startedAt, prerequisites.records, reason)
-      await bounded(() =>
-        deps.write(
-          run,
-          { version: 1, runId, samples: [] },
-          { version: 1, runId, workloads: [] },
-          false
-        )
+      await deps.write(
+        run,
+        { version: 1, runId, samples: [] },
+        { version: 1, runId, workloads: [] },
+        false
       )
+      retained = true
       io.stderr(
         JSON.stringify({
           event: 'workbench.capacity.fixture.failed',
@@ -216,46 +240,34 @@ export const runCapacityCli = async (
           reason,
         })
       )
-      return 3
+      result = 3
+      return result
     }
-    const coordinated = await bounded(() => deps.coordinate(runId, timedOut))
-    let fixtureAfter: FixtureSnapshot
+
+    coordinated = await deps.coordinate(runId, controller.signal, timedOut)
+    if (timedOut() && !controller.signal.aborted)
+      controller.abort(deadlineError)
+
+    let fixtureAfter = fixtureBefore
+    let fixtureFinalizationReason: string | null = null
     try {
-      fixtureAfter = await bounded(deps.snapshot)
+      fixtureAfter = await deps.snapshot()
     } catch (error) {
-      if (error instanceof CapacityDeadlineError) throw error
-      const reason =
+      fixtureFinalizationReason =
         'fixture-finalization-failed:' +
         (error instanceof Error ? error.message : 'unknown')
-      const run = failureRun(
-        runId,
-        startedAt,
-        prerequisites.records,
-        reason,
-        fixtureBefore
-      )
-      run.cohorts = coordinated.cohorts
-      run.safetyStopReason = coordinated.safetyStopReason
-      run.threeMemberGate = coordinated.threeMemberGate
-      run.exitReasons = [...new Set([...coordinated.exitReasons, reason])]
-      await bounded(() =>
-        deps.write(run, coordinated.samples, coordinated.workloads, false)
-      )
-      io.stderr(
-        JSON.stringify({
-          event: 'workbench.capacity.fixture.failed',
-          runId,
-          reason,
-        })
-      )
-      return 3
     }
     const unchanged =
+      !fixtureFinalizationReason &&
       JSON.stringify(fixtureBefore) === JSON.stringify(fixtureAfter)
     const exitReasons = [
       ...coordinated.exitReasons,
-      ...(!unchanged ? ['final-fixture-integrity-failed'] : []),
+      ...(fixtureFinalizationReason ? [fixtureFinalizationReason] : []),
+      ...(!unchanged && !fixtureFinalizationReason
+        ? ['final-fixture-integrity-failed']
+        : []),
       ...(timedOut() ? ['overall-timeout'] : []),
+      ...(!coordinated.finalCleanup.passed ? ['final-cleanup-failed'] : []),
     ]
     const run: CapacityRunRecord = {
       version: 1,
@@ -280,11 +292,11 @@ export const runCapacityCli = async (
       threeMemberGate: coordinated.threeMemberGate,
       overallDisposition: exitReasons.length ? 'failed' : 'passed',
       exitReasons: [...new Set(exitReasons)],
+      finalCleanup: coordinated.finalCleanup,
       evidence: relativeEvidencePaths(runId),
     }
-    await bounded(() =>
-      deps.write(run, coordinated.samples, coordinated.workloads)
-    )
+    await deps.write(run, coordinated.samples, coordinated.workloads)
+    retained = true
     io.stdout(
       JSON.stringify({
         runId,
@@ -295,33 +307,86 @@ export const runCapacityCli = async (
     )
     io.stderr(
       JSON.stringify({
-        event: 'workbench.capacity.completed',
+        event: timedOut()
+          ? 'workbench.capacity.deadline.exceeded'
+          : fixtureFinalizationReason
+            ? 'workbench.capacity.fixture.failed'
+            : 'workbench.capacity.completed',
         runId,
         disposition: run.overallDisposition,
         cohortCount: run.cohorts.length,
+        code: timedOut() ? 'overall-timeout' : fixtureFinalizationReason,
+        partialEvidenceRetained: timedOut(),
       })
     )
-    return run.overallDisposition === 'passed' ? 0 : 1
+    result = timedOut()
+      ? 4
+      : fixtureFinalizationReason
+        ? 3
+        : run.overallDisposition === 'passed'
+          ? 0
+          : 1
   } catch (error) {
-    const deadline = error instanceof CapacityDeadlineError || timedOut()
+    const deadline = timedOut() || error instanceof CapacityDeadlineError
+    if (deadline && !controller.signal.aborted) controller.abort(deadlineError)
+    const reason = deadline
+      ? 'overall-timeout'
+      : error instanceof Error
+        ? error.message
+        : 'unknown'
+    if (guarded && !retained) {
+      const run = failureRun(
+        runId,
+        startedAt,
+        prerequisiteRecords,
+        reason,
+        fixtureBefore
+      )
+      if (coordinated) {
+        run.cohorts = coordinated.cohorts
+        run.safetyStopReason = coordinated.safetyStopReason
+        run.threeMemberGate = coordinated.threeMemberGate
+        run.exitReasons = [...new Set([...coordinated.exitReasons, reason])]
+        run.finalCleanup = coordinated.finalCleanup
+      }
+      await deps
+        .write(
+          run,
+          coordinated?.samples ?? { version: 1, runId, samples: [] },
+          coordinated?.workloads ?? { version: 1, runId, workloads: [] },
+          false
+        )
+        .then(() => {
+          retained = true
+        })
+        .catch((writeError) =>
+          io.stderr(
+            JSON.stringify({
+              event: 'workbench.capacity.evidence.failed',
+              runId,
+              code: String(writeError),
+            })
+          )
+        )
+    }
     io.stderr(
       JSON.stringify({
         event: deadline
           ? 'workbench.capacity.deadline.exceeded'
           : 'workbench.capacity.failed',
         runId,
-        code: deadline
-          ? 'overall-timeout'
-          : error instanceof Error
-            ? error.message
-            : 'unknown',
+        code: reason,
         prerequisiteRecords: prerequisiteRecords.length,
+        partialEvidenceRetained: retained,
       })
     )
-    return deadline ? 4 : 1
+    result = deadline ? 4 : 1
   } finally {
     if (guarded) {
-      const release = deps.releaseGuard(runId).catch((error) =>
+      try {
+        await deps.releaseGuard(runId)
+      } catch (error) {
+        releaseFailed = true
         io.stderr(
           JSON.stringify({
             event: 'workbench.capacity.guard.release.failed',
@@ -329,20 +394,11 @@ export const runCapacityCli = async (
             code: String(error),
           })
         )
-      )
-      const remaining = Math.max(0, deadlineAt - deps.now())
-      if (remaining > 0) {
-        let releaseTimer: NodeJS.Timeout | undefined
-        await Promise.race([
-          release,
-          new Promise<void>((resolve) => {
-            releaseTimer = setTimeout(resolve, remaining)
-          }),
-        ])
-        if (releaseTimer) clearTimeout(releaseTimer)
-      } else void release
+      }
     }
+    clearTimeout(deadlineTimer)
   }
+  return timedOut() ? 4 : releaseFailed ? 1 : result
 }
 
 if (

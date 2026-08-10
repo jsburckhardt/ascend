@@ -140,6 +140,14 @@ const evidence = () => {
     },
     overallDisposition: 'failed',
     exitReasons: ['three-member-gate-failed'],
+    finalCleanup: {
+      complete: true,
+      passed: true,
+      processIdentitiesAbsent: true,
+      listenersAbsent: true,
+      workloadIdentitiesAbsent: true,
+      details: [],
+    },
     evidence: relativeEvidencePaths(runId),
   }
   return {
@@ -163,7 +171,7 @@ describe('capacity evidence retention', () => {
       renderCapacityComparison(value.run, value.samples, value.workloads)
     )
     expect(retained.comparison).toContain(
-      '| Cohort | Requested | Ready | Failed | Unstarted | Workload pass/fail | Samples retained/absent'
+      '| Cohort | Requested | Ready | Failed | Unstarted | Workload pass/fail | Host retained/absent | Process trees retained/absent | Missing reasons'
     )
     expect(
       await readFile(path.join(directory, 'samples.json'), 'utf8')
@@ -328,5 +336,46 @@ describe('capacity evidence retention', () => {
         incompleteCleanup.workloads
       )
     ).toThrow('final audit')
+
+    const incompleteFinalCleanup = evidence()
+    incompleteFinalCleanup.run.finalCleanup.complete = false
+    incompleteFinalCleanup.run.finalCleanup.passed = false
+    expect(() =>
+      validateCapacityEvidence(
+        incompleteFinalCleanup.run,
+        incompleteFinalCleanup.samples,
+        incompleteFinalCleanup.workloads
+      )
+    ).toThrow('Final cleanup audit')
+    incompleteFinalCleanup.run.finalCleanup.details = [
+      'explicit-final-audit-failure',
+    ]
+    expect(() =>
+      validateCapacityEvidence(
+        incompleteFinalCleanup.run,
+        incompleteFinalCleanup.samples,
+        incompleteFinalCleanup.workloads
+      )
+    ).not.toThrow()
+  })
+
+  it('reproduces immutable legacy comparison rows while new runs split completeness', () => {
+    const current = evidence()
+    expect(
+      renderCapacityComparison(current.run, current.samples, current.workloads)
+    ).toContain(
+      'Host retained/absent | Process trees retained/absent | Missing reasons'
+    )
+    const legacy = {
+      ...current.run,
+      finalCleanup: undefined,
+    } as unknown as CapacityRunRecord
+    const comparison = renderCapacityComparison(
+      legacy,
+      current.samples,
+      current.workloads
+    )
+    expect(comparison).toContain('Samples retained/absent')
+    expect(comparison).not.toContain('Process trees retained/absent')
   })
 })

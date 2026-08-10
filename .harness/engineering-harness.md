@@ -13,7 +13,7 @@ development servers running.
 ## Checks command
 
 `harness checks` wraps the root `just verify` recipe and gates formatting, linting,
-typechecking, unit tests, builds, and Playwright E2E tests. On the designated host, the gate includes bounded BL-001 lifecycle and terminal-parity failures plus one real code-server Chromium episode with exact-handle, terminal-command, browser-context, and listener cleanup.
+typechecking, unit tests, builds, and Playwright E2E tests. On the designated host, the gate includes bounded BL-001 lifecycle and terminal-parity failures plus two real code-server Chromium scenarios: forced integrated-terminal timeout cleanup and passing terminal parity, each with exact-handle, terminal-command, browser-context, and listener cleanup.
 
 ## Health check
 
@@ -42,7 +42,7 @@ artifacts under each application package.
 - `just proof-terminal-parity`: 90-second designated-host direct-vs-integrated terminal sensor
 - API root test: in-process health interaction and JSON consequence
 - Project-home Playwright test: browser interaction and visible UI consequence
-- BL-001/BL-002 host-process sensor: one real loopback code-server process tree, Explorer, Markdown Preview, one integrated terminal, direct-vs-integrated fixed-tool parity, and zero-leak cleanup audit
+- BL-001/BL-002 host-process sensor: two real loopback code-server Chromium scenarios—forced integrated-terminal timeout cleanup and passing Explorer, Markdown Preview, and direct-vs-integrated terminal parity—with zero-leak cleanup audits
 
 ## Evidence paths
 
@@ -51,6 +51,7 @@ artifacts under each application package.
 - Playwright artifacts: `test-results/` and `playwright-report/`
 - BL-001 terminal-parity episode: `test-results/bl-001/terminal-parity/episode.json` with direct/integrated raw references (generated, ignored)
 - BL-001 retained AC evidence: `project/work-items/5-bl-001-prove-a-host-code-server-workbench/implementation/00-implementation.md`
+- BL-002 retained AC evidence: `project/work-items/7-bl-002-prove-host-native-terminal-parity/implementation/00-implementation.md`
 - Harnessability reports: `.harness/reports/harnessability/`
 - Harness retrospectives: `.harness/records/retro/`
 

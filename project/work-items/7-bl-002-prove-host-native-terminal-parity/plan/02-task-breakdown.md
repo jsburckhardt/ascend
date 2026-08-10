@@ -68,7 +68,7 @@ Before starting code-server or Chromium, resolve all six fixed-list executables 
 - Generated direct/integrated raw JSON showing separate streams and canonical cwd.
 - Process audit proving timed-out fake children absent and unrelated control process alive.
 
-## Task T-3: Extend the single BL-001 Chromium episode
+## Task T-3: Extend the passing BL-001 Chromium scenario
 
 - **Status:** Complete
 - **Complexity:** High
@@ -95,7 +95,7 @@ The `finally` path must first cancel/terminate unfinished tracked command childr
 - Episode contains the complete AC-9 host, command, timeout, output, version, cleanup, and disposition fields. (AC-9)
 
 ### Test Coverage
-- Run the extended real designated-host Chromium episode through the paved command.
+- Run the passing real designated-host Chromium parity scenario through the paved command.
 - Assert one terminal creation action and one completion marker.
 - Assert all parity comparisons, evidence schema fields, existing Explorer/Markdown observations, fixture integrity, and injection-sentinel absence.
 - Assert explicit browser-context close and post-cleanup process/listener/command absence in `finally`.
@@ -153,7 +153,7 @@ Every diagnostic must be typed and include only safe command/context/timeout/exi
 - **Related Core-Components:** CORE-COMPONENT-260806-project-command-interface, CORE-COMPONENT-260808-development-standards, CORE-COMPONENT-260808-engineering-harness-delivery-contract, CORE-COMPONENT-260806-rpiv-stage-contract
 
 ### Description
-Add `just proof-terminal-parity` as the exact paved target-host command, delegating to the extended single BL-001 Playwright sensor. Keep the same sensor in `just verify`; do not duplicate command bodies in harness configuration. Update `README.md`, `apps/api/README.md`, `docs/README.md`, `docs/workbench-proof.md`, and `.harness/engineering-harness.md` so discovery surfaces agree on prerequisites, fixed list, `PATH` policy, line-ending-only normalization, 5,000/90,000 ms bounds, diagnostics, raw/episode locations, and cleanup.
+Add `just proof-terminal-parity` as the exact paved target-host command, delegating to the extended BL-001 Playwright sensor. Keep the same sensor in `just verify`; do not duplicate command bodies in harness configuration. Update `README.md`, `apps/api/README.md`, `docs/README.md`, `docs/workbench-proof.md`, and `.harness/engineering-harness.md` so discovery surfaces agree on prerequisites, fixed list, `PATH` policy, line-ending-only normalization, 5,000/90,000 ms bounds, diagnostics, raw/episode locations, and cleanup.
 
 After target-host execution, write `implementation/00-implementation.md` with AC-1 through AC-11 mappings, exact commands/exits, normalized outputs, references to direct/integrated raw artifacts, Ubuntu/runtime hostname/user/shell/tool/code-server observations, cleanup outcome, overall disposition, and documentation evidence. Add a harness-change record only if the canonical gate capability description changes. Do not add or edit architecture artifacts.
 
@@ -175,6 +175,12 @@ After target-host execution, write `implementation/00-implementation.md` with AC
 - Retained `project/work-items/7-bl-002-prove-host-native-terminal-parity/implementation/00-implementation.md`.
 - Updated runbook/discovery files and, only if warranted, one harness-change record.
 - Final episode proving passed disposition and exact cleanup; `just verify` exit 0.
+
+### Verifier documentation correction evidence
+
+- Harness governance and the BL-002 harness-change record now name both real scenarios and governance links the retained BL-002 implementation evidence. (AC-9, AC-10)
+- Root, API, documentation-index, action-plan, task, and test-plan wording distinguishes the forced timeout-cleanup scenario from the passing terminal-parity scenario. (AC-10)
+- `just format-check` and `just verify-focused` passed; `just verify` passed 34 API tests, 1 web test, builds, and all 3 Chromium tests, including both real workbench scenarios. (AC-11)
 
 ## Dependency Order
 

@@ -14,4 +14,4 @@ target: "harness checks via just verify"
 
 # Harness change — extended BL-001 with terminal parity
 
-The canonical just verify gate, and therefore harness checks, now extends the single BL-001 designated-host Chromium episode with one integrated terminal and bounded direct-vs-integrated hostname, user, canonical cwd, fixed-tool, and PATH-resolution parity. It retains exact process/browser/listener cleanup and does not change non-persistent harness boot ownership.
+The canonical `just verify` gate, and therefore `harness checks`, now runs two real BL-001 designated-host Chromium scenarios: one forced integrated-terminal timeout-cleanup scenario and one passing terminal-parity scenario with Explorer, Markdown Preview, and bounded direct-vs-integrated hostname, user, canonical cwd, fixed-tool, and PATH-resolution parity. Both scenarios retain exact terminal-command, process, browser-context, and listener cleanup, without changing non-persistent harness boot ownership.

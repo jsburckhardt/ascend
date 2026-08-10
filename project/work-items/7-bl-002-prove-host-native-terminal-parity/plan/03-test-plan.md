@@ -174,7 +174,7 @@ Finish all implementation, tests, documentation, and retained evidence. Confirm 
 ### Steps
 1. Run `just verify` from repository root.
 2. Observe formatting, lint, strict type checking, unit/integration coverage, builds, and Playwright E2E.
-3. Confirm the canonical gate executes the extended single BL-001 sensor and completes within the harness wrapper.
+3. Confirm the canonical gate executes both real Chromium scenarios in the extended BL-001 sensor and completes within the harness wrapper.
 4. Inspect final cleanup and working-tree artifacts.
 
 ### Expected Result

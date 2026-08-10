@@ -26,6 +26,125 @@ export const START_TIMEOUT_MS = 15_000
 export const STOP_TIMEOUT_MS = 10_000
 export const BROWSER_TIMEOUT_MS = 60_000
 export const FULL_GATE_TIMEOUT_MS = 120_000
+export const TERMINAL_COMMAND_TIMEOUT_MS = 5_000
+export const TERMINAL_EPISODE_TIMEOUT_MS = 90_000
+export const TERMINAL_PARITY_ROOT = path.join(BL001_ROOT, 'terminal-parity')
+export const DIRECT_RAW_EVIDENCE = path.join(
+  TERMINAL_PARITY_ROOT,
+  'direct.raw.json'
+)
+export const INTEGRATED_RAW_EVIDENCE = path.join(
+  TERMINAL_PARITY_ROOT,
+  'integrated.raw.json'
+)
+export const INTEGRATED_COMMAND_IDENTITIES = path.join(
+  TERMINAL_PARITY_ROOT,
+  'integrated-command-identities.json'
+)
+export const TERMINAL_EPISODE_EVIDENCE = path.join(
+  TERMINAL_PARITY_ROOT,
+  'episode.json'
+)
+
+export type TerminalContext = 'direct' | 'integrated'
+
+export interface TerminalCommandSpec {
+  key: string
+  executable: string
+  args: string[]
+  command: string
+}
+
+export const TERMINAL_IDENTITY_COMMANDS: readonly TerminalCommandSpec[] = [
+  { key: 'hostname', executable: 'hostname', args: [], command: 'hostname' },
+  { key: 'user', executable: 'id', args: ['-un'], command: 'id -un' },
+  { key: 'cwd', executable: 'pwd', args: ['-P'], command: 'pwd -P' },
+]
+
+export const TERMINAL_TOOL_COMMANDS: readonly TerminalCommandSpec[] = [
+  {
+    key: 'git-version',
+    executable: 'git',
+    args: ['--version'],
+    command: 'git --version',
+  },
+  {
+    key: 'git-status',
+    executable: 'git',
+    args: ['status', '--short'],
+    command: 'git status --short',
+  },
+  {
+    key: 'gh-version',
+    executable: 'gh',
+    args: ['--version'],
+    command: 'gh --version',
+  },
+  { key: 'tmux-version', executable: 'tmux', args: ['-V'], command: 'tmux -V' },
+  {
+    key: 'docker-version',
+    executable: 'docker',
+    args: ['--version'],
+    command: 'docker --version',
+  },
+  {
+    key: 'copilot-version',
+    executable: 'copilot',
+    args: ['--version'],
+    command: 'copilot --version',
+  },
+]
+
+export const TERMINAL_COMMANDS: readonly TerminalCommandSpec[] = [
+  ...TERMINAL_IDENTITY_COMMANDS,
+  ...TERMINAL_TOOL_COMMANDS,
+]
+
+export const TERMINAL_ENVIRONMENT_ALLOWLIST = ['PATH'] as const
+export type PathClassification =
+  'equal' | 'allowed difference' | 'unexplained failure-causing difference'
+
+export interface ExecutableResolution {
+  executable: string
+  canonicalPath: string | null
+}
+
+export interface TerminalEnvironmentEvidence {
+  variable: 'PATH'
+  direct: string
+  integrated: string
+  classification: PathClassification
+  directResolutions: ExecutableResolution[]
+  integratedResolutions: ExecutableResolution[]
+}
+
+export const normalizeTerminalOutput = (content: string): string =>
+  content.replaceAll('\r\n', '\n').replaceAll('\r', '\n')
+
+export const classifyPathEnvironment = (
+  direct: string,
+  integrated: string,
+  directResolutions: readonly ExecutableResolution[],
+  integratedResolutions: readonly ExecutableResolution[]
+): PathClassification => {
+  if (direct === integrated) return 'equal'
+  const integratedByExecutable = new Map(
+    integratedResolutions.map((entry) => [
+      entry.executable,
+      entry.canonicalPath,
+    ])
+  )
+  const resolutionsEqual =
+    directResolutions.length === integratedResolutions.length &&
+    directResolutions.every(
+      (entry) =>
+        entry.canonicalPath !== null &&
+        integratedByExecutable.get(entry.executable) === entry.canonicalPath
+    )
+  return resolutionsEqual
+    ? 'allowed difference'
+    : 'unexplained failure-causing difference'
+}
 
 export interface FixtureSnapshot {
   paths: string[]

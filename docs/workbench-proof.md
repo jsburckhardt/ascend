@@ -56,7 +56,7 @@ Other explicit lifecycle codes cover unreadable projects, root execution, spawn 
 
 The only disposable boundary is `test-results/bl-001`. Per-run state, logs, user data, and extensions stay below `test-results/bl-001/runs/<runId>` and that exact run directory is removed by stop or startup-failure cleanup. `test-results/bl-001/injection-sentinel` must remain absent. The tracked fixture is never removed or modified.
 
-The Chromium proof writes `test-results/bl-001/episode.json` with host facts, handle, readiness exits, process identities, NUL-delimited argv represented as arrays, loopback listeners, fixture hashes, browser observations, and cleanup results. Playwright traces and screenshots are failure-only artifacts. Generated evidence is ignored; the safe retained AC mapping is the issue implementation record.
+The passing Chromium parity proof writes `test-results/bl-001/terminal-parity/episode.json` with host facts, handle, readiness exits, process identities, NUL-delimited argv represented as arrays, loopback listeners, fixture hashes, browser observations, and cleanup results. Playwright traces and screenshots are failure-only artifacts. Generated evidence is ignored; the safe retained AC mapping is the issue implementation record.
 
 If a prior run directory exists, do not delete its state until its exact handle is proven absent. Never kill by process name and never sweep unrelated listeners; the host may run unrelated VS Code Remote processes.
 
@@ -68,7 +68,7 @@ just test-e2e
 just verify
 ```
 
-The configured full gate runs exactly five fake startup failures and one real code-server Chromium lifecycle, alongside existing checks. Its BL-001 full-gate target is 120 seconds. During native Markdown Preview initialization, VS Code may replace its webview frame; the proof retries only that detached-frame transition within the existing 15-second exact rendered-text poll, while all other browser errors still fail. Every browser path places exact-handle stop in `finally`, repeats stop for idempotence, and audits PID, listener, fixture, injection sentinel, and disposable state.
+The configured full gate runs exactly five fake startup failures and two real code-server Chromium lifecycle scenarios: one forced overall-timeout cleanup and one passing parity episode, alongside existing checks. Its BL-001 full-gate target is 120 seconds. During native Markdown Preview initialization, VS Code may replace its webview frame; the proof retries only that detached-frame transition within the existing 15-second exact rendered-text poll, while all other browser errors still fail. After either Chromium scenario starts a workbench, the shared episode coordinator performs cleanup in `finally`; the passing scenario repeats exact-handle stop for idempotence and audits PID, listener, fixture, injection sentinel, and disposable state.
 
 ## Troubleshooting
 
@@ -76,3 +76,50 @@ The configured full gate runs exactly five fake startup failures and one real co
 - `root-user-forbidden`: run as `vscode`, not through privilege elevation.
 - `readiness-timeout`: inspect the structured condition and rerun only after confirming no exact handle is live.
 - Browser sentinel failure: retain Playwright failure artifacts; cleanup still runs against the emitted handle.
+
+## Terminal parity episode
+
+The designated-host paved command is:
+
+```text
+just proof-terminal-parity
+```
+
+It reuses the one BL-001 launcher, canonical metacharacter fixture, explicit Chromium context, and exact-handle cleanup. The episode is bounded to **90,000 ms** overall. It preflights the six fixed executables before workbench or browser startup, captures direct results, opens exactly one integrated terminal, and captures integrated results from the same canonical fixture directory. Every command is bounded to **5,000 ms**.
+
+The fixed tool command list is exactly:
+
+1. `git --version`
+2. `git status --short`
+3. `gh --version`
+4. `tmux -V`
+5. `docker --version`
+6. `copilot --version`
+
+The proof also compares `hostname` and `id -un` in both contexts (both users must be `vscode`), and requires integrated `pwd -P` to equal the canonical launch path. Direct and integrated commands use executable/argument arrays; the fixture path is never shell-interpolated.
+
+### Normalization and environment policy
+
+One content-preserving normalization is applied identically to stdout and stderr in both contexts: CRLF and lone CR become LF. It does not trim, sort, merge streams, strip control bytes, rewrite URLs/versions, or otherwise change content. Both untouched raw records remain referenced by the episode.
+
+Only `PATH` is retained and compared. Its result is `equal`; `allowed difference` when the text differs but all five unique fixed executables resolve to identical canonical paths; or `unexplained failure-causing difference`, which fails the command. No non-allowlisted environment values are retained.
+
+### Terminal diagnostics and evidence
+
+A missing fixed executable fails before browser/workbench startup as `terminal-executable-missing` and names the executable. Existing commands that return nonzero fail as `terminal-command-nonzero` and name the command, direct/integrated context, and exit result. Per-command timeouts fail as `terminal-command-timeout` and name command, context, and timeout. The overall deadline reports `terminal-episode-timeout`. Atomic evidence write failures report `terminal-artifact-write`.
+
+Current-run generated evidence is ignored by Git and written to:
+
+- `test-results/bl-001/terminal-parity/direct.raw.json`
+- `test-results/bl-001/terminal-parity/integrated.raw.json`
+- `test-results/bl-001/terminal-parity/episode.json`
+
+Each raw command row records cwd, argv, 5,000 ms bound, exit result, separate raw and normalized streams, PID/start identity, and absence after completion. The episode maps host facts, code-server/tool observations, comparisons, raw references, cleanup, and disposition. Raw terminal output remains in these proof artifacts and is not written to lifecycle logs.
+
+### Cleanup
+
+Every path that starts owned resources uses the shared episode coordinator to attempt, in order, exact tracked-command-group cancellation, explicit browser-context close, exact BL-001 process-group stop, and separate command-identity, workbench-PID, and listener absence audits. The real timeout scenario publishes the in-progress integrated command PID/start identity, reaches the overall deadline, cancels that exact group, and asserts all four absence results. Cleanup never uses process-name killing or listener sweeps, and cleanup failures remain failure-shaped. A missing-executable preflight creates no handle or browser context.
+
+### Observed designated-host result
+
+On Ubuntu 24.04.4 LTS host `03f809395a5d` as `vscode` with shell `/bin/zsh` and code-server 4.131.0, `just proof-terminal-parity` passed. Hostname/user/canonical cwd and all six command exits/stdout/stderr matched. The differing `PATH` was classified `allowed difference` because Git, GitHub CLI, tmux, Docker CLI, and Copilot CLI resolved identically. Browser context, terminal commands, exact workbench PID, and listener were absent after cleanup.

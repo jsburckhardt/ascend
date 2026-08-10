@@ -31,6 +31,9 @@ proof-start:
 proof-stop:
     pnpm --filter @ascend/api exec tsx src/cli/proof-stop.ts
 
+proof-terminal-parity:
+    pnpm exec playwright test tests/e2e/workbench-proof.spec.ts --project=chromium
+
 verify-focused *args:
     pnpm exec vitest run {{args}}
 

@@ -13,7 +13,7 @@ development servers running.
 ## Checks command
 
 `harness checks` wraps the root `just verify` recipe and gates formatting, linting,
-typechecking, unit tests, builds, and Playwright E2E tests. On the designated host, the gate includes bounded BL-001 lifecycle and terminal-parity failures plus two real code-server Chromium scenarios: forced integrated-terminal timeout cleanup and passing terminal parity, each with exact-handle, terminal-command, browser-context, and listener cleanup.
+typechecking, unit tests, builds, and Playwright E2E tests. On the designated host, the gate includes bounded BL-001 lifecycle and terminal-parity failures plus two real code-server Chromium scenarios: forced integrated-terminal timeout cleanup and passing terminal parity, each with exact-handle, terminal-command, browser-context, and listener cleanup. The gate ends with the bounded BL-004 retained-evidence, exact-resource, active-guard, and BL-001 fixture-integrity audit; it does not rerun the 1/3/5/10 episode.
 
 ## Health check
 
@@ -40,7 +40,9 @@ artifacts under each application package.
 - `harness boot --json`: aggregate test-backed readiness verdict
 - `just verify-focused <path>`: focused Vitest feedback during implementation
 - `just proof-terminal-parity`: 90-second designated-host direct-vs-integrated terminal sensor
-- just proof-workbench-presentation: six-attempt designated-host BL-003 presentation comparison and conditional ADR materialization
+- `just proof-workbench-presentation`: six-attempt designated-host BL-003 presentation comparison and conditional ADR materialization
+- `just proof-workbench-capacity`: one bounded designated-host 1/3/5/10 diagnostic episode
+- `just proof-workbench-capacity-audit`: short retained-evidence, exact-resource, active-guard, and fixture audit
 - API root test: in-process health interaction and JSON consequence
 - Project-home Playwright test: browser interaction and visible UI consequence
 - BL-001/BL-002 host-process sensor: two real loopback code-server Chromium scenarios—forced integrated-terminal timeout cleanup and passing Explorer, Markdown Preview, and direct-vs-integrated terminal parity—with zero-leak cleanup audits
@@ -55,6 +57,7 @@ artifacts under each application package.
 - BL-002 retained AC evidence: `project/work-items/7-bl-002-prove-host-native-terminal-parity/implementation/00-implementation.md`
 - BL-003 retained comparison and browser events: project/work-items/9-bl-003-select-a-viable-browser-workbench-presentation/implementation/evidence/
 - BL-003 retained terminal artifacts: `test-results/bl-003/raw/` (twelve comparison-referenced JSON files)
+- BL-004 retained run: `project/work-items/11-bl-004-establish-the-workbench-capacity-baseline/implementation/evidence/e7757a3f-54ec-4ea7-9399-713e91f49719/`
 - Harnessability reports: `.harness/reports/harnessability/`
 - Harness retrospectives: `.harness/records/retro/`
 

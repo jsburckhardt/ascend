@@ -193,3 +193,156 @@ export const auditHandleAbsent = async (
   const audit = await auditHandleCleanup(handle)
   return audit.exactProcessAbsent && audit.listenerAbsent
 }
+
+export interface CapacityProcessRow {
+  pid: number
+  ppid: number
+  startTimeTicks: string
+  cpuTicks: number
+  rssKiB: number
+}
+export type CapacityProcessInspection =
+  | { ok: true; rootPid: number; rows: CapacityProcessRow[] }
+  | { ok: false; rootPid: number; reason: string }
+
+const readCapacityProcessRow = async (
+  pid: number
+): Promise<CapacityProcessRow> => {
+  const base = path.join('/proc', String(pid))
+  const [stat, status] = await Promise.all([
+    readFile(path.join(base, 'stat'), 'utf8'),
+    readFile(path.join(base, 'status'), 'utf8'),
+  ])
+  const fields = stat.slice(stat.lastIndexOf(')') + 2).split(' ')
+  const rss = status.match(/^VmRSS:\s+([0-9]+)\s+kB$/mu)
+  if (!rss) throw new Error('rss-unavailable')
+  const row = {
+    pid,
+    ppid: Number(fields[1]),
+    startTimeTicks: fields[19],
+    cpuTicks: Number(fields[11]) + Number(fields[12]),
+    rssKiB: Number(rss[1]),
+  }
+  if (
+    !Number.isSafeInteger(row.ppid) ||
+    !row.startTimeTicks ||
+    !Number.isFinite(row.cpuTicks) ||
+    !Number.isFinite(row.rssKiB)
+  )
+    throw new Error('process-fields-invalid')
+  return row
+}
+
+export const inspectCapacityProcessTree = async (
+  rootPid: number
+): Promise<CapacityProcessInspection> => {
+  try {
+    const pids = await listProcPids()
+    const rows: CapacityProcessRow[] = []
+    for (const pid of pids) {
+      try {
+        rows.push(await readCapacityProcessRow(pid))
+      } catch (error) {
+        if (pid === rootPid) throw error
+      }
+    }
+    if (!rows.some(({ pid }) => pid === rootPid))
+      return { ok: false, rootPid, reason: 'root-process-absent' }
+    const managed = new Set<number>([rootPid])
+    let changed = true
+    while (changed) {
+      changed = false
+      for (const row of rows)
+        if (managed.has(row.ppid) && !managed.has(row.pid)) {
+          managed.add(row.pid)
+          changed = true
+        }
+    }
+    const attributed = rows
+      .filter(({ pid }) => managed.has(pid))
+      .sort((left, right) => left.pid - right.pid)
+    for (const row of attributed) {
+      try {
+        const current = await readCapacityProcessRow(row.pid)
+        if (current.startTimeTicks !== row.startTimeTicks)
+          return {
+            ok: false,
+            rootPid,
+            reason: 'process-identity-raced:' + row.pid,
+          }
+      } catch {
+        return {
+          ok: false,
+          rootPid,
+          reason: 'process-inspection-failed:' + row.pid,
+        }
+      }
+    }
+    return { ok: true, rootPid, rows: attributed }
+  } catch (error) {
+    return {
+      ok: false,
+      rootPid,
+      reason:
+        error instanceof Error ? error.message : 'process-inspection-failed',
+    }
+  }
+}
+
+export const processIdentityAbsent = async (identity: {
+  pid: number
+  startTimeTicks: string
+}): Promise<boolean> => {
+  try {
+    return (
+      (await readCapacityProcessRow(identity.pid)).startTimeTicks !==
+      identity.startTimeTicks
+    )
+  } catch {
+    return true
+  }
+}
+
+export const listenerIdentityAbsent = async (
+  identity: ManagedListenerRow
+): Promise<boolean> => {
+  const sameSocket = (await readProcListeners()).some(
+    ({ inode, port, address }) =>
+      inode === identity.inode &&
+      port === identity.port &&
+      address === identity.address
+  )
+  if (!sameSocket) return true
+  try {
+    for (const descriptor of await readdir(
+      path.join('/proc', String(identity.pid), 'fd')
+    )) {
+      try {
+        if (
+          (await readlink(
+            path.join('/proc', String(identity.pid), 'fd', descriptor)
+          )) ===
+          'socket:[' + identity.inode + ']'
+        )
+          return false
+      } catch {
+        /* descriptor raced */
+      }
+    }
+  } catch {
+    return true
+  }
+  return true
+}
+
+export const auditAttributedResources = async (
+  processes: readonly { pid: number; startTimeTicks: string }[],
+  listeners: readonly ManagedListenerRow[]
+): Promise<{ processIdentitiesAbsent: boolean; listenersAbsent: boolean }> => ({
+  processIdentitiesAbsent: (
+    await Promise.all(processes.map(processIdentityAbsent))
+  ).every(Boolean),
+  listenersAbsent: (
+    await Promise.all(listeners.map(listenerIdentityAbsent))
+  ).every(Boolean),
+})

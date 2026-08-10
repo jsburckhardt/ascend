@@ -29,6 +29,8 @@ just run
 just verify-focused apps/web/src/App.test.tsx
 just proof-start
 just proof-stop
+just proof-workbench-capacity
+just proof-workbench-capacity-audit
 just verify
 ```
 
@@ -67,3 +69,10 @@ The exact tool list is `git --version`, `git status --short`, `gh --version`, `t
 ## Browser Workbench Presentation Decision
 
 Run just proof-workbench-presentation on the designated Ubuntu 24.04 devcontainer to execute the BL-003 comparison. It runs exactly three fresh, no-retry 1440 by 900 Chromium attempts for each of two proof-only candidates: embedded code-server and top-level full-page code-server with a minimal Ascend header. The retained comparison selected full-page at the first ordered tie-breaker, with 0 blocking browser protocol violations versus 3 for embedded; both candidates were otherwise eligible. See docs/workbench-proof.md and ADR-260810-full-page-browser-workbench-presentation. This desktop Chromium result is authoritative; tablet validation is separate and non-authoritative. Project Home, routing, runtime, lifecycle, and tablet integration are not implemented by this proof.
+
+
+## Workbench Capacity Baseline
+
+`just proof-workbench-capacity` runs the designated-host BL-004 diagnostic once over fixed cohorts 1, 3, 5, and 10. It retains raw JSON plus a concise comparison under the Issue #11 implementation evidence directory. The three-member cohort is the only MVP gate; five and ten are findings. `just proof-workbench-capacity-audit` performs the short resource, evidence, and BL-001 fixture audit that also ends `just verify` without repeating the expensive episode.
+
+The retained run `e7757a3f-54ec-4ea7-9399-713e91f49719` passed: all 19 requested members became ready, all workloads passed, all scheduled host positions were retained, cleanup and fixture integrity passed, and the independent three-member gate passed. This is a diagnostic baseline, not runtime scheduling, quota, sleep, multi-host, BL-010, or BL-013 functionality. See [the workbench proof runbook](docs/workbench-proof.md) for exact prerequisites, bounds, sampling, evidence, results, and interpretation.

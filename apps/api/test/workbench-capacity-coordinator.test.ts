@@ -542,6 +542,62 @@ describe('capacity cohort coordinator', () => {
     })
   })
 
+  it('cleans and audits a member when the deadline lands after start returns', async () => {
+    const controlled = dependencies()
+    const controller = new AbortController()
+    const start = controlled.deps.start!
+    const audited: number[][] = []
+    controlled.deps.signal = controller.signal
+    controlled.deps.timedOut = () => controller.signal.aborted
+    controlled.deps.start = async (slot, cohort, signal) => {
+      const member = await start(slot, cohort, signal)
+      controller.abort(new Error('overall-timeout'))
+      return member
+    }
+    controlled.deps.audit = async (processes) => {
+      audited.push(processes.map(({ pid }) => pid))
+      return { processIdentitiesAbsent: true, listenersAbsent: true }
+    }
+
+    const result = await coordinateCapacityRun(runId, controlled.deps)
+
+    expect(result.cohorts[0].slots[0]).toMatchObject({
+      state: 'failed',
+      pid: 101,
+      reason: 'overall-timeout-during-member-start',
+    })
+    expect(controlled.calls).toContain('stop:101')
+    expect(audited.some((pids) => pids.includes(101))).toBe(true)
+    expect(result.exitReasons).toContain('overall-timeout')
+  })
+
+  it('retains listener attribution failure discovered during cleanup', async () => {
+    const controlled = dependencies()
+    const listeners = controlled.deps.listeners!
+    let listenerCalls = 0
+    controlled.deps.listeners = async (pids) => {
+      listenerCalls += 1
+      if (listenerCalls === 2)
+        throw new Error('controlled-post-start-listener-failure')
+      return listeners(pids)
+    }
+
+    const result = await coordinateCapacityRun(runId, controlled.deps)
+    const first = result.cohorts[0]
+
+    expect(first.slots[0]).toMatchObject({
+      state: 'failed',
+      readinessAchieved: true,
+      reason:
+        'listener-attribution-failed:controlled-post-start-listener-failure',
+    })
+    expect(first.cleanup.details.join(' ')).toContain(
+      'post-start-listener-attribution:1:controlled-post-start-listener-failure'
+    )
+    expect(first.cleanup.passed).toBe(false)
+    expect(result.exitReasons).toContain('cleanup-failed:1')
+  })
+
   it('cooperatively cancels an in-flight start and retains its discovered identity', async () => {
     const controlled = dependencies()
     const controller = new AbortController()

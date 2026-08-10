@@ -359,6 +359,56 @@ describe('capacity evidence retention', () => {
     ).not.toThrow()
   })
 
+  it('renders retained resources and failed finalization evidence', () => {
+    const value = evidence()
+    const cohort = value.run.cohorts[0]
+    cohort.preProbe = {
+      ...probe,
+      passed: false,
+      exitCode: 1,
+      reason: 'controlled-probe-failure',
+    }
+    cohort.cleanup.passed = false
+    cohort.integrity.passed = false
+    const retained = value.samples.samples.find(
+      ({ cohort: requested, window, position }) =>
+        requested === 1 && window === 'idle' && position === 0
+    )!
+    retained.actualMonotonicMs = 0
+    retained.absentReason = null
+    retained.host = {
+      timestamp: value.run.startedAt,
+      monotonicMs: 0,
+      loadAverage: [1, 2, 3],
+      availableMemoryKiB: 100,
+      usedMemoryKiB: 200,
+      responsiveness: probe,
+    }
+    retained.processTrees = [
+      {
+        slot: 1,
+        absentReason: null,
+        sample: {
+          timestamp: value.run.startedAt,
+          monotonicMs: 0,
+          rootPid: 123,
+          cpuPercent: 4,
+          rssKiB: 500,
+          memberPids: [123],
+        },
+      },
+    ]
+
+    const comparison = renderCapacityComparison(
+      value.run,
+      value.samples,
+      value.workloads
+    )
+
+    expect(comparison).toContain('1.00/1.00 | 100 | 4.00/4.00 | 500.00/500.00')
+    expect(comparison).toContain('failed | failed / failed')
+  })
+
   it('reproduces immutable legacy comparison rows while new runs split completeness', () => {
     const current = evidence()
     expect(

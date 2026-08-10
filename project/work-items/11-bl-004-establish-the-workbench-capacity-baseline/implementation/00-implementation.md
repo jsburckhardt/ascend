@@ -2,7 +2,7 @@
 
 ## Scope
 
-This correction resolves the defects returned against commit 29707d3 while remaining inside the accepted direct-host diagnostic architecture. It does not add product scheduling, quotas, sleep policy, multi-host behavior, BL-010 or BL-013 outcomes, or change the browser presentation decision.
+This correction resolves the defects returned against commit 29707d3 and the later AC-21 branch-coverage return while remaining inside the accepted direct-host diagnostic architecture. The coverage follow-up adds only meaningful deadline-after-start cleanup, post-start listener-attribution failure, and failed evidence-rendering controls; it does not weaken thresholds, exclude files, or change runtime behavior. It does not add product scheduling, quotas, sleep policy, multi-host behavior, BL-010 or BL-013 outcomes, or change the browser presentation decision.
 
 ## Completed Tasks
 
@@ -11,7 +11,7 @@ This correction resolves the defects returned against commit 29707d3 while remai
 - T-3: propagated cancellation through probe, scheduled sleeps, workload spawn/run/finish, and exact workload cleanup.
 - T-4: cleaned and audited all started/discovered members, retained cleanup failures, and added a run-wide final audit.
 - T-5: retained honest timeout/partial evidence and split host/tree comparison completeness with missing reasons.
-- T-6: added controlled spawn, early exit, attribution, stop/audit, cancellation, guard-lifetime, partial-evidence, and no-background-work tests.
+- T-6: added controlled spawn, early exit, attribution, stop/audit, cancellation, guard-lifetime, partial-evidence, no-background-work, deadline-after-start cleanup, post-start listener-attribution failure, and failed evidence-rendering tests.
 - T-7: retained fresh designated run 853037e6-5dab-43cf-bcf8-61f1e8bbdb18.
 - T-8: aligned README, runbook, harness inventory, task claims, consistency tests, and the final bounded audit.
 
@@ -34,10 +34,10 @@ This correction resolves the defects returned against commit 29707d3 while remai
 - **AC-15:** Timeout, incomplete cohort, cleanup/integrity/final-audit failure, gate failure, and evidence failure remain independently nonzero; timeout evidence retains overall-timeout and partialEvidenceRetained.
 - **AC-16:** Spawn/early-exit, start inspection, listener attribution, scheduled inspection, stop, identity cleanup, and audit controls preserve prior evidence and produce failed states, findings, or cleanup details.
 - **AC-17:** Exclusive ownership remains before starts; the deadline guard-lifetime test proves release occurs only after stopped coordination and evidence retention. Final audit reports the guard absent across three immutable runs.
-- **AC-18:** The focused suite covers the named positive/negative matrix, including cooperative cancellation during start/sample/workload, strict in-flight cleanup, guard held through completion, honest partial evidence, and no delayed background mutation after return.
+- **AC-18:** The focused suite covers the named positive/negative matrix, including cooperative cancellation during and immediately after start, sample/workload cancellation, post-start listener-attribution failure, strict in-flight cleanup, guard held through completion, honest partial evidence, failed comparison evidence, and no delayed background mutation after return.
 - **AC-19:** The fresh paved run completed all four cohorts in about 73 seconds: 19/19 ready, 19/19 workloads passed, host counts 10/0 each, tree counts 10/0, 30/0, 50/0, and 100/0, no missing reasons/findings, passing gate/disposition, and passing post-run audit.
 - **AC-20:** README.md, docs/workbench-proof.md, and .harness/engineering-harness.md document cooperative cancellation, guard lifetime, failed identity retention, all-identity cleanup, failure semantics, split completeness counts, fresh run identity/results, and diagnostic-only exclusions.
-- **AC-21:** The canonical full gate passes formatting, lint, strict type checks, 145 API tests at 80.03% branch coverage, web tests, builds, three passing/one skipped Playwright scenarios, and a final audit with no guard/resource/fixture failure.
+- **AC-21:** The first post-return canonical full gate passes formatting, lint, strict type checks, 148 API tests with 931/1,157 API branches covered (80.46672428694902%; Vitest display 80.46%), web tests at 100% coverage, builds, three passing/one skipped Playwright scenarios, and a final audit with three retained runs, no active guard, no attributed resource, and unchanged fixture integrity.
 
 ## Fresh Designated Baseline
 
@@ -52,20 +52,17 @@ The retained run reports no missing reasons or findings and finalCleanup complet
 
 ## Validation Evidence
 
-- Focused: just verify-focused over the eight capacity files plus the runtime lifecycle file passed 60 tests.
+- Focused: just verify-focused for the coordinator and evidence test files passed 26 tests in two files after the coverage controls were added and again after formatting correction.
 - Designated: just proof-workbench-capacity retained run 853037e6-5dab-43cf-bcf8-61f1e8bbdb18 with passing gate and disposition.
 - Audit: just proof-workbench-capacity-audit passed with retainedRuns 3, activeGuardAbsent true, attributedResourcesAbsent true, and fixtureIntegrityUnchanged true.
-- Full: just verify passed all configured stages and ended with the passing BL-004 audit.
+- Full: the first post-return just verify passed all configured stages with 148 API tests, 931/1,157 API branches covered (80.46672428694902%; Vitest display 80.46%), three passing/one skipped Playwright scenarios, and the passing BL-004 audit. A repeat full run is part of the final handoff evidence.
 
 ## Documentation Evidence
 
 - README.md: user-facing cancellation, guard, cleanup, comparison, audit, and observed baseline behavior.
 - docs/workbench-proof.md: operational prerequisites, cancellation/deadline procedure, sampling/workload rules, partial evidence, all-identity cleanup, failure semantics, and fresh results.
 - .harness/engineering-harness.md: governed checks/evidence inventory points to the fresh run and all-identity final audit.
-- Task breakdown: Complete claims now explicitly include the returned correction and controlled matrix.
-- API references/specifications: no impact; no HTTP API contract changed.
-- Configuration and migration guides: no impact; no product option, default, data format, or migration changed.
-- Architecture documentation: no contract change; implementation stays inside the cited ADR and core-component boundaries.
-- Deployment instructions: no impact. The affected operational procedure is the workbench proof runbook above.
+- Task breakdown: no status change; all dependency-ordered tasks remain Complete and the implementation note records the additional AC-21 controls.
+- README, API references/specifications, configuration, usage, migration, architecture, and operational documentation: no follow-up impact; these are test-only additions for already documented cancellation, cleanup, and evidence behavior, with no setup, contract, default, workflow, runtime procedure, or user-facing capability change.
 
 Implementation evidence is recorded for Verify. Final acceptance remains owned by Verify.

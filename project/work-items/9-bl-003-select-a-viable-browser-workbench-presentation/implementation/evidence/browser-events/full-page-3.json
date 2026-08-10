@@ -1,0 +1,2068 @@
+{
+  "version": 1,
+  "candidate": "full-page",
+  "attempt": 3,
+  "runId": "e44822cd-a5b5-4f65-8c9c-fa16cdd93936",
+  "events": [
+    {
+      "sequence": 1,
+      "monotonicMs": 64713,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/",
+      "detail": "document",
+      "status": 302,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 2,
+      "monotonicMs": 64773,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/?folder=/workspaces/ascend/tests/fixtures/bl-001/workbench%20project%3BBL-001",
+      "detail": "document",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 3,
+      "monotonicMs": 64813,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/static/out/vs/code/browser/workbench/workbench.css",
+      "detail": "stylesheet",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 4,
+      "monotonicMs": 64839,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/static/out/nls.messages.js",
+      "detail": "script",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 5,
+      "monotonicMs": 65910,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/static/out/vs/code/browser/workbench/workbench.js",
+      "detail": "script",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 6,
+      "monotonicMs": 66762,
+      "kind": "websocket-open",
+      "url": "ws://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688?reconnectionToken=%5Bredacted%5D&reconnection=false&skipWebSocketFrames=false",
+      "detail": "opened",
+      "status": null,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 7,
+      "monotonicMs": 66782,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/static/node_modules/vsda/rust/web/vsda_bg.wasm",
+      "detail": "fetch",
+      "status": 404,
+      "blocking": false,
+      "nonBlockingWarning": true
+    },
+    {
+      "sequence": 8,
+      "monotonicMs": 66782,
+      "kind": "console",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/static/node_modules/vsda/rust/web/vsda_bg.wasm",
+      "detail": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "status": null,
+      "blocking": false,
+      "nonBlockingWarning": true
+    },
+    {
+      "sequence": 9,
+      "monotonicMs": 66783,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/static/node_modules/vsda/rust/web/vsda.js",
+      "detail": "script",
+      "status": 404,
+      "blocking": false,
+      "nonBlockingWarning": true
+    },
+    {
+      "sequence": 10,
+      "monotonicMs": 66783,
+      "kind": "console",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/static/node_modules/vsda/rust/web/vsda.js",
+      "detail": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+      "status": null,
+      "blocking": false,
+      "nonBlockingWarning": true
+    },
+    {
+      "sequence": 11,
+      "monotonicMs": 66783,
+      "kind": "request-failed",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/static/node_modules/vsda/rust/web/vsda.js",
+      "detail": "net::ERR_ABORTED",
+      "status": null,
+      "blocking": false,
+      "nonBlockingWarning": true
+    },
+    {
+      "sequence": 12,
+      "monotonicMs": 67340,
+      "kind": "console",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/static/out/vs/code/browser/workbench/workbench.js",
+      "detail": "The web worker extension host is started in a same-origin iframe!",
+      "status": null,
+      "blocking": false,
+      "nonBlockingWarning": true
+    },
+    {
+      "sequence": 13,
+      "monotonicMs": 67348,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/static/out/vs/workbench/services/extensions/worker/webWorkerExtensionHostIframe.html?&vscodeWebWorkerExtHostId=3c87dbc7-b1ad-4d34-9d45-f6a359a0ea65",
+      "detail": "document",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 14,
+      "monotonicMs": 67357,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/static/out/media/letterpress-light.svg",
+      "detail": "image",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 15,
+      "monotonicMs": 67379,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/static/out/vs/workbench/services/keybinding/browser/keyboardLayouts/layout.contribution.win.js",
+      "detail": "script",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 16,
+      "monotonicMs": 67421,
+      "kind": "websocket-open",
+      "url": "ws://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688?reconnectionToken=%5Bredacted%5D&reconnection=false&skipWebSocketFrames=false",
+      "detail": "opened",
+      "status": null,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 17,
+      "monotonicMs": 67421,
+      "kind": "console",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/static/out/vs/workbench/services/extensions/worker/webWorkerExtensionHostIframe.html?&vscodeWebWorkerExtHostId=3c87dbc7-b1ad-4d34-9d45-f6a359a0ea65",
+      "detail": "An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing.",
+      "status": null,
+      "blocking": false,
+      "nonBlockingWarning": true
+    },
+    {
+      "sequence": 18,
+      "monotonicMs": 67639,
+      "kind": "response",
+      "url": "blob:http://127.0.0.1:45939/02390efe-ca70-4334-9d31-251b869451e2",
+      "detail": "script",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 19,
+      "monotonicMs": 67647,
+      "kind": "response",
+      "url": "blob:http://127.0.0.1:45939/8481fb57-4870-4650-b627-da18f19122f3",
+      "detail": "script",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 20,
+      "monotonicMs": 67788,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/static/out/media/codicon.ttf",
+      "detail": "font",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 21,
+      "monotonicMs": 67883,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/static/out/vs/editor/common/services/editorWebWorkerMain.js",
+      "detail": "script",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 22,
+      "monotonicMs": 68153,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/static/out/vs/workbench/api/worker/extensionHostWorkerMain.js",
+      "detail": "script",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 23,
+      "monotonicMs": 69187,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/static/node_modules/vscode-oniguruma/release/main.js",
+      "detail": "script",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 24,
+      "monotonicMs": 69187,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/static/node_modules/vscode-textmate/release/main.js",
+      "detail": "script",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 25,
+      "monotonicMs": 69187,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/static/node_modules/vscode-oniguruma/release/onig.wasm",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 26,
+      "monotonicMs": 69193,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fmarkdown-basics%2Flanguage-configuration.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 27,
+      "monotonicMs": 69193,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Ftheme-defaults%2Fthemes%2F2026-light.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 28,
+      "monotonicMs": 69193,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Ftheme-seti%2Ficons%2Fvs-seti-icon-theme.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 29,
+      "monotonicMs": 69351,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fjson%2Flanguage-configuration.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 30,
+      "monotonicMs": 69424,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Ftheme-seti%2Ficons%2Fseti.woff&tkn=",
+      "detail": "font",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 31,
+      "monotonicMs": 69461,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Ftheme-defaults%2Fthemes%2Flight_modern.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 32,
+      "monotonicMs": 69498,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fjson%2Fsyntaxes%2FJSON.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 33,
+      "monotonicMs": 69498,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fmarkdown-basics%2Fsyntaxes%2Fmarkdown.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 34,
+      "monotonicMs": 69535,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Ftheme-defaults%2Fthemes%2Flight_plus.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 35,
+      "monotonicMs": 69536,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fyaml%2Fsyntaxes%2Fyaml.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 36,
+      "monotonicMs": 69538,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fhtml%2Fsyntaxes%2Fhtml-derivative.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 37,
+      "monotonicMs": 69550,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fcss%2Fsyntaxes%2Fcss.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 38,
+      "monotonicMs": 69551,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fini%2Fsyntaxes%2Fini.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 39,
+      "monotonicMs": 69552,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fhtml%2Fsyntaxes%2Fhtml.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 40,
+      "monotonicMs": 69585,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fjava%2Fsyntaxes%2Fjava.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 41,
+      "monotonicMs": 69587,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Flua%2Fsyntaxes%2Flua.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 42,
+      "monotonicMs": 69587,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fmake%2Fsyntaxes%2Fmake.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 43,
+      "monotonicMs": 69588,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fperl%2Fsyntaxes%2Fperl.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 44,
+      "monotonicMs": 69588,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fruby%2Fsyntaxes%2Fruby.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 45,
+      "monotonicMs": 69588,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fr%2Fsyntaxes%2Fr.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 46,
+      "monotonicMs": 69655,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fvb%2Fsyntaxes%2Fasp-vb-net.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 47,
+      "monotonicMs": 69655,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fsql%2Fsyntaxes%2Fsql.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 48,
+      "monotonicMs": 69655,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fxml%2Fsyntaxes%2Fxml.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 49,
+      "monotonicMs": 69659,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fxml%2Fsyntaxes%2Fxsl.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 50,
+      "monotonicMs": 69659,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fbat%2Fsyntaxes%2Fbatchfile.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 51,
+      "monotonicMs": 69659,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fphp%2Fsyntaxes%2Fphp.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 52,
+      "monotonicMs": 69659,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fclojure%2Fsyntaxes%2Fclojure.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 53,
+      "monotonicMs": 69659,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fcoffeescript%2Fsyntaxes%2Fcoffeescript.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 54,
+      "monotonicMs": 69662,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fdiff%2Fsyntaxes%2Fdiff.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 55,
+      "monotonicMs": 69663,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fdocker%2Fsyntaxes%2Fdocker.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 56,
+      "monotonicMs": 69663,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fcpp%2Fsyntaxes%2Fc.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 57,
+      "monotonicMs": 69663,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fcpp%2Fsyntaxes%2Fcpp.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 58,
+      "monotonicMs": 69668,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fgit-base%2Fsyntaxes%2Fgit-commit.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 59,
+      "monotonicMs": 69673,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fgit-base%2Fsyntaxes%2Fgit-rebase.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 60,
+      "monotonicMs": 69674,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fgo%2Fsyntaxes%2Fgo.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 61,
+      "monotonicMs": 69677,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fgroovy%2Fsyntaxes%2Fgroovy.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 62,
+      "monotonicMs": 69677,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fpug%2Fsyntaxes%2Fpug.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 63,
+      "monotonicMs": 69677,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fgit-base%2Fsyntaxes%2Fignore.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 64,
+      "monotonicMs": 69709,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fjavascript%2Fsyntaxes%2FRegular%20Expressions%20(JavaScript).tmLanguage&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 65,
+      "monotonicMs": 69709,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fjson%2Fsyntaxes%2FJSONC.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 66,
+      "monotonicMs": 69720,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fjson%2Fsyntaxes%2FJSONL.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 67,
+      "monotonicMs": 69721,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fjavascript%2Fsyntaxes%2FJavaScript.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 68,
+      "monotonicMs": 69721,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fobjective-c%2Fsyntaxes%2Fobjective-c.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 69,
+      "monotonicMs": 69722,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fless%2Fsyntaxes%2Fless.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 70,
+      "monotonicMs": 69738,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fscss%2Fsyntaxes%2Fscss.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 71,
+      "monotonicMs": 69738,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fpowershell%2Fsyntaxes%2Fpowershell.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 72,
+      "monotonicMs": 69738,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fperl%2Fsyntaxes%2Fperl6.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 73,
+      "monotonicMs": 69738,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fjulia%2Fsyntaxes%2Fjulia.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 74,
+      "monotonicMs": 69739,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fswift%2Fsyntaxes%2Fswift.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 75,
+      "monotonicMs": 69739,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fpython%2Fsyntaxes%2FMagicPython.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 76,
+      "monotonicMs": 69741,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fpython%2Fsyntaxes%2FMagicRegExp.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 77,
+      "monotonicMs": 69742,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Frust%2Fsyntaxes%2Frust.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 78,
+      "monotonicMs": 69743,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fshellscript%2Fsyntaxes%2Fshell-unix-bash.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 79,
+      "monotonicMs": 69745,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fcsharp%2Fsyntaxes%2Fcsharp.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 80,
+      "monotonicMs": 69747,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Ftypescript-basics%2Fsyntaxes%2FTypeScriptReact.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 81,
+      "monotonicMs": 69750,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Ftypescript-basics%2Fsyntaxes%2FTypeScript.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 82,
+      "monotonicMs": 69765,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Ffsharp%2Fsyntaxes%2Ffsharp.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 83,
+      "monotonicMs": 69765,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fdart%2Fsyntaxes%2Fdart.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 84,
+      "monotonicMs": 69765,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fhandlebars%2Fsyntaxes%2FHandlebars.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 85,
+      "monotonicMs": 69768,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Flog%2Fsyntaxes%2Flog.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 86,
+      "monotonicMs": 69771,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Flatex%2Fsyntaxes%2FBibtex.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 87,
+      "monotonicMs": 69771,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Flatex%2Fsyntaxes%2FLaTeX.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 88,
+      "monotonicMs": 69780,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Frestructuredtext%2Fsyntaxes%2Frst.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 89,
+      "monotonicMs": 69781,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fmarkdown-math%2Fsyntaxes%2Fmd-math-block.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": true,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 90,
+      "monotonicMs": 69783,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fmarkdown-math%2Fsyntaxes%2Fmd-math-inline.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 91,
+      "monotonicMs": 69784,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Ftheme-defaults%2Fthemes%2Flight_vs.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 92,
+      "monotonicMs": 69784,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fmarkdown-math%2Fsyntaxes%2Fmd-math-fence.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 93,
+      "monotonicMs": 69892,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fyaml%2Fsyntaxes%2Fyaml-1.2.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 94,
+      "monotonicMs": 69893,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fyaml%2Fsyntaxes%2Fyaml-embedded.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 95,
+      "monotonicMs": 69894,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fscss%2Fsyntaxes%2Fsassdoc.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 96,
+      "monotonicMs": 69894,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Ftypescript-basics%2Fsyntaxes%2Fjsdoc.js.injection.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 97,
+      "monotonicMs": 69894,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Ftypescript-basics%2Fsyntaxes%2Fjsdoc.ts.injection.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 98,
+      "monotonicMs": 69895,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Flatex%2Fsyntaxes%2FTeX.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 99,
+      "monotonicMs": 69895,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fcpp%2Fsyntaxes%2Fcpp.embedded.macro.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 100,
+      "monotonicMs": 69900,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fmarkdown-math%2Fsyntaxes%2Fmd-math.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 101,
+      "monotonicMs": 69900,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Flatex%2Fsyntaxes%2Fmarkdown-latex-combined.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 102,
+      "monotonicMs": 69905,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Flatex%2Fsyntaxes%2Fcpp-grammar-bailout.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 103,
+      "monotonicMs": 69925,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fyaml%2Fsyntaxes%2Fyaml-1.3.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 104,
+      "monotonicMs": 69925,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fyaml%2Fsyntaxes%2Fyaml-1.1.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 105,
+      "monotonicMs": 69927,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fyaml%2Fsyntaxes%2Fyaml-1.0.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 106,
+      "monotonicMs": 70189,
+      "kind": "response",
+      "url": "blob:http://127.0.0.1:45939/63c233eb-34b1-494d-adad-ab31f636cb1c",
+      "detail": "script",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 107,
+      "monotonicMs": 70246,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/static/out/vs/workbench/services/textMate/browser/backgroundTokenization/worker/textMateTokenizationWorker.workerMain.js",
+      "detail": "script",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 108,
+      "monotonicMs": 70288,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/static/node_modules/vscode-textmate/release/main.js",
+      "detail": "script",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 109,
+      "monotonicMs": 70305,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/static/node_modules/vscode-oniguruma/release/main.js",
+      "detail": "script",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 110,
+      "monotonicMs": 70310,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/static/node_modules/vscode-oniguruma/release/onig.wasm",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 111,
+      "monotonicMs": 70351,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fmarkdown-basics%2Fsyntaxes%2Fmarkdown.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 112,
+      "monotonicMs": 70385,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fyaml%2Fsyntaxes%2Fyaml.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 113,
+      "monotonicMs": 70391,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fhtml%2Fsyntaxes%2Fhtml-derivative.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 114,
+      "monotonicMs": 70392,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fcss%2Fsyntaxes%2Fcss.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 115,
+      "monotonicMs": 70395,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fhtml%2Fsyntaxes%2Fhtml.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 116,
+      "monotonicMs": 70400,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fini%2Fsyntaxes%2Fini.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 117,
+      "monotonicMs": 70401,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fjava%2Fsyntaxes%2Fjava.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 118,
+      "monotonicMs": 70401,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Flua%2Fsyntaxes%2Flua.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 119,
+      "monotonicMs": 70401,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fmake%2Fsyntaxes%2Fmake.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 120,
+      "monotonicMs": 70402,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fperl%2Fsyntaxes%2Fperl.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 121,
+      "monotonicMs": 70402,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fr%2Fsyntaxes%2Fr.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 122,
+      "monotonicMs": 70405,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fruby%2Fsyntaxes%2Fruby.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 123,
+      "monotonicMs": 70405,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fphp%2Fsyntaxes%2Fphp.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 124,
+      "monotonicMs": 70406,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fsql%2Fsyntaxes%2Fsql.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 125,
+      "monotonicMs": 70411,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fvb%2Fsyntaxes%2Fasp-vb-net.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 126,
+      "monotonicMs": 70411,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fxml%2Fsyntaxes%2Fxml.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 127,
+      "monotonicMs": 70412,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fxml%2Fsyntaxes%2Fxsl.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 128,
+      "monotonicMs": 70412,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fbat%2Fsyntaxes%2Fbatchfile.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 129,
+      "monotonicMs": 70420,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fclojure%2Fsyntaxes%2Fclojure.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 130,
+      "monotonicMs": 70426,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fcoffeescript%2Fsyntaxes%2Fcoffeescript.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 131,
+      "monotonicMs": 70427,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fcpp%2Fsyntaxes%2Fc.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 132,
+      "monotonicMs": 70427,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fcpp%2Fsyntaxes%2Fcpp.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 133,
+      "monotonicMs": 70429,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fdiff%2Fsyntaxes%2Fdiff.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 134,
+      "monotonicMs": 70430,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fdocker%2Fsyntaxes%2Fdocker.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 135,
+      "monotonicMs": 70430,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fgit-base%2Fsyntaxes%2Fgit-commit.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 136,
+      "monotonicMs": 70432,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fgit-base%2Fsyntaxes%2Fgit-rebase.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 137,
+      "monotonicMs": 70433,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fgo%2Fsyntaxes%2Fgo.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 138,
+      "monotonicMs": 70434,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fgroovy%2Fsyntaxes%2Fgroovy.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 139,
+      "monotonicMs": 70436,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fpug%2Fsyntaxes%2Fpug.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 140,
+      "monotonicMs": 70440,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fgit-base%2Fsyntaxes%2Fignore.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 141,
+      "monotonicMs": 70441,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fjavascript%2Fsyntaxes%2FJavaScript.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 142,
+      "monotonicMs": 70441,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fjavascript%2Fsyntaxes%2FRegular%20Expressions%20(JavaScript).tmLanguage&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 143,
+      "monotonicMs": 70452,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fjson%2Fsyntaxes%2FJSON.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 144,
+      "monotonicMs": 70458,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fjson%2Fsyntaxes%2FJSONC.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 145,
+      "monotonicMs": 70458,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fjson%2Fsyntaxes%2FJSONL.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 146,
+      "monotonicMs": 70458,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fless%2Fsyntaxes%2Fless.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 147,
+      "monotonicMs": 70458,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fobjective-c%2Fsyntaxes%2Fobjective-c.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 148,
+      "monotonicMs": 70461,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fswift%2Fsyntaxes%2Fswift.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 149,
+      "monotonicMs": 70461,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fscss%2Fsyntaxes%2Fscss.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 150,
+      "monotonicMs": 70464,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fperl%2Fsyntaxes%2Fperl6.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 151,
+      "monotonicMs": 70465,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fpowershell%2Fsyntaxes%2Fpowershell.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 152,
+      "monotonicMs": 70465,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fpython%2Fsyntaxes%2FMagicPython.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 153,
+      "monotonicMs": 70471,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fjulia%2Fsyntaxes%2Fjulia.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 154,
+      "monotonicMs": 70475,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fpython%2Fsyntaxes%2FMagicRegExp.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 155,
+      "monotonicMs": 70475,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Frust%2Fsyntaxes%2Frust.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 156,
+      "monotonicMs": 70476,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fshellscript%2Fsyntaxes%2Fshell-unix-bash.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 157,
+      "monotonicMs": 70477,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Ftypescript-basics%2Fsyntaxes%2FTypeScript.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 158,
+      "monotonicMs": 70478,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Ftypescript-basics%2Fsyntaxes%2FTypeScriptReact.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 159,
+      "monotonicMs": 70481,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fcsharp%2Fsyntaxes%2Fcsharp.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 160,
+      "monotonicMs": 70481,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Ffsharp%2Fsyntaxes%2Ffsharp.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 161,
+      "monotonicMs": 70483,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fdart%2Fsyntaxes%2Fdart.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 162,
+      "monotonicMs": 70491,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fhandlebars%2Fsyntaxes%2FHandlebars.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 163,
+      "monotonicMs": 70492,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Flog%2Fsyntaxes%2Flog.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 164,
+      "monotonicMs": 70492,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Flatex%2Fsyntaxes%2FLaTeX.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 165,
+      "monotonicMs": 70508,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Flatex%2Fsyntaxes%2FBibtex.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 166,
+      "monotonicMs": 70509,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Frestructuredtext%2Fsyntaxes%2Frst.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 167,
+      "monotonicMs": 70509,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fmarkdown-math%2Fsyntaxes%2Fmd-math-block.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": true,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 168,
+      "monotonicMs": 70510,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fmarkdown-math%2Fsyntaxes%2Fmd-math-inline.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 169,
+      "monotonicMs": 70510,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fmarkdown-math%2Fsyntaxes%2Fmd-math-fence.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 170,
+      "monotonicMs": 70610,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fyaml%2Fsyntaxes%2Fyaml-1.2.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 171,
+      "monotonicMs": 70616,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fyaml%2Fsyntaxes%2Fyaml-embedded.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 172,
+      "monotonicMs": 70617,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fcpp%2Fsyntaxes%2Fcpp.embedded.macro.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 173,
+      "monotonicMs": 70619,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Ftypescript-basics%2Fsyntaxes%2Fjsdoc.js.injection.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 174,
+      "monotonicMs": 70619,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fscss%2Fsyntaxes%2Fsassdoc.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 175,
+      "monotonicMs": 70620,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Ftypescript-basics%2Fsyntaxes%2Fjsdoc.ts.injection.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 176,
+      "monotonicMs": 70621,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Flatex%2Fsyntaxes%2FTeX.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 177,
+      "monotonicMs": 70624,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Flatex%2Fsyntaxes%2Fcpp-grammar-bailout.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 178,
+      "monotonicMs": 70624,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Flatex%2Fsyntaxes%2Fmarkdown-latex-combined.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 179,
+      "monotonicMs": 70626,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fmarkdown-math%2Fsyntaxes%2Fmd-math.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 180,
+      "monotonicMs": 70655,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fyaml%2Fsyntaxes%2Fyaml-1.3.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 181,
+      "monotonicMs": 70656,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fyaml%2Fsyntaxes%2Fyaml-1.1.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 182,
+      "monotonicMs": 70656,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fyaml%2Fsyntaxes%2Fyaml-1.0.tmLanguage.json&tkn=",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 183,
+      "monotonicMs": 71057,
+      "kind": "console",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/static/out/vs/code/browser/workbench/workbench.js",
+      "detail": "An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing.",
+      "status": null,
+      "blocking": false,
+      "nonBlockingWarning": true
+    },
+    {
+      "sequence": 184,
+      "monotonicMs": 71074,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/static/out/vs/workbench/contrib/webview/browser/pre/index.html?id=c3ede4f4-ab5e-4f21-a133-74a27883e6c6&parentId=1&origin=4a94eb48-13b2-48d8-8c1f-bfc110322e55&swVersion=6&extensionId=vscode.markdown-language-features&platform=browser&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=http%3A%2F%2F127.0.0.1%3A45939&remoteAuthority=127.0.0.1%3A45939",
+      "detail": "document",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 185,
+      "monotonicMs": 71100,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fmarkdown-language-features%2Fmedia%2Fpreview-light.svg&tkn=",
+      "detail": "image",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 186,
+      "monotonicMs": 71111,
+      "kind": "console",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/static/out/vs/workbench/contrib/webview/browser/pre/index.html?id=c3ede4f4-ab5e-4f21-a133-74a27883e6c6&parentId=1&origin=4a94eb48-13b2-48d8-8c1f-bfc110322e55&swVersion=6&extensionId=vscode.markdown-language-features&platform=browser&vscode-resource-base-authority=vscode-resource.vscode-cdn.net&parentOrigin=http%3A%2F%2F127.0.0.1%3A45939&remoteAuthority=127.0.0.1%3A45939",
+      "detail": "An iframe which has both allow-scripts and allow-same-origin for its sandbox attribute can escape its sandboxing.",
+      "status": null,
+      "blocking": false,
+      "nonBlockingWarning": true
+    },
+    {
+      "sequence": 187,
+      "monotonicMs": 71294,
+      "kind": "response",
+      "url": "https://open-vsx.org/vscode/gallery/vscode/github/copilot-chat/latest",
+      "detail": "fetch",
+      "status": 404,
+      "blocking": false,
+      "nonBlockingWarning": true
+    },
+    {
+      "sequence": 188,
+      "monotonicMs": 71294,
+      "kind": "console",
+      "url": "https://open-vsx.org/vscode/gallery/vscode/github/copilot-chat/latest",
+      "detail": "Failed to load resource: the server responded with a status of 404 ()",
+      "status": null,
+      "blocking": false,
+      "nonBlockingWarning": true
+    },
+    {
+      "sequence": 189,
+      "monotonicMs": 71297,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/static/out/vs/workbench/contrib/webview/browser/pre/fake.html?id=c3ede4f4-ab5e-4f21-a133-74a27883e6c6",
+      "detail": "document",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 190,
+      "monotonicMs": 71305,
+      "kind": "request-failed",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/static/out/vs/workbench/contrib/webview/browser/pre/fake.html?id=c3ede4f4-ab5e-4f21-a133-74a27883e6c6",
+      "detail": "net::ERR_ABORTED",
+      "status": null,
+      "blocking": false,
+      "nonBlockingWarning": true
+    },
+    {
+      "sequence": 191,
+      "monotonicMs": 71310,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/static/out/vs/workbench/contrib/webview/browser/pre/fake.html?id=c3ede4f4-ab5e-4f21-a133-74a27883e6c6",
+      "detail": "document",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 192,
+      "monotonicMs": 71508,
+      "kind": "response",
+      "url": "https://vscode-remote+127-002e0-002e0-002e1-003a45939.vscode-resource.vscode-cdn.net/home/vscode/.local/lib/code-server-4.131.0/lib/vscode/extensions/markdown-language-features/media/pre.js",
+      "detail": "script",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 193,
+      "monotonicMs": 71520,
+      "kind": "response",
+      "url": "https://vscode-remote+127-002e0-002e0-002e1-003a45939.vscode-resource.vscode-cdn.net/home/vscode/.local/lib/code-server-4.131.0/lib/vscode/extensions/github/markdown.css",
+      "detail": "stylesheet",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 194,
+      "monotonicMs": 71538,
+      "kind": "response",
+      "url": "https://vscode-remote+127-002e0-002e0-002e1-003a45939.vscode-resource.vscode-cdn.net/home/vscode/.local/lib/code-server-4.131.0/lib/vscode/extensions/markdown-language-features/media/markdown.css",
+      "detail": "stylesheet",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 195,
+      "monotonicMs": 71538,
+      "kind": "response",
+      "url": "https://vscode-remote+127-002e0-002e0-002e1-003a45939.vscode-resource.vscode-cdn.net/home/vscode/.local/lib/code-server-4.131.0/lib/vscode/extensions/markdown-language-features/media/highlight.css",
+      "detail": "stylesheet",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 196,
+      "monotonicMs": 71539,
+      "kind": "response",
+      "url": "https://vscode-remote+127-002e0-002e0-002e1-003a45939.vscode-resource.vscode-cdn.net/home/vscode/.local/lib/code-server-4.131.0/lib/vscode/extensions/markdown-math/notebook-out/katex.min.css",
+      "detail": "stylesheet",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 197,
+      "monotonicMs": 71544,
+      "kind": "response",
+      "url": "https://vscode-remote+127-002e0-002e0-002e1-003a45939.vscode-resource.vscode-cdn.net/home/vscode/.local/lib/code-server-4.131.0/lib/vscode/extensions/markdown-math/preview-styles/index.css",
+      "detail": "stylesheet",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 198,
+      "monotonicMs": 71597,
+      "kind": "response",
+      "url": "https://vscode-remote+127-002e0-002e0-002e1-003a45939.vscode-resource.vscode-cdn.net/home/vscode/.local/lib/code-server-4.131.0/lib/vscode/extensions/markdown-language-features/media/index.js",
+      "detail": "script",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 199,
+      "monotonicMs": 72115,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/static/node_modules/@xterm/xterm/lib/xterm.js",
+      "detail": "script",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 200,
+      "monotonicMs": 72361,
+      "kind": "response",
+      "url": "https://open-vsx.org/vscode/gallery/extensionquery",
+      "detail": "fetch",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 201,
+      "monotonicMs": 72362,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/static/node_modules/@xterm/addon-unicode11/lib/addon-unicode11.js",
+      "detail": "script",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 202,
+      "monotonicMs": 72362,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/static/node_modules/@xterm/addon-clipboard/lib/addon-clipboard.js",
+      "detail": "script",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 203,
+      "monotonicMs": 72362,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/static/node_modules/@xterm/addon-progress/lib/addon-progress.js",
+      "detail": "script",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 204,
+      "monotonicMs": 72362,
+      "kind": "response",
+      "url": "http://127.0.0.1:45939/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/static/node_modules/@xterm/addon-webgl/lib/addon-webgl.js",
+      "detail": "script",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 205,
+      "monotonicMs": 72697,
+      "kind": "response",
+      "url": "blob:http://127.0.0.1:45939/a4dea3d4-3087-4c17-9772-223db22a85ee",
+      "detail": "script",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    },
+    {
+      "sequence": 206,
+      "monotonicMs": 73610,
+      "kind": "response",
+      "url": "https://vscode-remote+127-002e0-002e0-002e1-003a45939.vscode-resource.vscode-cdn.net/home/vscode/.local/lib/code-server-4.131.0/lib/vscode/extensions/mermaid-markdown-features/markdown-preview-out/index.js",
+      "detail": "script",
+      "status": 200,
+      "blocking": false,
+      "nonBlockingWarning": false
+    }
+  ]
+}

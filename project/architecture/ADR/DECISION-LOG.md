@@ -8,6 +8,7 @@ This file is the single registry of all architectural decisions and core-compone
 |----|-------|--------|------|
 | ADR-260808-typescript-monorepo | TypeScript Monorepo and Host Workbench Stack | Accepted | 2026-08-08 |
 | ADR-260808-governed-engineering-harness | Governed Repository-Local Engineering Harness | Accepted | 2026-08-08 |
+| ADR-260810-full-page-browser-workbench-presentation | Select the Full-Page Browser Workbench Presentation | Accepted | 2026-08-10 |
 
 ## Core-Components
 
@@ -73,3 +74,6 @@ Short, actionable statements derived from ADRs and core-components. More than on
 | 40 | Inject advisory harness lifecycle calls at RPIV stage seams without reordering stages | CORE-COMPONENT-260808-engineering-harness-delivery-contract | 2026-08-08 |
 | 41 | Capture configured implementation friction once and reject unsupported observation kinds | CORE-COMPONENT-260808-engineering-harness-delivery-contract | 2026-08-08 |
 | 42 | Preserve harness evidence, flow, and skill-installation records as repository-local artifacts | CORE-COMPONENT-260808-engineering-harness-delivery-contract | 2026-08-08 |
+| 43 | Use full-page code-server with a minimal Ascend header for authoritative desktop Chromium workbench presentation | ADR-260810-full-page-browser-workbench-presentation | 2026-08-10 |
+| 44 | Reject embedded code-server presentation because it retained more blocking browser protocol violations | ADR-260810-full-page-browser-workbench-presentation | 2026-08-10 |
+| 45 | Keep tablet validation non-authoritative and defer product routing and lifecycle integration | ADR-260810-full-page-browser-workbench-presentation | 2026-08-10 |

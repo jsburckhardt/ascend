@@ -123,3 +123,37 @@ Every path that starts owned resources uses the shared episode coordinator to at
 ### Observed designated-host result
 
 On Ubuntu 24.04.4 LTS host `03f809395a5d` as `vscode` with shell `/bin/zsh` and code-server 4.131.0, `just proof-terminal-parity` passed. Hostname/user/canonical cwd and all six command exits/stdout/stderr matched. The differing `PATH` was classified `allowed difference` because Git, GitHub CLI, tmux, Docker CLI, and Copilot CLI resolved identically. Browser context, terminal commands, exact workbench PID, and listener were absent after cleanup.
+
+## BL-003 browser presentation comparison
+
+### Paved command and ordered prerequisites
+
+Run the designated-host comparison once with:
+
+~~~text
+just proof-workbench-presentation
+~~~
+
+Before any attempt starts, the command checks these prerequisites in order and stops at the first failure: Ubuntu 24.04; non-root vscode user; merged BL-001/BL-002 proof capabilities and canonical fixture; code-server 4.131.0; the repository Chromium desktop build; then creation of a 1440 by 900 viewport. A prerequisite stop starts no attempt and records prerequisite failure:<name>.
+
+Exactly two proof-only candidates are compared: code-server embedded in a minimal Ascend surface, followed by top-level full-page code-server with a minimal Ascend header. There is no third candidate. Presentation is the only candidate-specific variable; fixture, launch configuration, Chromium version, viewport, observers, fixed scenario, terminal commands, integrity checks, and cleanup are shared. This command does not add Project Home, stable routing or proxying, runtime management, lifecycle UI, polished UI, or tablet integration.
+
+### Fixed scenario, evidence, and safety
+
+Each candidate receives exactly three fresh attempts in slot order, embedded 1 through 3 then full-page 1 through 3. Every attempt has a new BL-001 process handle and group, empty browser context, run ID allocated before navigation, and candidate-disposable area. The scenario is invoked once with no assertion, timeout, transient-error, action, or attempt retry. The only passive tolerance is observing the known detached Preview frame replacement.
+
+The fixed scenario receives a final candidate document status from 200 through 399, finds the Explorer sentinel, opens WORKBENCH-PREVIEW.md, observes the rendered Preview sentinel, uses keyboard actions to focus Explorer and enter and leave Preview, opens one integrated terminal, completes the memory-only clipboard round-trip, and then runs the BL-002 identity, canonical-path, and exact six fixed tool parity commands. The clipboard token is typed into unexecuted terminal input, copied, cleared, pasted, compared, and cleared again. Its value is never recorded, executed, or written to the fixture.
+
+An attempt-local observer is attached before navigation. It retains every response, request failure, console warning or error, page error, and WebSocket open, error, or close occurrence in order, including repeats. Blocking classification takes precedence for browser-reported blocked, refused, denied, or policy-enforced frame, CSP, X-Frame-Options, origin/CORS, mixed-content, sandbox/permission, cookie/storage, required workbench or Preview resource, and WebSocket failures, including close before terminal completion. Other console warnings/errors, HTTP statuses of 400 or greater, request failures, and WebSocket warnings/closes count as non-blocking. Functional outcomes fail independently when their required observable result is absent.
+
+Each started attempt retains one JSON record and one raw browser-event record below the BL-003 work-item evidence directory. The attempt includes candidate and slot, run and fresh resource identities, exact Chromium version, start/final status, failed assertion IDs and errors, monotonic navigation and completion times, functional/evidence/cleanup/integrity assertions, warning totals, cleanup details, fixture tree/sentinel results, and generated terminal raw references. Raw terminal command output remains ignored under test-results/bl-003. The comparison contains exactly six slots, host/tool/viewport facts, eligibility, warning totals, three elapsed values and middle-value median for each eligible candidate, stop reason, disposition, and every started record reference.
+
+Cleanup is attempted for each start and requires integrated command identities, browser context, exact BL-001 process group/PID/listener, and the attempt disposable area to be absent while the canonical fixture remains present and byte-identical. Fixture tree membership and sentinel hashes are checked independently before and after every attempt. Cleanup failure records cleanup failure:<candidate>/<attempt>, prevents later slots from starting, leaves them without run IDs, and still runs selection from completed evidence.
+
+### Eligibility, selection, and retained result
+
+A candidate is eligible only when all three fresh attempts pass every functional, required-evidence, cleanup, and integrity assertion. One eligible candidate is selected directly. Two eligible candidates are compared in this exact order: fewer retained blocking occurrences, fewer retained non-blocking occurrences, then lower middle-value median elapsed time. The first strict difference selects; no fallback preference exists.
+
+The four exact dispositions are embedded selected, full-page selected, selection tie, and no viable candidate. Selected dispositions exit zero. A tie or no viable candidate exits nonzero and creates no Accepted ADR. Missing later slots never receive fabricated run IDs.
+
+The retained comparison at project/work-items/9-bl-003-select-a-viable-browser-workbench-presentation/implementation/evidence/comparison.json started all six attempts on Ubuntu 24.04.4 LTS host 03f809395a5d as vscode with Chromium 151.0.7922.34 and code-server 4.131.0. Both candidates were eligible. Embedded retained 9 blocking and 30 non-blocking occurrences with median 11,400 ms; full-page retained 6 blocking and 36 non-blocking occurrences with median 11,561 ms. The first tie-breaker therefore produced full-page selected. ADR-260810-full-page-browser-workbench-presentation records that authoritative desktop Chromium decision. Tablet validation remains a separate, non-authoritative follow-up.

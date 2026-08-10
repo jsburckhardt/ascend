@@ -15,7 +15,7 @@ import {
   readCapacityEvidence,
 } from '../src/workbench-capacity-evidence.js'
 
-const DESIGNATED_RUN_ID = 'e7757a3f-54ec-4ea7-9399-713e91f49719'
+const DESIGNATED_RUN_ID = '532abfdb-c970-4979-9da2-ec9ef99a295a'
 
 describe('capacity baseline documentation', () => {
   it('matches source constants, retained result, command surface, and scope', async () => {

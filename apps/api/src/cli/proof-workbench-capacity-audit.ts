@@ -57,15 +57,19 @@ export const runCapacityAuditCli = async (
                 ':' +
                 slot.slot
             )
-          if (slot.listener && !(await listenerIdentityAbsent(slot.listener)))
-            failures.push(
-              'managed-listener-present:' +
-                evidence.run.runId +
-                ':' +
-                slot.cohort +
-                ':' +
-                slot.slot
-            )
+          for (const listener of slot.attributedListeners ??
+            (slot.listener ? [slot.listener] : []))
+            if (!(await listenerIdentityAbsent(listener)))
+              failures.push(
+                'managed-listener-present:' +
+                  evidence.run.runId +
+                  ':' +
+                  slot.cohort +
+                  ':' +
+                  slot.slot +
+                  ':' +
+                  listener.pid
+              )
         }
         for (const workload of evidence.workloads.workloads)
           if (

@@ -126,6 +126,35 @@ export const readProcessStartTime = async (
 const identityMatches = async (handle: ProofHandle): Promise<boolean> =>
   (await readProcessStartTime(handle.pid)) === handle.startTimeTicks
 
+export const terminateExactProcessIdentity = async (
+  identity: { pid: number; startTimeTicks: string },
+  timeoutMs: number
+): Promise<void> => {
+  const matches = async () =>
+    (await readProcessStartTime(identity.pid)) === identity.startTimeTicks
+  if (!(await matches())) return
+  try {
+    process.kill(identity.pid, 'SIGTERM')
+  } catch {
+    return
+  }
+  const termDeadline = Date.now() + Math.max(50, Math.floor(timeoutMs / 2))
+  while (Date.now() < termDeadline && (await matches())) await delay(25)
+  if (!(await matches())) return
+  try {
+    process.kill(identity.pid, 'SIGKILL')
+  } catch {
+    return
+  }
+  const killDeadline = Date.now() + Math.max(50, Math.ceil(timeoutMs / 2))
+  while (Date.now() < killDeadline && (await matches())) await delay(25)
+  if (await matches())
+    throw new ProofError('stop-timeout', 'Attributed process did not stop', {
+      pid: identity.pid,
+      timeoutMs,
+    })
+}
+
 export const parseLoopbackUrl = (content: string): string | null => {
   const match = content.match(/http:[/][/]127[.]0[.]0[.]1:[0-9]+[/]?/u)
   if (!match) return null

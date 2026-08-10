@@ -1,0 +1,4136 @@
+{
+  "version": 1,
+  "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+  "samples": [
+    {
+      "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+      "cohort": 1,
+      "window": "idle",
+      "position": 0,
+      "targetOffsetMs": 0,
+      "targetMonotonicMs": 1444.506031,
+      "actualMonotonicMs": 1444.532828,
+      "host": {
+        "timestamp": "2026-08-10T04:59:58.385Z",
+        "monotonicMs": 1449.703293,
+        "loadAverage": [
+          5.68,
+          5.02,
+          4.09
+        ],
+        "availableMemoryKiB": 22004056,
+        "usedMemoryKiB": 10770740,
+        "responsiveness": {
+          "command": "/usr/bin/true",
+          "timeoutMs": 1000,
+          "startedAt": "2026-08-10T04:59:58.380Z",
+          "endedAt": "2026-08-10T04:59:58.383Z",
+          "passed": true,
+          "exitCode": 0,
+          "reason": null
+        }
+      },
+      "processTrees": [
+        {
+          "slot": 1,
+          "sample": {
+            "timestamp": "2026-08-10T04:59:58.432Z",
+            "monotonicMs": 1497.011702,
+            "rootPid": 451190,
+            "cpuPercent": 171.38644627232975,
+            "rssKiB": 197764,
+            "memberPids": [
+              451190,
+              451213
+            ]
+          },
+          "absentReason": null
+        }
+      ],
+      "absentReason": null
+    },
+    {
+      "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+      "cohort": 1,
+      "window": "idle",
+      "position": 1,
+      "targetOffsetMs": 1000,
+      "targetMonotonicMs": 2444.506031,
+      "actualMonotonicMs": 2446.246189,
+      "host": {
+        "timestamp": "2026-08-10T04:59:59.389Z",
+        "monotonicMs": 2453.948512,
+        "loadAverage": [
+          5.68,
+          5.02,
+          4.09
+        ],
+        "availableMemoryKiB": 21992676,
+        "usedMemoryKiB": 10782120,
+        "responsiveness": {
+          "command": "/usr/bin/true",
+          "timeoutMs": 1000,
+          "startedAt": "2026-08-10T04:59:59.382Z",
+          "endedAt": "2026-08-10T04:59:59.388Z",
+          "passed": true,
+          "exitCode": 0,
+          "reason": null
+        }
+      },
+      "processTrees": [
+        {
+          "slot": 1,
+          "sample": {
+            "timestamp": "2026-08-10T04:59:59.457Z",
+            "monotonicMs": 2521.193371,
+            "rootPid": 451190,
+            "cpuPercent": 0,
+            "rssKiB": 197956,
+            "memberPids": [
+              451190,
+              451213
+            ]
+          },
+          "absentReason": null
+        }
+      ],
+      "absentReason": null
+    },
+    {
+      "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+      "cohort": 1,
+      "window": "idle",
+      "position": 2,
+      "targetOffsetMs": 2000,
+      "targetMonotonicMs": 3444.506031,
+      "actualMonotonicMs": 3446.090837,
+      "host": {
+        "timestamp": "2026-08-10T05:00:00.390Z",
+        "monotonicMs": 3454.497344,
+        "loadAverage": [
+          5.68,
+          5.02,
+          4.09
+        ],
+        "availableMemoryKiB": 22007532,
+        "usedMemoryKiB": 10767264,
+        "responsiveness": {
+          "command": "/usr/bin/true",
+          "timeoutMs": 1000,
+          "startedAt": "2026-08-10T05:00:00.381Z",
+          "endedAt": "2026-08-10T05:00:00.388Z",
+          "passed": true,
+          "exitCode": 0,
+          "reason": null
+        }
+      },
+      "processTrees": [
+        {
+          "slot": 1,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:00.467Z",
+            "monotonicMs": 3531.544158,
+            "rootPid": 451190,
+            "cpuPercent": 0,
+            "rssKiB": 197956,
+            "memberPids": [
+              451190,
+              451213
+            ]
+          },
+          "absentReason": null
+        }
+      ],
+      "absentReason": null
+    },
+    {
+      "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+      "cohort": 1,
+      "window": "idle",
+      "position": 3,
+      "targetOffsetMs": 3000,
+      "targetMonotonicMs": 4444.506031,
+      "actualMonotonicMs": 4444.872353,
+      "host": {
+        "timestamp": "2026-08-10T05:00:01.386Z",
+        "monotonicMs": 4450.911882,
+        "loadAverage": [
+          5.68,
+          5.02,
+          4.09
+        ],
+        "availableMemoryKiB": 21997520,
+        "usedMemoryKiB": 10777276,
+        "responsiveness": {
+          "command": "/usr/bin/true",
+          "timeoutMs": 1000,
+          "startedAt": "2026-08-10T05:00:01.380Z",
+          "endedAt": "2026-08-10T05:00:01.385Z",
+          "passed": true,
+          "exitCode": 0,
+          "reason": null
+        }
+      },
+      "processTrees": [
+        {
+          "slot": 1,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:01.428Z",
+            "monotonicMs": 4492.188212,
+            "rootPid": 451190,
+            "cpuPercent": 0,
+            "rssKiB": 197976,
+            "memberPids": [
+              451190,
+              451213
+            ]
+          },
+          "absentReason": null
+        }
+      ],
+      "absentReason": null
+    },
+    {
+      "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+      "cohort": 1,
+      "window": "idle",
+      "position": 4,
+      "targetOffsetMs": 4000,
+      "targetMonotonicMs": 5444.506031,
+      "actualMonotonicMs": 5446.145439,
+      "host": {
+        "timestamp": "2026-08-10T05:00:02.395Z",
+        "monotonicMs": 5460.053675,
+        "loadAverage": [
+          5.39,
+          4.97,
+          4.08
+        ],
+        "availableMemoryKiB": 21994404,
+        "usedMemoryKiB": 10780392,
+        "responsiveness": {
+          "command": "/usr/bin/true",
+          "timeoutMs": 1000,
+          "startedAt": "2026-08-10T05:00:02.381Z",
+          "endedAt": "2026-08-10T05:00:02.392Z",
+          "passed": true,
+          "exitCode": 0,
+          "reason": null
+        }
+      },
+      "processTrees": [
+        {
+          "slot": 1,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:02.491Z",
+            "monotonicMs": 5556.117136,
+            "rootPid": 451190,
+            "cpuPercent": 0,
+            "rssKiB": 197976,
+            "memberPids": [
+              451190,
+              451213
+            ]
+          },
+          "absentReason": null
+        }
+      ],
+      "absentReason": null
+    },
+    {
+      "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+      "cohort": 1,
+      "window": "active",
+      "position": 0,
+      "targetOffsetMs": 0,
+      "targetMonotonicMs": 6531.853694,
+      "actualMonotonicMs": 6531.864319,
+      "host": {
+        "timestamp": "2026-08-10T05:00:03.473Z",
+        "monotonicMs": 6537.281959,
+        "loadAverage": [
+          5.39,
+          4.97,
+          4.08
+        ],
+        "availableMemoryKiB": 22009548,
+        "usedMemoryKiB": 10765248,
+        "responsiveness": {
+          "command": "/usr/bin/true",
+          "timeoutMs": 1000,
+          "startedAt": "2026-08-10T05:00:03.467Z",
+          "endedAt": "2026-08-10T05:00:03.472Z",
+          "passed": true,
+          "exitCode": 0,
+          "reason": null
+        }
+      },
+      "processTrees": [
+        {
+          "slot": 1,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:03.509Z",
+            "monotonicMs": 6573.763562,
+            "rootPid": 451190,
+            "cpuPercent": 0,
+            "rssKiB": 197980,
+            "memberPids": [
+              451190,
+              451213
+            ]
+          },
+          "absentReason": null
+        }
+      ],
+      "absentReason": null
+    },
+    {
+      "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+      "cohort": 1,
+      "window": "active",
+      "position": 1,
+      "targetOffsetMs": 1000,
+      "targetMonotonicMs": 7531.853694,
+      "actualMonotonicMs": 7533.221235,
+      "host": {
+        "timestamp": "2026-08-10T05:00:04.480Z",
+        "monotonicMs": 7544.75901,
+        "loadAverage": [
+          5.39,
+          4.97,
+          4.08
+        ],
+        "availableMemoryKiB": 22013724,
+        "usedMemoryKiB": 10761072,
+        "responsiveness": {
+          "command": "/usr/bin/true",
+          "timeoutMs": 1000,
+          "startedAt": "2026-08-10T05:00:04.469Z",
+          "endedAt": "2026-08-10T05:00:04.477Z",
+          "passed": true,
+          "exitCode": 0,
+          "reason": null
+        }
+      },
+      "processTrees": [
+        {
+          "slot": 1,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:04.529Z",
+            "monotonicMs": 7593.24937,
+            "rootPid": 451190,
+            "cpuPercent": 0,
+            "rssKiB": 197980,
+            "memberPids": [
+              451190,
+              451213
+            ]
+          },
+          "absentReason": null
+        }
+      ],
+      "absentReason": null
+    },
+    {
+      "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+      "cohort": 1,
+      "window": "active",
+      "position": 2,
+      "targetOffsetMs": 2000,
+      "targetMonotonicMs": 8531.853694000001,
+      "actualMonotonicMs": 8532.591872,
+      "host": {
+        "timestamp": "2026-08-10T05:00:05.478Z",
+        "monotonicMs": 8542.492239,
+        "loadAverage": [
+          5.39,
+          4.97,
+          4.08
+        ],
+        "availableMemoryKiB": 21997876,
+        "usedMemoryKiB": 10776920,
+        "responsiveness": {
+          "command": "/usr/bin/true",
+          "timeoutMs": 1000,
+          "startedAt": "2026-08-10T05:00:05.468Z",
+          "endedAt": "2026-08-10T05:00:05.476Z",
+          "passed": true,
+          "exitCode": 0,
+          "reason": null
+        }
+      },
+      "processTrees": [
+        {
+          "slot": 1,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:05.507Z",
+            "monotonicMs": 8572.079424,
+            "rootPid": 451190,
+            "cpuPercent": 0,
+            "rssKiB": 197980,
+            "memberPids": [
+              451190,
+              451213
+            ]
+          },
+          "absentReason": null
+        }
+      ],
+      "absentReason": null
+    },
+    {
+      "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+      "cohort": 1,
+      "window": "active",
+      "position": 3,
+      "targetOffsetMs": 3000,
+      "targetMonotonicMs": 9531.853694000001,
+      "actualMonotonicMs": 9532.81513,
+      "host": {
+        "timestamp": "2026-08-10T05:00:06.473Z",
+        "monotonicMs": 9538.052324,
+        "loadAverage": [
+          5.39,
+          4.97,
+          4.08
+        ],
+        "availableMemoryKiB": 22013236,
+        "usedMemoryKiB": 10761560,
+        "responsiveness": {
+          "command": "/usr/bin/true",
+          "timeoutMs": 1000,
+          "startedAt": "2026-08-10T05:00:06.468Z",
+          "endedAt": "2026-08-10T05:00:06.472Z",
+          "passed": true,
+          "exitCode": 0,
+          "reason": null
+        }
+      },
+      "processTrees": [
+        {
+          "slot": 1,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:06.520Z",
+            "monotonicMs": 9584.933771,
+            "rootPid": 451190,
+            "cpuPercent": 0,
+            "rssKiB": 197980,
+            "memberPids": [
+              451190,
+              451213
+            ]
+          },
+          "absentReason": null
+        }
+      ],
+      "absentReason": null
+    },
+    {
+      "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+      "cohort": 1,
+      "window": "active",
+      "position": 4,
+      "targetOffsetMs": 4000,
+      "targetMonotonicMs": 10531.853694000001,
+      "actualMonotonicMs": 10532.781777,
+      "host": {
+        "timestamp": "2026-08-10T05:00:07.477Z",
+        "monotonicMs": 10542.090032,
+        "loadAverage": [
+          5.03,
+          4.91,
+          4.06
+        ],
+        "availableMemoryKiB": 22003440,
+        "usedMemoryKiB": 10771356,
+        "responsiveness": {
+          "command": "/usr/bin/true",
+          "timeoutMs": 1000,
+          "startedAt": "2026-08-10T05:00:07.468Z",
+          "endedAt": "2026-08-10T05:00:07.475Z",
+          "passed": true,
+          "exitCode": 0,
+          "reason": null
+        }
+      },
+      "processTrees": [
+        {
+          "slot": 1,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:07.545Z",
+            "monotonicMs": 10609.857657,
+            "rootPid": 451190,
+            "cpuPercent": 0,
+            "rssKiB": 197980,
+            "memberPids": [
+              451190,
+              451213
+            ]
+          },
+          "absentReason": null
+        }
+      ],
+      "absentReason": null
+    },
+    {
+      "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+      "cohort": 3,
+      "window": "idle",
+      "position": 0,
+      "targetOffsetMs": 0,
+      "targetMonotonicMs": 16447.553111,
+      "actualMonotonicMs": 16447.556334,
+      "host": {
+        "timestamp": "2026-08-10T05:00:13.388Z",
+        "monotonicMs": 16452.98559,
+        "loadAverage": [
+          4.79,
+          4.86,
+          4.05
+        ],
+        "availableMemoryKiB": 21914996,
+        "usedMemoryKiB": 10859800,
+        "responsiveness": {
+          "command": "/usr/bin/true",
+          "timeoutMs": 1000,
+          "startedAt": "2026-08-10T05:00:13.383Z",
+          "endedAt": "2026-08-10T05:00:13.386Z",
+          "passed": true,
+          "exitCode": 0,
+          "reason": null
+        }
+      },
+      "processTrees": [
+        {
+          "slot": 1,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:13.449Z",
+            "monotonicMs": 16513.361769,
+            "rootPid": 451347,
+            "cpuPercent": 0,
+            "rssKiB": 196620,
+            "memberPids": [
+              451347,
+              451370
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 2,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:13.486Z",
+            "monotonicMs": 16550.357189,
+            "rootPid": 451389,
+            "cpuPercent": 0,
+            "rssKiB": 197644,
+            "memberPids": [
+              451389,
+              451412
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 3,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:13.526Z",
+            "monotonicMs": 16590.934015,
+            "rootPid": 451425,
+            "cpuPercent": 6.974378087731598,
+            "rssKiB": 195692,
+            "memberPids": [
+              451425,
+              451448
+            ]
+          },
+          "absentReason": null
+        }
+      ],
+      "absentReason": null
+    },
+    {
+      "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+      "cohort": 3,
+      "window": "idle",
+      "position": 1,
+      "targetOffsetMs": 1000,
+      "targetMonotonicMs": 17447.553111,
+      "actualMonotonicMs": 17448.073753,
+      "host": {
+        "timestamp": "2026-08-10T05:00:14.394Z",
+        "monotonicMs": 17459.092374,
+        "loadAverage": [
+          4.79,
+          4.86,
+          4.05
+        ],
+        "availableMemoryKiB": 21899400,
+        "usedMemoryKiB": 10875396,
+        "responsiveness": {
+          "command": "/usr/bin/true",
+          "timeoutMs": 1000,
+          "startedAt": "2026-08-10T05:00:14.383Z",
+          "endedAt": "2026-08-10T05:00:14.392Z",
+          "passed": true,
+          "exitCode": 0,
+          "reason": null
+        }
+      },
+      "processTrees": [
+        {
+          "slot": 1,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:14.498Z",
+            "monotonicMs": 17562.802589,
+            "rootPid": 451347,
+            "cpuPercent": 0,
+            "rssKiB": 196620,
+            "memberPids": [
+              451347,
+              451370
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 2,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:14.589Z",
+            "monotonicMs": 17653.205061,
+            "rootPid": 451389,
+            "cpuPercent": 0,
+            "rssKiB": 197644,
+            "memberPids": [
+              451389,
+              451412
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 3,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:14.642Z",
+            "monotonicMs": 17706.252697,
+            "rootPid": 451425,
+            "cpuPercent": 0,
+            "rssKiB": 195748,
+            "memberPids": [
+              451425,
+              451448
+            ]
+          },
+          "absentReason": null
+        }
+      ],
+      "absentReason": null
+    },
+    {
+      "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+      "cohort": 3,
+      "window": "idle",
+      "position": 2,
+      "targetOffsetMs": 2000,
+      "targetMonotonicMs": 18447.553111,
+      "actualMonotonicMs": 18448.594722,
+      "host": {
+        "timestamp": "2026-08-10T05:00:15.389Z",
+        "monotonicMs": 18453.390793,
+        "loadAverage": [
+          4.79,
+          4.86,
+          4.05
+        ],
+        "availableMemoryKiB": 21908616,
+        "usedMemoryKiB": 10866180,
+        "responsiveness": {
+          "command": "/usr/bin/true",
+          "timeoutMs": 1000,
+          "startedAt": "2026-08-10T05:00:15.384Z",
+          "endedAt": "2026-08-10T05:00:15.388Z",
+          "passed": true,
+          "exitCode": 0,
+          "reason": null
+        }
+      },
+      "processTrees": [
+        {
+          "slot": 1,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:15.437Z",
+            "monotonicMs": 18501.465898,
+            "rootPid": 451347,
+            "cpuPercent": 1.06534471989253,
+            "rssKiB": 196640,
+            "memberPids": [
+              451347,
+              451370
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 2,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:15.477Z",
+            "monotonicMs": 18542.091291,
+            "rootPid": 451389,
+            "cpuPercent": 0,
+            "rssKiB": 197664,
+            "memberPids": [
+              451389,
+              451412
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 3,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:15.539Z",
+            "monotonicMs": 18603.814419,
+            "rootPid": 451425,
+            "cpuPercent": 0,
+            "rssKiB": 195748,
+            "memberPids": [
+              451425,
+              451448
+            ]
+          },
+          "absentReason": null
+        }
+      ],
+      "absentReason": null
+    },
+    {
+      "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+      "cohort": 3,
+      "window": "idle",
+      "position": 3,
+      "targetOffsetMs": 3000,
+      "targetMonotonicMs": 19447.553111,
+      "actualMonotonicMs": 19447.689207,
+      "host": {
+        "timestamp": "2026-08-10T05:00:16.395Z",
+        "monotonicMs": 19459.513512,
+        "loadAverage": [
+          4.79,
+          4.86,
+          4.05
+        ],
+        "availableMemoryKiB": 21892128,
+        "usedMemoryKiB": 10882668,
+        "responsiveness": {
+          "command": "/usr/bin/true",
+          "timeoutMs": 1000,
+          "startedAt": "2026-08-10T05:00:16.383Z",
+          "endedAt": "2026-08-10T05:00:16.392Z",
+          "passed": true,
+          "exitCode": 0,
+          "reason": null
+        }
+      },
+      "processTrees": [
+        {
+          "slot": 1,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:16.464Z",
+            "monotonicMs": 19528.66659,
+            "rootPid": 451347,
+            "cpuPercent": 0,
+            "rssKiB": 196640,
+            "memberPids": [
+              451347,
+              451370
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 2,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:16.496Z",
+            "monotonicMs": 19560.857402,
+            "rootPid": 451389,
+            "cpuPercent": 0,
+            "rssKiB": 197664,
+            "memberPids": [
+              451389,
+              451412
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 3,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:16.530Z",
+            "monotonicMs": 19594.594336,
+            "rootPid": 451425,
+            "cpuPercent": 2.0186117680461626,
+            "rssKiB": 195768,
+            "memberPids": [
+              451425,
+              451448
+            ]
+          },
+          "absentReason": null
+        }
+      ],
+      "absentReason": null
+    },
+    {
+      "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+      "cohort": 3,
+      "window": "idle",
+      "position": 4,
+      "targetOffsetMs": 4000,
+      "targetMonotonicMs": 20447.553111,
+      "actualMonotonicMs": 20447.737813,
+      "host": {
+        "timestamp": "2026-08-10T05:00:17.394Z",
+        "monotonicMs": 20458.494404,
+        "loadAverage": [
+          4.89,
+          4.88,
+          4.06
+        ],
+        "availableMemoryKiB": 21876988,
+        "usedMemoryKiB": 10897808,
+        "responsiveness": {
+          "command": "/usr/bin/true",
+          "timeoutMs": 1000,
+          "startedAt": "2026-08-10T05:00:17.383Z",
+          "endedAt": "2026-08-10T05:00:17.391Z",
+          "passed": true,
+          "exitCode": 0,
+          "reason": null
+        }
+      },
+      "processTrees": [
+        {
+          "slot": 1,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:17.486Z",
+            "monotonicMs": 20550.370532,
+            "rootPid": 451347,
+            "cpuPercent": 0,
+            "rssKiB": 196640,
+            "memberPids": [
+              451347,
+              451370
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 2,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:17.532Z",
+            "monotonicMs": 20596.679681,
+            "rootPid": 451389,
+            "cpuPercent": 0,
+            "rssKiB": 197664,
+            "memberPids": [
+              451389,
+              451412
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 3,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:17.590Z",
+            "monotonicMs": 20654.817118,
+            "rootPid": 451425,
+            "cpuPercent": 0,
+            "rssKiB": 195768,
+            "memberPids": [
+              451425,
+              451448
+            ]
+          },
+          "absentReason": null
+        }
+      ],
+      "absentReason": null
+    },
+    {
+      "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+      "cohort": 3,
+      "window": "active",
+      "position": 0,
+      "targetOffsetMs": 0,
+      "targetMonotonicMs": 21663.638718,
+      "actualMonotonicMs": 21663.642957,
+      "host": {
+        "timestamp": "2026-08-10T05:00:18.604Z",
+        "monotonicMs": 21668.980319,
+        "loadAverage": [
+          4.89,
+          4.88,
+          4.06
+        ],
+        "availableMemoryKiB": 21879260,
+        "usedMemoryKiB": 10895536,
+        "responsiveness": {
+          "command": "/usr/bin/true",
+          "timeoutMs": 1000,
+          "startedAt": "2026-08-10T05:00:18.599Z",
+          "endedAt": "2026-08-10T05:00:18.604Z",
+          "passed": true,
+          "exitCode": 0,
+          "reason": null
+        }
+      },
+      "processTrees": [
+        {
+          "slot": 1,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:18.649Z",
+            "monotonicMs": 21713.701466,
+            "rootPid": 451347,
+            "cpuPercent": 0,
+            "rssKiB": 196640,
+            "memberPids": [
+              451347,
+              451370
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 2,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:18.681Z",
+            "monotonicMs": 21745.404786,
+            "rootPid": 451389,
+            "cpuPercent": 0,
+            "rssKiB": 197668,
+            "memberPids": [
+              451389,
+              451412
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 3,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:18.718Z",
+            "monotonicMs": 21782.961108,
+            "rootPid": 451425,
+            "cpuPercent": 0,
+            "rssKiB": 195768,
+            "memberPids": [
+              451425,
+              451448
+            ]
+          },
+          "absentReason": null
+        }
+      ],
+      "absentReason": null
+    },
+    {
+      "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+      "cohort": 3,
+      "window": "active",
+      "position": 1,
+      "targetOffsetMs": 1000,
+      "targetMonotonicMs": 22663.638718,
+      "actualMonotonicMs": 22664.816262,
+      "host": {
+        "timestamp": "2026-08-10T05:00:19.609Z",
+        "monotonicMs": 22673.965155,
+        "loadAverage": [
+          4.89,
+          4.88,
+          4.06
+        ],
+        "availableMemoryKiB": 21874040,
+        "usedMemoryKiB": 10900756,
+        "responsiveness": {
+          "command": "/usr/bin/true",
+          "timeoutMs": 1000,
+          "startedAt": "2026-08-10T05:00:19.600Z",
+          "endedAt": "2026-08-10T05:00:19.607Z",
+          "passed": true,
+          "exitCode": 0,
+          "reason": null
+        }
+      },
+      "processTrees": [
+        {
+          "slot": 1,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:19.729Z",
+            "monotonicMs": 22793.364276,
+            "rootPid": 451347,
+            "cpuPercent": 0,
+            "rssKiB": 196640,
+            "memberPids": [
+              451347,
+              451370
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 2,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:19.845Z",
+            "monotonicMs": 22909.30022,
+            "rootPid": 451389,
+            "cpuPercent": 0,
+            "rssKiB": 197668,
+            "memberPids": [
+              451389,
+              451412
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 3,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:19.913Z",
+            "monotonicMs": 22977.322114,
+            "rootPid": 451425,
+            "cpuPercent": 0,
+            "rssKiB": 195768,
+            "memberPids": [
+              451425,
+              451448
+            ]
+          },
+          "absentReason": null
+        }
+      ],
+      "absentReason": null
+    },
+    {
+      "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+      "cohort": 3,
+      "window": "active",
+      "position": 2,
+      "targetOffsetMs": 2000,
+      "targetMonotonicMs": 23663.638718,
+      "actualMonotonicMs": 23664.792517,
+      "host": {
+        "timestamp": "2026-08-10T05:00:20.612Z",
+        "monotonicMs": 23677.161455,
+        "loadAverage": [
+          4.89,
+          4.88,
+          4.06
+        ],
+        "availableMemoryKiB": 21865540,
+        "usedMemoryKiB": 10909256,
+        "responsiveness": {
+          "command": "/usr/bin/true",
+          "timeoutMs": 1000,
+          "startedAt": "2026-08-10T05:00:20.600Z",
+          "endedAt": "2026-08-10T05:00:20.610Z",
+          "passed": true,
+          "exitCode": 0,
+          "reason": null
+        }
+      },
+      "processTrees": [
+        {
+          "slot": 1,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:20.671Z",
+            "monotonicMs": 23735.743398,
+            "rootPid": 451347,
+            "cpuPercent": 0,
+            "rssKiB": 196640,
+            "memberPids": [
+              451347,
+              451370
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 2,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:20.710Z",
+            "monotonicMs": 23774.260615,
+            "rootPid": 451389,
+            "cpuPercent": 0,
+            "rssKiB": 197668,
+            "memberPids": [
+              451389,
+              451412
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 3,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:20.743Z",
+            "monotonicMs": 23807.363922,
+            "rootPid": 451425,
+            "cpuPercent": 0,
+            "rssKiB": 195768,
+            "memberPids": [
+              451425,
+              451448
+            ]
+          },
+          "absentReason": null
+        }
+      ],
+      "absentReason": null
+    },
+    {
+      "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+      "cohort": 3,
+      "window": "active",
+      "position": 3,
+      "targetOffsetMs": 3000,
+      "targetMonotonicMs": 24663.638718,
+      "actualMonotonicMs": 24664.673301,
+      "host": {
+        "timestamp": "2026-08-10T05:00:21.606Z",
+        "monotonicMs": 24670.761292,
+        "loadAverage": [
+          4.89,
+          4.88,
+          4.06
+        ],
+        "availableMemoryKiB": 21851460,
+        "usedMemoryKiB": 10923336,
+        "responsiveness": {
+          "command": "/usr/bin/true",
+          "timeoutMs": 1000,
+          "startedAt": "2026-08-10T05:00:21.600Z",
+          "endedAt": "2026-08-10T05:00:21.604Z",
+          "passed": true,
+          "exitCode": 0,
+          "reason": null
+        }
+      },
+      "processTrees": [
+        {
+          "slot": 1,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:21.716Z",
+            "monotonicMs": 24780.337742,
+            "rootPid": 451347,
+            "cpuPercent": 0,
+            "rssKiB": 196652,
+            "memberPids": [
+              451347,
+              451370
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 2,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:21.791Z",
+            "monotonicMs": 24855.74085,
+            "rootPid": 451389,
+            "cpuPercent": 0,
+            "rssKiB": 197668,
+            "memberPids": [
+              451389,
+              451412
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 3,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:21.859Z",
+            "monotonicMs": 24923.865606,
+            "rootPid": 451425,
+            "cpuPercent": 0,
+            "rssKiB": 195772,
+            "memberPids": [
+              451425,
+              451448
+            ]
+          },
+          "absentReason": null
+        }
+      ],
+      "absentReason": null
+    },
+    {
+      "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+      "cohort": 3,
+      "window": "active",
+      "position": 4,
+      "targetOffsetMs": 4000,
+      "targetMonotonicMs": 25663.638718,
+      "actualMonotonicMs": 25663.986691,
+      "host": {
+        "timestamp": "2026-08-10T05:00:22.608Z",
+        "monotonicMs": 25672.546167,
+        "loadAverage": [
+          4.5,
+          4.8,
+          4.04
+        ],
+        "availableMemoryKiB": 21851988,
+        "usedMemoryKiB": 10922808,
+        "responsiveness": {
+          "command": "/usr/bin/true",
+          "timeoutMs": 1000,
+          "startedAt": "2026-08-10T05:00:22.599Z",
+          "endedAt": "2026-08-10T05:00:22.606Z",
+          "passed": true,
+          "exitCode": 0,
+          "reason": null
+        }
+      },
+      "processTrees": [
+        {
+          "slot": 1,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:22.685Z",
+            "monotonicMs": 25749.815363,
+            "rootPid": 451347,
+            "cpuPercent": 0,
+            "rssKiB": 196652,
+            "memberPids": [
+              451347,
+              451370
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 2,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:22.738Z",
+            "monotonicMs": 25802.856618,
+            "rootPid": 451389,
+            "cpuPercent": 0,
+            "rssKiB": 197680,
+            "memberPids": [
+              451389,
+              451412
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 3,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:22.792Z",
+            "monotonicMs": 25856.648838,
+            "rootPid": 451425,
+            "cpuPercent": 0,
+            "rssKiB": 195772,
+            "memberPids": [
+              451425,
+              451448
+            ]
+          },
+          "absentReason": null
+        }
+      ],
+      "absentReason": null
+    },
+    {
+      "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+      "cohort": 5,
+      "window": "idle",
+      "position": 0,
+      "targetOffsetMs": 0,
+      "targetMonotonicMs": 33644.136449,
+      "actualMonotonicMs": 33644.144986,
+      "host": {
+        "timestamp": "2026-08-10T05:00:30.635Z",
+        "monotonicMs": 33651.858445,
+        "loadAverage": [
+          4.3,
+          4.75,
+          4.03
+        ],
+        "availableMemoryKiB": 21851248,
+        "usedMemoryKiB": 10923548,
+        "responsiveness": {
+          "command": "/usr/bin/true",
+          "timeoutMs": 1000,
+          "startedAt": "2026-08-10T05:00:30.627Z",
+          "endedAt": "2026-08-10T05:00:30.633Z",
+          "passed": true,
+          "exitCode": 0,
+          "reason": null
+        }
+      },
+      "processTrees": [
+        {
+          "slot": 1,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:30.673Z",
+            "monotonicMs": 33690.535196,
+            "rootPid": 451590,
+            "cpuPercent": 0,
+            "rssKiB": 195824,
+            "memberPids": [
+              451590,
+              451617
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 2,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:30.721Z",
+            "monotonicMs": 33738.585195,
+            "rootPid": 451629,
+            "cpuPercent": 0,
+            "rssKiB": 196064,
+            "memberPids": [
+              451629,
+              451653
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 3,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:30.757Z",
+            "monotonicMs": 33774.56323,
+            "rootPid": 451665,
+            "cpuPercent": 0,
+            "rssKiB": 196776,
+            "memberPids": [
+              451665,
+              451691
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 4,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:30.784Z",
+            "monotonicMs": 33801.690572,
+            "rootPid": 451707,
+            "cpuPercent": 0,
+            "rssKiB": 196348,
+            "memberPids": [
+              451707,
+              451730
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 5,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:30.825Z",
+            "monotonicMs": 33842.105252,
+            "rootPid": 451743,
+            "cpuPercent": 0,
+            "rssKiB": 197252,
+            "memberPids": [
+              451743,
+              451776
+            ]
+          },
+          "absentReason": null
+        }
+      ],
+      "absentReason": null
+    },
+    {
+      "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+      "cohort": 5,
+      "window": "idle",
+      "position": 1,
+      "targetOffsetMs": 1000,
+      "targetMonotonicMs": 34644.136449,
+      "actualMonotonicMs": 34644.969252,
+      "host": {
+        "timestamp": "2026-08-10T05:00:31.640Z",
+        "monotonicMs": 34657.281711,
+        "loadAverage": [
+          4.3,
+          4.75,
+          4.03
+        ],
+        "availableMemoryKiB": 21844000,
+        "usedMemoryKiB": 10930796,
+        "responsiveness": {
+          "command": "/usr/bin/true",
+          "timeoutMs": 1000,
+          "startedAt": "2026-08-10T05:00:31.628Z",
+          "endedAt": "2026-08-10T05:00:31.638Z",
+          "passed": true,
+          "exitCode": 0,
+          "reason": null
+        }
+      },
+      "processTrees": [
+        {
+          "slot": 1,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:31.710Z",
+            "monotonicMs": 34727.226458,
+            "rootPid": 451590,
+            "cpuPercent": 0,
+            "rssKiB": 195824,
+            "memberPids": [
+              451590,
+              451617
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 2,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:31.803Z",
+            "monotonicMs": 34819.810459,
+            "rootPid": 451629,
+            "cpuPercent": 0,
+            "rssKiB": 196080,
+            "memberPids": [
+              451629,
+              451653
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 3,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:31.841Z",
+            "monotonicMs": 34858.446436,
+            "rootPid": 451665,
+            "cpuPercent": 0,
+            "rssKiB": 196800,
+            "memberPids": [
+              451665,
+              451691
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 4,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:31.878Z",
+            "monotonicMs": 34895.088666,
+            "rootPid": 451707,
+            "cpuPercent": 0,
+            "rssKiB": 196348,
+            "memberPids": [
+              451707,
+              451730
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 5,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:31.934Z",
+            "monotonicMs": 34951.068128,
+            "rootPid": 451743,
+            "cpuPercent": 0,
+            "rssKiB": 197252,
+            "memberPids": [
+              451743,
+              451776
+            ]
+          },
+          "absentReason": null
+        }
+      ],
+      "absentReason": null
+    },
+    {
+      "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+      "cohort": 5,
+      "window": "idle",
+      "position": 2,
+      "targetOffsetMs": 2000,
+      "targetMonotonicMs": 35644.136449,
+      "actualMonotonicMs": 35644.406648,
+      "host": {
+        "timestamp": "2026-08-10T05:00:32.644Z",
+        "monotonicMs": 35661.261719,
+        "loadAverage": [
+          4.03,
+          4.69,
+          4.01
+        ],
+        "availableMemoryKiB": 21880564,
+        "usedMemoryKiB": 10894232,
+        "responsiveness": {
+          "command": "/usr/bin/true",
+          "timeoutMs": 1000,
+          "startedAt": "2026-08-10T05:00:32.627Z",
+          "endedAt": "2026-08-10T05:00:32.641Z",
+          "passed": true,
+          "exitCode": 0,
+          "reason": null
+        }
+      },
+      "processTrees": [
+        {
+          "slot": 1,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:32.733Z",
+            "monotonicMs": 35750.324904,
+            "rootPid": 451590,
+            "cpuPercent": 0.9774230465403292,
+            "rssKiB": 195824,
+            "memberPids": [
+              451590,
+              451617
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 2,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:32.787Z",
+            "monotonicMs": 35804.193604,
+            "rootPid": 451629,
+            "cpuPercent": 0,
+            "rssKiB": 196084,
+            "memberPids": [
+              451629,
+              451653
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 3,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:32.833Z",
+            "monotonicMs": 35850.486232,
+            "rootPid": 451665,
+            "cpuPercent": 0,
+            "rssKiB": 196800,
+            "memberPids": [
+              451665,
+              451691
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 4,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:32.876Z",
+            "monotonicMs": 35893.553938,
+            "rootPid": 451707,
+            "cpuPercent": 1.0015370870104794,
+            "rssKiB": 196368,
+            "memberPids": [
+              451707,
+              451730
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 5,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:32.925Z",
+            "monotonicMs": 35942.297249,
+            "rootPid": 451743,
+            "cpuPercent": 0,
+            "rssKiB": 197252,
+            "memberPids": [
+              451743,
+              451776
+            ]
+          },
+          "absentReason": null
+        }
+      ],
+      "absentReason": null
+    },
+    {
+      "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+      "cohort": 5,
+      "window": "idle",
+      "position": 3,
+      "targetOffsetMs": 3000,
+      "targetMonotonicMs": 36644.136449,
+      "actualMonotonicMs": 36645.277863,
+      "host": {
+        "timestamp": "2026-08-10T05:00:33.646Z",
+        "monotonicMs": 36663.13734,
+        "loadAverage": [
+          4.03,
+          4.69,
+          4.01
+        ],
+        "availableMemoryKiB": 21872644,
+        "usedMemoryKiB": 10902152,
+        "responsiveness": {
+          "command": "/usr/bin/true",
+          "timeoutMs": 1000,
+          "startedAt": "2026-08-10T05:00:33.628Z",
+          "endedAt": "2026-08-10T05:00:33.643Z",
+          "passed": true,
+          "exitCode": 0,
+          "reason": null
+        }
+      },
+      "processTrees": [
+        {
+          "slot": 1,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:33.735Z",
+            "monotonicMs": 36752.539564,
+            "rootPid": 451590,
+            "cpuPercent": 0,
+            "rssKiB": 195824,
+            "memberPids": [
+              451590,
+              451617
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 2,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:33.816Z",
+            "monotonicMs": 36832.7848,
+            "rootPid": 451629,
+            "cpuPercent": 0,
+            "rssKiB": 196084,
+            "memberPids": [
+              451629,
+              451653
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 3,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:33.880Z",
+            "monotonicMs": 36897.059929,
+            "rootPid": 451665,
+            "cpuPercent": 0,
+            "rssKiB": 196800,
+            "memberPids": [
+              451665,
+              451691
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 4,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:33.925Z",
+            "monotonicMs": 36942.632602,
+            "rootPid": 451707,
+            "cpuPercent": 0,
+            "rssKiB": 196368,
+            "memberPids": [
+              451707,
+              451730
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 5,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:33.970Z",
+            "monotonicMs": 36987.388026,
+            "rootPid": 451743,
+            "cpuPercent": 0,
+            "rssKiB": 197276,
+            "memberPids": [
+              451743,
+              451776
+            ]
+          },
+          "absentReason": null
+        }
+      ],
+      "absentReason": null
+    },
+    {
+      "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+      "cohort": 5,
+      "window": "idle",
+      "position": 4,
+      "targetOffsetMs": 4000,
+      "targetMonotonicMs": 37644.136449,
+      "actualMonotonicMs": 37644.362459,
+      "host": {
+        "timestamp": "2026-08-10T05:00:34.633Z",
+        "monotonicMs": 37650.447903,
+        "loadAverage": [
+          4.03,
+          4.69,
+          4.01
+        ],
+        "availableMemoryKiB": 21865484,
+        "usedMemoryKiB": 10909312,
+        "responsiveness": {
+          "command": "/usr/bin/true",
+          "timeoutMs": 1000,
+          "startedAt": "2026-08-10T05:00:34.627Z",
+          "endedAt": "2026-08-10T05:00:34.633Z",
+          "passed": true,
+          "exitCode": 0,
+          "reason": null
+        }
+      },
+      "processTrees": [
+        {
+          "slot": 1,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:34.672Z",
+            "monotonicMs": 37689.201915,
+            "rootPid": 451590,
+            "cpuPercent": 0,
+            "rssKiB": 195828,
+            "memberPids": [
+              451590,
+              451617
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 2,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:34.710Z",
+            "monotonicMs": 37726.802397,
+            "rootPid": 451629,
+            "cpuPercent": 0,
+            "rssKiB": 196084,
+            "memberPids": [
+              451629,
+              451653
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 3,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:34.760Z",
+            "monotonicMs": 37777.366883,
+            "rootPid": 451665,
+            "cpuPercent": 0,
+            "rssKiB": 196800,
+            "memberPids": [
+              451665,
+              451691
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 4,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:34.821Z",
+            "monotonicMs": 37838.532154,
+            "rootPid": 451707,
+            "cpuPercent": 0,
+            "rssKiB": 196368,
+            "memberPids": [
+              451707,
+              451730
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 5,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:34.907Z",
+            "monotonicMs": 37924.544275,
+            "rootPid": 451743,
+            "cpuPercent": 0,
+            "rssKiB": 197276,
+            "memberPids": [
+              451743,
+              451776
+            ]
+          },
+          "absentReason": null
+        }
+      ],
+      "absentReason": null
+    },
+    {
+      "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+      "cohort": 5,
+      "window": "active",
+      "position": 0,
+      "targetOffsetMs": 0,
+      "targetMonotonicMs": 38972.422245,
+      "actualMonotonicMs": 38972.42817,
+      "host": {
+        "timestamp": "2026-08-10T05:00:35.961Z",
+        "monotonicMs": 38978.285187,
+        "loadAverage": [
+          4.03,
+          4.69,
+          4.01
+        ],
+        "availableMemoryKiB": 21863176,
+        "usedMemoryKiB": 10911620,
+        "responsiveness": {
+          "command": "/usr/bin/true",
+          "timeoutMs": 1000,
+          "startedAt": "2026-08-10T05:00:35.955Z",
+          "endedAt": "2026-08-10T05:00:35.960Z",
+          "passed": true,
+          "exitCode": 0,
+          "reason": null
+        }
+      },
+      "processTrees": [
+        {
+          "slot": 1,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:36.001Z",
+            "monotonicMs": 39018.663188,
+            "rootPid": 451590,
+            "cpuPercent": 0,
+            "rssKiB": 195828,
+            "memberPids": [
+              451590,
+              451617
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 2,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:36.047Z",
+            "monotonicMs": 39064.650957,
+            "rootPid": 451629,
+            "cpuPercent": 0,
+            "rssKiB": 196084,
+            "memberPids": [
+              451629,
+              451653
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 3,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:36.090Z",
+            "monotonicMs": 39107.224378,
+            "rootPid": 451665,
+            "cpuPercent": 0,
+            "rssKiB": 196800,
+            "memberPids": [
+              451665,
+              451691
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 4,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:36.142Z",
+            "monotonicMs": 39159.462571,
+            "rootPid": 451707,
+            "cpuPercent": 0,
+            "rssKiB": 196368,
+            "memberPids": [
+              451707,
+              451730
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 5,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:36.181Z",
+            "monotonicMs": 39197.780412,
+            "rootPid": 451743,
+            "cpuPercent": 0,
+            "rssKiB": 197276,
+            "memberPids": [
+              451743,
+              451776
+            ]
+          },
+          "absentReason": null
+        }
+      ],
+      "absentReason": null
+    },
+    {
+      "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+      "cohort": 5,
+      "window": "active",
+      "position": 1,
+      "targetOffsetMs": 1000,
+      "targetMonotonicMs": 39972.422245,
+      "actualMonotonicMs": 39972.562428,
+      "host": {
+        "timestamp": "2026-08-10T05:00:36.962Z",
+        "monotonicMs": 39979.599404,
+        "loadAverage": [
+          4.03,
+          4.69,
+          4.01
+        ],
+        "availableMemoryKiB": 21848396,
+        "usedMemoryKiB": 10926400,
+        "responsiveness": {
+          "command": "/usr/bin/true",
+          "timeoutMs": 1000,
+          "startedAt": "2026-08-10T05:00:36.955Z",
+          "endedAt": "2026-08-10T05:00:36.961Z",
+          "passed": true,
+          "exitCode": 0,
+          "reason": null
+        }
+      },
+      "processTrees": [
+        {
+          "slot": 1,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:37.008Z",
+            "monotonicMs": 40025.089831,
+            "rootPid": 451590,
+            "cpuPercent": 0,
+            "rssKiB": 195836,
+            "memberPids": [
+              451590,
+              451617
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 2,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:37.052Z",
+            "monotonicMs": 40069.05157,
+            "rootPid": 451629,
+            "cpuPercent": 0,
+            "rssKiB": 196084,
+            "memberPids": [
+              451629,
+              451653
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 3,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:37.126Z",
+            "monotonicMs": 40143.441699,
+            "rootPid": 451665,
+            "cpuPercent": 0,
+            "rssKiB": 196800,
+            "memberPids": [
+              451665,
+              451691
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 4,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:37.185Z",
+            "monotonicMs": 40202.158648,
+            "rootPid": 451707,
+            "cpuPercent": 0.9590522320532329,
+            "rssKiB": 196368,
+            "memberPids": [
+              451707,
+              451730
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 5,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:37.252Z",
+            "monotonicMs": 40269.015655,
+            "rootPid": 451743,
+            "cpuPercent": 0,
+            "rssKiB": 197276,
+            "memberPids": [
+              451743,
+              451776
+            ]
+          },
+          "absentReason": null
+        }
+      ],
+      "absentReason": null
+    },
+    {
+      "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+      "cohort": 5,
+      "window": "active",
+      "position": 2,
+      "targetOffsetMs": 2000,
+      "targetMonotonicMs": 40972.422245,
+      "actualMonotonicMs": 40973.095564,
+      "host": {
+        "timestamp": "2026-08-10T05:00:37.965Z",
+        "monotonicMs": 40981.915924,
+        "loadAverage": [
+          4.11,
+          4.69,
+          4.02
+        ],
+        "availableMemoryKiB": 21841364,
+        "usedMemoryKiB": 10933432,
+        "responsiveness": {
+          "command": "/usr/bin/true",
+          "timeoutMs": 1000,
+          "startedAt": "2026-08-10T05:00:37.956Z",
+          "endedAt": "2026-08-10T05:00:37.963Z",
+          "passed": true,
+          "exitCode": 0,
+          "reason": null
+        }
+      },
+      "processTrees": [
+        {
+          "slot": 1,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:38.037Z",
+            "monotonicMs": 41054.222406,
+            "rootPid": 451590,
+            "cpuPercent": 0,
+            "rssKiB": 195836,
+            "memberPids": [
+              451590,
+              451617
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 2,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:38.121Z",
+            "monotonicMs": 41138.660865,
+            "rootPid": 451629,
+            "cpuPercent": 0,
+            "rssKiB": 196096,
+            "memberPids": [
+              451629,
+              451653
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 3,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:38.215Z",
+            "monotonicMs": 41231.741683,
+            "rootPid": 451665,
+            "cpuPercent": 0,
+            "rssKiB": 196800,
+            "memberPids": [
+              451665,
+              451691
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 4,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:38.270Z",
+            "monotonicMs": 41287.424309,
+            "rootPid": 451707,
+            "cpuPercent": 0,
+            "rssKiB": 196368,
+            "memberPids": [
+              451707,
+              451730
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 5,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:38.330Z",
+            "monotonicMs": 41347.382718,
+            "rootPid": 451743,
+            "cpuPercent": 0,
+            "rssKiB": 197276,
+            "memberPids": [
+              451743,
+              451776
+            ]
+          },
+          "absentReason": null
+        }
+      ],
+      "absentReason": null
+    },
+    {
+      "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+      "cohort": 5,
+      "window": "active",
+      "position": 3,
+      "targetOffsetMs": 3000,
+      "targetMonotonicMs": 41972.422245,
+      "actualMonotonicMs": 41973.587101,
+      "host": {
+        "timestamp": "2026-08-10T05:00:38.965Z",
+        "monotonicMs": 41981.869263,
+        "loadAverage": [
+          4.11,
+          4.69,
+          4.02
+        ],
+        "availableMemoryKiB": 21870736,
+        "usedMemoryKiB": 10904060,
+        "responsiveness": {
+          "command": "/usr/bin/true",
+          "timeoutMs": 1000,
+          "startedAt": "2026-08-10T05:00:38.956Z",
+          "endedAt": "2026-08-10T05:00:38.963Z",
+          "passed": true,
+          "exitCode": 0,
+          "reason": null
+        }
+      },
+      "processTrees": [
+        {
+          "slot": 1,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:39.045Z",
+            "monotonicMs": 42062.298429,
+            "rootPid": 451590,
+            "cpuPercent": 0,
+            "rssKiB": 195836,
+            "memberPids": [
+              451590,
+              451617
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 2,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:39.113Z",
+            "monotonicMs": 42129.985441,
+            "rootPid": 451629,
+            "cpuPercent": 0,
+            "rssKiB": 196096,
+            "memberPids": [
+              451629,
+              451653
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 3,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:39.203Z",
+            "monotonicMs": 42219.996485,
+            "rootPid": 451665,
+            "cpuPercent": 1.0118847871785974,
+            "rssKiB": 196808,
+            "memberPids": [
+              451665,
+              451691
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 4,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:39.285Z",
+            "monotonicMs": 42302.248615,
+            "rootPid": 451707,
+            "cpuPercent": 0,
+            "rssKiB": 196372,
+            "memberPids": [
+              451707,
+              451730
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 5,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:39.356Z",
+            "monotonicMs": 42373.031769,
+            "rootPid": 451743,
+            "cpuPercent": 0,
+            "rssKiB": 197276,
+            "memberPids": [
+              451743,
+              451776
+            ]
+          },
+          "absentReason": null
+        }
+      ],
+      "absentReason": null
+    },
+    {
+      "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+      "cohort": 5,
+      "window": "active",
+      "position": 4,
+      "targetOffsetMs": 4000,
+      "targetMonotonicMs": 42972.422245,
+      "actualMonotonicMs": 42973.016136,
+      "host": {
+        "timestamp": "2026-08-10T05:00:39.975Z",
+        "monotonicMs": 42992.672948,
+        "loadAverage": [
+          4.11,
+          4.69,
+          4.02
+        ],
+        "availableMemoryKiB": 21858768,
+        "usedMemoryKiB": 10916028,
+        "responsiveness": {
+          "command": "/usr/bin/true",
+          "timeoutMs": 1000,
+          "startedAt": "2026-08-10T05:00:39.956Z",
+          "endedAt": "2026-08-10T05:00:39.965Z",
+          "passed": true,
+          "exitCode": 0,
+          "reason": null
+        }
+      },
+      "processTrees": [
+        {
+          "slot": 1,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:40.041Z",
+            "monotonicMs": 43058.526507,
+            "rootPid": 451590,
+            "cpuPercent": 0,
+            "rssKiB": 195836,
+            "memberPids": [
+              451590,
+              451617
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 2,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:40.095Z",
+            "monotonicMs": 43112.675081,
+            "rootPid": 451629,
+            "cpuPercent": 0,
+            "rssKiB": 196096,
+            "memberPids": [
+              451629,
+              451653
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 3,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:40.139Z",
+            "monotonicMs": 43156.353168,
+            "rootPid": 451665,
+            "cpuPercent": 0,
+            "rssKiB": 196808,
+            "memberPids": [
+              451665,
+              451691
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 4,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:40.208Z",
+            "monotonicMs": 43225.03161,
+            "rootPid": 451707,
+            "cpuPercent": 0,
+            "rssKiB": 196380,
+            "memberPids": [
+              451707,
+              451730
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 5,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:40.270Z",
+            "monotonicMs": 43287.710181,
+            "rootPid": 451743,
+            "cpuPercent": 0,
+            "rssKiB": 197276,
+            "memberPids": [
+              451743,
+              451776
+            ]
+          },
+          "absentReason": null
+        }
+      ],
+      "absentReason": null
+    },
+    {
+      "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+      "cohort": 10,
+      "window": "idle",
+      "position": 0,
+      "targetOffsetMs": 0,
+      "targetMonotonicMs": 56526.47801,
+      "actualMonotonicMs": 56526.484541,
+      "host": {
+        "timestamp": "2026-08-10T05:00:53.522Z",
+        "monotonicMs": 56538.724598,
+        "loadAverage": [
+          3.65,
+          4.56,
+          3.99
+        ],
+        "availableMemoryKiB": 21640252,
+        "usedMemoryKiB": 11134544,
+        "responsiveness": {
+          "command": "/usr/bin/true",
+          "timeoutMs": 1000,
+          "startedAt": "2026-08-10T05:00:53.509Z",
+          "endedAt": "2026-08-10T05:00:53.521Z",
+          "passed": true,
+          "exitCode": 0,
+          "reason": null
+        }
+      },
+      "processTrees": [
+        {
+          "slot": 1,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:53.616Z",
+            "monotonicMs": 56633.281867,
+            "rootPid": 451929,
+            "cpuPercent": 0,
+            "rssKiB": 197068,
+            "memberPids": [
+              451929,
+              451952
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 2,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:53.700Z",
+            "monotonicMs": 56717.494014,
+            "rootPid": 451970,
+            "cpuPercent": 0,
+            "rssKiB": 197244,
+            "memberPids": [
+              451970,
+              452001
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 3,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:53.785Z",
+            "monotonicMs": 56802.04077,
+            "rootPid": 452022,
+            "cpuPercent": 0,
+            "rssKiB": 196040,
+            "memberPids": [
+              452022,
+              452045
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 4,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:53.840Z",
+            "monotonicMs": 56857.497812,
+            "rootPid": 452061,
+            "cpuPercent": 0,
+            "rssKiB": 195832,
+            "memberPids": [
+              452061,
+              452084
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 5,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:53.887Z",
+            "monotonicMs": 56903.935203,
+            "rootPid": 452100,
+            "cpuPercent": 0,
+            "rssKiB": 196880,
+            "memberPids": [
+              452100,
+              452123
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 6,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:53.987Z",
+            "monotonicMs": 57003.909017,
+            "rootPid": 452138,
+            "cpuPercent": 0,
+            "rssKiB": 195532,
+            "memberPids": [
+              452138,
+              452162
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 7,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:54.065Z",
+            "monotonicMs": 57081.769099,
+            "rootPid": 452174,
+            "cpuPercent": 0,
+            "rssKiB": 196332,
+            "memberPids": [
+              452174,
+              452198
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 8,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:54.150Z",
+            "monotonicMs": 57167.617504,
+            "rootPid": 452223,
+            "cpuPercent": 1.2133427821027354,
+            "rssKiB": 195416,
+            "memberPids": [
+              452223,
+              452248
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 9,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:54.242Z",
+            "monotonicMs": 57259.412889,
+            "rootPid": 452267,
+            "cpuPercent": 0,
+            "rssKiB": 195392,
+            "memberPids": [
+              452267,
+              452290
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 10,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:54.332Z",
+            "monotonicMs": 57349.1522,
+            "rootPid": 452306,
+            "cpuPercent": 0,
+            "rssKiB": 198724,
+            "memberPids": [
+              452306,
+              452329
+            ]
+          },
+          "absentReason": null
+        }
+      ],
+      "absentReason": null
+    },
+    {
+      "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+      "cohort": 10,
+      "window": "idle",
+      "position": 1,
+      "targetOffsetMs": 1000,
+      "targetMonotonicMs": 57526.47801,
+      "actualMonotonicMs": 57526.783553,
+      "host": {
+        "timestamp": "2026-08-10T05:00:54.532Z",
+        "monotonicMs": 57549.391715,
+        "loadAverage": [
+          3.65,
+          4.56,
+          3.99
+        ],
+        "availableMemoryKiB": 21612560,
+        "usedMemoryKiB": 11162236,
+        "responsiveness": {
+          "command": "/usr/bin/true",
+          "timeoutMs": 1000,
+          "startedAt": "2026-08-10T05:00:54.510Z",
+          "endedAt": "2026-08-10T05:00:54.530Z",
+          "passed": true,
+          "exitCode": 0,
+          "reason": null
+        }
+      },
+      "processTrees": [
+        {
+          "slot": 1,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:54.650Z",
+            "monotonicMs": 57667.323173,
+            "rootPid": 451929,
+            "cpuPercent": 0,
+            "rssKiB": 197084,
+            "memberPids": [
+              451929,
+              451952
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 2,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:54.714Z",
+            "monotonicMs": 57731.056536,
+            "rootPid": 451970,
+            "cpuPercent": 0,
+            "rssKiB": 197244,
+            "memberPids": [
+              451970,
+              452001
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 3,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:54.765Z",
+            "monotonicMs": 57782.645025,
+            "rootPid": 452022,
+            "cpuPercent": 0,
+            "rssKiB": 196040,
+            "memberPids": [
+              452022,
+              452045
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 4,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:54.864Z",
+            "monotonicMs": 57881.49765,
+            "rootPid": 452061,
+            "cpuPercent": 0,
+            "rssKiB": 195832,
+            "memberPids": [
+              452061,
+              452084
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 5,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:54.931Z",
+            "monotonicMs": 57947.890371,
+            "rootPid": 452100,
+            "cpuPercent": 0,
+            "rssKiB": 196880,
+            "memberPids": [
+              452100,
+              452123
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 6,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:54.978Z",
+            "monotonicMs": 57995.681071,
+            "rootPid": 452138,
+            "cpuPercent": 0,
+            "rssKiB": 195536,
+            "memberPids": [
+              452138,
+              452162
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 7,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:55.036Z",
+            "monotonicMs": 58053.346835,
+            "rootPid": 452174,
+            "cpuPercent": 0,
+            "rssKiB": 196332,
+            "memberPids": [
+              452174,
+              452198
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 8,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:55.088Z",
+            "monotonicMs": 58105.099796,
+            "rootPid": 452223,
+            "cpuPercent": 0,
+            "rssKiB": 195416,
+            "memberPids": [
+              452223,
+              452248
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 9,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:55.141Z",
+            "monotonicMs": 58158.688944,
+            "rootPid": 452267,
+            "cpuPercent": 0,
+            "rssKiB": 195412,
+            "memberPids": [
+              452267,
+              452290
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 10,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:55.239Z",
+            "monotonicMs": 58256.549109,
+            "rootPid": 452306,
+            "cpuPercent": 0,
+            "rssKiB": 198724,
+            "memberPids": [
+              452306,
+              452329
+            ]
+          },
+          "absentReason": null
+        }
+      ],
+      "absentReason": null
+    },
+    {
+      "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+      "cohort": 10,
+      "window": "idle",
+      "position": 2,
+      "targetOffsetMs": 2000,
+      "targetMonotonicMs": 58526.47801,
+      "actualMonotonicMs": 58527.826348,
+      "host": {
+        "timestamp": "2026-08-10T05:00:55.540Z",
+        "monotonicMs": 58557.172541,
+        "loadAverage": [
+          3.65,
+          4.56,
+          3.99
+        ],
+        "availableMemoryKiB": 21601400,
+        "usedMemoryKiB": 11173396,
+        "responsiveness": {
+          "command": "/usr/bin/true",
+          "timeoutMs": 1000,
+          "startedAt": "2026-08-10T05:00:55.511Z",
+          "endedAt": "2026-08-10T05:00:55.537Z",
+          "passed": true,
+          "exitCode": 0,
+          "reason": null
+        }
+      },
+      "processTrees": [
+        {
+          "slot": 1,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:55.649Z",
+            "monotonicMs": 58665.788991,
+            "rootPid": 451929,
+            "cpuPercent": 0,
+            "rssKiB": 197084,
+            "memberPids": [
+              451929,
+              451952
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 2,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:55.709Z",
+            "monotonicMs": 58726.188312,
+            "rootPid": 451970,
+            "cpuPercent": 1.0048920395443166,
+            "rssKiB": 197252,
+            "memberPids": [
+              451970,
+              452001
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 3,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:55.818Z",
+            "monotonicMs": 58835.02133,
+            "rootPid": 452022,
+            "cpuPercent": 0,
+            "rssKiB": 196040,
+            "memberPids": [
+              452022,
+              452045
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 4,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:55.892Z",
+            "monotonicMs": 58908.747783,
+            "rootPid": 452061,
+            "cpuPercent": 0,
+            "rssKiB": 195832,
+            "memberPids": [
+              452061,
+              452084
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 5,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:55.971Z",
+            "monotonicMs": 58988.154284,
+            "rootPid": 452100,
+            "cpuPercent": 0,
+            "rssKiB": 196880,
+            "memberPids": [
+              452100,
+              452123
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 6,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:56.087Z",
+            "monotonicMs": 59048.654095,
+            "rootPid": 452138,
+            "cpuPercent": 0,
+            "rssKiB": 195536,
+            "memberPids": [
+              452138,
+              452162
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 7,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:56.155Z",
+            "monotonicMs": 59117.033096,
+            "rootPid": 452174,
+            "cpuPercent": 0,
+            "rssKiB": 196332,
+            "memberPids": [
+              452174,
+              452198
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 8,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:56.221Z",
+            "monotonicMs": 59183.508221,
+            "rootPid": 452223,
+            "cpuPercent": 0,
+            "rssKiB": 195416,
+            "memberPids": [
+              452223,
+              452248
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 9,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:56.275Z",
+            "monotonicMs": 59237.374285,
+            "rootPid": 452267,
+            "cpuPercent": 0,
+            "rssKiB": 195412,
+            "memberPids": [
+              452267,
+              452290
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 10,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:56.334Z",
+            "monotonicMs": 59295.654634,
+            "rootPid": 452306,
+            "cpuPercent": 0,
+            "rssKiB": 198748,
+            "memberPids": [
+              452306,
+              452329
+            ]
+          },
+          "absentReason": null
+        }
+      ],
+      "absentReason": null
+    },
+    {
+      "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+      "cohort": 10,
+      "window": "idle",
+      "position": 3,
+      "targetOffsetMs": 3000,
+      "targetMonotonicMs": 59526.47801,
+      "actualMonotonicMs": 59527.594136,
+      "host": {
+        "timestamp": "2026-08-10T05:00:56.575Z",
+        "monotonicMs": 59536.963664,
+        "loadAverage": [
+          3.65,
+          4.56,
+          3.99
+        ],
+        "availableMemoryKiB": 21602548,
+        "usedMemoryKiB": 11172248,
+        "responsiveness": {
+          "command": "/usr/bin/true",
+          "timeoutMs": 1000,
+          "startedAt": "2026-08-10T05:00:56.566Z",
+          "endedAt": "2026-08-10T05:00:56.573Z",
+          "passed": true,
+          "exitCode": 0,
+          "reason": null
+        }
+      },
+      "processTrees": [
+        {
+          "slot": 1,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:56.676Z",
+            "monotonicMs": 59637.956588,
+            "rootPid": 451929,
+            "cpuPercent": 0,
+            "rssKiB": 197084,
+            "memberPids": [
+              451929,
+              451952
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 2,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:56.751Z",
+            "monotonicMs": 59712.831605,
+            "rootPid": 451970,
+            "cpuPercent": 0,
+            "rssKiB": 197252,
+            "memberPids": [
+              451970,
+              452001
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 3,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:56.825Z",
+            "monotonicMs": 59786.789164,
+            "rootPid": 452022,
+            "cpuPercent": 0,
+            "rssKiB": 196052,
+            "memberPids": [
+              452022,
+              452045
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 4,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:56.932Z",
+            "monotonicMs": 59894.36858,
+            "rootPid": 452061,
+            "cpuPercent": 0,
+            "rssKiB": 195832,
+            "memberPids": [
+              452061,
+              452084
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 5,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:57.002Z",
+            "monotonicMs": 59963.736517,
+            "rootPid": 452100,
+            "cpuPercent": 0,
+            "rssKiB": 196880,
+            "memberPids": [
+              452100,
+              452123
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 6,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:57.057Z",
+            "monotonicMs": 60018.809152,
+            "rootPid": 452138,
+            "cpuPercent": 0,
+            "rssKiB": 195536,
+            "memberPids": [
+              452138,
+              452162
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 7,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:57.107Z",
+            "monotonicMs": 60069.333788,
+            "rootPid": 452174,
+            "cpuPercent": 0,
+            "rssKiB": 196332,
+            "memberPids": [
+              452174,
+              452198
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 8,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:57.193Z",
+            "monotonicMs": 60154.554342,
+            "rootPid": 452223,
+            "cpuPercent": 0,
+            "rssKiB": 195416,
+            "memberPids": [
+              452223,
+              452248
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 9,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:57.318Z",
+            "monotonicMs": 60279.613254,
+            "rootPid": 452267,
+            "cpuPercent": 0,
+            "rssKiB": 195412,
+            "memberPids": [
+              452267,
+              452290
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 10,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:57.363Z",
+            "monotonicMs": 60324.792016,
+            "rootPid": 452306,
+            "cpuPercent": 0,
+            "rssKiB": 198748,
+            "memberPids": [
+              452306,
+              452329
+            ]
+          },
+          "absentReason": null
+        }
+      ],
+      "absentReason": null
+    },
+    {
+      "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+      "cohort": 10,
+      "window": "idle",
+      "position": 4,
+      "targetOffsetMs": 4000,
+      "targetMonotonicMs": 60526.47801,
+      "actualMonotonicMs": 60527.391493,
+      "host": {
+        "timestamp": "2026-08-10T05:00:57.577Z",
+        "monotonicMs": 60538.870525,
+        "loadAverage": [
+          4,
+          4.62,
+          4.01
+        ],
+        "availableMemoryKiB": 21587320,
+        "usedMemoryKiB": 11187476,
+        "responsiveness": {
+          "command": "/usr/bin/true",
+          "timeoutMs": 1000,
+          "startedAt": "2026-08-10T05:00:57.565Z",
+          "endedAt": "2026-08-10T05:00:57.574Z",
+          "passed": true,
+          "exitCode": 0,
+          "reason": null
+        }
+      },
+      "processTrees": [
+        {
+          "slot": 1,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:57.684Z",
+            "monotonicMs": 60646.371599,
+            "rootPid": 451929,
+            "cpuPercent": 0,
+            "rssKiB": 197084,
+            "memberPids": [
+              451929,
+              451952
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 2,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:57.766Z",
+            "monotonicMs": 60727.674889,
+            "rootPid": 451970,
+            "cpuPercent": 0,
+            "rssKiB": 197252,
+            "memberPids": [
+              451970,
+              452001
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 3,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:57.835Z",
+            "monotonicMs": 60797.357948,
+            "rootPid": 452022,
+            "cpuPercent": 0,
+            "rssKiB": 196052,
+            "memberPids": [
+              452022,
+              452045
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 4,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:57.934Z",
+            "monotonicMs": 60896.129803,
+            "rootPid": 452061,
+            "cpuPercent": 0,
+            "rssKiB": 195836,
+            "memberPids": [
+              452061,
+              452084
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 5,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:58.033Z",
+            "monotonicMs": 60995.233462,
+            "rootPid": 452100,
+            "cpuPercent": 0.969464819888537,
+            "rssKiB": 196884,
+            "memberPids": [
+              452100,
+              452123
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 6,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:58.122Z",
+            "monotonicMs": 61084.256371,
+            "rootPid": 452138,
+            "cpuPercent": 0,
+            "rssKiB": 195536,
+            "memberPids": [
+              452138,
+              452162
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 7,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:58.185Z",
+            "monotonicMs": 61146.868241,
+            "rootPid": 452174,
+            "cpuPercent": 0,
+            "rssKiB": 196332,
+            "memberPids": [
+              452174,
+              452198
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 8,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:58.257Z",
+            "monotonicMs": 61218.868555,
+            "rootPid": 452223,
+            "cpuPercent": 0,
+            "rssKiB": 195416,
+            "memberPids": [
+              452223,
+              452248
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 9,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:58.329Z",
+            "monotonicMs": 61290.71637,
+            "rootPid": 452267,
+            "cpuPercent": 0,
+            "rssKiB": 195412,
+            "memberPids": [
+              452267,
+              452290
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 10,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:58.396Z",
+            "monotonicMs": 61358.395413,
+            "rootPid": 452306,
+            "cpuPercent": 0,
+            "rssKiB": 198748,
+            "memberPids": [
+              452306,
+              452329
+            ]
+          },
+          "absentReason": null
+        }
+      ],
+      "absentReason": null
+    },
+    {
+      "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+      "cohort": 10,
+      "window": "active",
+      "position": 0,
+      "targetOffsetMs": 0,
+      "targetMonotonicMs": 62232.731805,
+      "actualMonotonicMs": 62232.736957,
+      "host": {
+        "timestamp": "2026-08-10T05:00:59.278Z",
+        "monotonicMs": 62240.224876,
+        "loadAverage": [
+          4,
+          4.62,
+          4.01
+        ],
+        "availableMemoryKiB": 21593312,
+        "usedMemoryKiB": 11181484,
+        "responsiveness": {
+          "command": "/usr/bin/true",
+          "timeoutMs": 1000,
+          "startedAt": "2026-08-10T05:00:59.271Z",
+          "endedAt": "2026-08-10T05:00:59.277Z",
+          "passed": true,
+          "exitCode": 0,
+          "reason": null
+        }
+      },
+      "processTrees": [
+        {
+          "slot": 1,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:59.330Z",
+            "monotonicMs": 62292.050749,
+            "rootPid": 451929,
+            "cpuPercent": 0,
+            "rssKiB": 197084,
+            "memberPids": [
+              451929,
+              451952
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 2,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:59.394Z",
+            "monotonicMs": 62356.454828,
+            "rootPid": 451970,
+            "cpuPercent": 0,
+            "rssKiB": 197252,
+            "memberPids": [
+              451970,
+              452001
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 3,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:59.468Z",
+            "monotonicMs": 62430.383743,
+            "rootPid": 452022,
+            "cpuPercent": 0,
+            "rssKiB": 196052,
+            "memberPids": [
+              452022,
+              452045
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 4,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:59.516Z",
+            "monotonicMs": 62478.426777,
+            "rootPid": 452061,
+            "cpuPercent": 0,
+            "rssKiB": 195836,
+            "memberPids": [
+              452061,
+              452084
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 5,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:59.567Z",
+            "monotonicMs": 62529.019568,
+            "rootPid": 452100,
+            "cpuPercent": 0,
+            "rssKiB": 196888,
+            "memberPids": [
+              452100,
+              452123
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 6,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:59.619Z",
+            "monotonicMs": 62581.2915,
+            "rootPid": 452138,
+            "cpuPercent": 0,
+            "rssKiB": 195540,
+            "memberPids": [
+              452138,
+              452162
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 7,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:59.666Z",
+            "monotonicMs": 62628.093925,
+            "rootPid": 452174,
+            "cpuPercent": 0,
+            "rssKiB": 196332,
+            "memberPids": [
+              452174,
+              452198
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 8,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:59.739Z",
+            "monotonicMs": 62700.657922,
+            "rootPid": 452223,
+            "cpuPercent": 0,
+            "rssKiB": 195416,
+            "memberPids": [
+              452223,
+              452248
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 9,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:59.817Z",
+            "monotonicMs": 62778.94148,
+            "rootPid": 452267,
+            "cpuPercent": 0,
+            "rssKiB": 195412,
+            "memberPids": [
+              452267,
+              452290
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 10,
+          "sample": {
+            "timestamp": "2026-08-10T05:00:59.890Z",
+            "monotonicMs": 62851.85217,
+            "rootPid": 452306,
+            "cpuPercent": 0,
+            "rssKiB": 198748,
+            "memberPids": [
+              452306,
+              452329
+            ]
+          },
+          "absentReason": null
+        }
+      ],
+      "absentReason": null
+    },
+    {
+      "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+      "cohort": 10,
+      "window": "active",
+      "position": 1,
+      "targetOffsetMs": 1000,
+      "targetMonotonicMs": 63232.731805,
+      "actualMonotonicMs": 63233.114939,
+      "host": {
+        "timestamp": "2026-08-10T05:01:00.281Z",
+        "monotonicMs": 63242.569706,
+        "loadAverage": [
+          4,
+          4.62,
+          4.01
+        ],
+        "availableMemoryKiB": 21585816,
+        "usedMemoryKiB": 11188980,
+        "responsiveness": {
+          "command": "/usr/bin/true",
+          "timeoutMs": 1000,
+          "startedAt": "2026-08-10T05:01:00.271Z",
+          "endedAt": "2026-08-10T05:01:00.279Z",
+          "passed": true,
+          "exitCode": 0,
+          "reason": null
+        }
+      },
+      "processTrees": [
+        {
+          "slot": 1,
+          "sample": {
+            "timestamp": "2026-08-10T05:01:00.366Z",
+            "monotonicMs": 63328.518578,
+            "rootPid": 451929,
+            "cpuPercent": 0,
+            "rssKiB": 197084,
+            "memberPids": [
+              451929,
+              451952
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 2,
+          "sample": {
+            "timestamp": "2026-08-10T05:01:00.421Z",
+            "monotonicMs": 63383.162213,
+            "rootPid": 451970,
+            "cpuPercent": 0,
+            "rssKiB": 197252,
+            "memberPids": [
+              451970,
+              452001
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 3,
+          "sample": {
+            "timestamp": "2026-08-10T05:01:00.473Z",
+            "monotonicMs": 63435.204277,
+            "rootPid": 452022,
+            "cpuPercent": 0,
+            "rssKiB": 196052,
+            "memberPids": [
+              452022,
+              452045
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 4,
+          "sample": {
+            "timestamp": "2026-08-10T05:01:00.522Z",
+            "monotonicMs": 63484.322077,
+            "rootPid": 452061,
+            "cpuPercent": 0,
+            "rssKiB": 195836,
+            "memberPids": [
+              452061,
+              452084
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 5,
+          "sample": {
+            "timestamp": "2026-08-10T05:01:00.588Z",
+            "monotonicMs": 63550.525655,
+            "rootPid": 452100,
+            "cpuPercent": 0,
+            "rssKiB": 196888,
+            "memberPids": [
+              452100,
+              452123
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 6,
+          "sample": {
+            "timestamp": "2026-08-10T05:01:00.639Z",
+            "monotonicMs": 63601.448879,
+            "rootPid": 452138,
+            "cpuPercent": 0,
+            "rssKiB": 195540,
+            "memberPids": [
+              452138,
+              452162
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 7,
+          "sample": {
+            "timestamp": "2026-08-10T05:01:00.678Z",
+            "monotonicMs": 63639.634552,
+            "rootPid": 452174,
+            "cpuPercent": 0.9885910395569292,
+            "rssKiB": 196348,
+            "memberPids": [
+              452174,
+              452198
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 8,
+          "sample": {
+            "timestamp": "2026-08-10T05:01:00.728Z",
+            "monotonicMs": 63690.13709,
+            "rootPid": 452223,
+            "cpuPercent": 0,
+            "rssKiB": 195416,
+            "memberPids": [
+              452223,
+              452248
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 9,
+          "sample": {
+            "timestamp": "2026-08-10T05:01:00.776Z",
+            "monotonicMs": 63738.385296,
+            "rootPid": 452267,
+            "cpuPercent": 0,
+            "rssKiB": 195412,
+            "memberPids": [
+              452267,
+              452290
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 10,
+          "sample": {
+            "timestamp": "2026-08-10T05:01:00.835Z",
+            "monotonicMs": 63796.779068,
+            "rootPid": 452306,
+            "cpuPercent": 0,
+            "rssKiB": 198748,
+            "memberPids": [
+              452306,
+              452329
+            ]
+          },
+          "absentReason": null
+        }
+      ],
+      "absentReason": null
+    },
+    {
+      "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+      "cohort": 10,
+      "window": "active",
+      "position": 2,
+      "targetOffsetMs": 2000,
+      "targetMonotonicMs": 64232.731805,
+      "actualMonotonicMs": 64233.194015,
+      "host": {
+        "timestamp": "2026-08-10T05:01:01.277Z",
+        "monotonicMs": 64239.314456,
+        "loadAverage": [
+          4,
+          4.62,
+          4.01
+        ],
+        "availableMemoryKiB": 21601444,
+        "usedMemoryKiB": 11173352,
+        "responsiveness": {
+          "command": "/usr/bin/true",
+          "timeoutMs": 1000,
+          "startedAt": "2026-08-10T05:01:01.271Z",
+          "endedAt": "2026-08-10T05:01:01.276Z",
+          "passed": true,
+          "exitCode": 0,
+          "reason": null
+        }
+      },
+      "processTrees": [
+        {
+          "slot": 1,
+          "sample": {
+            "timestamp": "2026-08-10T05:01:01.326Z",
+            "monotonicMs": 64288.247443,
+            "rootPid": 451929,
+            "cpuPercent": 0,
+            "rssKiB": 197084,
+            "memberPids": [
+              451929,
+              451952
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 2,
+          "sample": {
+            "timestamp": "2026-08-10T05:01:01.388Z",
+            "monotonicMs": 64349.888936,
+            "rootPid": 451970,
+            "cpuPercent": 0,
+            "rssKiB": 197252,
+            "memberPids": [
+              451970,
+              452001
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 3,
+          "sample": {
+            "timestamp": "2026-08-10T05:01:01.454Z",
+            "monotonicMs": 64415.740521,
+            "rootPid": 452022,
+            "cpuPercent": 0,
+            "rssKiB": 196052,
+            "memberPids": [
+              452022,
+              452045
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 4,
+          "sample": {
+            "timestamp": "2026-08-10T05:01:01.508Z",
+            "monotonicMs": 64469.807164,
+            "rootPid": 452061,
+            "cpuPercent": 0,
+            "rssKiB": 195836,
+            "memberPids": [
+              452061,
+              452084
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 5,
+          "sample": {
+            "timestamp": "2026-08-10T05:01:01.572Z",
+            "monotonicMs": 64533.773299,
+            "rootPid": 452100,
+            "cpuPercent": 0,
+            "rssKiB": 196888,
+            "memberPids": [
+              452100,
+              452123
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 6,
+          "sample": {
+            "timestamp": "2026-08-10T05:01:01.649Z",
+            "monotonicMs": 64610.615135,
+            "rootPid": 452138,
+            "cpuPercent": 0,
+            "rssKiB": 195540,
+            "memberPids": [
+              452138,
+              452162
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 7,
+          "sample": {
+            "timestamp": "2026-08-10T05:01:01.697Z",
+            "monotonicMs": 64658.800225,
+            "rootPid": 452174,
+            "cpuPercent": 0,
+            "rssKiB": 196348,
+            "memberPids": [
+              452174,
+              452198
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 8,
+          "sample": {
+            "timestamp": "2026-08-10T05:01:01.739Z",
+            "monotonicMs": 64701.368143,
+            "rootPid": 452223,
+            "cpuPercent": 0,
+            "rssKiB": 195428,
+            "memberPids": [
+              452223,
+              452248
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 9,
+          "sample": {
+            "timestamp": "2026-08-10T05:01:01.784Z",
+            "monotonicMs": 64746.211919,
+            "rootPid": 452267,
+            "cpuPercent": 0,
+            "rssKiB": 195420,
+            "memberPids": [
+              452267,
+              452290
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 10,
+          "sample": {
+            "timestamp": "2026-08-10T05:01:01.868Z",
+            "monotonicMs": 64829.943681,
+            "rootPid": 452306,
+            "cpuPercent": 0,
+            "rssKiB": 198748,
+            "memberPids": [
+              452306,
+              452329
+            ]
+          },
+          "absentReason": null
+        }
+      ],
+      "absentReason": null
+    },
+    {
+      "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+      "cohort": 10,
+      "window": "active",
+      "position": 3,
+      "targetOffsetMs": 3000,
+      "targetMonotonicMs": 65232.731805,
+      "actualMonotonicMs": 65233.524062,
+      "host": {
+        "timestamp": "2026-08-10T05:01:02.278Z",
+        "monotonicMs": 65239.752481,
+        "loadAverage": [
+          3.76,
+          4.56,
+          3.99
+        ],
+        "availableMemoryKiB": 21593432,
+        "usedMemoryKiB": 11181364,
+        "responsiveness": {
+          "command": "/usr/bin/true",
+          "timeoutMs": 1000,
+          "startedAt": "2026-08-10T05:01:02.271Z",
+          "endedAt": "2026-08-10T05:01:02.276Z",
+          "passed": true,
+          "exitCode": 0,
+          "reason": null
+        }
+      },
+      "processTrees": [
+        {
+          "slot": 1,
+          "sample": {
+            "timestamp": "2026-08-10T05:01:02.329Z",
+            "monotonicMs": 65291.08981,
+            "rootPid": 451929,
+            "cpuPercent": 0,
+            "rssKiB": 197084,
+            "memberPids": [
+              451929,
+              451952
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 2,
+          "sample": {
+            "timestamp": "2026-08-10T05:01:02.369Z",
+            "monotonicMs": 65331.32577,
+            "rootPid": 451970,
+            "cpuPercent": 0,
+            "rssKiB": 197252,
+            "memberPids": [
+              451970,
+              452001
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 3,
+          "sample": {
+            "timestamp": "2026-08-10T05:01:02.412Z",
+            "monotonicMs": 65374.033284,
+            "rootPid": 452022,
+            "cpuPercent": 0,
+            "rssKiB": 196052,
+            "memberPids": [
+              452022,
+              452045
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 4,
+          "sample": {
+            "timestamp": "2026-08-10T05:01:02.465Z",
+            "monotonicMs": 65426.609547,
+            "rootPid": 452061,
+            "cpuPercent": 0,
+            "rssKiB": 195836,
+            "memberPids": [
+              452061,
+              452084
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 5,
+          "sample": {
+            "timestamp": "2026-08-10T05:01:02.510Z",
+            "monotonicMs": 65471.867271,
+            "rootPid": 452100,
+            "cpuPercent": 0,
+            "rssKiB": 196888,
+            "memberPids": [
+              452100,
+              452123
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 6,
+          "sample": {
+            "timestamp": "2026-08-10T05:01:02.592Z",
+            "monotonicMs": 65554.204828,
+            "rootPid": 452138,
+            "cpuPercent": 0,
+            "rssKiB": 195540,
+            "memberPids": [
+              452138,
+              452162
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 7,
+          "sample": {
+            "timestamp": "2026-08-10T05:01:02.664Z",
+            "monotonicMs": 65626.101797,
+            "rootPid": 452174,
+            "cpuPercent": 0,
+            "rssKiB": 196348,
+            "memberPids": [
+              452174,
+              452198
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 8,
+          "sample": {
+            "timestamp": "2026-08-10T05:01:02.715Z",
+            "monotonicMs": 65677.399272,
+            "rootPid": 452223,
+            "cpuPercent": 0,
+            "rssKiB": 195428,
+            "memberPids": [
+              452223,
+              452248
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 9,
+          "sample": {
+            "timestamp": "2026-08-10T05:01:02.755Z",
+            "monotonicMs": 65716.704114,
+            "rootPid": 452267,
+            "cpuPercent": 0,
+            "rssKiB": 195420,
+            "memberPids": [
+              452267,
+              452290
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 10,
+          "sample": {
+            "timestamp": "2026-08-10T05:01:02.801Z",
+            "monotonicMs": 65762.827461,
+            "rootPid": 452306,
+            "cpuPercent": 0,
+            "rssKiB": 198756,
+            "memberPids": [
+              452306,
+              452329
+            ]
+          },
+          "absentReason": null
+        }
+      ],
+      "absentReason": null
+    },
+    {
+      "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+      "cohort": 10,
+      "window": "active",
+      "position": 4,
+      "targetOffsetMs": 4000,
+      "targetMonotonicMs": 66232.731805,
+      "actualMonotonicMs": 66232.822608,
+      "host": {
+        "timestamp": "2026-08-10T05:01:03.287Z",
+        "monotonicMs": 66249.480847,
+        "loadAverage": [
+          3.76,
+          4.56,
+          3.99
+        ],
+        "availableMemoryKiB": 21588768,
+        "usedMemoryKiB": 11186028,
+        "responsiveness": {
+          "command": "/usr/bin/true",
+          "timeoutMs": 1000,
+          "startedAt": "2026-08-10T05:01:03.271Z",
+          "endedAt": "2026-08-10T05:01:03.285Z",
+          "passed": true,
+          "exitCode": 0,
+          "reason": null
+        }
+      },
+      "processTrees": [
+        {
+          "slot": 1,
+          "sample": {
+            "timestamp": "2026-08-10T05:01:03.411Z",
+            "monotonicMs": 66372.934015,
+            "rootPid": 451929,
+            "cpuPercent": 0,
+            "rssKiB": 197084,
+            "memberPids": [
+              451929,
+              451952
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 2,
+          "sample": {
+            "timestamp": "2026-08-10T05:01:03.466Z",
+            "monotonicMs": 66428.541546,
+            "rootPid": 451970,
+            "cpuPercent": 0,
+            "rssKiB": 197252,
+            "memberPids": [
+              451970,
+              452001
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 3,
+          "sample": {
+            "timestamp": "2026-08-10T05:01:03.516Z",
+            "monotonicMs": 66477.744691,
+            "rootPid": 452022,
+            "cpuPercent": 0,
+            "rssKiB": 196052,
+            "memberPids": [
+              452022,
+              452045
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 4,
+          "sample": {
+            "timestamp": "2026-08-10T05:01:03.564Z",
+            "monotonicMs": 66525.974026,
+            "rootPid": 452061,
+            "cpuPercent": 0,
+            "rssKiB": 195836,
+            "memberPids": [
+              452061,
+              452084
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 5,
+          "sample": {
+            "timestamp": "2026-08-10T05:01:03.630Z",
+            "monotonicMs": 66592.425386,
+            "rootPid": 452100,
+            "cpuPercent": 0,
+            "rssKiB": 196888,
+            "memberPids": [
+              452100,
+              452123
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 6,
+          "sample": {
+            "timestamp": "2026-08-10T05:01:03.687Z",
+            "monotonicMs": 66649.333072,
+            "rootPid": 452138,
+            "cpuPercent": 0,
+            "rssKiB": 195540,
+            "memberPids": [
+              452138,
+              452162
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 7,
+          "sample": {
+            "timestamp": "2026-08-10T05:01:03.733Z",
+            "monotonicMs": 66695.075331,
+            "rootPid": 452174,
+            "cpuPercent": 0,
+            "rssKiB": 196348,
+            "memberPids": [
+              452174,
+              452198
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 8,
+          "sample": {
+            "timestamp": "2026-08-10T05:01:03.772Z",
+            "monotonicMs": 66733.611184,
+            "rootPid": 452223,
+            "cpuPercent": 0,
+            "rssKiB": 195428,
+            "memberPids": [
+              452223,
+              452248
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 9,
+          "sample": {
+            "timestamp": "2026-08-10T05:01:03.821Z",
+            "monotonicMs": 66783.487009,
+            "rootPid": 452267,
+            "cpuPercent": 0,
+            "rssKiB": 195420,
+            "memberPids": [
+              452267,
+              452290
+            ]
+          },
+          "absentReason": null
+        },
+        {
+          "slot": 10,
+          "sample": {
+            "timestamp": "2026-08-10T05:01:03.870Z",
+            "monotonicMs": 66832.093229,
+            "rootPid": 452306,
+            "cpuPercent": 0,
+            "rssKiB": 198756,
+            "memberPids": [
+              452306,
+              452329
+            ]
+          },
+          "absentReason": null
+        }
+      ],
+      "absentReason": null
+    }
+  ]
+}

@@ -71,7 +71,7 @@ const sampleRows = (
   }))
   return {
     anchorMonotonicMs: anchor,
-    endedMonotonicMs: anchor + (input.window === 'idle' ? 5000 : 4000),
+    endedMonotonicMs: anchor + 5000,
     samples,
   }
 }
@@ -250,6 +250,12 @@ describe('capacity cohort coordinator', () => {
         .flatMap(({ slots }) => slots)
         .every(({ state }) => state === 'unstarted')
     ).toBe(true)
+    expect(timedResult.cohorts.every(({ complete }) => !complete)).toBe(true)
+    expect(
+      timedResult.cohorts.every(({ findings }) =>
+        findings.includes('incomplete-evidence')
+      )
+    ).toBe(true)
 
     const leaked = dependencies()
     leaked.deps.audit = async () => ({
@@ -321,5 +327,139 @@ describe('capacity cohort coordinator', () => {
     expect(probeResult.threeMemberGate.blockers).toContain(
       'required responsiveness probe failed'
     )
+  })
+
+  it('tracks and cleans identities and listener owners discovered during sampling', async () => {
+    const controlled = dependencies()
+    const cleaned: number[] = []
+    const audited: number[][] = []
+    controlled.deps.cleanupIdentity = async ({ pid }) => {
+      cleaned.push(pid)
+    }
+    controlled.deps.audit = async (processes) => {
+      audited.push(processes.map(({ pid }) => pid))
+      return { processIdentitiesAbsent: true, listenersAbsent: true }
+    }
+    controlled.deps.sample = async (input) => {
+      for (const slot of input.slots.filter(({ state }) => state === 'ready'))
+        input.onAttribution?.(
+          slot.slot,
+          [
+            { pid: slot.pid!, startTimeTicks: '10' },
+            { pid: slot.pid! + 10_000, startTimeTicks: 'later' },
+          ],
+          [
+            slot.listener!,
+            {
+              address: '127.0.0.1',
+              port: slot.listener!.port + 10_000,
+              pid: slot.pid! + 10_000,
+              inode: 'later-' + slot.pid,
+            },
+          ]
+        )
+      return sampleRows(input)
+    }
+    const result = await coordinateCapacityRun(runId, controlled.deps)
+    expect(result.cohorts[0].slots[0].processIdentities).toContainEqual({
+      pid: 10_101,
+      startTimeTicks: 'later',
+    })
+    expect(result.cohorts[0].slots[0].attributedListeners).toContainEqual(
+      expect.objectContaining({ pid: 10_101, inode: 'later-101' })
+    )
+    expect(cleaned).toContain(10_101)
+    expect(audited.some((pids) => pids.includes(10_101))).toBe(true)
+  })
+
+  it('rejects a repeated listener-owner PID and includes it in the three-member gate', async () => {
+    const controlled = dependencies()
+    controlled.deps.inspect = async (pid) => ({
+      ok: true,
+      rootPid: pid,
+      rows: [
+        { pid, ppid: 1, startTimeTicks: '10', cpuTicks: 1, rssKiB: 10 },
+        { pid: 777, ppid: pid, startTimeTicks: '11', cpuTicks: 1, rssKiB: 10 },
+      ],
+    })
+    controlled.deps.listeners = async (pids) => [
+      {
+        address: '127.0.0.1',
+        port: 4000 + pids[0],
+        pid: 777,
+        inode: String(pids[0]),
+      },
+    ]
+    const result = await coordinateCapacityRun(runId, controlled.deps)
+    expect(result.cohorts[1].slots.map(({ state }) => state)).toEqual([
+      'ready',
+      'failed',
+      'failed',
+    ])
+    expect(result.threeMemberGate.blockers).toContain(
+      'all three members were not ready'
+    )
+    expect(result.threeMemberGate.blockers).toContain(
+      'member PID, listener-owner PID, or port was not distinct'
+    )
+  })
+
+  it('removes unexpected exits from ready counts and records findings', async () => {
+    const controlled = dependencies()
+    const calls = new Map<number, number>()
+    controlled.deps.inspect = async (pid) => {
+      const count = (calls.get(pid) ?? 0) + 1
+      calls.set(pid, count)
+      return count === 1
+        ? {
+            ok: true,
+            rootPid: pid,
+            rows: [
+              {
+                pid,
+                ppid: 1,
+                startTimeTicks: '10',
+                cpuTicks: 1,
+                rssKiB: 10,
+              },
+            ],
+          }
+        : { ok: false, rootPid: pid, reason: 'root-process-absent' }
+    }
+    const result = await coordinateCapacityRun(runId, controlled.deps)
+    const first = result.cohorts[0]
+    expect(first.slots[0]).toMatchObject({
+      state: 'failed',
+      readinessAchieved: true,
+      unexpectedExit: true,
+      reason: 'unexpected-exit:root-process-absent',
+    })
+    expect(first.findings).toContain('unexpected-exit:1')
+    expect(first.slots.filter(({ state }) => state === 'ready')).toHaveLength(0)
+  })
+
+  it('records probe, process-tree, missing-sample, and incomplete findings', async () => {
+    const controlled = dependencies()
+    controlled.deps.sample = async (input) => {
+      const result = sampleRows(input)
+      if (input.cohort === 5 && input.window === 'idle') {
+        result.samples[0].host!.responsiveness = probe(false)
+        result.samples[1].processTrees[0] = {
+          slot: 1,
+          sample: null,
+          absentReason: 'controlled-process-tree-failure',
+        }
+      }
+      if (input.cohort === 5 && input.window === 'active')
+        result.samples[0].processTrees = []
+      return result
+    }
+    const result = await coordinateCapacityRun(runId, controlled.deps)
+    const findings = result.cohorts[2].findings.join('\n')
+    expect(findings).toContain('probe-failed')
+    expect(findings).toContain('controlled-process-tree-failure')
+    expect(findings).toContain('incomplete-evidence')
+    expect(result.cohorts[2].complete).toBe(false)
+    expect(result.exitReasons).toContain('cohort-incomplete:5')
   })
 })

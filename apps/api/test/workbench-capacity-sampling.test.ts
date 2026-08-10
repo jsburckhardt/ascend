@@ -1,5 +1,9 @@
+import path from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { BL001_FIXTURE } from '../src/workbench-proof-contract.js'
+import {
+  BL001_FIXTURE,
+  REPOSITORY_ROOT,
+} from '../src/workbench-proof-contract.js'
 import {
   CAPACITY_SAMPLE_OFFSETS_MS,
   type CapacitySlot,
@@ -47,7 +51,16 @@ const readySlot = (slot = 1): CapacitySlot => ({
     pid: 1000 + slot,
     inode: String(slot),
   },
+  readinessAchieved: true,
   processIdentities: [{ pid: 1000 + slot, startTimeTicks: '10' }],
+  attributedListeners: [
+    {
+      address: '127.0.0.1',
+      port: 4000 + slot,
+      pid: 1000 + slot,
+      inode: String(slot),
+    },
+  ],
   unexpectedExit: false,
 })
 const passedProbe = (clock: CapacityClock): Promise<ProbeResult> =>
@@ -120,11 +133,17 @@ describe('capacity sampling and workload', () => {
       memberPids: [1001],
     })
     expect(result.endedMonotonicMs - result.anchorMonotonicMs).toBe(5_000)
+    expect(
+      result.samples.every(
+        ({ actualMonotonicMs, targetMonotonicMs }) =>
+          actualMonotonicMs !== null && actualMonotonicMs >= targetMonotonicMs
+      )
+    ).toBe(true)
   })
 
   it('does not replace missed, non-overlapped, zero-ready, or safety-stop positions', async () => {
     const lateClock = new FakeClock()
-    lateClock.late = 1_001
+    let missedProbeCalls = 0
     const missed = await sampleCapacityWindow({
       runId,
       cohort: 3,
@@ -133,11 +152,14 @@ describe('capacity sampling and workload', () => {
       clock: lateClock,
       stopReason: () => null,
       onProbeFailure: () => undefined,
-      probe: passedProbe,
+      probe: async (clock) => {
+        if (++missedProbeCalls === 1) lateClock.late = 1_001
+        return passedProbe(clock)
+      },
       readHost: host,
       inspectTree: inspect,
     })
-    expect(missed.samples[0]).toMatchObject({
+    expect(missed.samples[1]).toMatchObject({
       actualMonotonicMs: null,
       absentReason: 'missed target position',
     })
@@ -151,6 +173,7 @@ describe('capacity sampling and workload', () => {
       onProbeFailure: () => undefined,
     })
     expect(zero.samples).toHaveLength(5)
+    expect(zero.endedMonotonicMs - zero.anchorMonotonicMs).toBe(5_000)
     expect(
       zero.samples.every(
         ({ absentReason }) => absentReason === 'no ready workload'
@@ -274,5 +297,28 @@ describe('capacity sampling and workload', () => {
       outputLimitBytes: 10,
     })
     expect(Buffer.byteLength(overflowResult.stdout)).toBeLessThanOrEqual(10)
+  })
+
+  it('enforces one combined stdout and stderr byte limit', async () => {
+    const result = await (
+      await startCapacityWorkload({
+        runId,
+        cohort: 1,
+        slot: 1,
+        cwd: BL001_FIXTURE,
+        timeoutMs: 1_000,
+        outputLimitBytes: 4_096,
+        scriptPath: path.join(
+          REPOSITORY_ROOT,
+          'apps/api/test/fixtures/workbench-capacity-combined-output.mjs'
+        ),
+      })
+    ).finish()
+    expect(result.status).toBe('output-overflow')
+    expect(result.stdout.length).toBeGreaterThan(0)
+    expect(result.stderr.length).toBeGreaterThan(0)
+    expect(
+      Buffer.byteLength(result.stdout) + Buffer.byteLength(result.stderr)
+    ).toBe(4_096)
   })
 })

@@ -6,7 +6,7 @@ import {
 } from '../src/workbench-capacity-evidence.js'
 import { validateCapacityEvidence } from '../src/workbench-capacity-contract.js'
 
-const DESIGNATED_RUN_ID = 'e7757a3f-54ec-4ea7-9399-713e91f49719'
+const DESIGNATED_RUN_ID = '532abfdb-c970-4979-9da2-ec9ef99a295a'
 describe('designated-host workbench capacity baseline', () => {
   it('recomputes complete 1/3/5/10 evidence, gate, findings, and disposition', async () => {
     const directories = await listRetainedCapacityRuns()
@@ -37,7 +37,27 @@ describe('designated-host workbench capacity baseline', () => {
     expect(evidence.samples.samples).toHaveLength(40)
     expect(
       evidence.samples.samples.every(
-        ({ host, absentReason }) => Boolean(host) && absentReason === null
+        ({ host, absentReason, actualMonotonicMs, targetMonotonicMs }) =>
+          Boolean(host) &&
+          absentReason === null &&
+          actualMonotonicMs !== null &&
+          actualMonotonicMs >= targetMonotonicMs
+      )
+    ).toBe(true)
+    expect(
+      evidence.run.cohorts.every(
+        ({
+          idleAnchorMonotonicMs,
+          idleEndedMonotonicMs,
+          activeAnchorMonotonicMs,
+          activeEndedMonotonicMs,
+        }) =>
+          idleAnchorMonotonicMs !== null &&
+          idleEndedMonotonicMs !== null &&
+          idleEndedMonotonicMs - idleAnchorMonotonicMs >= 5_000 &&
+          activeAnchorMonotonicMs !== null &&
+          activeEndedMonotonicMs !== null &&
+          activeEndedMonotonicMs - activeAnchorMonotonicMs >= 5_000
       )
     ).toBe(true)
     expect(evidence.workloads.workloads).toHaveLength(19)

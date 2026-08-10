@@ -64,7 +64,9 @@ const evidence = () => {
         url: null,
         readinessStatus: null,
         listener: null,
+        readinessAchieved: false,
         processIdentities: [],
+        attributedListeners: [],
         unexpectedExit: false,
       })
     )
@@ -91,6 +93,7 @@ const evidence = () => {
       idleAnchorMonotonicMs: 0,
       idleEndedMonotonicMs: 5000,
       activeAnchorMonotonicMs: 5000,
+      activeEndedMonotonicMs: 10000,
       cleanup: {
         complete: true,
         passed: true,
@@ -178,6 +181,57 @@ describe('capacity evidence retention', () => {
     ).toThrow('schedule is incomplete')
   })
 
+  it('requires every readiness-achieved process tree or an explicit absence', () => {
+    const value = evidence()
+    const slot = value.run.cohorts[0].slots[0]
+    Object.assign(slot, {
+      state: 'ready',
+      reason: null,
+      pid: 123,
+      runtimeRunId: randomUUID(),
+      listener: { address: '127.0.0.1', port: 4321, pid: 123, inode: '1' },
+      readinessAchieved: true,
+      processIdentities: [{ pid: 123, startTimeTicks: '1' }],
+      attributedListeners: [
+        { address: '127.0.0.1', port: 4321, pid: 123, inode: '1' },
+      ],
+    })
+    for (const sample of value.samples.samples.filter(
+      ({ cohort }) => cohort === 1
+    ))
+      sample.processTrees = [
+        { slot: 1, sample: null, absentReason: 'controlled process absence' },
+      ]
+    value.workloads.workloads.push({
+      runId: value.run.runId,
+      cohort: 1,
+      slot: 1,
+      command: 'node workload',
+      executable: process.execPath,
+      args: [],
+      cwd: '/fixture',
+      timeoutMs: 10_000,
+      outputLimitBytes: 4_096,
+      pid: 456,
+      startTimeTicks: '2',
+      startedAt: value.run.startedAt,
+      endedAt: value.run.endedAt,
+      startMonotonicMs: 0,
+      endMonotonicMs: 1,
+      exitCode: 0,
+      status: 'passed',
+      stdout: '',
+      stderr: '',
+    })
+    expect(() =>
+      validateCapacityEvidence(value.run, value.samples, value.workloads)
+    ).not.toThrow()
+    value.samples.samples[0].processTrees = []
+    expect(() =>
+      validateCapacityEvidence(value.run, value.samples, value.workloads)
+    ).toThrow('schedule is incomplete')
+  })
+
   it('keeps evidence write collisions failure-shaped and exposes only root recipes', async () => {
     const value = evidence()
     const directory = path.join(CAPACITY_EVIDENCE_ROOT, value.run.runId)
@@ -229,6 +283,7 @@ describe('capacity evidence retention', () => {
     const incompleteReady = evidence()
     incompleteReady.run.cohorts[0].slots[0].state = 'ready'
     incompleteReady.run.cohorts[0].slots[0].reason = null
+    incompleteReady.run.cohorts[0].slots[0].readinessAchieved = true
     expect(() =>
       validateCapacityEvidence(
         incompleteReady.run,
@@ -244,7 +299,18 @@ describe('capacity evidence retention', () => {
       pid: 123,
       runtimeRunId: randomUUID(),
       listener: { address: '127.0.0.1', port: 4321, pid: 123, inode: '1' },
+      readinessAchieved: true,
+      processIdentities: [{ pid: 123, startTimeTicks: '1' }],
+      attributedListeners: [
+        { address: '127.0.0.1', port: 4321, pid: 123, inode: '1' },
+      ],
     })
+    for (const sample of missingWorkload.samples.samples.filter(
+      ({ cohort }) => cohort === 1
+    ))
+      sample.processTrees = [
+        { slot: 1, sample: null, absentReason: 'controlled absence' },
+      ]
     expect(() =>
       validateCapacityEvidence(
         missingWorkload.run,

@@ -4,20 +4,24 @@ import { performance } from 'node:perf_hooks'
 import {
   CAPACITY_PROBE,
   CAPACITY_SAMPLE_OFFSETS_MS,
-  CAPACITY_WORKLOAD_COMMAND,
   CAPACITY_WORKLOAD_DURATION_MS,
   CAPACITY_WORKLOAD_OUTPUT_LIMIT_BYTES,
   CAPACITY_WORKLOAD_SCRIPT,
   CAPACITY_WORKLOAD_TIMEOUT_MS,
   type CapacitySlot,
   type HostSample,
+  type ListenerIdentity,
   type ProbeResult,
+  type ProcessIdentity,
   type ProcessTreeSample,
   type SampleWindow,
   type ScheduledSample,
   type WorkloadResult,
 } from './workbench-capacity-contract.js'
-import { inspectCapacityProcessTree } from './workbench-proof-audit.js'
+import {
+  inspectCapacityProcessTree,
+  readManagedListeners,
+} from './workbench-proof-audit.js'
 import {
   readProcessStartTime,
   terminateExactProcessGroup,
@@ -111,6 +115,13 @@ interface CpuBaseline {
   ticks: number
   monotonicMs: number
 }
+const sleepUntil = async (
+  clock: CapacityClock,
+  targetMonotonicMs: number
+): Promise<void> => {
+  while (clock.now() < targetMonotonicMs)
+    await clock.sleep(targetMonotonicMs - clock.now())
+}
 export interface SampleWindowOptions {
   runId: string
   cohort: number
@@ -122,6 +133,12 @@ export interface SampleWindowOptions {
   onProbeFailure: (reason: string) => void
   workloadRunning?: (slot: number, atMonotonicMs: number) => boolean
   inspectTree?: typeof inspectCapacityProcessTree
+  inspectListeners?: typeof readManagedListeners
+  onAttribution?: (
+    slot: number,
+    processes: ProcessIdentity[],
+    listeners: ListenerIdentity[]
+  ) => void
   readHost?: typeof readHostFacts
 }
 export interface SampleWindowResult {
@@ -135,42 +152,62 @@ export const sampleCapacityWindow = async (
   const clock = options.clock ?? realCapacityClock
   const probe = options.probe ?? runResponsivenessProbe
   const inspectTree = options.inspectTree ?? inspectCapacityProcessTree
+  const inspectListeners = options.inspectListeners ?? readManagedListeners
   const readHost = options.readHost ?? readHostFacts
-  const ready = options.slots.filter(({ state }) => state === 'ready')
+  const ready = options.slots.filter(
+    ({ readinessAchieved }) => readinessAchieved
+  )
   const samples: ScheduledSample[] = []
   const baselines = new Map<number, CpuBaseline>()
-  for (const slot of ready) {
+  const baselineFailures = new Map<number, string>()
+
+  const inspectAttributed = async (slot: CapacitySlot) => {
     const inspected = await inspectTree(slot.pid ?? -1)
-    if (inspected.ok)
-      baselines.set(slot.slot, {
-        ticks: inspected.rows.reduce((sum, row) => sum + row.cpuTicks, 0),
-        monotonicMs: clock.now(),
-      })
+    if (!inspected.ok) return inspected
+    const listeners = await inspectListeners(
+      inspected.rows.map(({ pid }) => pid)
+    )
+    options.onAttribution?.(
+      slot.slot,
+      inspected.rows.map(({ pid, startTimeTicks }) => ({
+        pid,
+        startTimeTicks,
+      })),
+      listeners
+    )
+    return inspected
   }
+
+  for (const slot of ready) {
+    try {
+      const inspected = await inspectAttributed(slot)
+      if (inspected.ok)
+        baselines.set(slot.slot, {
+          ticks: inspected.rows.reduce((sum, row) => sum + row.cpuTicks, 0),
+          monotonicMs: clock.now(),
+        })
+      else baselineFailures.set(slot.slot, inspected.reason)
+    } catch (error) {
+      baselineFailures.set(
+        slot.slot,
+        'attribution-inspection-failed:' +
+          (error instanceof Error ? error.message : 'unknown')
+      )
+    }
+  }
+
   const anchor = clock.now()
   for (let index = 0; index < CAPACITY_SAMPLE_OFFSETS_MS.length; index += 1) {
     const targetOffsetMs = CAPACITY_SAMPLE_OFFSETS_MS[index]
     const target = anchor + targetOffsetMs
-    if (options.window === 'active' && ready.length === 0) {
-      samples.push({
-        runId: options.runId,
-        cohort: options.cohort,
-        window: options.window,
-        position: index as 0 | 1 | 2 | 3 | 4,
-        targetOffsetMs,
-        targetMonotonicMs: target,
-        actualMonotonicMs: null,
-        host: null,
-        processTrees: [],
-        absentReason: 'no ready workload',
-      })
-      continue
-    }
-    await clock.sleep(target - clock.now())
-    const now = clock.now()
+    await sleepUntil(clock, target)
+    const positionStarted = clock.now()
     const stop = options.stopReason()
-    if (stop || now >= target + 1_000) {
-      const reason = stop ?? 'missed target position'
+    const noReadyWorkload = options.window === 'active' && ready.length === 0
+    if (stop || noReadyWorkload || positionStarted >= target + 1_000) {
+      const reason =
+        stop ??
+        (noReadyWorkload ? 'no ready workload' : 'missed target position')
       samples.push({
         runId: options.runId,
         cohort: options.cohort,
@@ -189,7 +226,7 @@ export const sampleCapacityWindow = async (
       })
       continue
     }
-    const actual = now
+
     const probeResult = await probe(clock)
     if (!probeResult.passed)
       options.onProbeFailure(
@@ -198,10 +235,12 @@ export const sampleCapacityWindow = async (
     let host: HostSample | null = null
     let hostFailure: string | null = null
     try {
+      const facts = await readHost()
+      const hostMonotonicMs = clock.now()
       host = {
         timestamp: clock.wall().toISOString(),
-        monotonicMs: actual,
-        ...(await readHost()),
+        monotonicMs: hostMonotonicMs,
+        ...facts,
         responsiveness: probeResult,
       }
     } catch (error) {
@@ -212,7 +251,7 @@ export const sampleCapacityWindow = async (
     for (const slot of ready) {
       if (
         options.window === 'active' &&
-        !options.workloadRunning?.(slot.slot, actual)
+        !options.workloadRunning?.(slot.slot, positionStarted)
       ) {
         processTrees.push({
           slot: slot.slot,
@@ -221,32 +260,60 @@ export const sampleCapacityWindow = async (
         })
         continue
       }
-      const inspected = await inspectTree(slot.pid ?? -1)
-      if (!inspected.ok) {
+      try {
+        const inspected = await inspectAttributed(slot)
+        if (!inspected.ok) {
+          processTrees.push({
+            slot: slot.slot,
+            sample: null,
+            absentReason: inspected.reason,
+          })
+          baselineFailures.set(slot.slot, inspected.reason)
+          continue
+        }
+        const sampledAt = clock.now()
+        const ticks = inspected.rows.reduce((sum, row) => sum + row.cpuTicks, 0)
+        const baseline = baselines.get(slot.slot)
+        if (!baseline) {
+          const reason =
+            'cpu-baseline-unavailable:' +
+            (baselineFailures.get(slot.slot) ?? 'process-inspection-failed')
+          baselines.set(slot.slot, { ticks, monotonicMs: sampledAt })
+          baselineFailures.delete(slot.slot)
+          processTrees.push({
+            slot: slot.slot,
+            sample: null,
+            absentReason: reason,
+          })
+          continue
+        }
+        const elapsed = sampledAt - baseline.monotonicMs
+        const tree: ProcessTreeSample = {
+          timestamp: clock.wall().toISOString(),
+          monotonicMs: sampledAt,
+          rootPid: slot.pid ?? -1,
+          cpuPercent:
+            elapsed > 0
+              ? (Math.max(0, ticks - baseline.ticks) /
+                  100 /
+                  (elapsed / 1_000)) *
+                100
+              : 0,
+          rssKiB: inspected.rows.reduce((sum, row) => sum + row.rssKiB, 0),
+          memberPids: inspected.rows.map(({ pid }) => pid),
+        }
+        baselines.set(slot.slot, { ticks, monotonicMs: sampledAt })
+        baselineFailures.delete(slot.slot)
+        processTrees.push({ slot: slot.slot, sample: tree, absentReason: null })
+      } catch (error) {
         processTrees.push({
           slot: slot.slot,
           sample: null,
-          absentReason: inspected.reason,
+          absentReason:
+            'attribution-inspection-failed:' +
+            (error instanceof Error ? error.message : 'unknown'),
         })
-        continue
       }
-      const ticks = inspected.rows.reduce((sum, row) => sum + row.cpuTicks, 0)
-      const baseline = baselines.get(slot.slot)
-      const elapsed = baseline ? actual - baseline.monotonicMs : 0
-      const tree: ProcessTreeSample = {
-        timestamp: clock.wall().toISOString(),
-        monotonicMs: actual,
-        rootPid: slot.pid ?? -1,
-        cpuPercent:
-          baseline && elapsed > 0
-            ? (Math.max(0, ticks - baseline.ticks) / 100 / (elapsed / 1_000)) *
-              100
-            : 0,
-        rssKiB: inspected.rows.reduce((sum, row) => sum + row.rssKiB, 0),
-        memberPids: inspected.rows.map(({ pid }) => pid),
-      }
-      baselines.set(slot.slot, { ticks, monotonicMs: actual })
-      processTrees.push({ slot: slot.slot, sample: tree, absentReason: null })
     }
     samples.push({
       runId: options.runId,
@@ -255,13 +322,13 @@ export const sampleCapacityWindow = async (
       position: index as 0 | 1 | 2 | 3 | 4,
       targetOffsetMs,
       targetMonotonicMs: target,
-      actualMonotonicMs: actual,
+      actualMonotonicMs: positionStarted,
       host,
       processTrees,
       absentReason: hostFailure,
     })
   }
-  if (options.window === 'idle') await clock.sleep(anchor + 5_000 - clock.now())
+  await sleepUntil(clock, anchor + 5_000)
   return { anchorMonotonicMs: anchor, endedMonotonicMs: clock.now(), samples }
 }
 
@@ -281,6 +348,7 @@ export const startCapacityWorkload = async (input: {
   durationMs?: number
   timeoutMs?: number
   outputLimitBytes?: number
+  scriptPath?: string
 }): Promise<WorkloadController> => {
   const clock = input.clock ?? realCapacityClock
   const startedAt = clock.wall().toISOString()
@@ -289,44 +357,43 @@ export const startCapacityWorkload = async (input: {
   const timeoutMs = input.timeoutMs ?? CAPACITY_WORKLOAD_TIMEOUT_MS
   const outputLimit =
     input.outputLimitBytes ?? CAPACITY_WORKLOAD_OUTPUT_LIMIT_BYTES
-  const child = spawn(
-    process.execPath,
-    [CAPACITY_WORKLOAD_SCRIPT, String(durationMs)],
-    { cwd: input.cwd, detached: true, stdio: ['ignore', 'pipe', 'pipe'] }
-  )
+  const scriptPath = input.scriptPath ?? CAPACITY_WORKLOAD_SCRIPT
+  const child = spawn(process.execPath, [scriptPath, String(durationMs)], {
+    cwd: input.cwd,
+    detached: true,
+    stdio: ['ignore', 'pipe', 'pipe'],
+  })
   const pid = child.pid ?? null
   let startTimeTicks = pid ? await readProcessStartTime(pid) : null
   for (let index = 0; pid && !startTimeTicks && index < 20; index += 1) {
     await clock.sleep(5)
     startTimeTicks = await readProcessStartTime(pid)
   }
-  let stdout = ''
-  let stderr = ''
+  let stdout = Buffer.alloc(0)
+  let stderr = Buffer.alloc(0)
+  let capturedBytes = 0
   let overflow = false
   let timedOut = false
   let cancelled = false
   let spawnFailure: string | null = pid ? null : 'workload pid unavailable'
   let endedMonotonicMs: number | null = null
-  const capture = (current: string, chunk: string) => {
-    const bytes = Buffer.byteLength(current + chunk)
-    if (bytes > outputLimit) {
+  const capture = (stream: 'stdout' | 'stderr', value: Buffer | string) => {
+    const chunk = Buffer.isBuffer(value) ? value : Buffer.from(value)
+    const remaining = Math.max(0, outputLimit - capturedBytes)
+    const retained = chunk.subarray(0, remaining)
+    if (stream === 'stdout') stdout = Buffer.concat([stdout, retained])
+    else stderr = Buffer.concat([stderr, retained])
+    capturedBytes += retained.length
+    if (retained.length < chunk.length) {
       overflow = true
-      return (current + chunk).slice(0, outputLimit)
+      if (pid) void terminateExactProcessGroup(pid, 500)
     }
-    return current + chunk
   }
-  child.stdout?.setEncoding('utf8')
-  child.stderr?.setEncoding('utf8')
-  child.stdout?.on('data', (chunk: string) => {
-    stdout = capture(stdout, chunk)
-    if (overflow && pid) void terminateExactProcessGroup(pid, 500)
-  })
-  child.stderr?.on('data', (chunk: string) => {
-    stderr = capture(stderr, chunk)
-    if (overflow && pid) void terminateExactProcessGroup(pid, 500)
-  })
+  child.stdout?.on('data', (chunk: Buffer) => capture('stdout', chunk))
+  child.stderr?.on('data', (chunk: Buffer) => capture('stderr', chunk))
   child.once('error', (error) => {
     spawnFailure = error.message
+    capture('stderr', error.message)
   })
   const resultPromise = new Promise<WorkloadResult>((resolve) => {
     const timer = setTimeout(() => {
@@ -351,9 +418,9 @@ export const startCapacityWorkload = async (input: {
         runId: input.runId,
         cohort: input.cohort,
         slot: input.slot,
-        command: CAPACITY_WORKLOAD_COMMAND,
+        command: process.execPath + ' ' + scriptPath,
         executable: process.execPath,
-        args: [CAPACITY_WORKLOAD_SCRIPT, String(durationMs)],
+        args: [scriptPath, String(durationMs)],
         cwd: input.cwd,
         timeoutMs,
         outputLimitBytes: outputLimit,
@@ -365,8 +432,8 @@ export const startCapacityWorkload = async (input: {
         endMonotonicMs: endedMonotonicMs,
         exitCode: code,
         status,
-        stdout,
-        stderr: spawnFailure ? stderr + spawnFailure : stderr,
+        stdout: stdout.toString('utf8'),
+        stderr: stderr.toString('utf8'),
       })
     })
   })

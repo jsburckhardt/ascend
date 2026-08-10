@@ -121,7 +121,9 @@ export interface CapacitySlot {
   url: string | null
   readinessStatus: number | null
   listener: ListenerIdentity | null
+  readinessAchieved: boolean
   processIdentities: ProcessIdentity[]
+  attributedListeners: ListenerIdentity[]
   unexpectedExit: boolean
 }
 export interface ProcessTreeSample {
@@ -207,6 +209,7 @@ export interface CapacityCohortRecord {
   idleAnchorMonotonicMs: number | null
   idleEndedMonotonicMs: number | null
   activeAnchorMonotonicMs: number | null
+  activeEndedMonotonicMs: number | null
   cleanup: CleanupResult
   integrity: IntegrityResult
   complete: boolean
@@ -264,6 +267,11 @@ export const isUuid = (value: unknown): value is string =>
     value
   )
 
+export const slotsRequiringSampleEvidence = (
+  cohort: CapacityCohortRecord
+): CapacitySlot[] =>
+  cohort.slots.filter(({ readinessAchieved }) => readinessAchieved)
+
 export const validateCapacityEvidence = (
   run: CapacityRunRecord,
   samples: CapacitySamplesEvidence,
@@ -287,15 +295,23 @@ export const validateCapacityEvidence = (
       if (
         slot.runId !== run.runId ||
         slot.slot !== index + 1 ||
-        (slot.state !== 'ready' && !slot.reason)
+        (slot.state !== 'ready' && !slot.reason) ||
+        (slot.unexpectedExit && slot.state === 'ready')
       )
         throw new Error('Cohort slot is invalid')
       if (
-        slot.state === 'ready' &&
-        (!slot.pid || !slot.runtimeRunId || !slot.listener || slot.reason)
+        slot.readinessAchieved &&
+        (!slot.pid ||
+          !slot.runtimeRunId ||
+          !slot.listener ||
+          slot.processIdentities.length === 0 ||
+          slot.attributedListeners.length === 0)
       )
         throw new Error('Ready slot metadata is incomplete')
+      if (slot.state === 'ready' && (!slot.readinessAchieved || slot.reason))
+        throw new Error('Ready slot terminal state is invalid')
     })
+    const sampleTargets = slotsRequiringSampleEvidence(cohort)
     for (const window of ['idle', 'active'] as const) {
       const positions = samples.samples.filter(
         (sample) =>
@@ -303,18 +319,30 @@ export const validateCapacityEvidence = (
       )
       if (
         positions.length !== 5 ||
-        positions.some(
-          (position, index) =>
+        positions.some((position, index) => {
+          if (
             position.position !== index ||
             position.runId !== run.runId ||
+            position.targetOffsetMs !== CAPACITY_SAMPLE_OFFSETS_MS[index] ||
             (!position.host && !position.absentReason)
-        )
+          )
+            return true
+          const bySlot = new Map(
+            position.processTrees.map((tree) => [tree.slot, tree])
+          )
+          return (
+            bySlot.size !== sampleTargets.length ||
+            sampleTargets.some(({ slot }) => {
+              const tree = bySlot.get(slot)
+              return !tree || (!tree.sample && !tree.absentReason)
+            })
+          )
+        })
       )
         throw new Error('Cohort schedule is incomplete')
     }
-    const readySlots = cohort.slots.filter(({ state }) => state === 'ready')
     if (
-      readySlots.some(
+      sampleTargets.some(
         (slot) =>
           !workloads.workloads.some(
             (workload) =>

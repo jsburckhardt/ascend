@@ -11,6 +11,9 @@ export interface BrowserOccurrenceInput {
   status?: number | null
   beforeTerminalCompletion?: boolean
 }
+export interface RetainedBrowserEvidence {
+  previewRendered: boolean
+}
 
 const failureWords =
   /(block(?:ed|ing)?|refus(?:ed|al)|denied|policy|not allowed|violat(?:e|ion)|failed)/iu
@@ -44,6 +47,33 @@ export const classifyBrowserOccurrence = (
   return { blocking, nonBlockingWarning: !blocking && warning }
 }
 
+const previewPlaceholder =
+  /\/workbench\/contrib\/webview\/browser\/pre\/fake\.html(?:\?|$)/u
+
+export const reconcileRetainedBrowserEvents = (
+  events: RawBrowserEvent[],
+  evidence: RetainedBrowserEvidence
+): void => {
+  if (!evidence.previewRendered) return
+  events.forEach((event, index) => {
+    const resultingResponse = events[index + 1]
+    const successfulReplacement =
+      event.kind === 'request-failed' &&
+      event.detail.trim() === 'net::ERR_ABORTED' &&
+      previewPlaceholder.test(event.url ?? '') &&
+      resultingResponse?.kind === 'response' &&
+      resultingResponse.url === event.url &&
+      resultingResponse.detail === 'document' &&
+      resultingResponse.status !== null &&
+      resultingResponse.status >= 200 &&
+      resultingResponse.status < 400
+    if (successfulReplacement) {
+      event.blocking = false
+      event.nonBlockingWarning = true
+    }
+  })
+}
+
 export class BrowserEventObserver {
   readonly events: RawBrowserEvent[] = []
   private terminalCompleted = false
@@ -75,6 +105,10 @@ export class BrowserEventObserver {
     }
     this.events.push(event)
     return event
+  }
+
+  reconcileRetainedEvidence(evidence: RetainedBrowserEvidence): void {
+    reconcileRetainedBrowserEvents(this.events, evidence)
   }
 
   totals(): { blocking: number; nonBlocking: number } {

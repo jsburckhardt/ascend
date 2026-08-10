@@ -449,6 +449,9 @@ const runRealAttempt = async (
             ? operationError.message
             : 'Required observable outcome was not reached',
       })
+  observer.reconcileRetainedEvidence({
+    previewRendered: functional['preview-rendered'],
+  })
   const warningCounts = observer.totals()
   await writeJsonAtomic(browserEventsPath, {
     version: 1,

@@ -50,59 +50,59 @@
       "candidate": "embedded",
       "attempt": 1,
       "status": "started",
-      "runId": "c1fb0a6b-09c8-4da5-8fc7-8d55ae013a5e",
+      "runId": "3319c8f9-2d01-4f4e-9dc1-26d3a8d99f14",
       "recordReference": "project/work-items/9-bl-003-select-a-viable-browser-workbench-presentation/implementation/evidence/attempts/embedded-1.json"
     },
     {
       "candidate": "embedded",
       "attempt": 2,
       "status": "started",
-      "runId": "d367ebf8-f03a-4aec-8c1c-acbab9755064",
+      "runId": "08dac856-3b78-46a2-ba73-c2d73f2be5de",
       "recordReference": "project/work-items/9-bl-003-select-a-viable-browser-workbench-presentation/implementation/evidence/attempts/embedded-2.json"
     },
     {
       "candidate": "embedded",
       "attempt": 3,
       "status": "started",
-      "runId": "3197d3a5-2284-4068-ac7f-341e5e7d8286",
+      "runId": "8e67b95d-63d1-4697-adae-6f53bbcf6640",
       "recordReference": "project/work-items/9-bl-003-select-a-viable-browser-workbench-presentation/implementation/evidence/attempts/embedded-3.json"
     },
     {
       "candidate": "full-page",
       "attempt": 1,
       "status": "started",
-      "runId": "f074d569-1d32-4a33-91a0-038e3fddef89",
+      "runId": "44076a1f-b2a5-4ad1-bc61-59e76de6a779",
       "recordReference": "project/work-items/9-bl-003-select-a-viable-browser-workbench-presentation/implementation/evidence/attempts/full-page-1.json"
     },
     {
       "candidate": "full-page",
       "attempt": 2,
       "status": "started",
-      "runId": "8896fefe-2ed0-4c83-aabb-d8a560bdc6ba",
+      "runId": "33acc2d7-21b1-4d99-9f51-ee2e58088f37",
       "recordReference": "project/work-items/9-bl-003-select-a-viable-browser-workbench-presentation/implementation/evidence/attempts/full-page-2.json"
     },
     {
       "candidate": "full-page",
       "attempt": 3,
       "status": "started",
-      "runId": "224deeed-8f57-4c12-9b23-43f9b2974b9f",
+      "runId": "e0efd542-fb90-435f-a8c7-d97d37b2b95b",
       "recordReference": "project/work-items/9-bl-003-select-a-viable-browser-workbench-presentation/implementation/evidence/attempts/full-page-3.json"
     }
   ],
   "candidates": {
     "embedded": {
       "eligible": true,
-      "blockingCount": 5,
-      "nonBlockingCount": 27,
-      "elapsedMs": [12121, 15435, 12101],
-      "medianElapsedMs": 12121
+      "blockingCount": 3,
+      "nonBlockingCount": 30,
+      "elapsedMs": [12258, 12737, 12787],
+      "medianElapsedMs": 12737
     },
     "full-page": {
       "eligible": true,
-      "blockingCount": 3,
-      "nonBlockingCount": 33,
-      "elapsedMs": [11179, 10489, 11395],
-      "medianElapsedMs": 11179
+      "blockingCount": 0,
+      "nonBlockingCount": 36,
+      "elapsedMs": [12072, 13568, 13347],
+      "medianElapsedMs": 13347
     }
   },
   "stopReason": null,

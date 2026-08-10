@@ -75,6 +75,67 @@ describe('BL-003 browser protocol evidence', () => {
     }
   )
 
+  it('classifies an observed successful Preview placeholder replacement as non-blocking', () => {
+    const observer = new BrowserEventObserver()
+    const url =
+      'http://host/static/out/vs/workbench/contrib/webview/browser/pre/fake.html?id=preview'
+    observer.record({ kind: 'response', url, status: 200, detail: 'document' })
+    const aborted = observer.record({
+      kind: 'request-failed',
+      url,
+      detail: 'net::ERR_ABORTED',
+    })
+    observer.record({ kind: 'response', url, status: 200, detail: 'document' })
+
+    expect(aborted).toMatchObject({
+      blocking: true,
+      nonBlockingWarning: false,
+    })
+    observer.reconcileRetainedEvidence({ previewRendered: true })
+    expect(aborted).toMatchObject({
+      blocking: false,
+      nonBlockingWarning: true,
+    })
+    expect(observer.totals()).toEqual({ blocking: 0, nonBlocking: 1 })
+  })
+
+  it.each([
+    ['Preview assertion failed', false, 200, 'document', true],
+    ['resulting response failed', true, 500, 'document', true],
+    ['result was not a document navigation', true, 200, 'fetch', true],
+    [
+      'aborted required resource was not the placeholder',
+      true,
+      200,
+      'document',
+      false,
+    ],
+  ])(
+    'keeps genuinely blocking aborted Preview failures blocking: %s',
+    (_name, previewRendered, status, detail, placeholder) => {
+      const observer = new BrowserEventObserver()
+      const url = placeholder
+        ? 'http://host/static/out/vs/workbench/contrib/webview/browser/pre/fake.html?id=preview'
+        : 'http://host/preview-required.html'
+      const aborted = observer.record({
+        kind: 'request-failed',
+        url,
+        detail: 'net::ERR_ABORTED',
+      })
+      observer.record({ kind: 'response', url, status, detail })
+
+      observer.reconcileRetainedEvidence({ previewRendered })
+      expect(aborted).toMatchObject({
+        blocking: true,
+        nonBlockingWarning: false,
+      })
+      expect(observer.totals()).toEqual({
+        blocking: status >= 400 ? 2 : 1,
+        nonBlocking: 0,
+      })
+    }
+  )
+
   it('retains warnings, overlap, and repeated occurrences exactly once each', () => {
     const observer = new BrowserEventObserver()
     observer.record({ kind: 'console', detail: 'ordinary warning' })

@@ -20,6 +20,7 @@ describe('BL-003 retained evidence and documentation consistency', () => {
         (slot) => slot.status === 'started' && Boolean(slot.runId)
       )
     ).toBe(true)
+    let observedPreviewReplacements = 0
     const attempts = await Promise.all(
       comparison.slots.map(async (slot) => {
         const record = validateAttemptRecord(
@@ -30,12 +31,43 @@ describe('BL-003 retained evidence and documentation consistency', () => {
             )
           )
         )
-        await expect(
-          readFile(
-            path.join(REPOSITORY_ROOT, record.evidence.rawBrowserEvents),
-            'utf8'
+        const rawBrowserEvidence = await readFile(
+          path.join(REPOSITORY_ROOT, record.evidence.rawBrowserEvents),
+          'utf8'
+        )
+        expect(rawBrowserEvidence).toContain(record.runId)
+        const raw = JSON.parse(rawBrowserEvidence) as {
+          events: Array<{
+            kind: string
+            url: string | null
+            detail: string
+            status: number | null
+            blocking: boolean
+            nonBlockingWarning: boolean
+          }>
+        }
+        raw.events.forEach((event, index) => {
+          if (
+            event.kind !== 'request-failed' ||
+            event.detail !== 'net::ERR_ABORTED' ||
+            !event.url?.includes(
+              '/workbench/contrib/webview/browser/pre/fake.html'
+            )
           )
-        ).resolves.toContain(record.runId)
+            return
+          observedPreviewReplacements += 1
+          expect(record.assertions.functional['preview-rendered']).toBe(true)
+          expect(event).toMatchObject({
+            blocking: false,
+            nonBlockingWarning: true,
+          })
+          expect(raw.events[index + 1]).toMatchObject({
+            kind: 'response',
+            url: event.url,
+            detail: 'document',
+            status: 200,
+          })
+        })
         for (const reference of Object.values(record.evidence))
           await expect(
             readFile(path.join(REPOSITORY_ROOT, reference), 'utf8')
@@ -46,6 +78,7 @@ describe('BL-003 retained evidence and documentation consistency', () => {
     expect(attempts.every((attempt) => attempt.finalStatus === 'passed')).toBe(
       true
     )
+    expect(observedPreviewReplacements).toBeGreaterThan(0)
     expect(selectPresentation(attempts)).toMatchObject({
       disposition: comparison.disposition,
       selectedCandidate: comparison.selectedCandidate,

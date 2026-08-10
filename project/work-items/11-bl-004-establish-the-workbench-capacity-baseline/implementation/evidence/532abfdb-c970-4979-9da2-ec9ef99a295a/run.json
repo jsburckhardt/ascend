@@ -1,0 +1,1091 @@
+{
+  "version": 1,
+  "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+  "startedAt": "2026-08-10T04:59:57.138Z",
+  "endedAt": "2026-08-10T05:01:07.107Z",
+  "overallTimeoutMs": 1200000,
+  "prerequisites": [
+    {
+      "name": "ubuntu-24.04.4",
+      "passed": true,
+      "detail": "Ubuntu 24.04.4 LTS"
+    },
+    {
+      "name": "hostname-03f809395a5d",
+      "passed": true,
+      "detail": "03f809395a5d"
+    },
+    {
+      "name": "non-root-vscode-uid-1000",
+      "passed": true,
+      "detail": "vscode:1000"
+    },
+    {
+      "name": "repository-workspaces-ascend",
+      "passed": true,
+      "detail": "/workspaces/ascend"
+    },
+    {
+      "name": "code-server-4.131.0",
+      "passed": true,
+      "detail": "4.131.0"
+    },
+    {
+      "name": "fixture-readable",
+      "passed": true,
+      "detail": "/workspaces/ascend/tests/fixtures/bl-001/workbench project;BL-001"
+    },
+    {
+      "name": "proc-readable",
+      "passed": true,
+      "detail": "required /proc files readable"
+    },
+    {
+      "name": "cgroup-v2-readable",
+      "passed": true,
+      "detail": "{\"cpuMax\":\"max 100000\",\"cpusetEffective\":\"0-19\",\"memoryMax\":\"max\",\"memoryHigh\":\"max\",\"swapMax\":\"max\",\"pidsMax\":\"max\"}"
+    }
+  ],
+  "host": {
+    "ubuntuVersion": "Ubuntu 24.04.4 LTS",
+    "hostname": "03f809395a5d",
+    "user": "vscode",
+    "uid": 1000,
+    "repository": "/workspaces/ascend",
+    "codeServerPath": "/home/vscode/.local/bin/code-server",
+    "codeServerVersion": "4.131.0",
+    "procReadable": true,
+    "cgroup": {
+      "version": "v2",
+      "path": "/",
+      "cpuMax": "max 100000",
+      "cpusetEffective": "0-19",
+      "memoryMax": "max",
+      "memoryHigh": "max",
+      "swapMax": "max",
+      "pidsMax": "max"
+    }
+  },
+  "probeDefinition": {
+    "executable": "/usr/bin/true",
+    "args": [],
+    "command": "/usr/bin/true",
+    "timeoutMs": 1000
+  },
+  "workloadDefinition": {
+    "command": "/usr/local/bin/node /workspaces/ascend/apps/api/src/workbench-capacity-workload.mjs",
+    "durationMs": 7000,
+    "timeoutMs": 10000,
+    "outputLimitBytes": 4096
+  },
+  "measurementMethod": "Linux /proc process CPU-tick deltas at CLK_TCK=100 without logical-CPU normalization; summed VmRSS KiB; /proc/loadavg 1/5/15; MemAvailable and MemTotal minus MemAvailable",
+  "fixture": {
+    "before": {
+      "paths": [
+        "EXPLORER-SENTINEL-BL-001.txt",
+        "nested",
+        "nested/FIXTURE-MEMBERSHIP.txt",
+        "WORKBENCH-PREVIEW.md"
+      ],
+      "sentinelHashes": {
+        "EXPLORER-SENTINEL-BL-001.txt": "bf81d032dd5e3181ad1569a00fc777953c66987f113933dc973e8df41aa1f2f1",
+        "WORKBENCH-PREVIEW.md": "5331e3f8f74cf6680ef70e6275a061301b10837f09e976e0eba42dbda6773494"
+      }
+    },
+    "after": {
+      "paths": [
+        "EXPLORER-SENTINEL-BL-001.txt",
+        "nested",
+        "nested/FIXTURE-MEMBERSHIP.txt",
+        "WORKBENCH-PREVIEW.md"
+      ],
+      "sentinelHashes": {
+        "EXPLORER-SENTINEL-BL-001.txt": "bf81d032dd5e3181ad1569a00fc777953c66987f113933dc973e8df41aa1f2f1",
+        "WORKBENCH-PREVIEW.md": "5331e3f8f74cf6680ef70e6275a061301b10837f09e976e0eba42dbda6773494"
+      }
+    },
+    "unchanged": true
+  },
+  "cohorts": [
+    {
+      "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+      "requested": 1,
+      "slots": [
+        {
+          "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+          "cohort": 1,
+          "slot": 1,
+          "state": "ready",
+          "reason": null,
+          "attemptStartedAt": "2026-08-10T04:59:57.432Z",
+          "attemptEndedAt": "2026-08-10T04:59:58.329Z",
+          "readinessTimeoutMs": 30000,
+          "runtimeRunId": "ba707adc-f1e8-43f1-a945-53d0de1f0ede",
+          "pid": 451190,
+          "startTimeTicks": "7568604",
+          "url": "http://127.0.0.1:37669/",
+          "readinessStatus": 302,
+          "listener": {
+            "address": "127.0.0.1",
+            "port": 37669,
+            "inode": "15939292",
+            "pid": 451213
+          },
+          "readinessAchieved": true,
+          "processIdentities": [
+            {
+              "pid": 451190,
+              "startTimeTicks": "7568604"
+            },
+            {
+              "pid": 451213,
+              "startTimeTicks": "7568625"
+            }
+          ],
+          "attributedListeners": [
+            {
+              "address": "127.0.0.1",
+              "port": 37669,
+              "inode": "15939292",
+              "pid": 451213
+            }
+          ],
+          "unexpectedExit": false
+        }
+      ],
+      "preProbe": {
+        "command": "/usr/bin/true",
+        "timeoutMs": 1000,
+        "startedAt": "2026-08-10T04:59:57.429Z",
+        "endedAt": "2026-08-10T04:59:57.432Z",
+        "passed": true,
+        "exitCode": 0,
+        "reason": null
+      },
+      "postCleanupProbe": {
+        "command": "/usr/bin/true",
+        "timeoutMs": 1000,
+        "startedAt": "2026-08-10T05:00:10.674Z",
+        "endedAt": "2026-08-10T05:00:10.677Z",
+        "passed": true,
+        "exitCode": 0,
+        "reason": null
+      },
+      "idleAnchorMonotonicMs": 1444.506031,
+      "idleEndedMonotonicMs": 6445.195112,
+      "activeAnchorMonotonicMs": 6531.853694,
+      "activeEndedMonotonicMs": 11532.949867,
+      "cleanup": {
+        "complete": true,
+        "passed": true,
+        "processIdentitiesAbsent": true,
+        "listenersAbsent": true,
+        "workloadIdentitiesAbsent": true,
+        "details": []
+      },
+      "integrity": {
+        "complete": true,
+        "passed": true,
+        "treeMembershipEqual": true,
+        "sentinelHashesEqual": true,
+        "details": []
+      },
+      "complete": true,
+      "findings": [],
+      "gateStatus": "not-applicable",
+      "gateBlockers": []
+    },
+    {
+      "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+      "requested": 3,
+      "slots": [
+        {
+          "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+          "cohort": 3,
+          "slot": 1,
+          "state": "ready",
+          "reason": null,
+          "attemptStartedAt": "2026-08-10T05:00:10.687Z",
+          "attemptEndedAt": "2026-08-10T05:00:11.543Z",
+          "readinessTimeoutMs": 30000,
+          "runtimeRunId": "5d73b81e-0bc3-48a3-9284-84b16ed030fc",
+          "pid": 451347,
+          "startTimeTicks": "7569930",
+          "url": "http://127.0.0.1:40621/",
+          "readinessStatus": 302,
+          "listener": {
+            "address": "127.0.0.1",
+            "port": 40621,
+            "inode": "15946231",
+            "pid": 451370
+          },
+          "readinessAchieved": true,
+          "processIdentities": [
+            {
+              "pid": 451347,
+              "startTimeTicks": "7569930"
+            },
+            {
+              "pid": 451370,
+              "startTimeTicks": "7569956"
+            }
+          ],
+          "attributedListeners": [
+            {
+              "address": "127.0.0.1",
+              "port": 40621,
+              "inode": "15946231",
+              "pid": 451370
+            }
+          ],
+          "unexpectedExit": false
+        },
+        {
+          "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+          "cohort": 3,
+          "slot": 2,
+          "state": "ready",
+          "reason": null,
+          "attemptStartedAt": "2026-08-10T05:00:11.543Z",
+          "attemptEndedAt": "2026-08-10T05:00:12.434Z",
+          "readinessTimeoutMs": 30000,
+          "runtimeRunId": "8fbd5cd3-5ec3-48f0-9409-9b2c167c9023",
+          "pid": 451389,
+          "startTimeTicks": "7570015",
+          "url": "http://127.0.0.1:44401/",
+          "readinessStatus": 302,
+          "listener": {
+            "address": "127.0.0.1",
+            "port": 44401,
+            "inode": "15954973",
+            "pid": 451412
+          },
+          "readinessAchieved": true,
+          "processIdentities": [
+            {
+              "pid": 451389,
+              "startTimeTicks": "7570015"
+            },
+            {
+              "pid": 451412,
+              "startTimeTicks": "7570045"
+            }
+          ],
+          "attributedListeners": [
+            {
+              "address": "127.0.0.1",
+              "port": 44401,
+              "inode": "15954973",
+              "pid": 451412
+            }
+          ],
+          "unexpectedExit": false
+        },
+        {
+          "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+          "cohort": 3,
+          "slot": 3,
+          "state": "ready",
+          "reason": null,
+          "attemptStartedAt": "2026-08-10T05:00:12.434Z",
+          "attemptEndedAt": "2026-08-10T05:00:13.272Z",
+          "readinessTimeoutMs": 30000,
+          "runtimeRunId": "beb01f2d-b54a-4f76-9ddb-746b4ffd9ae6",
+          "pid": 451425,
+          "startTimeTicks": "7570104",
+          "url": "http://127.0.0.1:38551/",
+          "readinessStatus": 302,
+          "listener": {
+            "address": "127.0.0.1",
+            "port": 38551,
+            "inode": "15944517",
+            "pid": 451448
+          },
+          "readinessAchieved": true,
+          "processIdentities": [
+            {
+              "pid": 451425,
+              "startTimeTicks": "7570104"
+            },
+            {
+              "pid": 451448,
+              "startTimeTicks": "7570127"
+            }
+          ],
+          "attributedListeners": [
+            {
+              "address": "127.0.0.1",
+              "port": 38551,
+              "inode": "15944517",
+              "pid": 451448
+            }
+          ],
+          "unexpectedExit": false
+        }
+      ],
+      "preProbe": {
+        "command": "/usr/bin/true",
+        "timeoutMs": 1000,
+        "startedAt": "2026-08-10T05:00:10.680Z",
+        "endedAt": "2026-08-10T05:00:10.687Z",
+        "passed": true,
+        "exitCode": 0,
+        "reason": null
+      },
+      "postCleanupProbe": {
+        "command": "/usr/bin/true",
+        "timeoutMs": 1000,
+        "startedAt": "2026-08-10T05:00:26.005Z",
+        "endedAt": "2026-08-10T05:00:26.014Z",
+        "passed": true,
+        "exitCode": 0,
+        "reason": null
+      },
+      "idleAnchorMonotonicMs": 16447.553111,
+      "idleEndedMonotonicMs": 21447.829779,
+      "activeAnchorMonotonicMs": 21663.638718,
+      "activeEndedMonotonicMs": 26663.873864,
+      "cleanup": {
+        "complete": true,
+        "passed": true,
+        "processIdentitiesAbsent": true,
+        "listenersAbsent": true,
+        "workloadIdentitiesAbsent": true,
+        "details": []
+      },
+      "integrity": {
+        "complete": true,
+        "passed": true,
+        "treeMembershipEqual": true,
+        "sentinelHashesEqual": true,
+        "details": []
+      },
+      "complete": true,
+      "findings": [],
+      "gateStatus": "passed",
+      "gateBlockers": []
+    },
+    {
+      "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+      "requested": 5,
+      "slots": [
+        {
+          "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+          "cohort": 5,
+          "slot": 1,
+          "state": "ready",
+          "reason": null,
+          "attemptStartedAt": "2026-08-10T05:00:26.039Z",
+          "attemptEndedAt": "2026-08-10T05:00:26.892Z",
+          "readinessTimeoutMs": 30000,
+          "runtimeRunId": "f6cc6182-8f00-43b6-a0ef-9966e679cb50",
+          "pid": 451590,
+          "startTimeTicks": "7571460",
+          "url": "http://127.0.0.1:37067/",
+          "readinessStatus": 302,
+          "listener": {
+            "address": "127.0.0.1",
+            "port": 37067,
+            "inode": "15957470",
+            "pid": 451617
+          },
+          "readinessAchieved": true,
+          "processIdentities": [
+            {
+              "pid": 451590,
+              "startTimeTicks": "7571460"
+            },
+            {
+              "pid": 451617,
+              "startTimeTicks": "7571486"
+            }
+          ],
+          "attributedListeners": [
+            {
+              "address": "127.0.0.1",
+              "port": 37067,
+              "inode": "15957470",
+              "pid": 451617
+            }
+          ],
+          "unexpectedExit": false
+        },
+        {
+          "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+          "cohort": 5,
+          "slot": 2,
+          "state": "ready",
+          "reason": null,
+          "attemptStartedAt": "2026-08-10T05:00:26.892Z",
+          "attemptEndedAt": "2026-08-10T05:00:27.796Z",
+          "readinessTimeoutMs": 30000,
+          "runtimeRunId": "ebc3aa5a-44a8-4b74-821b-6b376dad54e9",
+          "pid": 451629,
+          "startTimeTicks": "7571545",
+          "url": "http://127.0.0.1:40481/",
+          "readinessStatus": 302,
+          "listener": {
+            "address": "127.0.0.1",
+            "port": 40481,
+            "inode": "15937536",
+            "pid": 451653
+          },
+          "readinessAchieved": true,
+          "processIdentities": [
+            {
+              "pid": 451629,
+              "startTimeTicks": "7571545"
+            },
+            {
+              "pid": 451653,
+              "startTimeTicks": "7571570"
+            }
+          ],
+          "attributedListeners": [
+            {
+              "address": "127.0.0.1",
+              "port": 40481,
+              "inode": "15937536",
+              "pid": 451653
+            }
+          ],
+          "unexpectedExit": false
+        },
+        {
+          "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+          "cohort": 5,
+          "slot": 3,
+          "state": "ready",
+          "reason": null,
+          "attemptStartedAt": "2026-08-10T05:00:27.796Z",
+          "attemptEndedAt": "2026-08-10T05:00:28.676Z",
+          "readinessTimeoutMs": 30000,
+          "runtimeRunId": "756d5e4a-61a6-4151-b4b7-c658056da014",
+          "pid": 451665,
+          "startTimeTicks": "7571636",
+          "url": "http://127.0.0.1:40851/",
+          "readinessStatus": 302,
+          "listener": {
+            "address": "127.0.0.1",
+            "port": 40851,
+            "inode": "15959406",
+            "pid": 451691
+          },
+          "readinessAchieved": true,
+          "processIdentities": [
+            {
+              "pid": 451665,
+              "startTimeTicks": "7571636"
+            },
+            {
+              "pid": 451691,
+              "startTimeTicks": "7571659"
+            }
+          ],
+          "attributedListeners": [
+            {
+              "address": "127.0.0.1",
+              "port": 40851,
+              "inode": "15959406",
+              "pid": 451691
+            }
+          ],
+          "unexpectedExit": false
+        },
+        {
+          "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+          "cohort": 5,
+          "slot": 4,
+          "state": "ready",
+          "reason": null,
+          "attemptStartedAt": "2026-08-10T05:00:28.677Z",
+          "attemptEndedAt": "2026-08-10T05:00:29.463Z",
+          "readinessTimeoutMs": 30000,
+          "runtimeRunId": "fe47581f-f5d0-4c3b-bdf7-9b604634d349",
+          "pid": 451707,
+          "startTimeTicks": "7571724",
+          "url": "http://127.0.0.1:36903/",
+          "readinessStatus": 302,
+          "listener": {
+            "address": "127.0.0.1",
+            "port": 36903,
+            "inode": "15957530",
+            "pid": 451730
+          },
+          "readinessAchieved": true,
+          "processIdentities": [
+            {
+              "pid": 451707,
+              "startTimeTicks": "7571724"
+            },
+            {
+              "pid": 451730,
+              "startTimeTicks": "7571747"
+            }
+          ],
+          "attributedListeners": [
+            {
+              "address": "127.0.0.1",
+              "port": 36903,
+              "inode": "15957530",
+              "pid": 451730
+            }
+          ],
+          "unexpectedExit": false
+        },
+        {
+          "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+          "cohort": 5,
+          "slot": 5,
+          "state": "ready",
+          "reason": null,
+          "attemptStartedAt": "2026-08-10T05:00:29.463Z",
+          "attemptEndedAt": "2026-08-10T05:00:30.412Z",
+          "readinessTimeoutMs": 30000,
+          "runtimeRunId": "3574f526-de50-4b43-85d5-d80b73701d35",
+          "pid": 451743,
+          "startTimeTicks": "7571803",
+          "url": "http://127.0.0.1:40559/",
+          "readinessStatus": 302,
+          "listener": {
+            "address": "127.0.0.1",
+            "port": 40559,
+            "inode": "15962422",
+            "pid": 451776
+          },
+          "readinessAchieved": true,
+          "processIdentities": [
+            {
+              "pid": 451743,
+              "startTimeTicks": "7571803"
+            },
+            {
+              "pid": 451776,
+              "startTimeTicks": "7571832"
+            }
+          ],
+          "attributedListeners": [
+            {
+              "address": "127.0.0.1",
+              "port": 40559,
+              "inode": "15962422",
+              "pid": 451776
+            }
+          ],
+          "unexpectedExit": false
+        }
+      ],
+      "preProbe": {
+        "command": "/usr/bin/true",
+        "timeoutMs": 1000,
+        "startedAt": "2026-08-10T05:00:26.021Z",
+        "endedAt": "2026-08-10T05:00:26.039Z",
+        "passed": true,
+        "exitCode": 0,
+        "reason": null
+      },
+      "postCleanupProbe": {
+        "command": "/usr/bin/true",
+        "timeoutMs": 1000,
+        "startedAt": "2026-08-10T05:00:43.594Z",
+        "endedAt": "2026-08-10T05:00:43.604Z",
+        "passed": true,
+        "exitCode": 0,
+        "reason": null
+      },
+      "idleAnchorMonotonicMs": 33644.136449,
+      "idleEndedMonotonicMs": 38645.582486,
+      "activeAnchorMonotonicMs": 38972.422245,
+      "activeEndedMonotonicMs": 43972.694889,
+      "cleanup": {
+        "complete": true,
+        "passed": true,
+        "processIdentitiesAbsent": true,
+        "listenersAbsent": true,
+        "workloadIdentitiesAbsent": true,
+        "details": []
+      },
+      "integrity": {
+        "complete": true,
+        "passed": true,
+        "treeMembershipEqual": true,
+        "sentinelHashesEqual": true,
+        "details": []
+      },
+      "complete": true,
+      "findings": [],
+      "gateStatus": "not-applicable",
+      "gateBlockers": []
+    },
+    {
+      "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+      "requested": 10,
+      "slots": [
+        {
+          "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+          "cohort": 10,
+          "slot": 1,
+          "state": "ready",
+          "reason": null,
+          "attemptStartedAt": "2026-08-10T05:00:43.629Z",
+          "attemptEndedAt": "2026-08-10T05:00:44.596Z",
+          "readinessTimeoutMs": 30000,
+          "runtimeRunId": "f25d9f4d-45a9-4b7b-93f3-ca5a5a33dc00",
+          "pid": 451929,
+          "startTimeTicks": "7573220",
+          "url": "http://127.0.0.1:38879/",
+          "readinessStatus": 302,
+          "listener": {
+            "address": "127.0.0.1",
+            "port": 38879,
+            "inode": "15970423",
+            "pid": 451952
+          },
+          "readinessAchieved": true,
+          "processIdentities": [
+            {
+              "pid": 451929,
+              "startTimeTicks": "7573220"
+            },
+            {
+              "pid": 451952,
+              "startTimeTicks": "7573251"
+            }
+          ],
+          "attributedListeners": [
+            {
+              "address": "127.0.0.1",
+              "port": 38879,
+              "inode": "15970423",
+              "pid": 451952
+            }
+          ],
+          "unexpectedExit": false
+        },
+        {
+          "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+          "cohort": 10,
+          "slot": 2,
+          "state": "ready",
+          "reason": null,
+          "attemptStartedAt": "2026-08-10T05:00:44.596Z",
+          "attemptEndedAt": "2026-08-10T05:00:45.707Z",
+          "readinessTimeoutMs": 30000,
+          "runtimeRunId": "c7a9b4de-89f1-467f-9770-4f72ba2df6b9",
+          "pid": 451970,
+          "startTimeTicks": "7573316",
+          "url": "http://127.0.0.1:36997/",
+          "readinessStatus": 302,
+          "listener": {
+            "address": "127.0.0.1",
+            "port": 36997,
+            "inode": "15955945",
+            "pid": 452001
+          },
+          "readinessAchieved": true,
+          "processIdentities": [
+            {
+              "pid": 451970,
+              "startTimeTicks": "7573316"
+            },
+            {
+              "pid": 452001,
+              "startTimeTicks": "7573351"
+            }
+          ],
+          "attributedListeners": [
+            {
+              "address": "127.0.0.1",
+              "port": 36997,
+              "inode": "15955945",
+              "pid": 452001
+            }
+          ],
+          "unexpectedExit": false
+        },
+        {
+          "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+          "cohort": 10,
+          "slot": 3,
+          "state": "ready",
+          "reason": null,
+          "attemptStartedAt": "2026-08-10T05:00:45.708Z",
+          "attemptEndedAt": "2026-08-10T05:00:46.606Z",
+          "readinessTimeoutMs": 30000,
+          "runtimeRunId": "acb765f5-d320-4d36-a211-32f36fe7f1c2",
+          "pid": 452022,
+          "startTimeTicks": "7573427",
+          "url": "http://127.0.0.1:44887/",
+          "readinessStatus": 302,
+          "listener": {
+            "address": "127.0.0.1",
+            "port": 44887,
+            "inode": "15961748",
+            "pid": 452045
+          },
+          "readinessAchieved": true,
+          "processIdentities": [
+            {
+              "pid": 452022,
+              "startTimeTicks": "7573427"
+            },
+            {
+              "pid": 452045,
+              "startTimeTicks": "7573456"
+            }
+          ],
+          "attributedListeners": [
+            {
+              "address": "127.0.0.1",
+              "port": 44887,
+              "inode": "15961748",
+              "pid": 452045
+            }
+          ],
+          "unexpectedExit": false
+        },
+        {
+          "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+          "cohort": 10,
+          "slot": 4,
+          "state": "ready",
+          "reason": null,
+          "attemptStartedAt": "2026-08-10T05:00:46.606Z",
+          "attemptEndedAt": "2026-08-10T05:00:47.461Z",
+          "readinessTimeoutMs": 30000,
+          "runtimeRunId": "ba1a73c5-d809-445e-94c3-f2988204f86a",
+          "pid": 452061,
+          "startTimeTicks": "7573517",
+          "url": "http://127.0.0.1:44505/",
+          "readinessStatus": 302,
+          "listener": {
+            "address": "127.0.0.1",
+            "port": 44505,
+            "inode": "15966772",
+            "pid": 452084
+          },
+          "readinessAchieved": true,
+          "processIdentities": [
+            {
+              "pid": 452061,
+              "startTimeTicks": "7573517"
+            },
+            {
+              "pid": 452084,
+              "startTimeTicks": "7573538"
+            }
+          ],
+          "attributedListeners": [
+            {
+              "address": "127.0.0.1",
+              "port": 44505,
+              "inode": "15966772",
+              "pid": 452084
+            }
+          ],
+          "unexpectedExit": false
+        },
+        {
+          "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+          "cohort": 10,
+          "slot": 5,
+          "state": "ready",
+          "reason": null,
+          "attemptStartedAt": "2026-08-10T05:00:47.461Z",
+          "attemptEndedAt": "2026-08-10T05:00:48.270Z",
+          "readinessTimeoutMs": 30000,
+          "runtimeRunId": "03b50fd5-334e-4f2f-b3dc-a893d9a66876",
+          "pid": 452100,
+          "startTimeTicks": "7573602",
+          "url": "http://127.0.0.1:45781/",
+          "readinessStatus": 302,
+          "listener": {
+            "address": "127.0.0.1",
+            "port": 45781,
+            "inode": "15966783",
+            "pid": 452123
+          },
+          "readinessAchieved": true,
+          "processIdentities": [
+            {
+              "pid": 452100,
+              "startTimeTicks": "7573602"
+            },
+            {
+              "pid": 452123,
+              "startTimeTicks": "7573624"
+            }
+          ],
+          "attributedListeners": [
+            {
+              "address": "127.0.0.1",
+              "port": 45781,
+              "inode": "15966783",
+              "pid": 452123
+            }
+          ],
+          "unexpectedExit": false
+        },
+        {
+          "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+          "cohort": 10,
+          "slot": 6,
+          "state": "ready",
+          "reason": null,
+          "attemptStartedAt": "2026-08-10T05:00:48.270Z",
+          "attemptEndedAt": "2026-08-10T05:00:49.069Z",
+          "readinessTimeoutMs": 30000,
+          "runtimeRunId": "89dfa9aa-91ac-49b6-bbe7-7ade905d93e0",
+          "pid": 452138,
+          "startTimeTicks": "7573683",
+          "url": "http://127.0.0.1:40203/",
+          "readinessStatus": 302,
+          "listener": {
+            "address": "127.0.0.1",
+            "port": 40203,
+            "inode": "15965526",
+            "pid": 452162
+          },
+          "readinessAchieved": true,
+          "processIdentities": [
+            {
+              "pid": 452138,
+              "startTimeTicks": "7573683"
+            },
+            {
+              "pid": 452162,
+              "startTimeTicks": "7573707"
+            }
+          ],
+          "attributedListeners": [
+            {
+              "address": "127.0.0.1",
+              "port": 40203,
+              "inode": "15965526",
+              "pid": 452162
+            }
+          ],
+          "unexpectedExit": false
+        },
+        {
+          "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+          "cohort": 10,
+          "slot": 7,
+          "state": "ready",
+          "reason": null,
+          "attemptStartedAt": "2026-08-10T05:00:49.069Z",
+          "attemptEndedAt": "2026-08-10T05:00:49.980Z",
+          "readinessTimeoutMs": 30000,
+          "runtimeRunId": "68111ac0-c8cb-4fe1-aa26-e8dde740df40",
+          "pid": 452174,
+          "startTimeTicks": "7573763",
+          "url": "http://127.0.0.1:34895/",
+          "readinessStatus": 302,
+          "listener": {
+            "address": "127.0.0.1",
+            "port": 34895,
+            "inode": "15951641",
+            "pid": 452198
+          },
+          "readinessAchieved": true,
+          "processIdentities": [
+            {
+              "pid": 452174,
+              "startTimeTicks": "7573763"
+            },
+            {
+              "pid": 452198,
+              "startTimeTicks": "7573790"
+            }
+          ],
+          "attributedListeners": [
+            {
+              "address": "127.0.0.1",
+              "port": 34895,
+              "inode": "15951641",
+              "pid": 452198
+            }
+          ],
+          "unexpectedExit": false
+        },
+        {
+          "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+          "cohort": 10,
+          "slot": 8,
+          "state": "ready",
+          "reason": null,
+          "attemptStartedAt": "2026-08-10T05:00:49.980Z",
+          "attemptEndedAt": "2026-08-10T05:00:50.885Z",
+          "readinessTimeoutMs": 30000,
+          "runtimeRunId": "22d1c01d-4152-4e0e-b4a0-9b90392a5250",
+          "pid": 452223,
+          "startTimeTicks": "7573854",
+          "url": "http://127.0.0.1:41073/",
+          "readinessStatus": 302,
+          "listener": {
+            "address": "127.0.0.1",
+            "port": 41073,
+            "inode": "15959941",
+            "pid": 452248
+          },
+          "readinessAchieved": true,
+          "processIdentities": [
+            {
+              "pid": 452223,
+              "startTimeTicks": "7573854"
+            },
+            {
+              "pid": 452248,
+              "startTimeTicks": "7573886"
+            }
+          ],
+          "attributedListeners": [
+            {
+              "address": "127.0.0.1",
+              "port": 41073,
+              "inode": "15959941",
+              "pid": 452248
+            }
+          ],
+          "unexpectedExit": false
+        },
+        {
+          "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+          "cohort": 10,
+          "slot": 9,
+          "state": "ready",
+          "reason": null,
+          "attemptStartedAt": "2026-08-10T05:00:50.885Z",
+          "attemptEndedAt": "2026-08-10T05:00:51.844Z",
+          "readinessTimeoutMs": 30000,
+          "runtimeRunId": "03421ed6-a8f6-4035-b9ee-a757a76f9c22",
+          "pid": 452267,
+          "startTimeTicks": "7573944",
+          "url": "http://127.0.0.1:42167/",
+          "readinessStatus": 302,
+          "listener": {
+            "address": "127.0.0.1",
+            "port": 42167,
+            "inode": "15950582",
+            "pid": 452290
+          },
+          "readinessAchieved": true,
+          "processIdentities": [
+            {
+              "pid": 452267,
+              "startTimeTicks": "7573944"
+            },
+            {
+              "pid": 452290,
+              "startTimeTicks": "7573972"
+            }
+          ],
+          "attributedListeners": [
+            {
+              "address": "127.0.0.1",
+              "port": 42167,
+              "inode": "15950582",
+              "pid": 452290
+            }
+          ],
+          "unexpectedExit": false
+        },
+        {
+          "runId": "532abfdb-c970-4979-9da2-ec9ef99a295a",
+          "cohort": 10,
+          "slot": 10,
+          "state": "ready",
+          "reason": null,
+          "attemptStartedAt": "2026-08-10T05:00:51.844Z",
+          "attemptEndedAt": "2026-08-10T05:00:52.730Z",
+          "readinessTimeoutMs": 30000,
+          "runtimeRunId": "3ba02037-fd78-4ea7-8ae8-ded76a59b20d",
+          "pid": 452306,
+          "startTimeTicks": "7574040",
+          "url": "http://127.0.0.1:39155/",
+          "readinessStatus": 302,
+          "listener": {
+            "address": "127.0.0.1",
+            "port": 39155,
+            "inode": "15961911",
+            "pid": 452329
+          },
+          "readinessAchieved": true,
+          "processIdentities": [
+            {
+              "pid": 452306,
+              "startTimeTicks": "7574040"
+            },
+            {
+              "pid": 452329,
+              "startTimeTicks": "7574066"
+            }
+          ],
+          "attributedListeners": [
+            {
+              "address": "127.0.0.1",
+              "port": 39155,
+              "inode": "15961911",
+              "pid": 452329
+            }
+          ],
+          "unexpectedExit": false
+        }
+      ],
+      "preProbe": {
+        "command": "/usr/bin/true",
+        "timeoutMs": 1000,
+        "startedAt": "2026-08-10T05:00:43.614Z",
+        "endedAt": "2026-08-10T05:00:43.629Z",
+        "passed": true,
+        "exitCode": 0,
+        "reason": null
+      },
+      "postCleanupProbe": {
+        "command": "/usr/bin/true",
+        "timeoutMs": 1000,
+        "startedAt": "2026-08-10T05:01:07.098Z",
+        "endedAt": "2026-08-10T05:01:07.104Z",
+        "passed": true,
+        "exitCode": 0,
+        "reason": null
+      },
+      "idleAnchorMonotonicMs": 56526.47801,
+      "idleEndedMonotonicMs": 61529.961198,
+      "activeAnchorMonotonicMs": 62232.731805,
+      "activeEndedMonotonicMs": 67233.061563,
+      "cleanup": {
+        "complete": true,
+        "passed": true,
+        "processIdentitiesAbsent": true,
+        "listenersAbsent": true,
+        "workloadIdentitiesAbsent": true,
+        "details": []
+      },
+      "integrity": {
+        "complete": true,
+        "passed": true,
+        "treeMembershipEqual": true,
+        "sentinelHashesEqual": true,
+        "details": []
+      },
+      "complete": true,
+      "findings": [],
+      "gateStatus": "not-applicable",
+      "gateBlockers": []
+    }
+  ],
+  "safetyStopReason": null,
+  "threeMemberGate": {
+    "passed": true,
+    "blockers": []
+  },
+  "overallDisposition": "passed",
+  "exitReasons": [],
+  "evidence": {
+    "run": "project/work-items/11-bl-004-establish-the-workbench-capacity-baseline/implementation/evidence/532abfdb-c970-4979-9da2-ec9ef99a295a/run.json",
+    "samples": "project/work-items/11-bl-004-establish-the-workbench-capacity-baseline/implementation/evidence/532abfdb-c970-4979-9da2-ec9ef99a295a/samples.json",
+    "workloads": "project/work-items/11-bl-004-establish-the-workbench-capacity-baseline/implementation/evidence/532abfdb-c970-4979-9da2-ec9ef99a295a/workloads.json",
+    "comparison": "project/work-items/11-bl-004-establish-the-workbench-capacity-baseline/implementation/evidence/532abfdb-c970-4979-9da2-ec9ef99a295a/comparison.md"
+  }
+}

@@ -12,6 +12,7 @@ test:
 
 test-e2e:
     pnpm test:e2e
+    just proof-workbench-capacity-audit
 
 lint:
     pnpm lint
@@ -41,6 +42,12 @@ proof-workbench-presentation:
 materialize-workbench-presentation:
     pnpm --filter @ascend/api exec tsx src/cli/materialize-workbench-presentation.ts
 
+proof-workbench-capacity:
+    pnpm --filter @ascend/api exec tsx src/cli/proof-workbench-capacity.ts
+
+proof-workbench-capacity-audit:
+    pnpm --filter @ascend/api exec tsx src/cli/proof-workbench-capacity-audit.ts
+
 verify-focused *args:
     pnpm exec vitest run {{args}}
 
@@ -51,3 +58,4 @@ verify:
     pnpm test
     pnpm build
     pnpm test:e2e
+    just proof-workbench-capacity-audit

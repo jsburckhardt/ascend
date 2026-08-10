@@ -157,3 +157,47 @@ A candidate is eligible only when all three fresh attempts pass every functional
 The four exact dispositions are embedded selected, full-page selected, selection tie, and no viable candidate. Selected dispositions exit zero. A tie or no viable candidate exits nonzero and creates no Accepted ADR. Missing later slots never receive fabricated run IDs.
 
 The retained comparison at project/work-items/9-bl-003-select-a-viable-browser-workbench-presentation/implementation/evidence/comparison.json started all six attempts on Ubuntu 24.04.4 LTS host 03f809395a5d as vscode with Chromium 151.0.7922.34 and code-server 4.131.0. Both candidates were eligible. Embedded retained 3 blocking and 30 non-blocking occurrences with median 12,737 ms; full-page retained 0 blocking and 36 non-blocking occurrences with median 13,347 ms. The first tie-breaker therefore produced full-page selected. ADR-260810-full-page-browser-workbench-presentation records that authoritative desktop Chromium decision. Tablet validation remains a separate, non-authoritative follow-up.
+
+
+## BL-004 workbench capacity baseline
+
+BL-004 is a bounded diagnostic extension of BL-001, not product runtime management. On the designated Ubuntu 24.04.4 LTS host `03f809395a5d`, as non-root `vscode` uid 1000 in `/workspaces/ascend` with code-server 4.131.0, run:
+
+```text
+just proof-workbench-capacity
+```
+
+The 1,200,000 ms overall deadline covers active-run acquisition, prerequisites, every cohort operation, cleanup, final fixture inspection, evidence retention, and guard release. At the deadline instant one AbortSignal cooperatively cancels starts, readiness polling, scheduled sleeps, probes, workload processes, and coordination. The command does not race away from those operations: it retains the active guard and does not return until coordination has stopped, all guarded cleanup and final all-identity audit have finished, partial evidence has been written when possible, and guard release completes. Bounded cleanup may therefore finish after the deadline instant, while the disposition remains `overall-timeout` and nonzero.
+
+Before starting a member the command checks the exact host, user, repository, executable/version, fixture, required `/proc` files, and cgroup-v2 context. Host or tool prerequisite failure is prerequisite-specific; fixture preflight or snapshot failure is fixture-specific; timeout and run-isolation failures are distinct. None starts a member. An exclusive active-run guard rejects concurrent or stale ownership; immutable historical evidence does not block a new run.
+
+The fixed cohort order is 1, 3, 5, and 10. Starts are sequential with a 30,000 ms readiness bound, and each requested slot is `ready`, `failed` with reason, or `unstarted` with reason. Ordinary failure continues to the next slot unless responsiveness, cancellation, or unsafe prior cleanup stops starts. Any PID/start identity, runtime ID, URL, process tree, or listener inode/owner/port discovered before a spawn, early-exit, inspection, attribution, or post-start failure stays on the failed slot and is included in cohort cleanup and the final audit.
+
+The responsiveness probe is direct argument-array `/usr/bin/true` with a 1,000 ms timeout. It runs before each cohort, at every retained host position, and after cleanup. Its first failure latches a run-wide safety stop. Probe spawn, timeout, cancellation, and inspection failures remain explicit evidence rather than being swallowed.
+
+Idle and active windows each target monotonic offsets 0, 1, 2, 3, and 4 seconds and ordinarily remain open through anchor plus 5,000 ms. Collection begins only at or after each target. Late, cancelled, non-overlapped, no-ready, and unavailable positions are not replaced; every missing host or process-tree position has an explicit reason. The active anchor is allocated only after workload start has been attempted for every ready member.
+
+Every ready member receives the same direct argument-array workload `/usr/local/bin/node /workspaces/ascend/apps/api/src/workbench-capacity-workload.mjs` in the canonical fixture. It runs for 7,000 ms with a 10,000 ms bound; stdout plus stderr share one 4,096-byte limit. Spawn failure, early exit, nonzero exit, timeout, overflow, and cancellation all produce complete workload results with command, PID/start identity when discovered, times, result, and bounded streams. Runtime logs contain metadata, not terminal output.
+
+Sampling consistently reads Linux `/proc`. Process-tree CPU percent is cumulative attributed CPU-tick delta divided by monotonic elapsed time and `CLK_TCK=100`, without normalization by 20 logical CPUs; RSS is summed `VmRSS` KiB. Host records retain 1/5/15 load average, `MemAvailable`, used memory as `MemTotal - MemAvailable`, and responsiveness. Raw timestamps and tick-derived values are retained.
+
+A cohort is complete only when every slot is terminal, all ten host positions and every required tree position are samples or explicit absences, every ready member has a workload result, and cleanup plus fixture integrity checks finish. Stop, process inspection, listener attribution, identity cleanup, and audit failures remain in cleanup details and findings; an audit inspection failure makes cleanup incomplete rather than absent-by-default. A failed member or explicit absence can be a complete finding, not a success. One member is plumbing only. Three members are the only MVP gate. Five and ten are findings and never rewrite the frozen three-member decision. Timeout, incomplete evidence, failed cleanup/integrity, failed final audit, or evidence-write failure makes the command nonzero.
+
+Cleanup operates on all started or discovered identities, including failed slots, not only ready members. It cancels each workload, stops each available exact handle, applies PID/start-checked cleanup to every discovered identity, audits every listener inode/owner/port, and then repeats one run-wide final absence audit over the union. It never kills by name or sweeps ports. The BL-001 fixture membership and sentinel hashes are compared around every cohort and again at command finalization.
+
+Evidence is retained atomically below `project/work-items/11-bl-004-establish-the-workbench-capacity-baseline/implementation/evidence/<runId>/` as `run.json`, `samples.json`, `workloads.json`, and `comparison.md`. The comparison separately reports host retained/absent and process-tree retained/absent counts for each cohort, explicit missing reasons, resource summaries, responsiveness, cleanup/integrity, findings, gate, and independent overall disposition.
+
+Run the bounded post-run and full-gate audit with:
+
+```text
+just proof-workbench-capacity-audit
+just verify
+```
+
+The audit recomputes each versioned comparison, checks every retained failed/ready member, workload, and listener identity is absent, proves no active guard remains, and compares the fixture. `just verify` runs this short audit last and does not repeat the 1/3/5/10 episode.
+
+### Observed designated-host baseline
+
+Retained run `853037e6-5dab-43cf-bcf8-61f1e8bbdb18` completed in about 73 seconds. Cohorts 1, 3, 5, and 10 had 1/1, 3/3, 5/5, and 10/10 ready members and workloads. Host retained/absent counts were 10/0 for every cohort; process-tree counts were 10/0, 30/0, 50/0, and 100/0. There were no missing reasons or findings. Cohort cleanup, final all-identity cleanup, fixture integrity, the independent three-member gate, and overall disposition passed. Minimum available memory was 19,103,172 KiB, 18,952,508 KiB, 18,602,712 KiB, and 18,467,380 KiB. The cgroup-v2 evidence records `cpu.max=max 100000`, CPUs `0-19`, and `max` memory, memory-high, swap, and PID limits.
+
+This is one diagnostic host episode. It does not establish scheduling, quotas, sleeping, product lifecycle policy, multi-host support, BL-010 outcomes, BL-013 outcomes, or change the accepted full-page presentation decision.

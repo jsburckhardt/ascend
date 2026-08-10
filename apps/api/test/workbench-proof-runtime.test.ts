@@ -15,6 +15,7 @@ import {
   stopWorkbenchProof,
   validateProjectPath,
 } from '../src/workbench-proof-runtime.js'
+import { processIdentityAbsent } from '../src/workbench-proof-audit.js'
 import { runProofStartCli } from '../src/cli/proof-start.js'
 import { runProofStopCli } from '../src/cli/proof-stop.js'
 
@@ -192,5 +193,58 @@ describe('workbench proof runtime', () => {
       event: 'runtime.stop.failed',
       code: 'invalid-handle',
     })
+  })
+
+  it('retains exact identity on early exit and cooperative start cancellation', async () => {
+    const earlyRoot = await temporaryRoot()
+    let early: ProofError | null = null
+    try {
+      await startWorkbenchProof({
+        executablePath: fakeExecutable,
+        runRoot: earlyRoot,
+        startupTimeoutMs: 1_000,
+        environmentOverrides: { BL001_FAKE_MODE: 'early-exit' },
+      })
+    } catch (error) {
+      early = error as ProofError
+    }
+    expect(early).toMatchObject({ code: 'early-exit' })
+    expect(early?.discoveredIdentity).toMatchObject({
+      pid: expect.any(Number),
+      startTimeTicks: expect.any(String),
+    })
+    await expect(
+      processIdentityAbsent({
+        pid: early!.discoveredIdentity!.pid!,
+        startTimeTicks: early!.discoveredIdentity!.startTimeTicks!,
+      })
+    ).resolves.toBe(true)
+
+    const cancelledRoot = await temporaryRoot()
+    const controller = new AbortController()
+    setTimeout(() => controller.abort(new Error('overall-timeout')), 20)
+    let cancelled: ProofError | null = null
+    try {
+      await startWorkbenchProof({
+        executablePath: fakeExecutable,
+        runRoot: cancelledRoot,
+        startupTimeoutMs: 2_000,
+        environmentOverrides: { BL001_FAKE_MODE: 'timeout' },
+        signal: controller.signal,
+      })
+    } catch (error) {
+      cancelled = error as ProofError
+    }
+    expect(cancelled).toMatchObject({ code: 'cancelled' })
+    expect(cancelled?.discoveredIdentity).toMatchObject({
+      pid: expect.any(Number),
+      startTimeTicks: expect.any(String),
+    })
+    await expect(
+      processIdentityAbsent({
+        pid: cancelled!.discoveredIdentity!.pid!,
+        startTimeTicks: cancelled!.discoveredIdentity!.startTimeTicks!,
+      })
+    ).resolves.toBe(true)
   })
 })

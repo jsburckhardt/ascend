@@ -268,6 +268,27 @@ const waitForAbort = async (signal: AbortSignal): Promise<void> => {
   )
 }
 
+const openIntegratedTerminal = async (page: Page): Promise<void> => {
+  await page.keyboard.press('F1')
+  await expect(page.locator('.quick-input-widget')).toBeVisible({
+    timeout: 5_000,
+  })
+  await page.keyboard.insertText('Terminal: Create New Terminal')
+  await expect(
+    page.getByText('Terminal: Create New Terminal', { exact: true }).first()
+  ).toBeVisible({ timeout: 5_000 })
+  await page.keyboard.press('Enter')
+  const terminal = page.locator('.terminal.xterm').first()
+  await expect(terminal).toBeVisible({ timeout: 10_000 })
+  await expect
+    .poll(
+      async () => (await page.locator('.xterm-rows').last().innerText()).trim(),
+      { timeout: 10_000 }
+    )
+    .not.toBe('')
+  await terminal.click()
+}
+
 test.describe.configure({ mode: 'serial' })
 
 test('cancels an in-progress real integrated command on overall timeout', async ({
@@ -315,10 +336,7 @@ test('cancels an in-progress real integrated command on overall timeout', async 
         await expect(
           page.getByText(EXPLORER_SENTINEL, { exact: true }).first()
         ).toBeVisible()
-        await page.keyboard.press('Control+Shift+Backquote')
-        await expect(page.locator('.terminal.xterm').first()).toBeVisible({
-          timeout: 10_000,
-        })
+        await openIntegratedTerminal(page)
         await page.keyboard.insertText(
           '/usr/local/bin/node /workspaces/ascend/tests/e2e/fixtures/terminal-timeout-command.mjs'
         )
@@ -504,11 +522,8 @@ test('proves one designated-host workbench with terminal parity', async ({
           .toBe(true)
         browserObserved = true
 
-        await page.keyboard.press('Control+Shift+Backquote')
+        await openIntegratedTerminal(page)
         terminalCreationActions += 1
-        await expect(page.locator('.terminal.xterm').first()).toBeVisible({
-          timeout: 10_000,
-        })
         const integratedCommand =
           'setsid /workspaces/ascend/node_modules/.bin/tsx /workspaces/ascend/apps/api/src/cli/proof-terminal-integrated.ts && printf BL002_TERMINAL_COMPLETE\\n'
         signal.throwIfAborted()

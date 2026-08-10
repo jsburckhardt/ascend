@@ -33,9 +33,9 @@ const record = (
     integrity: true,
   },
   evidence: {
-    rawBrowserEvents: 'events.json',
-    terminalDirect: 'direct.json',
-    terminalIntegrated: 'integrated.json',
+    rawBrowserEvents: 'package.json',
+    terminalDirect: 'package.json',
+    terminalIntegrated: 'package.json',
   },
   warningCounts: { blocking: 0, nonBlocking: 0 },
   freshness: {

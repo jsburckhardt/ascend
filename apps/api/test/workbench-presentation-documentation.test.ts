@@ -36,6 +36,10 @@ describe('BL-003 retained evidence and documentation consistency', () => {
             'utf8'
           )
         ).resolves.toContain(record.runId)
+        for (const reference of Object.values(record.evidence))
+          await expect(
+            readFile(path.join(REPOSITORY_ROOT, reference), 'utf8')
+          ).resolves.not.toHaveLength(0)
         return record
       })
     )
@@ -59,15 +63,20 @@ describe('BL-003 retained evidence and documentation consistency', () => {
         'docs/README.md',
         'docs/workbench-proof.md',
         '.harness/engineering-harness.md',
-        'project/architecture/ADR/ADR-260810-full-page-browser-workbench-presentation.md',
+        'project/architecture/ADR/ADR-260810-' +
+          comparison.selectedCandidate +
+          '-browser-workbench-presentation.md',
         'project/architecture/ADR/DECISION-LOG.md',
       ].map((name) => readFile(path.join(REPOSITORY_ROOT, name), 'utf8'))
     )
     const joined = files.join('\n')
-    expect(comparison.disposition).toBe('full-page selected')
-    expect(joined).toContain('full-page selected')
-    expect(joined).toContain('9 blocking')
-    expect(joined).toContain('6 blocking')
+    expect(joined).toContain(comparison.disposition)
+    expect(joined).toContain(
+      String(comparison.candidates.embedded.blockingCount) + ' blocking'
+    )
+    expect(joined).toContain(
+      String(comparison.candidates['full-page'].blockingCount) + ' blocking'
+    )
     expect(joined).toContain(comparison.comparisonId)
     expect(joined).toContain('1440 by 900')
     expect(joined).toContain('fresh')

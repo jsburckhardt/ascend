@@ -34,9 +34,9 @@ const attemptRecord = (): PresentationAttemptRecord => ({
     integrity: true,
   },
   evidence: {
-    rawBrowserEvents: 'events.json',
-    terminalDirect: 'direct.json',
-    terminalIntegrated: 'integrated.json',
+    rawBrowserEvents: 'package.json',
+    terminalDirect: 'package.json',
+    terminalIntegrated: 'package.json',
   },
   warningCounts: { blocking: 0, nonBlocking: 1 },
   freshness: {
@@ -154,6 +154,11 @@ describe('BL-003 comparison contracts', () => {
     const missing = attemptRecord()
     missing.evidence.rawBrowserEvents = ''
     expect(() => validateAttemptRecord(missing)).toThrow('artifact')
+
+    const absent = attemptRecord()
+    absent.evidence.rawBrowserEvents =
+      'test-results/bl-003/raw/absent/browser-events.json'
+    expect(() => validateAttemptRecord(absent)).toThrow('not readable')
 
     const clipboard = { ...attemptRecord(), clipboardToken: 'secret' }
     expect(() => validateAttemptRecord(clipboard)).toThrow('Clipboard')

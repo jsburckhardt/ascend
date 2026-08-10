@@ -22,13 +22,18 @@ const requiredResource =
 export const classifyBrowserOccurrence = (
   input: BrowserOccurrenceInput
 ): Pick<RawBrowserEvent, 'blocking' | 'nonBlockingWarning'> => {
-  const text = [input.url ?? '', input.detail ?? ''].join(' ')
+  const detail = input.detail ?? ''
+  const resourceText = [input.url ?? '', detail].join(' ')
   const websocketFailure =
     (input.kind === 'websocket-error' || input.kind === 'websocket-close') &&
     input.beforeTerminalCompletion === true
+  const eventReportsFailure =
+    input.kind === 'request-failed' ||
+    (input.kind === 'response' && (input.status ?? 0) >= 400) ||
+    failureWords.test(detail)
   const policyFailure =
-    failureWords.test(text) &&
-    (policyFamilies.test(text) || requiredResource.test(text))
+    eventReportsFailure &&
+    (policyFamilies.test(detail) || requiredResource.test(resourceText))
   const blocking = websocketFailure || policyFailure
   const warning =
     input.kind === 'console' ||

@@ -36,9 +36,9 @@ const passing = (
     integrity: true,
   },
   evidence: {
-    rawBrowserEvents: 'events.json',
-    terminalDirect: 'direct.json',
-    terminalIntegrated: 'integrated.json',
+    rawBrowserEvents: 'package.json',
+    terminalDirect: 'package.json',
+    terminalIntegrated: 'package.json',
   },
   warningCounts: { blocking, nonBlocking: warning },
   freshness: {
@@ -158,7 +158,8 @@ describe('BL-003 deterministic selector', () => {
 
   it('makes missing artifacts, cleanup failures, and fewer than three passes ineligible', () => {
     const missing = three('embedded')
-    missing[1].evidence.rawBrowserEvents = ''
+    missing[1].evidence.rawBrowserEvents =
+      'test-results/bl-003/raw/absent/browser-events.json'
     const cleanup = three('full-page')
     cleanup[2].cleanup.listenerAbsent = false
     expect(attemptIsCompletePass(missing[1])).toBe(false)

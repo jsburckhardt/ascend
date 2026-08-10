@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { REPOSITORY_ROOT } from './workbench-proof-contract.js'
 
@@ -159,6 +160,45 @@ export interface CandidateComparison {
   elapsedMs: number[]
   medianElapsedMs: number | null
 }
+const attemptArtifactReferences = (
+  record: PresentationAttemptRecord
+): string[] => [
+  record.evidence.rawBrowserEvents,
+  record.evidence.terminalDirect,
+  record.evidence.terminalIntegrated,
+]
+
+export const validateAttemptArtifactFiles = (
+  record: PresentationAttemptRecord,
+  repositoryRoot = REPOSITORY_ROOT
+): void => {
+  for (const reference of attemptArtifactReferences(record)) {
+    if (!reference || path.isAbsolute(reference))
+      throw new Error('Attempt artifact reference must be repository-relative')
+    const target = path.resolve(repositoryRoot, reference)
+    const relative = path.relative(repositoryRoot, target)
+    if (relative.startsWith('..' + path.sep) || path.isAbsolute(relative))
+      throw new Error('Attempt artifact reference escapes the repository')
+    try {
+      readFileSync(target)
+    } catch {
+      throw new Error('Attempt artifact is not readable: ' + reference)
+    }
+  }
+}
+
+export const attemptArtifactFilesReadable = (
+  record: PresentationAttemptRecord,
+  repositoryRoot = REPOSITORY_ROOT
+): boolean => {
+  try {
+    validateAttemptArtifactFiles(record, repositoryRoot)
+    return true
+  } catch {
+    return false
+  }
+}
+
 export interface PresentationComparisonRecord {
   version: 1
   comparisonId: string
@@ -243,7 +283,10 @@ export const validateAttemptRecord = (
     Object.keys(record).some((key) => /clipboard.*(token|content)/iu.test(key))
   )
     throw new Error('Clipboard content must not be retained')
-  return record as PresentationAttemptRecord
+  const validated = record as PresentationAttemptRecord
+  if (validated.finalStatus === 'passed')
+    validateAttemptArtifactFiles(validated)
+  return validated
 }
 export const validateComparisonRecord = (
   value: unknown

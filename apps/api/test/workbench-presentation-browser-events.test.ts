@@ -58,6 +58,23 @@ describe('BL-003 browser protocol evidence', () => {
     }
   )
 
+  it.each([
+    'http://127.0.0.1:43479/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fmarkdown-math%2Fsyntaxes%2Fmd-math-block.tmLanguage.json&tkn=',
+    'http://127.0.0.1:45233/stable-a3fc2899bd0fcd388253c0e79ce33b8acd48c688/vscode-remote-resource?path=%2Fhome%2Fvscode%2F.local%2Flib%2Fcode-server-4.131.0%2Flib%2Fvscode%2Fextensions%2Fmarkdown-math%2Fsyntaxes%2Fmd-math-block.tmLanguage.json&tkn=',
+  ])(
+    'does not classify a successful observed md-math-block resource as blocking: %s',
+    (url) => {
+      expect(
+        classifyBrowserOccurrence({
+          kind: 'response',
+          url,
+          status: 200,
+          detail: 'fetch',
+        })
+      ).toEqual({ blocking: false, nonBlockingWarning: false })
+    }
+  )
+
   it('retains warnings, overlap, and repeated occurrences exactly once each', () => {
     const observer = new BrowserEventObserver()
     observer.record({ kind: 'console', detail: 'ordinary warning' })

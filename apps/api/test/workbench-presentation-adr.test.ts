@@ -144,6 +144,34 @@ describe('BL-003 conditional ADR materialization', () => {
     expect(log).toContain('Reject embedded')
   })
 
+  it('regenerates the Accepted ADR when fresh evidence selects embedded', async () => {
+    const paths = await setup()
+    const fullPage = comparison()
+    await materializeSelectedPresentationDecision({
+      ...paths,
+      comparison: fullPage,
+      utcDate: '260810',
+    })
+    const embedded = comparison('embedded selected')
+    embedded.comparisonId = fullPage.comparisonId
+    const result = await materializeSelectedPresentationDecision({
+      ...paths,
+      comparison: embedded,
+      utcDate: '260810',
+    })
+    expect(result.path).toContain(
+      'ADR-260810-embedded-browser-workbench-presentation.md'
+    )
+    const files = await readdir(paths.architectureDirectory)
+    expect(files).not.toContain(
+      'ADR-260810-full-page-browser-workbench-presentation.md'
+    )
+    expect(await readFile(result.path!, 'utf8')).toContain('Use embedded')
+    expect(await readFile(paths.decisionLogPath, 'utf8')).toContain(
+      'Reject full-page'
+    )
+  })
+
   it.each(['selection tie', 'no viable candidate'] as const)(
     'creates no Accepted ADR or log selection for %s',
     async (disposition) => {

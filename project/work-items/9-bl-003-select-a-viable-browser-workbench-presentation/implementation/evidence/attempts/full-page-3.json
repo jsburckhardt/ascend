@@ -2,14 +2,14 @@
   "version": 1,
   "candidate": "full-page",
   "attempt": 3,
-  "runId": "e44822cd-a5b5-4f65-8c9c-fa16cdd93936",
+  "runId": "224deeed-8f57-4c12-9b23-43f9b2974b9f",
   "chromiumVersion": "151.0.7922.34",
   "startStatus": "started",
   "finalStatus": "passed",
   "failedAssertions": [],
   "timing": {
-    "navigationStartMs": 64644,
-    "scenarioCompletionMs": 76205
+    "navigationStartMs": 68848,
+    "scenarioCompletionMs": 80243
   },
   "assertions": {
     "functional": {
@@ -43,19 +43,19 @@
   },
   "evidence": {
     "rawBrowserEvents": "project/work-items/9-bl-003-select-a-viable-browser-workbench-presentation/implementation/evidence/browser-events/full-page-3.json",
-    "terminalDirect": "test-results/bl-003/raw/e44822cd-a5b5-4f65-8c9c-fa16cdd93936/direct.raw.json",
-    "terminalIntegrated": "test-results/bl-003/raw/e44822cd-a5b5-4f65-8c9c-fa16cdd93936/integrated.raw.json"
+    "terminalDirect": "test-results/bl-003/raw/224deeed-8f57-4c12-9b23-43f9b2974b9f/direct.raw.json",
+    "terminalIntegrated": "test-results/bl-003/raw/224deeed-8f57-4c12-9b23-43f9b2974b9f/integrated.raw.json"
   },
   "warningCounts": {
-    "blocking": 2,
-    "nonBlocking": 12
+    "blocking": 1,
+    "nonBlocking": 11
   },
   "freshness": {
-    "workbenchRunId": "35db15d4-0603-48e5-bf15-22c5ad2ce4b6",
-    "processPid": 297042,
-    "processGroup": 297042,
-    "browserContextId": "5910dc09-88c1-479c-afe1-0dd4455be258",
-    "disposableArea": "test-results/bl-003/disposable/e44822cd-a5b5-4f65-8c9c-fa16cdd93936",
+    "workbenchRunId": "66cc12f6-8339-4277-83e4-94e7c9791920",
+    "processPid": 329253,
+    "processGroup": 329253,
+    "browserContextId": "f8271fae-57b3-4a34-a851-ba878ae9f24c",
+    "disposableArea": "test-results/bl-003/disposable/224deeed-8f57-4c12-9b23-43f9b2974b9f",
     "priorStateAbsent": true
   },
   "cleanup": {

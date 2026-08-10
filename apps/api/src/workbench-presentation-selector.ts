@@ -1,5 +1,6 @@
 import {
   PRESENTATION_CANDIDATES,
+  attemptArtifactFilesReadable,
   middleIntegerMedian,
   type CandidateComparison,
   type PresentationAttemptRecord,
@@ -26,6 +27,7 @@ export const attemptIsCompletePass = (
   record.assertions.integrity &&
   Object.values(record.cleanup).every(Boolean) &&
   Object.values(record.integrity).every(Boolean) &&
+  attemptArtifactFilesReadable(record) &&
   Boolean(
     record.evidence.rawBrowserEvents &&
     record.evidence.terminalDirect &&

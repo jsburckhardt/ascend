@@ -1,4 +1,4 @@
-import { access, mkdir, readFile, writeFile } from 'node:fs/promises'
+import { access, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import {
   validateComparisonRecord,
@@ -20,10 +20,37 @@ const exists = async (target: string): Promise<boolean> => {
     return false
   }
 }
-const decisionId = (date: string): string =>
-  'ADR-' + date + '-full-page-browser-workbench-presentation'
+const decisionId = (date: string, candidate: string): string =>
+  'ADR-' + date + '-' + candidate + '-browser-workbench-presentation'
 const evidenceReference =
   '../../work-items/9-bl-003-select-a-viable-browser-workbench-presentation/implementation/evidence/comparison.json'
+
+const selectionReason = (comparison: PresentationComparisonRecord): string => {
+  const selected = comparison.selectedCandidate!
+  const rejected = selected === 'embedded' ? 'full-page' : 'embedded'
+  if (!comparison.candidates[rejected].eligible)
+    return selected + ' was the only eligible candidate.'
+  const measures = [
+    ['blocking browser protocol violations', 'blockingCount'],
+    ['non-blocking warning occurrences', 'nonBlockingCount'],
+    ['median elapsed milliseconds', 'medianElapsedMs'],
+  ] as const
+  for (const [label, key] of measures) {
+    const selectedValue = comparison.candidates[selected][key]
+    const rejectedValue = comparison.candidates[rejected][key]
+    if (selectedValue !== rejectedValue)
+      return (
+        'The ordered selector chose it at the first strict tie-breaker: fewer ' +
+        label +
+        ' (' +
+        String(selectedValue) +
+        ' versus ' +
+        String(rejectedValue) +
+        ').'
+      )
+  }
+  throw new Error('Selected comparison has no decisive eligibility or measure')
+}
 
 const adrContent = (
   comparison: PresentationComparisonRecord,
@@ -32,9 +59,8 @@ const adrContent = (
   const selected = comparison.selectedCandidate!
   const rejected = selected === 'embedded' ? 'full-page' : 'embedded'
   const selectedEvidence = comparison.candidates[selected]
-  const rejectedEvidence = comparison.candidates[rejected]
   return [
-    '# ' + id + ': Select the Full-Page Browser Workbench Presentation',
+    '# ' + id + ': Select the ' + selected + ' Browser Workbench Presentation',
     '',
     '## Status',
     '',
@@ -48,7 +74,11 @@ const adrContent = (
       comparison.comparisonId +
       ' at ' +
       evidenceReference +
-      '. Both candidates were eligible. Embedded retained ' +
+      '. Embedded eligibility was ' +
+      String(comparison.candidates.embedded.eligible) +
+      ' and full-page eligibility was ' +
+      String(comparison.candidates['full-page'].eligible) +
+      '. Embedded retained ' +
       String(comparison.candidates.embedded.blockingCount) +
       ' blocking and ' +
       String(comparison.candidates.embedded.nonBlockingCount) +
@@ -66,11 +96,9 @@ const adrContent = (
     '',
     'Use ' +
       selected +
-      ' code-server with a minimal Ascend header as the browser workbench presentation for authoritative desktop Chromium workflows. The ordered selector chose it at the first strict tie-breaker: fewer retained blocking browser protocol violations (' +
-      String(selectedEvidence.blockingCount) +
-      ' versus ' +
-      String(rejectedEvidence.blockingCount) +
-      '). Reject ' +
+      ' code-server with a minimal Ascend header as the browser workbench presentation for authoritative desktop Chromium workflows. ' +
+      selectionReason(comparison) +
+      ' Reject ' +
       rejected +
       ' for this decision.',
     '',
@@ -80,8 +108,16 @@ const adrContent = (
     '',
     '| Alternative | Pros | Cons | Why Rejected |',
     '|-------------|------|------|--------------|',
-    '| Embedded code-server in an Ascend surface | Keeps Ascend chrome continuously visible | Retained more blocking browser protocol violations in the fixed desktop comparison | Lost the first ordered tie-breaker |',
-    '| Full-page code-server with a minimal Ascend header | Preserves top-level workbench behavior and passed all three attempts | Requires later product navigation and lifecycle integration | Selected by retained evidence |',
+    '| Embedded code-server in an Ascend surface | Keeps Ascend chrome continuously visible | Requires frame-policy handling | ' +
+      (selected === 'embedded'
+        ? 'Selected by retained evidence'
+        : 'Rejected by retained evidence') +
+      ' |',
+    '| Full-page code-server with a minimal Ascend header | Preserves top-level workbench behavior | Requires later product navigation and lifecycle integration | ' +
+      (selected === 'full-page'
+        ? 'Selected by retained evidence'
+        : 'Rejected by retained evidence') +
+      ' |',
     '',
     '## Consequences',
     '',
@@ -115,46 +151,99 @@ export const materializeSelectedPresentationDecision = async (
 ): Promise<{ created: boolean; path: string | null }> => {
   const comparison = validateComparisonRecord(options.comparison)
   if (!comparison.selectedCandidate) return { created: false, path: null }
-  const id = decisionId(options.utcDate)
+  const id = decisionId(options.utcDate, comparison.selectedCandidate)
   const target = path.join(options.architectureDirectory, id + '.md')
   const template = await readFile(options.templatePath, 'utf8')
   const content = adrContent(comparison, id)
   const templateHeadings = template.match(/^## .+$/gmu) ?? []
   if (!templateHeadings.every((heading) => content.includes(heading)))
     throw new Error('Materialized ADR does not preserve the template sections')
-  if (await exists(target)) {
+  await mkdir(options.architectureDirectory, { recursive: true })
+  const rejected =
+    comparison.selectedCandidate === 'embedded' ? 'full-page' : 'embedded'
+  const staleId = decisionId(options.utcDate, rejected)
+  const staleTarget = path.join(options.architectureDirectory, staleId + '.md')
+  if (await exists(staleTarget)) {
+    const stale = await readFile(staleTarget, 'utf8')
+    if (!stale.includes(comparison.comparisonId))
+      throw new Error(
+        'Existing BL-003 ADR conflicts with the frozen comparison'
+      )
+    await rm(staleTarget)
+  }
+  const created = !(await exists(target))
+  if (!created) {
     const existing = await readFile(target, 'utf8')
     if (
-      existing.includes(comparison.comparisonId) &&
-      existing.includes('Use ' + comparison.selectedCandidate)
+      !existing.includes(comparison.comparisonId) ||
+      !existing.includes('Use ' + comparison.selectedCandidate)
     )
-      return { created: false, path: target }
-    throw new Error('Existing BL-003 ADR conflicts with the frozen comparison')
+      throw new Error(
+        'Existing BL-003 ADR conflicts with the frozen comparison'
+      )
   }
-  await mkdir(options.architectureDirectory, { recursive: true })
   await writeFile(target, content)
   let log = await readFile(options.decisionLogPath, 'utf8')
+  log =
+    log
+      .split('\n')
+      .filter(
+        (line) =>
+          !line.includes(
+            'ADR-' +
+              options.utcDate +
+              '-embedded-browser-workbench-presentation'
+          ) &&
+          !line.includes(
+            'ADR-' +
+              options.utcDate +
+              '-full-page-browser-workbench-presentation'
+          ) &&
+          !/^\| (43|44|45) \|/u.test(line)
+      )
+      .join('\n')
+      .trimEnd() + '\n'
+  const selectedLabel =
+    comparison.selectedCandidate === 'full-page' ? 'Full-Page' : 'Embedded'
+  const date =
+    '20' +
+    options.utcDate.slice(0, 2) +
+    '-' +
+    options.utcDate.slice(2, 4) +
+    '-' +
+    options.utcDate.slice(4, 6)
   const adrRow =
     '| ' +
     id +
-    ' | Select the Full-Page Browser Workbench Presentation | Accepted | 2026-08-10 |'
-  if (!log.includes('| ' + id + ' |')) {
-    const section = '\n\n## Core-Components'
-    log = log.replace(section, '\n' + adrRow + section)
-  }
+    ' | Select the ' +
+    selectedLabel +
+    ' Browser Workbench Presentation | Accepted | ' +
+    date +
+    ' |'
+  const section = '\n\n## Core-Components'
+  log = log.replace(section, '\n' + adrRow + section)
   const decisions = [
-    '| 43 | Use full-page code-server with a minimal Ascend header for authoritative desktop Chromium workbench presentation | ' +
+    '| 43 | Use ' +
+      comparison.selectedCandidate +
+      ' code-server with a minimal Ascend header for authoritative desktop Chromium workbench presentation | ' +
       id +
-      ' | 2026-08-10 |',
-    '| 44 | Reject embedded code-server presentation because it retained more blocking browser protocol violations | ' +
+      ' | ' +
+      date +
+      ' |',
+    '| 44 | Reject ' +
+      rejected +
+      ' code-server presentation based on the retained ordered selection evidence | ' +
       id +
-      ' | 2026-08-10 |',
+      ' | ' +
+      date +
+      ' |',
     '| 45 | Keep tablet validation non-authoritative and defer product routing and lifecycle integration | ' +
       id +
-      ' | 2026-08-10 |',
+      ' | ' +
+      date +
+      ' |',
   ]
-  for (const decision of decisions)
-    if (!log.includes(decision)) log = log.trimEnd() + '\n' + decision + '\n'
+  for (const decision of decisions) log = log.trimEnd() + '\n' + decision + '\n'
   await writeFile(options.decisionLogPath, log)
-  return { created: true, path: target }
+  return { created, path: target }
 }

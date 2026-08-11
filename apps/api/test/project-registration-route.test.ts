@@ -183,9 +183,19 @@ describe('POST /api/projects contract', () => {
       'application/json',
     ],
     [
-      'wrong-content-type',
+      'parser-supported-text-plain',
       JSON.stringify({ path: REDACTION_SENTINELS[1] }),
       'text/plain',
+    ],
+    [
+      'unsupported-application-xml',
+      `<registration><path>${REDACTION_SENTINELS[1]}</path></registration>`,
+      'application/xml',
+    ],
+    [
+      'unsupported-application-octet-stream',
+      JSON.stringify({ path: REDACTION_SENTINELS[1] }),
+      'application/octet-stream',
     ],
   ] as const
 

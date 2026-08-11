@@ -97,7 +97,7 @@ API startup resolves one `ASCEND_DATABASE_URL`, applies committed migrations bef
 
 ### HTTP contracts
 
-`GET /api/projects` remains the exact ordered list contract. `POST /api/projects` requires `Content-Type: application/json`, a body of at most 4,096 encoded bytes, and an exact object with the sole string field `path`; `name` is never submitted. Blank and whitespace strings are contract-valid and delegate once to BL-006. Empty or malformed JSON, scalar or array bodies, missing or non-string path, and extra fields return 400 `{"error":{"category":"invalid_registration_request"}}` with no delegation. Byte 4,097 returns 413 `{"error":{"category":"registration_request_too_large"}}`.
+`GET /api/projects` remains the exact ordered list contract. `POST /api/projects` requires `Content-Type: application/json`, a body of at most 4,096 encoded bytes, and an exact object with the sole string field `path`; `name` is never submitted. Blank and whitespace strings are contract-valid and delegate once to BL-006. `application/json` is the only supported request media type; missing or other media types, including parser-supported `text/plain` and unsupported `application/xml` or `application/octet-stream`, return the safe 400 `invalid_registration_request` envelope with no delegation. Empty or malformed JSON, scalar or array bodies, missing or non-string path, and extra fields return 400 `{"error":{"category":"invalid_registration_request"}}` with no delegation. Byte 4,097 returns 413 `{"error":{"category":"registration_request_too_large"}}`.
 
 Created is HTTP 201 and existing is HTTP 200. Both return only:
 

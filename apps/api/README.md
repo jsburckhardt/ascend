@@ -66,7 +66,7 @@ Before binding its listener, the API resolves `ASCEND_DATABASE_URL`, constructs 
 
 `GET /api/projects` returns `{"projects":[]}` or exact four-field records ordered `createdAt ASC, id ASC`; safe list failure remains 500 `{"error":{"category":"project_list_failed"}}`.
 
-`POST /api/projects` accepts only `application/json` and exactly `{"path":"string"}`. The encoded body limit is 4,096 bytes. Blank strings delegate to BL-006. Empty or malformed JSON, arrays, scalars, missing or wrong-type path, extra keys, and non-JSON content return 400 `{"error":{"category":"invalid_registration_request"}}` before registration. A 4,097-byte body returns 413 `{"error":{"category":"registration_request_too_large"}}` before registration.
+`POST /api/projects` supports only the `application/json` media type and exactly `{"path":"string"}`. The encoded body limit is 4,096 bytes. Blank strings delegate to BL-006. Missing or other media types—including Fastify parser-supported `text/plain` and unsupported `application/xml` or `application/octet-stream`—return 400 `{"error":{"category":"invalid_registration_request"}}` with zero registration delegation. Empty or malformed JSON, arrays, scalars, missing or wrong-type path, and extra keys return that same safe 400 response before registration. A 4,097-byte body returns 413 `{"error":{"category":"registration_request_too_large"}}` before registration.
 
 Created returns 201 and existing returns 200 with only `{"disposition":"created|existing","project":{"id","name","canonicalPath","createdAt"}}`. The project is exactly the stable BL-006 record; `name` is not accepted from the request. Failure status and category mappings are:
 

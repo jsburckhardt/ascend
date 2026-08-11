@@ -52,6 +52,15 @@ describe('BL-008 documentation contract', () => {
       expect(combined).toContain(token)
     for (const category of REGISTRATION_FAILURE_CATEGORIES)
       expect(combined).toContain(category)
+    for (const mediaType of [
+      'application/json',
+      'text/plain',
+      'application/xml',
+      'application/octet-stream',
+    ])
+      expect(api).toContain(mediaType)
+    expect(api).toContain('zero registration delegation')
+    expect(api).toContain('same safe 400 response')
   })
 
   it('synchronizes form, recovery, generation, scope, commands, and evidence', async () => {

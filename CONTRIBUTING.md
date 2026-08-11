@@ -10,6 +10,8 @@ Research → Plan → Implement → Verify
 
 Each stage has clear inputs, outputs, and artifact locations. No stage may be skipped.
 
+The coordinator alone invokes the advisory lifecycle seams through `/eng-harness-flow --hook <hook> --json`: pre-flight after branch preparation, pre-coding after Plan validation, post-coding after a valid Implement handoff, and post-flight after successful Verify. Corrections repeat the downstream seams. A missing host skill or unsuccessful seam blocks agent dispatch with an explicit pipeline error. Research, Plan, Implement, and Verify remain leaf workers; each uses its existing terminal capability only to capture its own qualifying friction with real `harness observe` calls.
+
 ## How to Start Work on an Issue
 
 1. **Create a GitHub Issue** describing the work to be done.

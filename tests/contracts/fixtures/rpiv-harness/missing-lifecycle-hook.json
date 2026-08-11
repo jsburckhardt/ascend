@@ -1,0 +1,6 @@
+{
+  "expectedRule": "LIFECYCLE_ORDER",
+  "override": {
+    "lifecycle": ["pre-flight", "pre-coding", "post-coding"]
+  }
+}

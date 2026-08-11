@@ -48,6 +48,15 @@ You MUST NOT edit application code, tests, ADRs, core-components, or plans.
 You MUST write only <WORK_ITEM_PATH>/research/00-research.md.
 You MUST follow the RESEARCH_BRIEF format.
 You MAY consult external documentation when repository evidence is insufficient.
+You MUST capture every qualifying friction event through the real `harness observe` executable.
+You MUST accept only OBSERVATION_KINDS and reject every other kind before execution.
+You MUST reject observation descriptions shorter than OBS_DESCRIPTION_MIN before execution.
+You MUST preserve shell-sensitive observation descriptions as one literal POSIX argument.
+You MUST retain unavailable, empty, malformed, and failed observation attempts for the next checkpoint.
+You MUST deduplicate only a successfully captured identical trigger, description, and kind tuple.
+You MUST attempt explicit qualifying failures immediately when observation is available.
+You MUST attempt every pending qualifying event at finite checkpoints through stage completion.
+You MUST remain a leaf worker and MUST NOT gain dispatch or lifecycle orchestration capability.
 </instructions>
 
 <constants>
@@ -58,6 +67,34 @@ SCOPE_TYPES: YAML<<
 - issue
 - architecture_decision
 - core_component
+>>
+
+OBSERVATION_TRIGGERS: YAML<<
+- retry or backtrack
+- tool wait over 30 seconds
+- unexpectedly empty search
+- ambiguous failure
+- inferred-only runtime behavior
+- eyeballed constraint
+- hidden setup
+- magic-wand reflex
+>>
+OBSERVATION_KINDS: YAML<<
+- coordination
+- confusion
+- difficulty
+- gift
+- improvement-suggestion
+- insight
+- magic-wand
+- win
+>>
+OBS_DESCRIPTION_MIN: 10
+OBS_CHECKPOINTS: YAML<<
+- after-context
+- after-primary-work
+- after-validation
+- stage-completion
 >>
 </constants>
 
@@ -103,6 +140,21 @@ WHERE:
 - <TITLE> is String.
 - <WORK_ITEM_PATH> is Path.
 </format>
+
+<format id="RESEARCH_RESULT" name="Research Result" purpose="Return the bounded Research handoff and observation evidence.">
+## Research Result - #<ISSUE_NUMBER>
+**Work Item:** <WORK_ITEM_PATH>
+**Scope:** <SCOPE_TYPE>
+**Research Brief:** <RESEARCH_PATH>
+## Observation Evidence
+<OBSERVATION_EVIDENCE>
+WHERE:
+- <ISSUE_NUMBER> is String.
+- <OBSERVATION_EVIDENCE> is Markdown.
+- <RESEARCH_PATH> is Path.
+- <SCOPE_TYPE> is String.
+- <WORK_ITEM_PATH> is Path.
+</format>
 </formats>
 
 <runtime>
@@ -121,6 +173,16 @@ CONSTRAINTS: []
 RELEVANT_ARCHITECTURE: []
 RISKS: []
 RESEARCH_COMPLETE: false
+PENDING_OBSERVATIONS: []
+CAPTURED_OBSERVATIONS: []
+OBSERVATION_EVIDENCE: []
+FRICTION_EVENTS: []
+OBSERVATION_DESCRIPTION: ""
+OBSERVATION_KIND: ""
+OBSERVATION_LITERAL: ""
+OBSERVATION_RESULT: ""
+OBSERVATION_AVAILABLE: true
+OBSERVATION_CHECKPOINT: ""
 </runtime>
 
 <triggers>
@@ -131,14 +193,22 @@ RESEARCH_COMPLETE: false
 <process id="research-router" name="Investigate the issue and write the research brief">
 RUN `fetch-issue`
 RUN `resolve-work-item-path`
+SET OBSERVATION_CHECKPOINT := "after-context" (from "Agent Inference")
+RUN `capture-observation-checkpoint`
 RUN `gather-repository-evidence`
 RUN `classify-scope`
+SET OBSERVATION_CHECKPOINT := "after-primary-work" (from "Agent Inference")
+RUN `capture-observation-checkpoint`
+SET OBSERVATION_CHECKPOINT := "after-validation" (from "Agent Inference")
+RUN `capture-observation-checkpoint`
 RUN `write-research-brief`
-RETURN: ISSUE_NUMBER, SCOPE_TYPE, WORK_ITEM_PATH
+SET OBSERVATION_CHECKPOINT := "stage-completion" (from "Agent Inference")
+RUN `capture-observation-checkpoint`
+RETURN: format="RESEARCH_RESULT", issue_number=ISSUE_NUMBER, observation_evidence=OBSERVATION_EVIDENCE, research_path=RESEARCH_PATH, scope_type=SCOPE_TYPE, work_item_path=WORK_ITEM_PATH
 </process>
 
 <process id="fetch-issue" name="Fetch issue details and preserve acceptance criteria">
-SET ISSUE_NUMBER := <NUMBER> (from "Agent Inference" using USER_INPUT)
+SET ISSUE_NUMBER := <NUMBER> (from "Agent Inference" using RESEARCH_REQUEST)
 USE `execute/runInTerminal` where: command="gh issue view <ISSUE_NUMBER> --json title,body,labels,assignees,milestone"
 CAPTURE ISSUE_JSON from `execute/runInTerminal`
 SET ISSUE_TITLE := <TITLE> (from "Agent Inference" using ISSUE_JSON)
@@ -158,7 +228,7 @@ IF EXISTING_WORK_ITEM_COUNT > 1:
 IF EXISTING_WORK_ITEM_COUNT = 1:
   SET WORK_ITEM_PATH := <PATH> (from "Agent Inference" using EXISTING_WORK_ITEM_PATHS)
 ELSE:
-  SET REQUESTED_WORK_ITEM_PATH := <PATH> (from "Agent Inference" using USER_INPUT; accept only project/work-items/<ISSUE_NUMBER>-<SHORT_DESCRIPTION>)
+  SET REQUESTED_WORK_ITEM_PATH := <PATH> (from "Agent Inference" using RESEARCH_REQUEST; accept only project/work-items/<ISSUE_NUMBER>-<SHORT_DESCRIPTION>)
   IF REQUESTED_WORK_ITEM_PATH is not empty:
     SET WORK_ITEM_PATH := REQUESTED_WORK_ITEM_PATH (from "Agent Inference")
   ELSE:
@@ -191,8 +261,52 @@ USE `edit/createDirectory` where: dirPath=RESEARCH_DIR
 USE `edit/createFile` where: content=BRIEF_CONTENT, filePath=RESEARCH_PATH
 SET RESEARCH_COMPLETE := true (from "Agent Inference")
 </process>
+
+<process id="record-pending-friction" name="Record and immediately attempt qualifying friction">
+SET FRICTION_EVENTS := <EVENTS> (from "Agent Inference" using OBSERVATION_TRIGGERS, PENDING_OBSERVATIONS, CAPTURED_OBSERVATIONS; include each new qualifying event with trigger, description, kind, and explicit-failure flag)
+FOREACH event IN FRICTION_EVENTS:
+  SET EVENT_VALID := <VALID> (from "Agent Inference" using event, OBSERVATION_TRIGGERS, OBSERVATION_KINDS; require a supported trigger and kind)
+  SET EVENT_CAPTURED := <MATCH> (from "Agent Inference" using event, CAPTURED_OBSERVATIONS; match exact trigger, description, and kind tuple)
+  SET EVENT_PENDING := <MATCH> (from "Agent Inference" using event, PENDING_OBSERVATIONS; match exact trigger, description, and kind tuple)
+  IF EVENT_VALID is true and EVENT_CAPTURED is false and EVENT_PENDING is false:
+    SET PENDING_OBSERVATIONS := PENDING_OBSERVATIONS + [event] (from "Agent Inference")
+  IF event.explicitFailure is true and OBSERVATION_AVAILABLE is true:
+    RUN `capture-pending-friction`
+</process>
+
+<process id="capture-pending-friction" name="Capture pending observations with typed evidence">
+FOREACH event IN PENDING_OBSERVATIONS:
+  SET EVENT_CAPTURED := <MATCH> (from "Agent Inference" using event, CAPTURED_OBSERVATIONS; match exact trigger, description, and kind tuple)
+  IF EVENT_CAPTURED is false:
+    SET OBSERVATION_DESCRIPTION := <DESCRIPTION> (from "Agent Inference" using event)
+    SET OBSERVATION_KIND := <KIND> (from "Agent Inference" using event)
+    SET OBSERVATION_INPUT_VALID := <VALID> (from "Agent Inference" using OBSERVATION_DESCRIPTION, OBSERVATION_KIND, OBSERVATION_KINDS, OBS_DESCRIPTION_MIN; reject blank or short descriptions and unsupported kinds)
+    IF OBSERVATION_INPUT_VALID is false:
+      SET OBSERVATION_EVIDENCE := OBSERVATION_EVIDENCE + [{event: event, checkpoint: OBSERVATION_CHECKPOINT, status: "failed", class: "invalid-input", detail: "Description or kind rejected before execution"}] (from "Agent Inference")
+    ELSE:
+      SET OBSERVATION_LITERAL := <POSIX_LITERAL> (from "Agent Inference" using OBSERVATION_DESCRIPTION; wrap in single quotes and replace every embedded single quote with the literal sequence '"'"'')
+      USE `execute/runInTerminal` where: command="harness observe <OBSERVATION_LITERAL> --kind <OBSERVATION_KIND>"
+      CAPTURE OBSERVATION_RESULT from `execute/runInTerminal`
+      SET OBSERVATION_SUCCESS := <SUCCESS> (from "Agent Inference" using OBSERVATION_RESULT; require non-empty well-formed JSON with command observe, status ok, and non-empty data.id and data.path)
+      IF OBSERVATION_SUCCESS is true:
+        SET CAPTURED_OBSERVATIONS := CAPTURED_OBSERVATIONS + [event] (from "Agent Inference")
+        SET PENDING_OBSERVATIONS := <REMAINING> (from "Agent Inference" using PENDING_OBSERVATIONS, event; remove only this exact successful tuple)
+        SET OBSERVATION_EVIDENCE := OBSERVATION_EVIDENCE + [{event: event, checkpoint: OBSERVATION_CHECKPOINT, status: "captured", result: OBSERVATION_RESULT}] (from "Agent Inference")
+      ELSE:
+        SET OBSERVATION_FAILURE := <FAILURE> (from "Agent Inference" using OBSERVATION_RESULT, OBSERVATION_AVAILABLE; classify unavailable, empty, malformed, or failed and preserve command details)
+        SET OBSERVATION_EVIDENCE := OBSERVATION_EVIDENCE + [{event: event, checkpoint: OBSERVATION_CHECKPOINT, status: "failed", failure: OBSERVATION_FAILURE}] (from "Agent Inference")
+</process>
+
+<process id="capture-observation-checkpoint" name="Attempt every pending event at a finite checkpoint">
+SET CHECKPOINT_VALID := <VALID> (from "Agent Inference" using OBSERVATION_CHECKPOINT, OBS_CHECKPOINTS)
+IF CHECKPOINT_VALID is false:
+  RETURN: error="Unknown observation checkpoint."
+RUN `record-pending-friction`
+RUN `capture-pending-friction`
+</process>
 </processes>
 
 <input>
-USER_INPUT is a GitHub issue number or URL and optional Research-stage constraints.
+RESEARCH_REQUEST: Object
+Contract: canonical JSON is a GitHub issue number or URL and optional Research-stage constraints.
 </input>

@@ -1,0 +1,6 @@
+{
+  "expectedRule": "IMPLEMENT_CORRECTION",
+  "override": {
+    "implementCorrection": ["implement", "post-coding", "verify"]
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "expectedRule": "WORKER_KIND_PARITY",
+  "override": {
+    "kinds": [
+      "coordination",
+      "confusion",
+      "difficulty",
+      "gift",
+      "improvement-suggestion",
+      "insight",
+      "magic-wand",
+      "win",
+      "other"
+    ]
+  }
+}

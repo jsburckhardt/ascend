@@ -58,6 +58,11 @@ You MUST NOT place output templates as inline text; define them in <formats> wit
 You MUST use MUST for absolute requirements, SHOULD for recommendations, MAY for permissions in generated <instructions>.
 You MUST prefer individual/qualified tool names over toolset names in generated frontmatter; consult TOOL_SELECTION.
 You MUST consult SECTION_GUIDE when composing each section in generated agents.
+You MUST apply RPIV_HARNESS_PROFILE when creating, updating, or linting any configured RPIV target.
+You MUST load the VS Code subagent architecture guide before authoring an RPIV target.
+You MUST reject RPIV lifecycle commands that bypass the host skill front door.
+You MUST reject RPIV worker tool expansion or lifecycle orchestration.
+You MUST lint every RPIV target against the full APS inventory and harness profile.
 </instructions>
 
 <constants>
@@ -75,6 +80,59 @@ SKILL_AUTHORING: JSON<<
 >>
 
 CTA: "Reply with letter choices (e.g., '1a, 2c') or 'ok' to accept defaults."
+
+RPIV_HARNESS_PROFILE: YAML<<
+targets:
+  - path: .github/agents/rpiv.agent.md
+    role: coordinator-lifecycle
+  - path: .github/agents/rpiv-research.agent.md
+    role: worker-observation
+  - path: .github/agents/rpiv-planner.agent.md
+    role: worker-observation
+  - path: .github/agents/rpiv-implementer.agent.md
+    role: worker-observation
+  - path: .github/agents/rpiv-verifier.agent.md
+    role: worker-observation
+host: vscode-copilot-skill
+lifecycle_front_door: /eng-harness-flow --hook <hook> --json
+observation_front_door: harness observe <posix-literal-description> --kind <allowed-kind>
+lifecycle_owner: coordinator
+worker_tool_policy: preserve-existing-frontmatter
+worker_dispatch_policy: leaf-only
+triggers:
+  - retry or backtrack
+  - tool wait over 30 seconds
+  - unexpectedly empty search
+  - ambiguous failure
+  - inferred-only runtime behavior
+  - eyeballed constraint
+  - hidden setup
+  - magic-wand reflex
+kinds:
+  - coordination
+  - confusion
+  - difficulty
+  - gift
+  - improvement-suggestion
+  - insight
+  - magic-wand
+  - win
+checkpoints:
+  - after-context
+  - after-primary-work
+  - after-validation
+  - stage-completion
+failure_results:
+  - unavailable
+  - empty
+  - malformed
+  - failed
+checks:
+  - profile placement and create/update/lint application
+  - lifecycle host, front-door command shape, order, correction recurrence, identity, deduplication, serialization, and failure gating
+  - worker no-hook boundary, trigger and kind parity, literal shell argument, checkpoints, retry evidence, and successful-tuple deduplication
+  - unchanged worker tools, leaf-worker input/output contracts, full APS syntax, frontmatter, formats, symbols, IDs, and where ordering
+>>
 
 PLATFORMS: JSON<<
 {
@@ -95,7 +153,7 @@ PLATFORMS: JSON<<
 }
 >>
 
-FIELD_REQUIREMENTS_VSCODE: JSON<<
+VSCODE_FIELDS: JSON<<
 {
   "required": ["name", "description"],
   "recommended": {
@@ -110,7 +168,7 @@ FIELD_REQUIREMENTS_VSCODE: JSON<<
 }
 >>
 
-FIELD_REQUIREMENTS_CLAUDE: JSON<<
+CLAUDE_FIELDS: JSON<<
 {
   "required": ["name", "description"],
   "recommended": {
@@ -182,6 +240,12 @@ LINT_CHECKS: TEXT<<
 - generated <constants> use YAML blocks for structured data unless JSON is the target format
 - update mode preserves the target path, agent identity, and unrelated behavior unless explicitly overridden
 - update mode traces every supplied requirement to one or more concrete changes
+- RPIV targets apply RPIV_HARNESS_PROFILE during create, update, and lint
+- RPIV coordinator lifecycle calls use `/eng-harness-flow --hook <hook> --json` through the VS Code host skill
+- RPIV coordinator validates host, skill, tool, empty, malformed, failed, order, correction, identity, deduplication, and serialization cases
+- RPIV workers preserve frontmatter tools, remain leaf workers, and contain no executable lifecycle calls
+- RPIV workers have exact trigger and kind parity, safe literal observation execution, finite checkpoints, retry evidence, and successful-tuple deduplication
+- RPIV caller args mirror worker input fields and caller captures typed worker results
 >>
 
 AGENT_SKELETON: TEXT<<
@@ -380,6 +444,9 @@ TARGET_AGENT_PATHS: []
 EXISTING_AGENT: ""
 EXISTING_AGENTS: {}
 FILE_PATHS: []
+RPIV_PROFILE_APPLIES: false
+RPIV_PROFILE_RESULT: ""
+SUBAGENT_GUIDE: ""
 </runtime>
 
 <triggers>
@@ -411,7 +478,7 @@ IF USER_INPUT matches "fix":
   RUN `generate`
   RETURN: format="OUT_V1", actions=ACTIONS, agent_name=AGENT_SLUG, file_paths=FILE_PATHS, lint=LINT, target_platform=TARGET_PLATFORM
 IF USER_INPUT matches "re-lint":
-  SET LINT := <LINT_TEXT> (from "Agent Inference" using AGENT, LINT_CHECKS, TARGET_PLATFORM, FIELD_REQUIREMENTS, COMMON_ERRORS)
+  SET LINT := <LINT_TEXT> (from "Agent Inference" using AGENT, LINT_CHECKS, TARGET_PLATFORM, FIELD_REQUIREMENTS, COMMON_ERRORS, RPIV_HARNESS_PROFILE)
   SET LINT_CLEAN := <IS_CLEAN> (from "Agent Inference" using LINT)
   RETURN: format="OUT_V1", actions=ACTIONS, agent_name=AGENT_SLUG, file_paths=FILE_PATHS, lint=LINT, target_platform=TARGET_PLATFORM
 IF USER_INPUT matches "refactor":
@@ -451,9 +518,9 @@ CAPTURE ADAPTOR_CONTENT from read result
 SET FRONTMATTER_TEMPLATE := <FORMATS_SECTION> (from "Agent Inference" using ADAPTOR_CONTENT)
 SET ADAPTER_TOOLS := <TOOLS_CONSTANT> (from "Agent Inference" using ADAPTOR_CONTENT)
 IF TARGET_PLATFORM = "claude-code":
-  SET FIELD_REQUIREMENTS := FIELD_REQUIREMENTS_CLAUDE (from "Constant Lookup")
+  SET FIELD_REQUIREMENTS := CLAUDE_FIELDS (from "Constant Lookup")
 ELSE:
-  SET FIELD_REQUIREMENTS := FIELD_REQUIREMENTS_VSCODE (from "Constant Lookup")
+  SET FIELD_REQUIREMENTS := VSCODE_FIELDS (from "Constant Lookup")
 </process>
 
 <process id="refine" name="Intent">
@@ -476,10 +543,11 @@ IF OPERATION_MODE = "update":
   FOREACH targetAgent IN EXISTING_AGENTS:
     SET FILE_PATH := targetAgent.path (from "Agent Inference")
     SET AGENT := <AGENT_TEXT> (from "Agent Inference" using INTENT, targetAgent.content, SKILL_CONTENT, FRONTMATTER_TEMPLATE, ADAPTER_TOOLS, AGENT_SKELETON, PLATFORM_CONFIG, FIELD_REQUIREMENTS, SECTION_GUIDE, CROSS_REF, APS_NAMING, COMMON_ERRORS, TOOL_SELECTION, VOCAB_RULES; preserve unrelated content and apply every requirement relevant to this target)
+    RUN `apply-rpiv-profile`
     USE `edit/editFiles` where: content=AGENT, filePath=FILE_PATH
     USE `read/readFile` where: filePath=FILE_PATH
     CAPTURE WRITTEN_AGENT from `read/readFile`
-    SET TARGET_LINT := <LINT_TEXT> (from "Agent Inference" using WRITTEN_AGENT, USER_INPUT, LINT_CHECKS, TARGET_PLATFORM, FIELD_REQUIREMENTS, COMMON_ERRORS)
+    SET TARGET_LINT := <LINT_TEXT> (from "Agent Inference" using WRITTEN_AGENT, USER_INPUT, LINT_CHECKS, TARGET_PLATFORM, FIELD_REQUIREMENTS, COMMON_ERRORS, RPIV_HARNESS_PROFILE, RPIV_PROFILE_RESULT)
     SET LINT := LINT + [TARGET_LINT] (from "Agent Inference")
 ELSE:
   IF TARGET_PLATFORM = "claude-code":
@@ -489,13 +557,24 @@ ELSE:
   SET FILE_PATH := <AGENT_FILE_PATH> (from "Agent Inference" using AGENT_SLUG, PLATFORM_CONFIG.agentsDir, PLATFORM_CONFIG.agentExt)
   SET FILE_PATHS := [FILE_PATH] (from "Agent Inference")
   SET AGENT := <AGENT_TEXT> (from "Agent Inference" using INTENT, SKILL_CONTENT, FRONTMATTER_TEMPLATE, ADAPTER_TOOLS, AGENT_SKELETON, PLATFORM_CONFIG, FIELD_REQUIREMENTS, SECTION_GUIDE, CROSS_REF, APS_NAMING, COMMON_ERRORS, TOOL_SELECTION, VOCAB_RULES)
+  RUN `apply-rpiv-profile`
 USE `edit/createDirectory` where: dirPath=PLATFORM_CONFIG.agentsDir
 IF OPERATION_MODE != "update":
   USE `edit/createFile` where: content=AGENT, filePath=FILE_PATH
   USE `read/readFile` where: filePath=FILE_PATH
   CAPTURE WRITTEN_AGENT from `read/readFile`
-  SET LINT := <LINT_TEXT> (from "Agent Inference" using WRITTEN_AGENT, USER_INPUT, LINT_CHECKS, TARGET_PLATFORM, FIELD_REQUIREMENTS, COMMON_ERRORS)
+  SET LINT := <LINT_TEXT> (from "Agent Inference" using WRITTEN_AGENT, USER_INPUT, LINT_CHECKS, TARGET_PLATFORM, FIELD_REQUIREMENTS, COMMON_ERRORS, RPIV_HARNESS_PROFILE, RPIV_PROFILE_RESULT)
 SET LINT_CLEAN := <IS_CLEAN> (from "Agent Inference" using LINT)
+</process>
+
+<process id="apply-rpiv-profile" name="Apply the reusable RPIV harness profile" args="TARGET_AGENT_PATH: Path, AGENT: String">
+SET RPIV_PROFILE_APPLIES := <APPLIES> (from "Agent Inference" using TARGET_AGENT_PATH, FILE_PATH, RPIV_HARNESS_PROFILE.targets; match only the five configured paths)
+IF RPIV_PROFILE_APPLIES is true:
+  SET GUIDE_PATH := <PATH> (from "Agent Inference" using SKILL_PATH; resolve guides/subagent-architecture-v1.0.0.guide.md)
+  USE `read/readFile` where: filePath=GUIDE_PATH
+  CAPTURE SUBAGENT_GUIDE from `read/readFile`
+  SET AGENT := <PROFILED_AGENT> (from "Agent Inference" using AGENT, RPIV_HARNESS_PROFILE, SUBAGENT_GUIDE, LINT_CHECKS; preserve unrelated stage ownership and apply every applicable profile rule)
+  SET RPIV_PROFILE_RESULT := <LINT_TEXT> (from "Agent Inference" using AGENT, RPIV_HARNESS_PROFILE, SUBAGENT_GUIDE; require all applicable profile and complete APS checks)
 </process>
 
 <process id="load-skill-builder" name="Load Skill Builder">

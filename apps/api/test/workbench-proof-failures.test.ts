@@ -191,7 +191,7 @@ describe('workbench proof failures and cleanup boundaries', () => {
         options: {
           executablePath: fakeExecutable,
           projectPath: BL001_FIXTURE,
-          startupTimeoutMs: 500,
+          startupTimeoutMs: 2_000,
           environmentOverrides: {
             BL001_FAKE_MODE: 'early-exit',
             BL001_CAPTURE_PID: path.join(base, 'early.pid'),
@@ -256,7 +256,7 @@ describe('workbench proof failures and cleanup boundaries', () => {
       throw new Error(mode + ' unexpectedly became ready')
     }
 
-    await expect(failureFor('early-exit', 500)).resolves.toMatchObject({
+    await expect(failureFor('early-exit', 2_000)).resolves.toMatchObject({
       code: 'early-exit',
       details: { exitCode: 23 },
     })

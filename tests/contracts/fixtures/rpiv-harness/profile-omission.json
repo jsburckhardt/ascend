@@ -1,0 +1,6 @@
+{
+  "expectedRule": "PROFILE_APPLICATION",
+  "override": {
+    "profileApplied": false
+  }
+}

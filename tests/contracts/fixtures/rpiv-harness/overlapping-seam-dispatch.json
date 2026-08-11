@@ -1,0 +1,6 @@
+{
+  "expectedRule": "LIFECYCLE_SERIALIZATION",
+  "override": {
+    "overlapDispatches": true
+  }
+}

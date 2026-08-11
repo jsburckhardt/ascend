@@ -247,4 +247,33 @@ describe('workbench proof runtime', () => {
       })
     ).resolves.toBe(true)
   })
+
+  it('preserves an established identity during later cooperative cancellation', async () => {
+    const runRoot = await temporaryRoot()
+    const controller = new AbortController()
+    setTimeout(() => controller.abort(new Error('overall-timeout')), 250)
+    let cancelled: ProofError | null = null
+    try {
+      await startWorkbenchProof({
+        executablePath: fakeExecutable,
+        runRoot,
+        startupTimeoutMs: 2_000,
+        environmentOverrides: { BL001_FAKE_MODE: 'timeout' },
+        signal: controller.signal,
+      })
+    } catch (error) {
+      cancelled = error as ProofError
+    }
+    expect(cancelled).toMatchObject({ code: 'cancelled' })
+    expect(cancelled?.discoveredIdentity).toMatchObject({
+      pid: expect.any(Number),
+      startTimeTicks: expect.any(String),
+    })
+    await expect(
+      processIdentityAbsent({
+        pid: cancelled!.discoveredIdentity!.pid!,
+        startTimeTicks: cancelled!.discoveredIdentity!.startTimeTicks!,
+      })
+    ).resolves.toBe(true)
+  })
 })

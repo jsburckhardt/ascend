@@ -27,6 +27,7 @@ The root `justfile` is the command interface:
 just setup
 just run
 just verify-focused apps/web/src/App.test.tsx
+just verify-rpiv-harness
 just proof-start
 just proof-stop
 just proof-workbench-capacity
@@ -37,6 +38,8 @@ just verify
 `just run` starts the web application and API together. The web application uses `http://localhost:5173`; the API uses `http://127.0.0.1:3000`.
 
 The devcontainer provides Node.js 22, pnpm, just, and code-server. Its post-create script runs `just setup`, including Playwright's Chromium dependencies, so no manually installed host tools are required for repository development.
+
+RPIV harness integration is APS-governed. The coordinator owns serialized lifecycle calls through the VS Code `/eng-harness-flow` skill, while Research, Plan, Implement, and Verify remain least-privilege leaf workers that capture only their own qualifying friction through `harness observe`. `just verify-rpiv-harness` runs the read-only profile, APS inventory, negative-fixture, regression, and documentation contract matrix.
 
 ## Host Workbench Proof
 

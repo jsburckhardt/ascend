@@ -1,0 +1,6 @@
+{
+  "expectedRule": "WORKER_LEAST_PRIVILEGE",
+  "override": {
+    "toolsExpanded": true
+  }
+}

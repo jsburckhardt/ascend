@@ -81,3 +81,7 @@ Short, actionable statements derived from ADRs and core-components. More than on
 | 46 | Require closeable explicit-path database resources for all SQLite persistence | CORE-COMPONENT-260810-sqlite-persistence-lifecycle | 2026-08-10 |
 | 47 | Apply committed ordered Drizzle migrations before persistence repositories operate | CORE-COMPONENT-260810-sqlite-persistence-lifecycle | 2026-08-10 |
 | 48 | Isolate database tests and refuse the documented default database location | CORE-COMPONENT-260810-sqlite-persistence-lifecycle | 2026-08-10 |
+| 49 | Require the RPIV coordinator to serialize lifecycle seams before stage dispatch | CORE-COMPONENT-260806-rpiv-stage-contract | 2026-08-11 |
+| 50 | Require every RPIV worker to capture governed friction without lifecycle orchestration | CORE-COMPONENT-260806-rpiv-stage-contract | 2026-08-11 |
+| 51 | Apply one APS harness profile to all RPIV agent generation and linting | CORE-COMPONENT-260806-rpiv-stage-contract | 2026-08-11 |
+| 52 | Preserve failed observation events for retry at finite worker checkpoints | CORE-COMPONENT-260806-rpiv-stage-contract | 2026-08-11 |

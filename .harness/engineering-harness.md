@@ -47,6 +47,7 @@ artifacts under each application package.
 - API root test: in-process health interaction and JSON consequence
 - Project-home Playwright test: browser interaction and visible UI consequence
 - BL-005 project-library tests: schema, duplicate, pre-write validation, migration compatibility, close/reopen, complete in-process restart, refusal, and exact-sidecar cleanup consequences
+- BL-006 project-registration gate: just verify-project-registration emits finite configuration, registration, persistence, non-mutation, fixture-cleanup, documentation, and capability-aware permission signals; harness checks still delegates only to just verify
 - BL-001/BL-002 host-process sensor: two real loopback code-server Chromium scenarios—forced integrated-terminal timeout cleanup and passing Explorer, Markdown Preview, and direct-vs-integrated terminal parity—with zero-leak cleanup audits
 
 ## Evidence paths
@@ -55,6 +56,7 @@ artifacts under each application package.
 - Unit coverage: `apps/*/coverage/`
 - BL-005 migrations and prior fixture: `apps/api/drizzle/` and `apps/api/test/fixtures/db/0000_project_library.sqlite`
 - BL-005 disposable database consequences: `test-results/bl-005/databases/` (generated, exact-file cleanup)
+- BL-006 disposable registration fixtures: test-results/bl-006/fixtures/ are generated and removed exactly; test-results/bl-006/permission-capability.json records proved or honest skipped host capability while controlled denial always runs
 - Playwright artifacts: `test-results/` and `playwright-report/`
 - BL-001 terminal-parity episode: `test-results/bl-001/terminal-parity/episode.json` with direct/integrated raw references (generated, ignored)
 - BL-001 retained AC evidence: `project/work-items/5-bl-001-prove-a-host-code-server-workbench/implementation/00-implementation.md`

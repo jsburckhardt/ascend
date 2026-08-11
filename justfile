@@ -54,11 +54,23 @@ proof-workbench-capacity-audit:
 verify-focused *args:
     pnpm exec vitest run {{args}}
 
+verify-project-registration:
+    @echo 'BL-006 registration gate: RUNNING'
+    pnpm exec vitest run apps/api/test/project-registration-construction.test.ts apps/api/test/project-registration-paths.test.ts apps/api/test/project-registration-persistence.test.ts apps/api/test/project-registration-fixtures.test.ts apps/api/test/project-registration-acceptance.test.ts apps/api/test/project-registration-documentation.test.ts --reporter=verbose
+    @echo 'BL-006 configuration: PASS'
+    @echo 'BL-006 registration: PASS'
+    @echo 'BL-006 persistence: PASS'
+    @echo 'BL-006 non-mutation: PASS'
+    @echo 'BL-006 fixture-cleanup: PASS'
+    @echo 'BL-006 documentation: PASS'
+    @node -e "console.log('BL-006 permission-capability: '+JSON.parse(require('node:fs').readFileSync('test-results/bl-006/permission-capability.json','utf8')).status.toUpperCase()+'; controlled-denial: PASS')"
+
 verify:
     pnpm format:check
     pnpm lint
     pnpm typecheck
     pnpm test
+    just verify-project-registration
     pnpm build
     pnpm test:e2e
     just proof-workbench-capacity-audit

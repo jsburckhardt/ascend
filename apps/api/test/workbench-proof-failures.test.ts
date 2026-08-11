@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process'
+import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
 import {
   access,
   mkdir,
@@ -26,24 +26,50 @@ import {
 import {
   startWorkbenchProof,
   stopWorkbenchProof,
+  type ProofError,
   type ProofHandle,
   type StartProofOptions,
 } from '../src/workbench-proof-runtime.js'
 import { runProofStartCli } from '../src/cli/proof-start.js'
+import {
+  processGroupAbsent,
+  readProcessGroupMembers,
+  stopOwnedProcessGroup,
+} from './helpers/project-home-process-group.js'
 
 const fakeExecutable = path.join(
   REPOSITORY_ROOT,
   'apps/api/test/fixtures/fake-code-server.mjs'
 )
+const ownedProcessGroupFixture = path.join(
+  REPOSITORY_ROOT,
+  'apps/api/test/fixtures/owned-process-group.mjs'
+)
 const temporaryRoots: string[] = []
 const activeHandles: Array<{ handle: ProofHandle; runRoot: string }> = []
 const activeControls: number[] = []
+const activeOwnedGroups = new Set<number>()
 
 const temporaryRoot = async (): Promise<string> => {
   await mkdir(BL001_ROOT, { recursive: true })
   const root = await mkdtemp(path.join(BL001_ROOT, 'failure-'))
   temporaryRoots.push(root)
   return root
+}
+
+const startOwnedProcessGroup = async (stubbornDescendant: boolean) => {
+  const child = spawn(
+    process.execPath,
+    [ownedProcessGroupFixture, stubbornDescendant ? 'stubborn' : 'cooperative'],
+    { detached: true, stdio: 'pipe' }
+  )
+  if (child.pid === undefined) throw new Error('Fixture process did not start')
+  activeOwnedGroups.add(child.pid)
+  await new Promise<void>((resolve, reject) => {
+    child.once('error', reject)
+    child.stdout.once('data', () => resolve())
+  })
+  return { process: child as ChildProcessWithoutNullStreams }
 }
 
 const exists = async (target: string): Promise<boolean> => {
@@ -81,6 +107,14 @@ afterEach(async () => {
   for (const pid of activeControls.splice(0)) {
     if (processExists(pid)) process.kill(-pid, 'SIGKILL')
   }
+  for (const groupId of activeOwnedGroups) {
+    try {
+      process.kill(-groupId, 'SIGKILL')
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ESRCH') throw error
+    }
+  }
+  activeOwnedGroups.clear()
   await Promise.all(
     temporaryRoots
       .splice(0)
@@ -202,6 +236,36 @@ describe('workbench proof failures and cleanup boundaries', () => {
     await expect(access(BL001_INJECTION_SENTINEL)).rejects.toThrow()
   })
 
+  it('distinguishes a fast early exit from a live readiness timeout', async () => {
+    const base = await temporaryRoot()
+    const failureFor = async (
+      mode: 'early-exit' | 'timeout',
+      startupTimeoutMs: number
+    ): Promise<ProofError> => {
+      try {
+        await startWorkbenchProof({
+          executablePath: fakeExecutable,
+          projectPath: BL001_FIXTURE,
+          runRoot: path.join(base, mode),
+          startupTimeoutMs,
+          environmentOverrides: { BL001_FAKE_MODE: mode },
+        })
+      } catch (error) {
+        return error as ProofError
+      }
+      throw new Error(mode + ' unexpectedly became ready')
+    }
+
+    await expect(failureFor('early-exit', 500)).resolves.toMatchObject({
+      code: 'early-exit',
+      details: { exitCode: 23 },
+    })
+    await expect(failureFor('timeout', 150)).resolves.toMatchObject({
+      code: 'readiness-timeout',
+      details: { timeoutMs: 150 },
+    })
+  })
+
   it('audits exact ownership, argv, listener, stop, and unrelated survival', async () => {
     const runRoot = await temporaryRoot()
     const control = spawn(
@@ -263,6 +327,32 @@ describe('workbench proof failures and cleanup boundaries', () => {
     ).resolves.toMatchObject({ alreadyAbsent: true })
     expect(await auditHandleAbsent(result.handle)).toBe(true)
     expect(processExists(control.pid)).toBe(true)
+  })
+
+  it('observes cooperative Project Home root and descendant cleanup', async () => {
+    const owned = await startOwnedProcessGroup(false)
+    expect(await readProcessGroupMembers(owned.process.pid!)).toHaveLength(2)
+
+    await expect(stopOwnedProcessGroup(owned, 1_000)).resolves.toEqual({
+      childExited: true,
+      graceful: true,
+      processGroupAbsent: true,
+    })
+    expect(await processGroupAbsent(owned.process.pid!)).toBe(true)
+    activeOwnedGroups.delete(owned.process.pid!)
+  })
+
+  it('detects and removes a Project Home descendant that survives root exit', async () => {
+    const owned = await startOwnedProcessGroup(true)
+    expect(await readProcessGroupMembers(owned.process.pid!)).toHaveLength(2)
+
+    await expect(stopOwnedProcessGroup(owned, 100)).resolves.toEqual({
+      childExited: true,
+      graceful: false,
+      processGroupAbsent: true,
+    })
+    expect(await processGroupAbsent(owned.process.pid!)).toBe(true)
+    activeOwnedGroups.delete(owned.process.pid!)
   })
 
   it('uses bounded SIGKILL escalation for an exact managed group', async () => {

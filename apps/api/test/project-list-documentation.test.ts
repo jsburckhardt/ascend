@@ -88,6 +88,8 @@ describe('BL-007 documentation contract', () => {
       'refuses the developer database',
       'test-launcher-only',
       '10,000 ms',
+      'process group',
+      'failure-path',
       'listener absence',
       '-wal',
       '-shm',
@@ -101,6 +103,8 @@ describe('BL-007 documentation contract', () => {
     expect(justfile).toMatch(/^verify:/mu)
     expect(config).not.toContain('webServer:')
     expect(episode).toContain('ASCEND_E2E_API_TARGET')
+    expect(episode).toContain('apiProcessGroupsAbsent')
+    expect(episode).toContain('webProcessGroupAbsent')
     expect(episode).toContain('databaseArtifactsAbsent')
     expect(harness).toContain('Harness boot remains non-persistent')
   })

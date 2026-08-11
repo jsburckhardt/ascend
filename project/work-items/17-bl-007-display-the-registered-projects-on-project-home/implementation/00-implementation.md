@@ -22,39 +22,36 @@
 - AC-8: App tests prove one request per mount and announced loading plus empty, populated, and failure states; Chromium records loadingState, emptyState, and populatedState as true.
 - AC-9: the empty component copy says registered projects will appear on Project Home and has no button or simulated registration.
 - AC-10: the component failure alert names the problem, gives one Retry button, and proves one new loader call; Chromium proves exactly one fault request and one successful retry request.
-- AC-11: component tests compare listitem count, exact names and paths, semantic button names, tabIndex, and data-project-id values; Chromium compares both returned stable identities and uses focusable Open controls.
-- AC-12: three component Open activations leave one identical project-associated BL-007 status with no URL or loader change; Chromium uses Tab, Shift+Tab, and Enter and records deferredStatus, urlUnchanged, and openRequestFree as true.
+- AC-11: component tests compare listitem count, exact names and paths, semantic button roles/names, and data-project-id values; a real keyboard user traverses both Open controls with Tab, activates with Enter and Space, and proves one click dispatch per key activation. Chromium compares both returned stable identities.
+- AC-12: repeated component keyboard Open activations leave one identical project-associated BL-007 status with no URL or loader change; Chromium uses Tab, Shift+Tab, and Enter and records deferredStatus, urlUnchanged, and openRequestFree as true.
 - AC-13: component evidence compares leading, internal, and trailing whitespace plus metacharacter path textContent and title byte-for-byte and proves no script node exists.
 - AC-14: API and web finite matrices reject missing, extra, scalar, blank, unsafe timestamp, malformed, and duplicate-ID records with no rendered or returned partial cards.
 - AC-15: deferred request tests prove rapid retries abort both predecessors, the newest success survives older success and failure, timeout aborts at 5,000 ms, and unmount aborts without a late render.
 - AC-16: component control and link inventories plus endpoint scope show no registration, close, workbench, search, sorting, tag, path mutation, navigation, or fake workbench operation.
-- AC-17: final web package validation reports 22 component/client tests passing with 94.52 percent branch coverage and 100 percent App coverage.
-- AC-18: final API validation reports 260 tests passing; the focused lifecycle and list suites pass 30 tests with isolated databases, restart, closure, malformed rows, ordering, and redaction.
-- AC-19: tests/e2e/project-home.spec.ts is one desktop Chromium scenario using owned Vite and API children; the definitive run passed empty, populated, identity, keyboard Open, one fault, and retry phases in 13.6 seconds.
-- AC-20: test-results/bl-007/project-home/episode.json records apiGracefulExit, webGracefulExit, both listener-absence flags, and databaseArtifactsAbsent as true after the 10,000 ms bounded cleanup.
+- AC-17: final web package validation reports 22 component/client tests passing with 94.52 percent branch coverage and 100 percent App coverage; the Open test uses Testing Library user-event rather than programmatic focus or click.
+- AC-18: final API validation reports 263 tests passing; the focused lifecycle and list suites pass 30 tests with isolated databases, restart, closure, malformed rows, ordering, and redaction.
+- AC-19: tests/e2e/project-home.spec.ts is one desktop Chromium scenario using owned Vite and API process groups; the final full gate passed empty, populated, identity, keyboard Open, one fault, and retry phases.
+- AC-20: cleanup records every API and web process-group identity, waits for graceful child and group exit, and independently scans each group afterward. Focused success and survivor failure paths prove a descendant cannot hide behind root exit. The final episode records apiProcessGroupsAbsent, webProcessGroupAbsent, graceful exits, listener absence, and databaseArtifactsAbsent as true.
 - AC-21: three documentation contract files pass five focused tests and cross-check runtime categories, ordering, timeout, root recipes, controlled fault, cleanup, harness signal, and evidence path.
-- AC-22: the definitive just verify invocation exited 0, including formatting, lint, typecheck, 282 package tests, BL-006 gate, build, three passing Chromium scenarios with one designated skip, and the passing retained-capacity audit.
+- AC-22: the corrected just verify invocation exited 0, including formatting, lint, typecheck, 285 package tests, the 48-test BL-006 gate, build, three passing Chromium scenarios with one designated skip, and the passing retained-capacity audit.
 
 ## Documentation Evidence
 
 - README.md: added startup, endpoint, Project Home, BL-008+ boundary, validation, and browser cleanup overview.
 - docs/README.md: updated configuration and migration-before-serving behavior, restart/shutdown, API contracts, UI states, accessibility, retry/stale ownership, isolation, fault, cleanup, and observed result. It explicitly records that BL-007 needs no migration conversion.
-- apps/api/README.md: replaced stale startup/list deferrals with resource lifecycle, typed startup event, exact endpoint/error/order/validity, same-origin proxy, fault seam, cleanup, and scope contracts.
-- apps/web/README.md: documented four states, timeout, exact response validation, retry/newest ownership, exact path rendering, deferred Open, and exclusions.
-- .harness/engineering-harness.md: added the deterministic owned BL-007 browser signal and sanitized episode evidence while preserving non-persistent boot.
+- apps/api/README.md: documents independent owned-process-group inspection and the graceful-versus-forced cleanup failure-path proof in addition to the existing lifecycle, endpoint, fault, and scope contracts.
+- apps/web/README.md: retains the four-state and deferred Open contract and now records independent process-group absence in the browser evidence.
+- .harness/engineering-harness.md: the deterministic BL-007 signal and episode inventory now explicitly include process-group-absence evidence while preserving non-persistent boot.
 - Executable documentation tests: project-persistence-documentation, project-registration-documentation, and project-list-documentation all pass.
 - Architecture documentation: no ADR or core-component change was required; implementation follows the accepted TypeScript, SQLite lifecycle, structured logging, path safety, command-interface, and harness contracts without changing them.
 - Migration notes: no schema, data, API replacement, or configuration-default migration is required; existing committed SQLite migrations are applied or validated automatically before serving.
 
 ## Validation Results
 
-- T-1 focused: just verify-focused lifecycle and root tests, 7 tests passed.
-- T-2 focused: lifecycle, list route, and persistence unit tests, 32 tests passed.
-- T-3 focused: project client validation and ownership, 16 tests passed.
-- T-4 focused: project client and Project Home components, 22 tests passed.
-- T-5 focused dependencies: 43 tests passed; just test-e2e completed with 3 passed, 1 designated skip, and a passing capacity audit.
-- T-6 focused: 5 documentation tests passed.
-- T-7 consolidated focused: 48 tests passed; added API branch proof then passed 30 focused API tests and the 6-test startup matrix.
-- Full: final just verify exited 0. API: 260 tests and 80.74 percent branch coverage. Web: 22 tests and 94.52 percent branch coverage. Playwright: 3 passed, 1 designated skip. Capacity audit: passed with no attributed resources.
+- Component keyboard focus: just verify-focused on App.test.tsx passed 6 tests; user-event Tab traversal plus Enter and Space each dispatched exactly once.
+- Cleanup and failure semantics: consolidated focused validation passed 19 tests across component, documentation, runtime, and failure suites. The workbench failure suite passed 10 consecutive focused repetitions after exact exit-code synchronization.
+- Browser proof: just test-e2e passed 3 Chromium scenarios with 1 designated skip; Project Home retained all-true API/web process-group absence, listener absence, graceful exit, and database cleanup fields.
+- Documentation: the three BL-005 through BL-007 documentation suites passed 5 tests.
+- Full: final just verify exited 0. API: 263 tests with branch coverage above the required 80 percent threshold. Web: 22 tests and 94.52 percent branch coverage. BL-006: 48 tests. Playwright: 3 passed, 1 designated skip. Capacity audit: passed with no attributed resources.
 
 Implementation evidence is ready for independent Verify review; no final acceptance claim is made here.

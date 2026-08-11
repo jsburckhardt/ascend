@@ -102,7 +102,7 @@ Use Testing Library with keyboard interaction. Prepare empty, failure, and popul
 2. Verify empty copy states that registered projects appear here and that no registration control is present.
 3. Verify failure exposes one actionable accessible message and one Retry button.
 4. Compare semantic card count, exact names, complete path text and title, Open accessible names, and data-project-id values with the response.
-5. Tab to Open and activate by keyboard; rapidly reactivate and assert one identical project-associated BL-007 deferred status.
+5. Tab through Open controls, activate with Enter and Space, assert each key activation dispatches once, and rapidly reactivate to assert one identical project-associated BL-007 deferred status.
 6. Assert Open causes no additional request, process operation, or URL change.
 7. Inspect path textContent and title exactly, and assert metacharacters create no interpreted element or script.
 8. Inventory controls and links and assert no BL-008+ registration, close, runtime, status, search, sort, tags, path mutation, navigation, or fake workbench destination.
@@ -133,8 +133,8 @@ Allocate one refused-default unique database below test-results/bl-007/project-h
 3. Use Tab and Enter on a seeded Open button and assert project-specific deferred status and unchanged URL.
 4. Restart the API with the E2E-only once-failure library wrapper, reload, and assert the accessible failure and Retry control.
 5. Activate Retry once and assert the seeded populated state returns.
-6. In a finally block, SIGTERM all owned servers, await each exit within 10,000 ms, probe both ports for absence, remove only the database and SQLite sidecar allowlist, and prove all selected paths absent.
-7. Write a sanitized test-results/bl-007/project-home/episode.json with state, identity, fault, retry, graceful-exit, listener, and file-cleanup booleans.
+6. In a finally block, SIGTERM all owned servers, await each exit within 10,000 ms, independently scan every recorded process group for survivors, probe both ports for absence, remove only the database and SQLite sidecar allowlist, and prove all selected paths absent.
+7. Write a sanitized test-results/bl-007/project-home/episode.json with state, identity, fault, retry, graceful-exit, process-group-absence, listener, and file-cleanup booleans. Add a focused failure-path test proving a descendant that survives root exit is detected, reported non-graceful, and removed by bounded escalation.
 
 ### Expected Result
 
@@ -142,7 +142,7 @@ One bounded desktop Chromium scenario proves empty, populated restart visibility
 
 ### Expected Evidence
 
-Playwright pass and trace-on-first-retry artifacts, sanitized episode.json with every required boolean true, and negative process, listener, database, and sidecar checks.
+Playwright pass and trace-on-first-retry artifacts, sanitized episode.json with every required boolean true, and negative process-group, listener, database, and sidecar checks plus focused survivor-detection failure-path evidence.
 
 ## Test V-6: Documentation and Scope Contract
 

@@ -7,6 +7,11 @@ import { expect, test } from '@playwright/test'
 import { DEFAULT_DATABASE_PATH } from '../../apps/api/src/db/client.js'
 import { createProjectLibrary } from '../../apps/api/src/project-library.js'
 import type { Project } from '../../apps/api/src/project-persistence.js'
+import {
+  processGroupAbsent,
+  stopOwnedProcessGroup,
+  type OwnedProcessGroupStopResult,
+} from '../../apps/api/test/helpers/project-home-process-group.js'
 
 const REPOSITORY_ROOT = path.resolve(import.meta.dirname, '../..')
 const EVIDENCE_ROOT = path.join(
@@ -41,6 +46,8 @@ interface EpisodeSummary {
   webGracefulExit: boolean
   apiListenerAbsent: boolean
   webListenerAbsent: boolean
+  apiProcessGroupsAbsent: boolean
+  webProcessGroupAbsent: boolean
   databaseArtifactsAbsent: boolean
   observedBoundedResult: boolean
 }
@@ -100,48 +107,10 @@ async function waitForHttp(url: string, child: OwnedChild): Promise<void> {
   throw new Error(child.label + ' did not become ready: ' + child.output)
 }
 
-async function waitForExit(
-  child: ChildProcessWithoutNullStreams,
-  timeoutMs: number
-): Promise<boolean> {
-  if (child.exitCode !== null || child.signalCode !== null) return true
-  return new Promise((resolve) => {
-    const onExit = (): void => {
-      clearTimeout(timer)
-      resolve(true)
-    }
-    const timer = setTimeout(() => {
-      child.off('exit', onExit)
-      resolve(false)
-    }, timeoutMs)
-    child.once('exit', onExit)
-  })
-}
-
-async function stopChild(child: OwnedChild | undefined): Promise<boolean> {
-  if (child === undefined) return true
-  if (
-    child.process.exitCode !== null ||
-    child.process.signalCode !== null ||
-    child.process.pid === undefined
-  ) {
-    return true
-  }
-  try {
-    process.kill(-child.process.pid, 'SIGTERM')
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ESRCH') throw error
-  }
-  const graceful = await waitForExit(child.process, GRACEFUL_EXIT_TIMEOUT_MS)
-  if (!graceful && child.process.pid !== undefined) {
-    try {
-      process.kill(-child.process.pid, 'SIGKILL')
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ESRCH') throw error
-    }
-    await waitForExit(child.process, 2_000)
-  }
-  return graceful
+async function stopChild(
+  child: OwnedChild | undefined
+): Promise<OwnedProcessGroupStopResult> {
+  return stopOwnedProcessGroup(child, GRACEFUL_EXIT_TIMEOUT_MS)
 }
 
 async function listenerAbsent(port: number): Promise<boolean> {
@@ -229,11 +198,15 @@ test('owns real API and web while proving Project Home empty, populated, and ret
     webGracefulExit: true,
     apiListenerAbsent: false,
     webListenerAbsent: false,
+    apiProcessGroupsAbsent: false,
+    webProcessGroupAbsent: false,
     databaseArtifactsAbsent: false,
     observedBoundedResult: false,
   }
   let api: OwnedChild | undefined
   let web: OwnedChild | undefined
+  const apiProcessGroupIds: number[] = []
+  let webProcessGroupId: number | undefined
   let projectListRequests = 0
   page.on('request', (request) => {
     if (new URL(request.url()).pathname === '/api/projects') {
@@ -252,10 +225,15 @@ test('owns real API and web while proving Project Home empty, populated, and ret
     ]
     if (fault) args.push('--fault-once')
     api = startChild('Ascend API', args, baseEnvironment)
+    if (api.process.pid === undefined) {
+      throw new Error('Ascend API process-group identity is unavailable')
+    }
+    apiProcessGroupIds.push(api.process.pid)
     await waitForHttp(apiUrl + '/', api)
   }
   const stopApi = async (): Promise<void> => {
-    summary.apiGracefulExit = (await stopChild(api)) && summary.apiGracefulExit
+    const stopped = await stopChild(api)
+    summary.apiGracefulExit = stopped.graceful && summary.apiGracefulExit
     api = undefined
   }
 
@@ -282,6 +260,10 @@ test('owns real API and web while proving Project Home empty, populated, and ret
       ],
       { ...process.env, ASCEND_E2E_API_TARGET: apiUrl }
     )
+    if (web.process.pid === undefined) {
+      throw new Error('Ascend web process-group identity is unavailable')
+    }
+    webProcessGroupId = web.process.pid
     await waitForHttp(webUrl + '/', web)
 
     await page.goto(webUrl + '/')
@@ -352,9 +334,16 @@ test('owns real API and web while proving Project Home empty, populated, and ret
     summary.observedBoundedResult = true
   } finally {
     await stopApi()
-    summary.webGracefulExit = await stopChild(web)
+    const webStop = await stopChild(web)
+    summary.webGracefulExit = webStop.graceful
     summary.apiListenerAbsent = await listenerAbsent(apiPort)
     summary.webListenerAbsent = await listenerAbsent(webPort)
+    summary.apiProcessGroupsAbsent = (
+      await Promise.all(apiProcessGroupIds.map(processGroupAbsent))
+    ).every(Boolean)
+    summary.webProcessGroupAbsent =
+      webProcessGroupId === undefined ||
+      (await processGroupAbsent(webProcessGroupId))
     for (const file of databaseFiles) await rm(file, { force: true })
     summary.databaseArtifactsAbsent = (
       await Promise.all(databaseFiles.map(pathAbsent))
@@ -365,6 +354,8 @@ test('owns real API and web while proving Project Home empty, populated, and ret
     expect(summary.webGracefulExit).toBe(true)
     expect(summary.apiListenerAbsent).toBe(true)
     expect(summary.webListenerAbsent).toBe(true)
+    expect(summary.apiProcessGroupsAbsent).toBe(true)
+    expect(summary.webProcessGroupAbsent).toBe(true)
     expect(summary.databaseArtifactsAbsent).toBe(true)
   }
 })

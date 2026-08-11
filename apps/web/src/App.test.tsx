@@ -7,6 +7,7 @@ import {
   waitFor,
   within,
 } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { App } from './App'
 import type { Project, ProjectLoader } from './projects'
@@ -95,26 +96,50 @@ describe('Project Home', () => {
     expect(container.querySelector('script')).toBeNull()
   })
 
-  it('keeps Open keyboard-focusable, identified, idempotent, and effect-free', async () => {
+  it('tabs through named Open buttons and dispatches Enter and Space once', async () => {
+    const user = userEvent.setup()
     const loader = vi.fn(async () => projects)
     const initialUrl = window.location.href
     render(<App loadProjectList={loader} />)
-    const open = await screen.findByRole('button', {
+
+    const list = await screen.findByRole('list', {
+      name: 'Registered projects',
+    })
+    const alphaOpen = within(list).getByRole('button', {
       name: 'Open Alpha Project',
     })
-    expect(open).toHaveAttribute('data-project-id', 'project-alpha')
-    expect(open.tabIndex).toBe(0)
-    open.focus()
-    expect(open).toHaveFocus()
+    const specialOpen = within(list).getByRole('button', {
+      name: 'Open Markup <script> Project',
+    })
+    expect(alphaOpen).toHaveAttribute('data-project-id', 'project-alpha')
+    expect(specialOpen).toHaveAttribute('data-project-id', 'project-special')
 
-    fireEvent.click(open)
-    fireEvent.click(open)
-    fireEvent.click(open)
-    const status = screen.getByRole('status')
+    const alphaDispatch = vi.fn()
+    const specialDispatch = vi.fn()
+    alphaOpen.addEventListener('click', alphaDispatch)
+    specialOpen.addEventListener('click', specialDispatch)
+
+    await user.tab()
+    expect(alphaOpen).toHaveFocus()
+    await user.keyboard('{Enter}')
+    expect(alphaDispatch).toHaveBeenCalledTimes(1)
+    expect(specialDispatch).not.toHaveBeenCalled()
+    expect(
+      within(alphaOpen.closest('li')!).getByRole('status')
+    ).toHaveTextContent('Alpha Project: Opening is not available in BL-007.')
+
+    await user.tab()
+    expect(specialOpen).toHaveFocus()
+    await user.keyboard(' ')
+    expect(alphaDispatch).toHaveBeenCalledTimes(1)
+    expect(specialDispatch).toHaveBeenCalledTimes(1)
+    const status = within(specialOpen.closest('li')!).getByRole('status')
     expect(status).toHaveTextContent(
-      'Alpha Project: Opening is not available in BL-007.'
+      'Markup <script> Project: Opening is not available in BL-007.'
     )
-    expect(within(open.closest('li')!).getByRole('status')).toBe(status)
+    await user.keyboard('{Enter}{Enter}')
+    expect(specialDispatch).toHaveBeenCalledTimes(3)
+    expect(screen.getAllByRole('status')).toEqual([status])
     expect(loader).toHaveBeenCalledTimes(1)
     expect(window.location.href).toBe(initialUrl)
     expect(screen.queryByRole('link')).not.toBeInTheDocument()

@@ -137,7 +137,7 @@ Each card shows the exact name and canonical path as React text. Preserve path w
 
 ### Test Coverage
 
-- Use Testing Library with a keyboard user to tab to and activate each semantic Open button.
+- Use Testing Library with a keyboard user to traverse semantic Open buttons by Tab, activate them with Enter and Space, and prove each key activation dispatches once.
 - Assert loading live region, empty copy, failure alert/message, Retry name, card list, Open accessible names, and project-associated status.
 - Compare card counts and `data-project-id` values with the validated response; rapidly activate Open and assert identical final status.
 - Render long, leading/internal/trailing-whitespace, and HTML/script sentinels; compare textContent and title exactly and assert no interpreted node.
@@ -164,7 +164,7 @@ Replace the static Playwright project-home test with exactly one bounded desktop
 
 Ideally use a single browser episode with three finite phases: empty; close, seed, and restart the API for populated restart-visibility; then restart the API with a once-only list failure injected by the E2E launcher through the product library factory seam. The fault must not add a product route, control, or environment backdoor. Prove failure then one Retry success.
 
-In a `finally` boundary, request SIGTERM for each server, await exit within 10,000 ms, probe each port for listener absence, remove only the selected database and `-wal`, `-shm`, and `-journal` sidecars, and prove all selected paths are absent. Retain a sanitized `test-results/bl-007/project-home/episode.json` summary with state/identity/fault/cleanup booleans, but no database path, secret, or log content.
+In a `finally` boundary, request SIGTERM for each server, await exit within 10,000 ms, independently inspect every recorded process group for surviving members, probe each port for listener absence, remove only the selected database and `-wal`, `-shm`, and `-journal` sidecars, and prove all selected paths are absent. Retain a sanitized `test-results/bl-007/project-home/episode.json` summary with state/identity/fault/cleanup booleans, but no database path, secret, or log content.
 
 ### Acceptance Criteria
 
@@ -181,14 +181,14 @@ In a `finally` boundary, request SIGTERM for each server, await exit within 10,0
 - Assert Playwright cannot reuse an unrelated product-web server, then assert empty heading/copy and exact seeded card count and `data-project-id` identities.
 - Use keyboard Tab/Enter for Open; assert the deferred status and unchanged URL.
 - Inject exactly one list failure in the E2E launcher, assert the failure message/Retry control, then assert the next request renders the seeded success.
-- Await graceful exit for both children within 10,000 ms, probe ports, and assert the entire database/sidecar allowlist is absent.
+- Await graceful exit for both children within 10,000 ms, independently assert every API and web process group is empty, probe ports, and assert the entire database/sidecar allowlist is absent. Add a focused failure-path test in which the root exits but a descendant survives SIGTERM, requiring a non-graceful result and bounded escalation.
 - Fail the test if cleanup needs forced escalation, while still escalating in `finally` to avoid a leak.
 
 ### Expected Evidence
 
 - Playwright desktop Chromium pass with the seeded-identity comparison.
 - `test-results/bl-007/project-home/episode.json` with all bounded booleans true.
-- Absent child processes, listeners, database, and sidecar files.
+- Absent child processes and process-group members, listeners, database, and sidecar files; focused failure-path evidence proves surviving descendants are detected.
 
 ## Task T-6: Synchronize Application, API, Harness, and Validation Documentation
 
@@ -248,7 +248,7 @@ Run the focused API, web, documentation, and desktop Chromium validation through
 
 - Run the focused tests identified in V-1 through V-6; no failure may be dismissed as flaky.
 - Run just verify without skipping format, lint, type, coverage, build, Playwright, or retained-capacity audit gates.
-- After the gate, probe the BL-007 ports and check the allowlisted database and sidecar paths and scenario child identities.
+- After the gate, probe the BL-007 ports and check the allowlisted database and sidecar paths and scenario process-group identities.
 
 ### Expected Evidence
 

@@ -1,3 +1,4 @@
+import { sendSafeBadUrl } from './bad-url.js'
 import Fastify, {
   type FastifyInstance,
   type FastifyServerOptions,
@@ -5,6 +6,7 @@ import Fastify, {
 import appPlugin, {
   PROJECT_LIBRARY_INITIALIZATION_FAILED,
   ProjectLibraryInitializationError,
+  type AppOptions,
 } from './app.js'
 import {
   createApplicationProjectLibrary,
@@ -34,6 +36,7 @@ export interface ApiServerControllerOptions {
   readonly fastify?: FastifyServerOptions
   readonly createProjectLibrary?: () => Promise<ProjectLibrary>
   readonly createProjectRegistration?: () => Promise<ProjectRegistrationService>
+  readonly createProjectCloseService?: AppOptions['createProjectCloseService']
   readonly stopTelemetry?: () => Promise<void>
   readonly recordStartupFailure?: (event: StartupFailureEvent) => void
 }
@@ -47,7 +50,10 @@ export interface ApiServerController {
 export function createApiServerController(
   options: ApiServerControllerOptions = {}
 ): ApiServerController {
-  const server = Fastify(options.fastify ?? { logger: true })
+  const server = Fastify({
+    ...(options.fastify ?? { logger: true }),
+    routerOptions: { onBadUrl: sendSafeBadUrl },
+  })
   const stopTelemetry = options.stopTelemetry ?? (async () => undefined)
   let startPromise: Promise<FastifyInstance> | undefined
   let stopPromise: Promise<void> | undefined
@@ -66,6 +72,9 @@ export function createApiServerController(
         await server.register(appPlugin, {
           createProjectLibrary:
             options.createProjectLibrary ?? createApplicationProjectLibrary,
+          ...(options.createProjectCloseService === undefined
+            ? {}
+            : { createProjectCloseService: options.createProjectCloseService }),
           ...(options.createProjectRegistration === undefined
             ? {}
             : { createProjectRegistration: options.createProjectRegistration }),

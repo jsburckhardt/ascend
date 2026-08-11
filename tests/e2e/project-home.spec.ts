@@ -33,6 +33,10 @@ export const BL008_EVIDENCE_ROOT = path.join(
 const DATABASE_ROOT = path.join(BL008_EVIDENCE_ROOT, 'databases')
 const FIXTURE_ROOT = path.join(BL008_EVIDENCE_ROOT, 'fixtures')
 const EPISODE_PATH = path.join(BL008_EVIDENCE_ROOT, 'episode.json')
+const CLOSE_FAULT_EPISODE_PATH = path.join(
+  BL008_EVIDENCE_ROOT,
+  'close-fault-episode.json'
+)
 const DATABASE_SUFFIXES = ['', '-wal', '-shm', '-journal'] as const
 const GRACEFUL_EXIT_TIMEOUT_MS = 10_000
 const START_TIMEOUT_MS = 15_000
@@ -182,6 +186,7 @@ test('uses only the keyboard to register, reconcile, correct, and defer Open wit
   let apiGroup: number | undefined
   let webGroup: number | undefined
   let postCount = 0
+  let deleteCount = 0
   let documentNavigations = 0
   page.on('request', (request) => {
     if (
@@ -189,6 +194,11 @@ test('uses only the keyboard to register, reconcile, correct, and defer Open wit
       new URL(request.url()).pathname === '/api/projects'
     )
       postCount += 1
+    if (
+      request.method() === 'DELETE' &&
+      new URL(request.url()).pathname.startsWith('/api/projects/')
+    )
+      deleteCount += 1
   })
   page.on('framenavigated', (frame) => {
     if (frame === page.mainFrame()) documentNavigations += 1
@@ -202,6 +212,9 @@ test('uses only the keyboard to register, reconcile, correct, and defer Open wit
     stableIdentity: false,
     noReload: false,
     deferredOpen: false,
+    closeCancelled: false,
+    closeConfirmed: false,
+    authoritativeClose: false,
     fixtureIntegrity: false,
     durableRows: 0,
     ownedCleanup: false,
@@ -296,6 +309,47 @@ test('uses only the keyboard to register, reconcile, correct, and defer Open wit
     )
     expect(page.url()).toBe(beforeOpenUrl)
     summary.deferredOpen = true
+
+    await page.keyboard.press('Tab')
+    const secondClose = page.getByRole('button', {
+      name: 'Close second <script> project',
+    })
+    await expect(secondClose).toBeFocused()
+    await page.keyboard.press('Enter')
+    const dialog = page.getByRole('dialog', {
+      name: 'Close second <script> project?',
+    })
+    await expect(dialog).toContainText(
+      'Closing removes this project registration from Ascend. The filesystem directory and files will not be deleted.'
+    )
+    await page.keyboard.press('Shift+Tab')
+    await expect(page.getByRole('button', { name: 'Confirm' })).toBeFocused()
+    await page.keyboard.press('Tab')
+    await expect(page.getByRole('button', { name: 'Cancel' })).toBeFocused()
+    await page.keyboard.press('Enter')
+    await expect(dialog).toBeHidden()
+    await expect(secondClose).toBeFocused()
+    expect(deleteCount).toBe(0)
+    summary.closeCancelled = true
+
+    await page.keyboard.press('Enter')
+    await page.keyboard.press('Tab')
+    await expect(page.getByRole('button', { name: 'Confirm' })).toBeFocused()
+    await page.keyboard.press('Enter')
+    await expect(secondClose).toBeHidden()
+    await expect(page.getByRole('status')).toContainText('Project closed')
+    await expect(
+      page.getByRole('button', { name: 'Close first project' })
+    ).toBeFocused()
+    expect(deleteCount).toBe(1)
+    summary.closeConfirmed = true
+    const authoritative = await fetch(apiUrl + '/api/projects')
+    const authoritativeBody = (await authoritative.json()) as {
+      projects: Array<{ id: string }>
+    }
+    expect(authoritativeBody.projects.map(({ id }) => id)).toEqual([firstId])
+    summary.authoritativeClose = true
+
     expect(postCount).toBe(4)
     expect(documentNavigations).toBe(baselineNavigations)
     summary.noReload = true
@@ -308,7 +362,7 @@ test('uses only the keyboard to register, reconcile, correct, and defer Open wit
     const library = await createProjectLibrary(databasePath)
     try {
       summary.durableRows = (await library.list()).length
-      expect(summary.durableRows).toBe(2)
+      expect(summary.durableRows).toBe(1)
     } finally {
       library.close()
     }
@@ -340,6 +394,152 @@ test('uses only the keyboard to register, reconcile, correct, and defer Open wit
     await writeFile(EPISODE_PATH, JSON.stringify(summary, null, 2))
     expect(summary.ownedCleanup).toBe(true)
     expect(summary.fixtureIntegrity).toBe(true)
+  }
+})
+
+test('recovers from a controlled close persistence fault in real Chromium', async ({
+  page,
+}) => {
+  await mkdir(DATABASE_ROOT, { recursive: true })
+  await mkdir(FIXTURE_ROOT, { recursive: true })
+  await rm(CLOSE_FAULT_EPISODE_PATH, { force: true })
+  const databasePath = path.join(
+    DATABASE_ROOT,
+    'close-fault-' + randomUUID() + '.db'
+  )
+  const fixtureRoot = path.join(FIXTURE_ROOT, 'close-fault-' + randomUUID())
+  const projectPath = path.join(fixtureRoot, 'fault project')
+  await mkdir(projectPath, { recursive: true })
+  await writeFile(path.join(projectPath, 'sentinel.txt'), 'fault unchanged')
+  const manifestBefore = await snapshotFixture(fixtureRoot)
+  if (path.resolve(databasePath) === path.resolve(DEFAULT_DATABASE_PATH)) {
+    throw new Error('BL-009 refused the developer database')
+  }
+  const databaseFiles = DATABASE_SUFFIXES.map((suffix) => databasePath + suffix)
+  const apiPort = await disposablePort()
+  const webPort = await disposablePort()
+  const apiUrl = 'http://127.0.0.1:' + apiPort
+  const webUrl = 'http://127.0.0.1:' + webPort
+  let api: OwnedChild | undefined
+  let web: OwnedChild | undefined
+  let apiGroup: number | undefined
+  let webGroup: number | undefined
+  let deletes = 0
+  page.on('request', (request) => {
+    if (request.method() === 'DELETE') deletes += 1
+  })
+  const summary: Record<string, boolean | number> = {
+    knownFailure: false,
+    sameIdRetry: false,
+    eventualClose: false,
+    fixtureIntegrity: false,
+    ownedCleanup: false,
+    deleteRequests: 0,
+  }
+  try {
+    api = startChild(
+      'Ascend API close fault',
+      [
+        '--filter',
+        '@ascend/api',
+        'exec',
+        'tsx',
+        '../../tests/e2e/project-home-api-launcher.ts',
+        '--close-fault-once',
+      ],
+      {
+        ...process.env,
+        ASCEND_HOST: '127.0.0.1',
+        ASCEND_PORT: String(apiPort),
+        ASCEND_DATABASE_URL: databasePath,
+        ASCEND_PROJECT_HOME: fixtureRoot,
+        ASCEND_PROJECT_ALLOWED_ROOTS: fixtureRoot,
+      }
+    )
+    apiGroup = api.process.pid
+    if (apiGroup === undefined)
+      throw new Error('API process identity unavailable')
+    await waitForHttp(apiUrl + '/', api)
+    web = startChild(
+      'Ascend web close fault',
+      [
+        '--filter',
+        '@ascend/web',
+        'exec',
+        'vite',
+        '--host',
+        '127.0.0.1',
+        '--port',
+        String(webPort),
+        '--strictPort',
+      ],
+      { ...process.env, ASCEND_E2E_API_TARGET: apiUrl }
+    )
+    webGroup = web.process.pid
+    if (webGroup === undefined)
+      throw new Error('Web process identity unavailable')
+    await waitForHttp(webUrl + '/', web)
+
+    await page.goto(webUrl + '/')
+    await expect(page.getByRole('textbox', { name: 'Host path' })).toBeVisible()
+    await page.keyboard.press('Tab')
+    await keyboardSubmit(page, projectPath)
+    await expect(
+      page.getByRole('button', { name: 'Open fault project' })
+    ).toBeFocused()
+    await page.keyboard.press('Tab')
+    await expect(
+      page.getByRole('button', { name: 'Close fault project' })
+    ).toBeFocused()
+    await page.keyboard.press('Enter')
+    await page.keyboard.press('Tab')
+    await page.keyboard.press('Enter')
+    const retry = page.getByRole('button', { name: 'Retry' })
+    await expect(retry).toBeFocused()
+    await expect(page.getByRole('dialog')).toContainText(
+      'The project could not be closed. Retry this project.'
+    )
+    await expect(
+      page.getByRole('button', { name: 'Close fault project' })
+    ).toBeVisible()
+    summary.knownFailure = true
+    await page.keyboard.press('Enter')
+    await expect(
+      page.getByRole('heading', { name: 'No registered projects' })
+    ).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Ascend' })).toBeFocused()
+    expect(deletes).toBe(2)
+    summary.deleteRequests = deletes
+    summary.sameIdRetry = true
+    const authoritative = await fetch(apiUrl + '/api/projects')
+    expect(await authoritative.json()).toEqual({ projects: [] })
+    summary.eventualClose = true
+    expect(await snapshotFixture(fixtureRoot)).toEqual(manifestBefore)
+    summary.fixtureIntegrity = true
+  } finally {
+    const apiStop = await stopOwnedProcessGroup(api, GRACEFUL_EXIT_TIMEOUT_MS)
+    const webStop = await stopOwnedProcessGroup(web, GRACEFUL_EXIT_TIMEOUT_MS)
+    const listenersAbsent =
+      (await listenerAbsent(apiPort)) && (await listenerAbsent(webPort))
+    const groupsAbsent =
+      (apiGroup === undefined || (await processGroupAbsent(apiGroup))) &&
+      (webGroup === undefined || (await processGroupAbsent(webGroup)))
+    for (const file of databaseFiles) await rm(file, { force: true })
+    const databaseAbsent = (
+      await Promise.all(databaseFiles.map(pathAbsent))
+    ).every(Boolean)
+    await rm(fixtureRoot, { recursive: true, force: true })
+    const fixtureAbsent = await pathAbsent(fixtureRoot)
+    summary.ownedCleanup =
+      apiStop.graceful &&
+      webStop.graceful &&
+      listenersAbsent &&
+      groupsAbsent &&
+      databaseAbsent &&
+      fixtureAbsent
+    await writeFile(CLOSE_FAULT_EPISODE_PATH, JSON.stringify(summary, null, 2))
+    expect(summary.fixtureIntegrity).toBe(true)
+    expect(summary.ownedCleanup).toBe(true)
   }
 })
 

@@ -99,6 +99,7 @@ describe('API project-library lifecycle', () => {
     const library: ProjectLibrary = {
       create: vi.fn(),
       list: vi.fn(async () => []),
+      closeProject: vi.fn(),
       close,
     }
     const controller = createApiServerController({

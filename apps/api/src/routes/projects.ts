@@ -16,6 +16,11 @@ export const PROJECT_REGISTRATION_FAILED =
   'project_registration_failed' as const
 export const PROJECT_REGISTRATION_FAILED_EVENT =
   'project.registration.failed' as const
+export const INVALID_PROJECT_ID = 'invalid_project_id' as const
+export const PROJECT_NOT_FOUND = 'project_not_found' as const
+export const PROJECT_CLOSE_FAILED = 'project_close_failed' as const
+export const PROJECT_CLOSED_EVENT = 'project.closed' as const
+export const PROJECT_CLOSE_FAILED_EVENT = 'project.close.failed' as const
 
 const PROJECT_FIELDS = ['canonicalPath', 'createdAt', 'id', 'name'] as const
 const REGISTRATION_STATUS: Readonly<
@@ -76,7 +81,7 @@ export function compareProjects(left: Project, right: Project): number {
 
 export function validateAndOrderProjects(value: unknown): Project[] {
   if (!Array.isArray(value)) throw new Error('Invalid project list')
-  const projects: Project[] = []
+  const ordered: Project[] = []
   const ids = new Set<string>()
   for (const candidate of value) {
     const project = validateProject(candidate)
@@ -84,9 +89,9 @@ export function validateAndOrderProjects(value: unknown): Project[] {
       throw new Error('Invalid project list')
     }
     ids.add(project.id)
-    projects.push(project)
+    ordered.push(project)
   }
-  return projects.sort(compareProjects)
+  return ordered.sort(compareProjects)
 }
 
 function registrationPath(body: unknown): string | undefined {
@@ -115,9 +120,26 @@ function sendRegistrationResult(
   })
 }
 
+function invalidProjectId(reply: FastifyReply) {
+  return reply.code(400).send({ error: { category: INVALID_PROJECT_ID } })
+}
+
 const projectsRoute: FastifyPluginAsync = async (fastify): Promise<void> => {
   fastify.setErrorHandler((error, request, reply) => {
-    const code = (error as { code?: string }).code
+    const details = error as { code?: string; statusCode?: number }
+    const code = details.code
+    if (request.method === 'DELETE') {
+      if (code === 'FST_ERR_BAD_URL' || details.statusCode === 400) {
+        return invalidProjectId(reply)
+      }
+      request.log.error({
+        event: PROJECT_CLOSE_FAILED_EVENT,
+        category: PROJECT_CLOSE_FAILED,
+      })
+      return reply.code(500).send({
+        error: { category: PROJECT_CLOSE_FAILED },
+      })
+    }
     if (code === 'FST_ERR_CTP_BODY_TOO_LARGE') {
       return reply.code(413).send({
         error: { category: REGISTRATION_REQUEST_TOO_LARGE },
@@ -186,6 +208,49 @@ const projectsRoute: FastifyPluginAsync = async (fastify): Promise<void> => {
         })
         return reply.code(500).send({
           error: { category: PROJECT_REGISTRATION_FAILED },
+        })
+      }
+    }
+  )
+
+  fastify.delete('/api/projects/', async (_request, reply) =>
+    invalidProjectId(reply)
+  )
+
+  fastify.delete<{ Params: { id?: string } }>(
+    '/api/projects/:id',
+    async (request, reply) => {
+      const id = request.params.id
+      if (typeof id !== 'string' || id.length === 0) {
+        return invalidProjectId(reply)
+      }
+      try {
+        const result = await fastify.projectClose.closeProject(id)
+        if (result.disposition === 'project_not_found') {
+          return reply.code(404).send({
+            error: { category: PROJECT_NOT_FOUND },
+          })
+        }
+        if (result.disposition !== 'closed' || result.id !== id) {
+          throw new Error('Invalid close result')
+        }
+        request.log.info({ event: PROJECT_CLOSED_EVENT, disposition: 'closed' })
+        return reply.code(200).send({ id, disposition: 'closed' })
+      } catch (error) {
+        if (
+          typeof error === 'object' &&
+          error !== null &&
+          'category' in error &&
+          error.category === INVALID_PROJECT_ID
+        ) {
+          return invalidProjectId(reply)
+        }
+        request.log.error({
+          event: PROJECT_CLOSE_FAILED_EVENT,
+          category: PROJECT_CLOSE_FAILED,
+        })
+        return reply.code(500).send({
+          error: { category: PROJECT_CLOSE_FAILED },
         })
       }
     }

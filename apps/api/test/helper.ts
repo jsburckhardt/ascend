@@ -1,3 +1,4 @@
+import { sendSafeBadUrl } from '../src/bad-url.js'
 import Fastify, { type FastifyInstance } from 'fastify'
 import { afterEach } from 'vitest'
 import appPlugin, { type AppOptions } from '../src/app.js'
@@ -14,6 +15,7 @@ function emptyProjectLibrary(): ProjectLibrary {
   return {
     create: async () => ({ disposition: 'invalid', code: 'empty-id' }),
     list: async () => [],
+    closeProject: async () => ({ disposition: 'project_not_found' }),
     close() {},
   }
 }
@@ -26,9 +28,10 @@ function emptyProjectRegistration(): ProjectRegistrationService {
 }
 
 export async function build(options: AppOptions = {}) {
-  const app = Fastify(
-    options.logger === undefined ? {} : { logger: options.logger }
-  )
+  const app = Fastify({
+    ...(options.logger === undefined ? {} : { logger: options.logger }),
+    routerOptions: { onBadUrl: sendSafeBadUrl },
+  })
   await app.register(appPlugin, {
     ...options,
     createProjectLibrary:

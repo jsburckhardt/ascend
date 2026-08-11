@@ -5,6 +5,10 @@ import { type FastifyPluginAsync, type FastifyServerOptions } from 'fastify'
 import fastifyPlugin from 'fastify-plugin'
 import { resolveApplicationDatabasePath } from './db/client.js'
 import {
+  createLibraryProjectCloseService,
+  type ProjectCloseService,
+} from './project-close.js'
+import {
   createApplicationProjectLibrary,
   type ProjectLibrary,
 } from './project-library.js'
@@ -17,6 +21,7 @@ declare module 'fastify' {
   interface FastifyInstance {
     projectLibrary: ProjectLibrary
     projectRegistration: ProjectRegistrationService
+    projectClose: ProjectCloseService
   }
 }
 
@@ -36,6 +41,7 @@ export interface AppOptions
   extends FastifyServerOptions, Partial<AutoloadPluginOptions> {
   createProjectLibrary?: () => Promise<ProjectLibrary>
   createProjectRegistration?: () => Promise<ProjectRegistrationService>
+  createProjectCloseService?: (library: ProjectLibrary) => ProjectCloseService
 }
 
 export async function createApplicationProjectRegistration(): Promise<ProjectRegistrationService> {
@@ -67,10 +73,14 @@ const app: FastifyPluginAsync<AppOptions> = async (
 ): Promise<void> => {
   let library: ProjectLibrary | undefined
   let registration: ProjectRegistrationService | undefined
+  let closeService: ProjectCloseService | undefined
   try {
     library = await (
       opts.createProjectLibrary ?? createApplicationProjectLibrary
     )()
+    closeService = (
+      opts.createProjectCloseService ?? createLibraryProjectCloseService
+    )(library)
     registration = await (
       opts.createProjectRegistration ?? createApplicationProjectRegistration
     )()
@@ -82,6 +92,7 @@ const app: FastifyPluginAsync<AppOptions> = async (
 
   fastify.decorate('projectLibrary', library)
   fastify.decorate('projectRegistration', registration)
+  fastify.decorate('projectClose', closeService)
   fastify.addHook('onClose', async () => {
     registration.close()
     library.close()

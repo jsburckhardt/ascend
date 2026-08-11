@@ -39,6 +39,7 @@ function libraryWithList(list: () => Promise<Project[]>): ProjectLibrary {
   return {
     create: vi.fn(),
     list,
+    closeProject: vi.fn(),
     close: vi.fn(),
   }
 }

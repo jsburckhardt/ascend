@@ -53,7 +53,12 @@ function registration(result: RegistrationResult | Error): {
 }
 
 function library(): ProjectLibrary {
-  return { create: vi.fn(), list: vi.fn(async () => []), close: vi.fn() }
+  return {
+    create: vi.fn(),
+    list: vi.fn(async () => []),
+    closeProject: vi.fn(),
+    close: vi.fn(),
+  }
 }
 
 interface RejectedCase {

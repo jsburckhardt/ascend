@@ -9,6 +9,7 @@ import { migrateDatabase } from './db/migrations.js'
 import {
   createDrizzleProjectAdapter,
   createProjectRepository,
+  type CloseProjectResult,
   type CreateProjectResult,
   type Project,
 } from './project-persistence.js'
@@ -16,6 +17,7 @@ import {
 export interface ProjectLibrary {
   create(input: Project): Promise<CreateProjectResult>
   list(): Promise<Project[]>
+  closeProject(id: string): Promise<CloseProjectResult>
   close(): void
 }
 
@@ -34,6 +36,7 @@ export async function createProjectLibrary(
     return {
       create: (input) => repository.create(input),
       list: () => repository.list(),
+      closeProject: (id) => repository.closeProject(id),
       close() {
         if (closed) return
         closed = true

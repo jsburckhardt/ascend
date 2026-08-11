@@ -28,7 +28,7 @@ Configuration uses environment variables:
 |---|---|---|
 | `ASCEND_HOST` | `127.0.0.1` | API bind address |
 | `ASCEND_PORT` | `3000` | API port |
-| `ASCEND_DATABASE_URL` | `file:ascend.db` | SQLite database URL |
+| `ASCEND_DATABASE_URL` | `<repository>/apps/api/ascend.db` | Local application SQLite path; `file:` or filesystem-path overrides are supported |
 | Standard `OTEL_*` variables | OpenTelemetry defaults | Optional observability configuration |
 
 Application logs are simple structured console records. Logs and telemetry must not contain source, terminal, clipboard, prompt, credential, or secret content.
@@ -50,3 +50,27 @@ Run `just proof-terminal-parity` on the designated Ubuntu 24.04.4 LTS devcontain
 ## Browser workbench presentation proof
 
 The designated comparison command is just proof-workbench-presentation. It compares only embedded code-server and full-page code-server with a minimal Ascend header, using three fresh no-retry attempts per candidate and a 1440 by 900 repository Chromium context. The retained authoritative desktop result selected full-page because it had fewer blocking browser protocol violations, 0 versus 3. Both candidates were eligible. Tablet validation remains a separate non-authoritative follow-up, and this proof adds no product routing or lifecycle behavior. The operational and evidence contract is documented in workbench-proof.md.
+
+
+## Project library persistence
+
+The application resolves its developer database to `<repository>/apps/api/ascend.db`. `ASCEND_DATABASE_URL` overrides that local application path with a `file:` URL or filesystem path. Migration is intentionally separate: it ignores the environment override and requires an explicit filesystem target.
+
+```text
+just db-migrate <database-path>
+```
+
+The command creates parent directories and a missing database, never resets data, applies committed migrations in order, closes its SQLite handle, and emits exactly one JSON object. The committed IDs and representative outputs are:
+
+```json
+{"appliedMigrationIds":["0000_project_library","0001_project_canonical_path_unique"],"currentMigrationId":"0001_project_canonical_path_unique"}
+{"appliedMigrationIds":[],"currentMigrationId":"0001_project_canonical_path_unique"}
+```
+
+The final `projects` table has exactly four physical columns: `id`, `name`, `canonical_path`, and `created_at`. They map to the `Project` fields `id`, `name`, `canonicalPath`, and `createdAt`; `createdAt` is a finite, non-negative safe integer containing Unix epoch milliseconds. No source text, terminal output, ports, PIDs, handles, environment data, credentials, secrets, or runtime state is part of this schema.
+
+The in-process `ProjectLibrary` creates and lists records. A valid create returns a `created` or `existing` disposition; canonical-path uniqueness is enforced by SQLite, and `existing` carries the durable winning record. Invalid input returns `invalid` with `empty-id`, `blank-name`, `empty-canonical-path`, or `invalid-created-at` before a write. A bounded integration proof closes the complete library/database generation, reconstructs fresh instances at the same path, and recovers exactly two records once each. This adds no HTTP route or UI.
+
+Migration compatibility uses the tracked prior-version fixture `apps/api/test/fixtures/db/0000_project_library.sqlite`, which is at `0000_project_library` and contains exactly two records. BL-005 database tests allocate unique paths below `test-results/bl-005/databases`, refuse `<repository>/apps/api/ascend.db`, close all handles, remove only the selected database plus `-wal`, `-shm`, and `-journal`, and prove those files are absent. The tracked fixture is copied and never mutated.
+
+Filesystem existence, readability, home expansion, and canonicalization policy remain BL-006 work. HTTP/API response semantics, routes, and UI remain BL-007 work.

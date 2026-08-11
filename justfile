@@ -7,6 +7,9 @@ setup:
 run:
     pnpm dev
 
+db-migrate database_path:
+    @pnpm --filter @ascend/api exec tsx src/cli/db-migrate.ts {{quote(database_path)}}
+
 test:
     pnpm test
 

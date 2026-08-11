@@ -29,6 +29,8 @@ Configuration uses environment variables:
 | `ASCEND_HOST` | `127.0.0.1` | API bind address |
 | `ASCEND_PORT` | `3000` | API port |
 | `ASCEND_DATABASE_URL` | `<repository>/apps/api/ascend.db` | Local application SQLite path; `file:` or filesystem-path overrides are supported |
+| `ASCEND_PROJECT_HOME` | configured OS home | Home used for `~` expansion and opening policy |
+| `ASCEND_PROJECT_ALLOWED_ROOTS` | configured home | Path-delimiter-separated allowed roots; an explicit empty value is deny-all |
 | Standard `OTEL_*` variables | OpenTelemetry defaults | Optional observability configuration |
 
 Application logs are simple structured console records. Logs and telemetry must not contain source, terminal, clipboard, prompt, credential, or secret content.
@@ -77,7 +79,7 @@ Migration compatibility uses the tracked prior-version fixture `apps/api/test/fi
 
 ## Canonical filesystem registration
 
-BL-006 adds an in-process registration service over BL-005 persistence; it does not add an HTTP API or UI. Construction receives an explicit database path, configured home, and allowed-root list. Every configured entry must be an absolute, existing, readable directory and is canonicalized once before persistence opens. Canonically equivalent roots are deduplicated, configuration symlink targets are frozen for the service lifetime, and [] is a valid deny-all policy. Any invalid entry fails the whole construction as invalid_opening_policy with only safe field configured_home or allowed_roots[n].
+BL-006 adds the in-process registration boundary over BL-005 persistence. BL-008 delegates to that unchanged boundary from HTTP and Project Home. Construction receives an explicit database path, configured home, and allowed-root list. Every configured entry must be an absolute, existing, readable directory and is canonicalized once before persistence opens. Canonically equivalent roots are deduplicated, configuration symlink targets are frozen for the service lifetime, and [] is a valid deny-all policy. Any invalid entry fails the whole construction as invalid_opening_policy with only safe field configured_home or allowed_roots[n].
 
 Inputs support absolute paths, exactly ~, and ~/.... Blank input maps to path_required; NUL and unsupported forms map to unsupported_path_syntax; missing, file, unreadable, and disallowed targets map to path_not_found, path_not_directory, path_unreadable, and outside_opening_policy. Each registration failure contains only field: path and its category. Nonblank path whitespace is preserved. Canonical segment containment admits roots and descendants while rejecting prefix siblings, outside traversal, and escaping symlinks; symlinked roots are evaluated at their canonical targets.
 
@@ -87,16 +89,51 @@ just verify-project-registration uses disposable test-results/bl-006/fixtures tr
 
 
 
-The BL-006 registration service remains in-process. Repository scanning, clone/import, Git requirements, native pickers, project close, and workbench launch remain outside registration. BL-007 adds read-only listing and presentation without adding registration.
+BL-008 exposes BL-006 registration but does not replace its path, canonicalization, policy, persistence, idempotency, or non-mutation rules. Repository scanning, clone/import, Git requirements, native pickers, project close, and workbench launch remain outside registration.
 
-## Registered Project Home (BL-007)
+## Open Project interaction (BL-008)
 
-API startup resolves `ASCEND_DATABASE_URL` (`file:` URL or filesystem path, with `<repository>/apps/api/ascend.db` as the default), opens one closeable project library, and applies or validates committed migrations before listening. Complete shutdown closes Fastify, SQLite, and telemetry once; repeated SIGINT, SIGTERM, and direct stop requests join the same memoized outcome. Restarting against the same database preserves every record. Initialization failure never opens the listener, exits nonzero, and emits the safe `api.start.failed` event with category `project_library_initialization_failed`; raw secrets, SQL, stack text, and database paths are not logged. BL-007 uses the existing migrations and requires no upgrade conversion.
+API startup resolves one `ASCEND_DATABASE_URL`, applies committed migrations before listening, constructs the listing library and merged BL-006 registration service before listening, and closes both idempotently. Complete shutdown closes resources after repeated SIGINT, SIGTERM, or direct stop. Startup failure emits only `api.start.failed` with `project_library_initialization_failed`. List failure emits only `project.list.failed` with `project_list_failed`. The page retains loading, empty, populated, failure, and Retry states. Invalid opening-policy or persistence initialization fails before listen with only the safe startup category. No schema, data, API, or configuration migration is required.
 
-`GET /api/projects` returns `{"projects":[]}` or a projects array whose records contain exactly `id`, `name`, `canonicalPath`, and `createdAt`. Valid records require a non-empty ID, non-blank name, non-empty unchanged canonical path, and finite non-negative safe-integer createdAt. Results are ordered `createdAt ASC, id ASC`. Duplicate IDs, malformed rows, and persistence failures return HTTP 500 as `{"error":{"category":"project_list_failed"}}`, with no projects or partial records.
+### HTTP contracts
 
-Vite sends same-origin `/api` traffic to the loopback API. Project Home makes one 5,000 ms-bounded request per mount and shows distinct announced loading, explanatory empty, populated, and actionable failure states. Retry starts one new request. A newer retry aborts or supersedes its predecessor, stale responses cannot update the page, and unmount aborts the current request. Every valid card shows the display name and complete canonical path unchanged as whitespace-preserving text and title. Its keyboard-focusable Open button carries the stable project ID and names the project; activation only announces that opening is not available in BL-007. It performs no navigation, request, or workbench operation, including after repeated activation.
+`GET /api/projects` remains the exact ordered list contract. `POST /api/projects` requires `Content-Type: application/json`, a body of at most 4,096 encoded bytes, and an exact object with the sole string field `path`; `name` is never submitted. Blank and whitespace strings are contract-valid and delegate once to BL-006. `application/json` is the only supported request media type; missing or other media types, including parser-supported `text/plain` and unsupported `application/xml` or `application/octet-stream`, return the safe 400 `invalid_registration_request` envelope with no delegation. Empty or malformed JSON, scalar or array bodies, missing or non-string path, and extra fields return 400 `{"error":{"category":"invalid_registration_request"}}` with no delegation. Byte 4,097 returns 413 `{"error":{"category":"registration_request_too_large"}}`.
 
-Project registration, close, workbench startup/status, search, sorting controls, tags, path mutation, and fake workbench routing remain BL-008+ scope. Registered projects appear here, but this page does not register them.
+Created is HTTP 201 and existing is HTTP 200. Both return only:
 
-Validate through root commands only: `just verify-focused apps/web/src/project-client.test.tsx apps/web/src/App.test.tsx`, `just verify-focused apps/api/test/api-lifecycle.test.ts apps/api/test/project-list-route.test.ts`, `just test-e2e`, and `just verify`. The one desktop Chromium episode owns real Vite and API children at disposable loopback ports and refuses the developer database. It proves empty, restart-populated, keyboard Open identity, one test-launcher-only list fault, and successful retry. Cleanup requests graceful shutdown within 10,000 ms, independently scans every scenario-owned process group to prove no member survives, proves listener absence, and removes only the isolated database plus `-wal`, `-shm`, and `-journal` sidecars. A focused failure-path test proves a surviving descendant makes graceful cleanup fail before bounded escalation removes the group. The observed bounded result passed; sanitized all-true evidence is generated at `test-results/bl-007/project-home/episode.json`. Harness boot remains non-persistent and test-backed.
+```json
+{"disposition":"created","project":{"id":"stable-id","name":"BL-006 name","canonicalPath":"/canonical/path","createdAt":1786407000000}}
+```
+
+Typed failures return only `{"error":{"category":"<category>","field":"path"}}`: `path_required` and `unsupported_path_syntax` are 400, `path_not_found` is 404, `path_unreadable` and `outside_opening_policy` are 403, and `path_not_directory` is 422. Unexpected failures are 500 `{"error":{"category":"project_registration_failed"}}`. Responses and structured events expose no submitted or configured path, partial project, raw platform error, stack, SQL, secret, or internal detail.
+
+### Accessible interaction and recovery
+
+Project Home presents a semantic Open Project form with a persistent `Host path` label and associated absolute, `~`, and `~/...` guidance. It preserves exact input. Blank input and all six typed path failures set `aria-invalid`, associate an alert with the field, announce the specific correction, focus the field, retain text, and change no card. React renders input, locked payload, names, and paths as complete inert whitespace-preserving text.
+
+Created and existing responses upsert by stable ID only, never display text, and restore `createdAt ASC, id ASC`. The exact card Open action is scrolled into view, focused, and announced as created or already registered. Equivalent path expressions therefore activate one unchanged card and one durable record. Open itself remains project-ID identified and keyboard operable but only announces that the workbench is deferred; it starts no workbench, request, or navigation.
+
+Each ordinary or retry registration owns a 10,000 ms bound; each list or recovery refresh owns 5,000 ms. Pending registration blocks repeated submit and exposes active Cancel. Ordinary cancellation, controlled positive pre-send unavailability, and unmount preserve input and cards while invalidating late completion. Once fetch is invoked, timeout, reset or rejection, truncated or unreadable body, non-JSON, undocumented status, or invalid response contract is `Submission outcome unknown`.
+
+Unknown outcome locks and visibly displays the exact serialized `{"path":"..."}` payload. Before a successful refresh, the only idle recovery actions are `Retry same submission` and `Refresh projects`; a different payload cannot be sent. Retry sends byte-equivalent JSON and has the same timeout and Cancel. Retry cancellation returns to the same locked state. Refresh replaces cards only after a valid authoritative list and compares stable IDs with the immutable pre-submit snapshot: one added ID is focused and reconciled; zero added IDs retains authoritative cards, unlocks the exact input, and announces no new project; multiple additions retain the complete list without guessing identity and require explicit reset. Failed, timed-out, or invalid refresh preserves locked payload and current cards and restores both recovery actions.
+
+One active owner and monotonic generation govern ordinary, retry, refresh, cancellation, timeout, authoritative lists, reset, and unmount. Any completion from an invalidated generation is inert across cards, input, validation, focus, scroll, announcements, and recovery state.
+
+### Scope and validation
+
+Native pickers, scanning, clone/import, repository detection, project close, search, user sorting, tags, path mutation, workbench launch, BL-010, and BL-012 remain deferred. Run root commands only: `just verify-open-project`, targeted `just verify-focused <test-path>`, and `just verify`.
+
+The real desktop Chromium episode is keyboard-only and uses disposable loopback listeners, an isolated refused-default database, and content-bearing host fixtures below `test-results/bl-008/open-project`. It proves created, equivalent existing, invalid/corrected, stable identity, no reload, and deferred Open. Recursive manifests prove fixture membership, bytes, links, modes, and timestamps unchanged. Harness boot remains non-persistent and test-backed.
+
+The bounded episode passed. Retained cleanup evidence maps only executed scenarios; the prior modeled startup placeholders are no longer used:
+
+| Artifact / scenario | Injected event | Retained result |
+|---|---|---|
+| `episode.json` / success | Complete keyboard episode | Graceful API/web stop, absent listeners and process groups, removed database/sidecars and fixture allocation, equal fixture manifest |
+| `cleanup-matrix.json` / `startupFailure` | Rejected startup after resource allocation | Failure observed; independent process-group, listener, database/sidecar, and fixture audits are zero |
+| `cleanup-matrix.json` / `assertionFailure` | Assertion thrown after listener readiness | Failure observed; all four owned-resource audits are zero |
+| `cleanup-matrix.json` / `episodeTimeout` | Executed bounded timeout race | Timeout observed; all four owned-resource audits are zero |
+| `cleanup-matrix.json` / `interruptedGracefulShutdown` | Child ignores SIGTERM | `gracefulStop` is false; exact-group escalation completes and all four owned-resource audits are zero |
+| `cleanup-matrix.json` / `survivingDescendant` | Descendant escapes the parent process group | Survivor is detected and `ownerCleanupPassed` is false; exact-PID test teardown removes it, then `teardownClean` is true and every residual count is zero |
+
+The matrix stores booleans and counts, including each scenario's executed failure, process-group members, listeners, database files, fixtures, descendant count before teardown, and descendant count after teardown. It is not an all-true assertion: the interrupted graceful result and pre-teardown surviving-descendant owner verdict are deliberately false.

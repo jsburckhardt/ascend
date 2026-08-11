@@ -27,8 +27,7 @@ describe('BL-007 documentation contract', () => {
       'ASCEND_DATABASE_URL',
       'before listening',
       'committed migrations',
-      'complete stop',
-      'repeated SIGINT',
+      'Shutdown closes',
       API_START_FAILED_EVENT,
       PROJECT_LIBRARY_INITIALIZATION_FAILED,
       'GET /api/projects',
@@ -46,12 +45,12 @@ describe('BL-007 documentation contract', () => {
       'populated',
       'failure',
       'Retry',
-      'newest-request-wins',
+      'monotonic',
       'unmount',
       'whitespace-preserving',
-      'keyboard-focusable',
-      'opening is not available in BL-007',
-      'BL-008+',
+      'keyboard',
+      'workbench is deferred',
+      'POST /api/projects',
     ]) {
       expect(combined).toContain(token)
     }
@@ -79,23 +78,22 @@ describe('BL-007 documentation contract', () => {
     const combined = [application, api, web, harness].join('\n')
     for (const command of [
       'just verify-focused',
-      'just test-e2e',
+      'just verify-open-project',
       'just verify',
     ]) {
       expect(combined).toContain(command)
     }
     for (const token of [
-      'refuses the developer database',
-      'test-launcher-only',
+      'refused-default',
       '10,000 ms',
       'process group',
-      'failure-path',
-      'listener absence',
+      'modeled startup',
+      'listener',
       '-wal',
       '-shm',
       '-journal',
-      'test-results/bl-007/project-home/episode.json',
-      'observed bounded result passed',
+      'test-results/bl-008/open-project/episode.json',
+      'bounded episode passed',
     ]) {
       expect(combined.toLowerCase()).toContain(token.toLowerCase())
     }
@@ -103,9 +101,10 @@ describe('BL-007 documentation contract', () => {
     expect(justfile).toMatch(/^verify:/mu)
     expect(config).not.toContain('webServer:')
     expect(episode).toContain('ASCEND_E2E_API_TARGET')
-    expect(episode).toContain('apiProcessGroupsAbsent')
-    expect(episode).toContain('webProcessGroupAbsent')
-    expect(episode).toContain('databaseArtifactsAbsent')
+    expect(episode).toContain('BL008_EVIDENCE_ROOT')
+    expect(episode).toContain('apiGroupAbsent')
+    expect(episode).toContain('databaseAbsent')
+    expect(episode).toContain('fixtureAbsent')
     expect(harness).toContain('Harness boot remains non-persistent')
   })
 })

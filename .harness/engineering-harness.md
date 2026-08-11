@@ -45,7 +45,7 @@ artifacts under each application package.
 - `just proof-workbench-capacity`: one bounded designated-host 1/3/5/10 diagnostic episode
 - `just proof-workbench-capacity-audit`: short retained-evidence, exact-resource, active-guard, and fixture audit
 - API root test: in-process health interaction and JSON consequence
-- BL-007 Project Home Playwright signal: one owned real-web/real-API desktop Chromium episode proving empty, restart-populated, keyboard Open identity, controlled fault/retry, graceful exits, independently absent owned process groups, absent listeners, and exact database-sidecar cleanup
+- BL-008 Open Project signal: `just verify-open-project` covers the exact POST, strict client/recovery controller, accessible component, documentation, and one keyboard-only real-web/real-API Chromium episode with fixture integrity and executed scenario-by-scenario cleanup evidence
 - BL-005 project-library tests: schema, duplicate, pre-write validation, migration compatibility, close/reopen, complete in-process restart, refusal, and exact-sidecar cleanup consequences
 - BL-006 project-registration gate: just verify-project-registration emits finite configuration, registration, persistence, non-mutation, fixture-cleanup, documentation, and capability-aware permission signals; harness checks still delegates only to just verify
 - BL-001/BL-002 host-process sensor: two real loopback code-server Chromium scenarios—forced integrated-terminal timeout cleanup and passing Explorer, Markdown Preview, and direct-vs-integrated terminal parity—with zero-leak cleanup audits
@@ -58,7 +58,7 @@ artifacts under each application package.
 - BL-005 disposable database consequences: `test-results/bl-005/databases/` (generated, exact-file cleanup)
 - BL-006 disposable registration fixtures: test-results/bl-006/fixtures/ are generated and removed exactly; test-results/bl-006/permission-capability.json records proved or honest skipped host capability while controlled denial always runs
 - Playwright artifacts: `test-results/` and `playwright-report/`
-- BL-007 Project Home episode: `test-results/bl-007/project-home/episode.json` (generated sanitized all-true bounded state, identity, fault, retry, graceful-exit, process-group-absence, listener, and database cleanup evidence)
+- BL-008 Open Project evidence: `test-results/bl-008/open-project/episode.json` maps the executed successful browser episode; `cleanup-matrix.json` maps executed startup failure, assertion failure, episode timeout, interrupted graceful shutdown, and surviving-descendant scenarios to process-group, listener, database-sidecar, fixture, and descendant counts. The survivor records owner cleanup failure before exact-PID teardown and zero residuals afterward.
 - BL-001 terminal-parity episode: `test-results/bl-001/terminal-parity/episode.json` with direct/integrated raw references (generated, ignored)
 - BL-001 retained AC evidence: `project/work-items/5-bl-001-prove-a-host-code-server-workbench/implementation/00-implementation.md`
 - BL-002 retained AC evidence: `project/work-items/7-bl-002-prove-host-native-terminal-parity/implementation/00-implementation.md`

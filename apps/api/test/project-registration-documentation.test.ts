@@ -49,10 +49,10 @@ describe('BL-006 registration documentation contract', () => {
       'clone/import',
       'Git',
       'native pickers',
-      'read-only listing',
+      'POST',
       'project close',
       'workbench launch',
-      'BL-008+',
+      'BL-008',
     ]) {
       expect(combined.toLowerCase()).toContain(exclusion.toLowerCase())
     }

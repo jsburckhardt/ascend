@@ -173,6 +173,10 @@ describe('GET /api/projects', () => {
           libraryWithList(async () => {
             throw new Error(sentinel)
           }),
+        createProjectRegistration: async () => ({
+          register: async () => ({ category: 'path_not_found', field: 'path' }),
+          close() {},
+        }),
       })
       await app.ready()
       try {

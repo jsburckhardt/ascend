@@ -144,7 +144,7 @@ describe('Project Home open interaction', () => {
       const list = await screen.findByRole('list', {
         name: 'Registered projects',
       })
-      const buttons = within(list).getAllByRole('button')
+      const buttons = within(list).getAllByRole('button', { name: /^Open /u })
       expect(buttons.map((button) => button.dataset.projectId)).toEqual([
         'project-beta',
         'project-alpha',

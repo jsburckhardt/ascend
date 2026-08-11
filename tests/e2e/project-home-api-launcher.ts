@@ -8,7 +8,9 @@ import {
 
 const faultOnce = process.argv.includes('--fault-once')
 const delayList = process.argv.includes('--delay-list')
+const closeFaultOnce = process.argv.includes('--close-fault-once')
 let faultPending = faultOnce
+let closeFaultPending = closeFaultOnce
 
 async function createE2eLibrary(): Promise<ProjectLibrary> {
   const library = await createApplicationProjectLibrary()
@@ -23,6 +25,13 @@ async function createE2eLibrary(): Promise<ProjectLibrary> {
         throw new Error('Controlled E2E project-list failure')
       }
       return library.list()
+    },
+    async closeProject(id) {
+      if (closeFaultPending) {
+        closeFaultPending = false
+        throw new Error('Controlled E2E project-close failure')
+      }
+      return library.closeProject(id)
     },
     close: () => library.close(),
   }

@@ -121,7 +121,7 @@ One active owner and monotonic generation govern ordinary, retry, refresh, cance
 
 ### Scope and validation
 
-Native pickers, scanning, clone/import, repository detection, project close, search, user sorting, tags, path mutation, workbench launch, BL-010, and BL-012 remain deferred. Run root commands only: `just verify-open-project`, targeted `just verify-focused <test-path>`, and `just verify`.
+Native pickers, scanning, clone/import, repository detection, running or failed workbench close, search, user sorting, tags, path mutation, workbench launch, BL-010, and BL-012 remain deferred. Run root commands only: `just verify-open-project`, targeted `just verify-focused <test-path>`, and `just verify`.
 
 The real desktop Chromium episode is keyboard-only and uses disposable loopback listeners, an isolated refused-default database, and content-bearing host fixtures below `test-results/bl-008/open-project`. It proves created, equivalent existing, invalid/corrected, stable identity, no reload, and deferred Open. Recursive manifests prove fixture membership, bytes, links, modes, and timestamps unchanged. Harness boot remains non-persistent and test-backed.
 
@@ -137,3 +137,28 @@ The bounded episode passed. Retained cleanup evidence maps only executed scenari
 | `cleanup-matrix.json` / `survivingDescendant` | Descendant escapes the parent process group | Survivor is detected and `ownerCleanupPassed` is false; exact-PID test teardown removes it, then `teardownClean` is true and every residual count is zero |
 
 The matrix stores booleans and counts, including each scenario's executed failure, process-group members, listeners, database files, fixtures, descendant count before teardown, and descendant count after teardown. It is not an all-true assertion: the interrupted graceful result and pre-teardown surviving-descendant owner verdict are deliberately false.
+
+
+## Persistence-only stopped-project close (BL-009)
+
+DELETE /api/projects/{id} treats the decoded nonempty stable ID as opaque. It delegates once and returns exactly 200 {id:<stable-id>, disposition:closed}, 400 {error:{category:invalid_project_id}}, 404 {error:{category:project_not_found}}, or 500 {error:{category:project_close_failed}}. Metadata removal uses DELETE WHERE id RETURNING id inside one explicit SQLite transaction. Unknown and already-absent IDs change no row; persistence failure rolls back target and siblings. No migration or configuration change is required.
+
+The close service is constructed over the application-owned listing ProjectLibrary and has no project path inspector, runtime manager, or project-filesystem API. Close never deletes, moves, renames, copies, chmods, or changes project contents. Exactly eight concurrent DELETE requests produce one closed and seven project_not_found outcomes. Responses, logs, and browser errors contain safe categories and fixed copy rather than IDs, paths, SQL, database paths, stacks, project content, secrets, or internal detail. Fastify access logging enforces `req.url` redaction to `[request-url-redacted]`; captured DELETE logs contain the static event/category but neither encoded nor decoded project-ID sentinels.
+
+Each card has one Close button. Its aria-modal dialog is named Close <project name>? and says exactly: Closing removes this project registration from Ascend. The filesystem directory and files will not be deleted. Focus is trapped for Tab and Shift+Tab. Escape and Cancel before transmission make zero close requests and restore the activating button. Confirm is destructive and repeat activation cannot start another request. Transmitted pending and recovery states are announced programmatically without Cancel.
+
+Confirmed success filters only the original ID without page reload and focuses the next Close, previous Close, or Ascend heading; closing the final card displays No registered projects. A definitive no-mutation failure exposes same-ID Retry. project_not_found and ambiguous post-transmission timeout/reset/body/status/contract results require GET /api/projects reconciliation. Original-ID presence enables Retry; absence applies success; failed, timed-out, duplicate-ID, or invalid refresh leaves the interaction locked with Refresh projects. One abortable generation suppresses stale, cancelled, timed-out, and unmounted completion.
+
+The recursive BL-009 matrix executes Cancel, success, unknown, persistence failure, transport ambiguity plus authoritative GET, same-ID retry, repeated already-absent close, and a combined exact eight-way HTTP DELETE path. Every named outcome retains complete before/after relative membership, bytes, symlink targets, modes, and nanosecond mtimes before cleanup; the combined path records one 200, seven 404 responses, and equal recursive manifests. The desktop Chromium flow performs keyboard registration, Cancel, Confirm, authoritative-list removal, and unchanged sentinel validation. A separate repository-controlled one-shot persistence fault proves safe Retry and recovery. Cleanup removes only owned process groups, listeners, isolated database plus -wal/-shm/-journal, and disposable fixtures after integrity capture.
+
+Component/client text-safety checks execute one-character and 4,096-character bounded project name/path fixtures as inert text. That 4,096-character fixture is not a new product name/path maximum; the existing finite request contract remains 4,096 encoded registration-body bytes and rejects byte 4,097. Malformed IDs are rejected before DELETE transmission.
+
+Use just verify-close-project, targeted just verify-focused paths, and just verify. Generated evidence lives at test-results/bl-009/close-project/manifest-matrix.json, test-results/bl-008/open-project/episode.json, and test-results/bl-008/open-project/close-fault-episode.json. Running or failed workbench close, stop/restart, runtime state, archive, undo, bulk close, and product cleanup remain BL-020 or later.
+
+
+Exact DELETE wire examples are:
+
+    200 {"id":"stable-id","disposition":"closed"}
+    400 {"error":{"category":"invalid_project_id"}}
+    404 {"error":{"category":"project_not_found"}}
+    500 {"error":{"category":"project_close_failed"}}

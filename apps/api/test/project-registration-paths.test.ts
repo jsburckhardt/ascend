@@ -54,6 +54,7 @@ async function readyService(options: {
     async list() {
       return created
     },
+    closeProject: vi.fn(),
     close: vi.fn(),
   }
   const result = await createProjectRegistrationService(

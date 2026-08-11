@@ -82,4 +82,23 @@ Typed path bodies contain exactly `{"error":{"category":"...","field":"path"}}`;
 
 Use root commands only: `just verify-open-project`, targeted `just verify-focused <test-path>`, and `just verify`. The API matrix uses a refused-default database and isolated SQLite paths and disposable content fixtures, compares manifests, closes every handle, removes only the selected database and `-wal`, `-shm`, `-journal` sidecars, and proves no residue. Browser success evidence is generated as `test-results/bl-008/open-project/episode.json`. The executed cleanup scenarios are retained separately in `cleanup-matrix.json`: startup and assertion failures, episode timeout, interrupted graceful shutdown, and a surviving descendant each report independent process-group, listener, database/sidecar, and fixture counts. The survivor deliberately reports `ownerCleanupPassed: false` before exact-PID test teardown and `teardownClean: true` afterward.
 
-Open still remains a project-ID deferred browser action. Workbench runtime, picker, scanning, clone/import, project close, search, user sorting, tags, and path mutation are later scope.
+Open still remains a project-ID deferred browser action. Workbench runtime, picker, scanning, clone/import, running or failed workbench close, search, user sorting, tags, and path mutation are later scope.
+
+
+## DELETE project registration (BL-009)
+
+DELETE /api/projects/{id} accepts one decoded nonempty opaque stable ID and delegates exactly once to the in-process close service. Success is HTTP 200 {id:<same-id>, disposition:closed}. Missing, undecodable, or empty input is 400 invalid_project_id; unknown and already-absent IDs are 404 project_not_found; persistence and unexpected failures are 500 project_close_failed. Error bodies contain only {error:{category:<category>}} and no partial success. Structured success uses project.closed; failure uses project.close.failed and safe categories without raw IDs or internal detail. The application logger preserves configured redactions and always adds `req.url`; Fastify access records therefore show `[request-url-redacted]` rather than encoded or decoded DELETE IDs.
+
+ProjectLibrary.closeProject performs DELETE WHERE id RETURNING id in one explicit SQLite transaction. It returns closed with the deleted ID or project_not_found. Driver and trigger failures become cause-free typed errors and roll back the complete transaction. Close requests on the shared listing owner are serialized, so exactly eight concurrent HTTP requests produce one 200 and seven 404 responses. Closing and reopening the library leaves the closed ID absent while sibling rows remain unchanged. No third database owner, schema column, migration, archive, or soft delete is introduced.
+
+ProjectCloseService receives only the metadata closeProject boundary. It imports no registration inspector, canonical project path, runtime manager, or project-filesystem API. Validation, unknown ID, success, rollback, ambiguity, retry, and repeated absence therefore cannot modify a project directory. The BL-009 manifest matrix executes Cancel, success, unknown, persistence failure, transport ambiguity with authoritative GET, same-ID retry, repeated already-absent close, and combined eight concurrent HTTP DELETE paths. Each retains complete before/after membership, bytes, modes, and nanosecond timestamps before test-only fixture cleanup.
+
+Validate with just verify-close-project and just verify. Controlled browser failure is injected only through test application construction; there is no product fault route. Test cleanup removes only its isolated database and -wal, -shm, -journal sidecars plus owned fixtures after integrity capture. Running or failed workbench close and runtime stop/restart remain BL-020; this route supports stopped-project metadata only.
+
+
+Exact DELETE wire examples are:
+
+    200 {"id":"stable-id","disposition":"closed"}
+    400 {"error":{"category":"invalid_project_id"}}
+    404 {"error":{"category":"project_not_found"}}
+    500 {"error":{"category":"project_close_failed"}}

@@ -18,6 +18,7 @@ function adapter(): ProjectPersistenceAdapter {
     insert: vi.fn(async (input: Project) => input),
     findByCanonicalPath: vi.fn(),
     list: vi.fn(async () => []),
+    deleteById: vi.fn(),
   }
 }
 
@@ -68,6 +69,9 @@ describe('project persistence contract', () => {
       }),
       findByCanonicalPath: vi.fn(),
       list: vi.fn(async () => {
+        throw rawDriverError
+      }),
+      deleteById: vi.fn(async () => {
         throw rawDriverError
       }),
     })

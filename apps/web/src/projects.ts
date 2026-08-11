@@ -210,3 +210,126 @@ export const registerProject: RegistrationTransport = sendRegistrationPayload
 export function serializeRegistrationPath(path: string): string {
   return JSON.stringify({ path })
 }
+
+export const PROJECT_CLOSE_TIMEOUT_MS = 10_000 as const
+
+export const CLOSE_FAILURE_MESSAGES = {
+  invalid_project_id: 'The project ID is invalid. Retry this project.',
+  project_not_found:
+    'The project is no longer registered. Refresh projects to reconcile.',
+  project_close_failed: 'The project could not be closed. Retry this project.',
+} as const
+
+export type CloseFailureCategory = keyof typeof CLOSE_FAILURE_MESSAGES
+export type CloseKnownResult =
+  | {
+      readonly kind: 'success'
+      readonly id: string
+      readonly disposition: 'closed'
+    }
+  | { readonly kind: 'failure'; readonly category: CloseFailureCategory }
+export type CloseTransportResult =
+  | CloseKnownResult
+  | { readonly kind: 'not_transmitted' }
+  | { readonly kind: 'unknown' }
+
+export type CloseTransport = (
+  id: string,
+  signal: AbortSignal,
+  onTransmitted?: () => void
+) => Promise<CloseTransportResult>
+
+const CLOSE_FAILURE_STATUS: Readonly<Record<CloseFailureCategory, number>> = {
+  invalid_project_id: 400,
+  project_not_found: 404,
+  project_close_failed: 500,
+}
+
+export function projectCloseEndpoint(id: string): string {
+  return PROJECT_LIST_ENDPOINT + '/' + encodeURIComponent(id)
+}
+
+export function parseCloseResponse(
+  status: number,
+  value: unknown,
+  expectedId: string
+): CloseKnownResult {
+  if (!isRecord(value)) throw new Error('Invalid close response')
+  if (status === 200) {
+    if (
+      !exactKeys(value, ['disposition', 'id']) ||
+      value.disposition !== 'closed' ||
+      value.id !== expectedId
+    ) {
+      throw new Error('Invalid close response')
+    }
+    return { kind: 'success', id: expectedId, disposition: 'closed' }
+  }
+  if (
+    !exactKeys(value, ['error']) ||
+    !isRecord(value.error) ||
+    !exactKeys(value.error, ['category']) ||
+    typeof value.error.category !== 'string' ||
+    !(value.error.category in CLOSE_FAILURE_STATUS)
+  ) {
+    throw new Error('Invalid close response')
+  }
+  const category = value.error.category as CloseFailureCategory
+  if (CLOSE_FAILURE_STATUS[category] !== status) {
+    throw new Error('Invalid close response')
+  }
+  return { kind: 'failure', category }
+}
+
+export interface CloseTransportOptions {
+  readonly fetcher?: typeof fetch
+  readonly preSendAvailable?: () => boolean
+  readonly timeoutMs?: number
+  readonly onTransmitted?: () => void
+}
+
+export async function sendCloseRequest(
+  id: string,
+  ownerSignal: AbortSignal,
+  options: CloseTransportOptions = {}
+): Promise<CloseTransportResult> {
+  if (id.length === 0) {
+    return { kind: 'failure', category: 'invalid_project_id' }
+  }
+  let endpoint: string
+  try {
+    endpoint = projectCloseEndpoint(id)
+  } catch {
+    return { kind: 'failure', category: 'invalid_project_id' }
+  }
+  try {
+    if (options.preSendAvailable?.() === false) {
+      return { kind: 'not_transmitted' }
+    }
+  } catch {
+    return { kind: 'not_transmitted' }
+  }
+  const timeoutController = new AbortController()
+  const timer = setTimeout(
+    () => timeoutController.abort(),
+    options.timeoutMs ?? PROJECT_CLOSE_TIMEOUT_MS
+  )
+  const signal = AbortSignal.any([ownerSignal, timeoutController.signal])
+  try {
+    options.onTransmitted?.()
+    const response = await (options.fetcher ?? fetch)(endpoint, {
+      method: 'DELETE',
+      signal,
+    })
+    const text = await response.text()
+    const value: unknown = JSON.parse(text)
+    return parseCloseResponse(response.status, value, id)
+  } catch {
+    return { kind: 'unknown' }
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+export const closeProject: CloseTransport = (id, signal, onTransmitted) =>
+  sendCloseRequest(id, signal, { onTransmitted })

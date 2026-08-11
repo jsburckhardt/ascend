@@ -69,6 +69,10 @@ verify-open-project:
     pnpm exec vitest run apps/api/test/project-registration-route.test.ts apps/api/test/open-project-cleanup-contract.test.ts apps/api/test/open-project-documentation.test.ts apps/web/src/project-registration-client.test.ts apps/web/src/use-project-home.test.tsx apps/web/src/App.test.tsx --reporter=verbose
     pnpm exec playwright test tests/e2e/project-home.spec.ts --project=chromium --workers=1 --retries=0
 
+verify-close-project:
+    pnpm exec vitest run apps/api/test/project-close-service.test.ts apps/api/test/project-close-route.test.ts apps/api/test/project-close-non-mutation.test.ts apps/api/test/project-close-documentation.test.ts apps/web/src/project-close-client.test.ts apps/web/src/use-project-close.test.tsx apps/web/src/App.close.test.tsx --reporter=verbose
+    pnpm exec playwright test tests/e2e/project-home.spec.ts --project=chromium --workers=1 --retries=0
+
 verify:
     pnpm format:check
     pnpm lint

@@ -17,12 +17,15 @@ export type CreateProjectResult =
   | { disposition: 'existing'; project: Project }
   | { disposition: 'invalid'; code: ProjectValidationCode }
 
+export type CloseProjectResult =
+  { disposition: 'closed'; id: string } | { disposition: 'project_not_found' }
+
 export class ProjectPersistenceError extends Error {
   readonly code = 'project-persistence-failed'
-  readonly operation: 'create' | 'list'
+  readonly operation: 'create' | 'list' | 'close'
 
   constructor(operation: ProjectPersistenceError['operation']) {
-    super(`Project persistence ${operation} failed`)
+    super('Project persistence ' + operation + ' failed')
     this.name = 'ProjectPersistenceError'
     this.operation = operation
   }
@@ -32,6 +35,7 @@ export interface ProjectPersistenceAdapter {
   insert(input: Project): Promise<Project | undefined>
   findByCanonicalPath(canonicalPath: string): Promise<Project | undefined>
   list(): Promise<Project[]>
+  deleteById(id: string): Promise<string | undefined>
 }
 
 function validationCode(input: Project): ProjectValidationCode | undefined {
@@ -70,17 +74,28 @@ export function createDrizzleProjectAdapter(
         .from(projects)
         .orderBy(asc(projects.createdAt), asc(projects.id))
     },
+    async deleteById(id) {
+      return database.transaction(async (transaction) => {
+        const rows = await transaction
+          .delete(projects)
+          .where(eq(projects.id, id))
+          .returning({ id: projects.id })
+        return rows[0]?.id
+      })
+    },
   }
 }
 
 export interface ProjectRepository {
   create(input: Project): Promise<CreateProjectResult>
   list(): Promise<Project[]>
+  closeProject(id: string): Promise<CloseProjectResult>
 }
 
 export function createProjectRepository(
   adapter: ProjectPersistenceAdapter
 ): ProjectRepository {
+  let closeTail: Promise<void> | undefined
   return {
     async create(input) {
       const code = validationCode(input)
@@ -105,6 +120,25 @@ export function createProjectRepository(
       } catch {
         throw new ProjectPersistenceError('list')
       }
+    },
+    async closeProject(id) {
+      const execute = async (): Promise<CloseProjectResult> => {
+        try {
+          const closedId = await adapter.deleteById(id)
+          return closedId === undefined
+            ? { disposition: 'project_not_found' }
+            : { disposition: 'closed', id: closedId }
+        } catch {
+          throw new ProjectPersistenceError('close')
+        }
+      }
+      const operation =
+        closeTail === undefined ? execute() : closeTail.then(execute)
+      closeTail = operation.then(
+        () => undefined,
+        () => undefined
+      )
+      return operation
     },
   }
 }

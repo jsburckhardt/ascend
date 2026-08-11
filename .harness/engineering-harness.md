@@ -93,3 +93,10 @@ artifacts under each application package.
 entry has been encoded, and harness-change records preserve the trajectory.**
 <!-- The single, current L0–L4 level the harness is ACTUALLY at. Updated ONLY at
      the Improve beat (never by boot, which is read-only). See maturity-assessment.md. -->
+
+
+## BL-009 Close Project signal
+
+just verify-close-project delegates finite persistence/service, DELETE mapping and combined exact eight-way HTTP concurrency plus recursive non-mutation, request-URL log redaction, strict client, single-owner reconciliation, accessible component, documentation, and no-retry desktop Chromium checks to repository commands. just verify remains authoritative, and harness checks still delegates only to just verify. Harness boot remains non-persistent and test-backed.
+
+Generated BL-009 evidence is test-results/bl-009/close-project/manifest-matrix.json plus test-results/bl-008/open-project/episode.json and close-fault-episode.json. The manifest artifact stores executed Cancel, success, unknown, persistence-failure, transport-ambiguity, retry, already-absent, and eight-concurrent-DELETE paths with complete before/after membership, bytes, modes, and timestamps. Integrity is captured before test-only removal. The success and controlled-fault episodes own exact process groups, listeners, isolated database sidecars, and disposable fixtures and leave zero residuals. This is stopped-project metadata close only; BL-020 retains running or failed workbench close and runtime lifecycle.

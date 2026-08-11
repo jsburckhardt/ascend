@@ -74,4 +74,17 @@ The in-process `ProjectLibrary` creates and lists records. A valid create return
 
 Migration compatibility uses the tracked prior-version fixture `apps/api/test/fixtures/db/0000_project_library.sqlite`, which is at `0000_project_library` and contains exactly two records. BL-005 database tests allocate unique paths below `test-results/bl-005/databases`, refuse `<repository>/apps/api/ascend.db`, close all handles, remove only the selected database plus `-wal`, `-shm`, and `-journal`, and prove those files are absent. The tracked fixture is copied and never mutated.
 
-Filesystem existence, readability, home expansion, and canonicalization policy remain BL-006 work. HTTP/API response semantics, routes, and UI remain BL-007 work.
+Filesystem existence, readability, home expansion, and canonicalization are provided by the BL-006 in-process registration boundary documented below. HTTP/API response semantics, routes, and UI remain BL-007 work.
+
+
+## Canonical filesystem registration
+
+BL-006 adds an in-process registration service over BL-005 persistence; it does not add an HTTP API or UI. Construction receives an explicit database path, configured home, and allowed-root list. Every configured entry must be an absolute, existing, readable directory and is canonicalized once before persistence opens. Canonically equivalent roots are deduplicated, configuration symlink targets are frozen for the service lifetime, and [] is a valid deny-all policy. Any invalid entry fails the whole construction as invalid_opening_policy with only safe field configured_home or allowed_roots[n].
+
+Inputs support absolute paths, exactly ~, and ~/.... Blank input maps to path_required; NUL and unsupported forms map to unsupported_path_syntax; missing, file, unreadable, and disallowed targets map to path_not_found, path_not_directory, path_unreadable, and outside_opening_policy. Each registration failure contains only field: path and its category. Nonblank path whitespace is preserved. Canonical segment containment admits roots and descendants while rejecting prefix siblings, outside traversal, and escaping symlinks; symlinked roots are evaluated at their canonical targets.
+
+A project record has exactly stable ID, canonical-basename display name (canonical root fallback), canonical path, and created-at time. Equivalent absolute, home, normalized, or symlink inputs—and exactly eight concurrent registrations—return the same durable four-field winner after close/reopen. Registration never mutates project membership, bytes, permissions, or modification timestamps.
+
+just verify-project-registration uses disposable test-results/bl-006/fixtures trees and emits named configuration, registration, persistence, non-mutation, fixture-cleanup, documentation, and permission-capability signals. The generated test-results/bl-006/permission-capability.json says proved only when bounded mode-000 checks are enforceable; otherwise it says skipped with the failed probe result. Controlled denial always proves unreadable configuration and project mappings, and fixture cleanup restores modes and removes only allocated roots.
+
+Repository scanning, clone/import, Git behavior, native pickers, HTTP/network routes, UI/project listing, project close, BL-007/BL-008, and all workbench behavior are explicitly out of scope.

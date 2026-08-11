@@ -8,7 +8,7 @@ The bootstrap scaffold includes SQLite/Drizzle foundations, structured Fastify l
 |---|---|
 | `ASCEND_HOST` | `127.0.0.1` |
 | `ASCEND_PORT` | `3000` |
-| `ASCEND_DATABASE_URL` | `file:ascend.db` |
+| `ASCEND_DATABASE_URL` | `<repository>/apps/api/ascend.db` |
 
 Use the repository root `justfile` rather than invoking package commands directly.
 
@@ -21,3 +21,26 @@ Pipe the unchanged handle to `just proof-stop`. Stop validates the saved state a
 ## Terminal parity sensor
 
 `just proof-terminal-parity` invokes the API-owned BL-001 proof modules through the existing Playwright sensor with forced integrated-terminal timeout-cleanup and passing terminal-parity scenarios; it adds no HTTP API. The shared executor directly spawns argument arrays from the canonical fixture, applies a 5,000 ms command timeout, and writes separate raw stdout/stderr plus line-ending-only normalized values. The whole episode is bounded to 90,000 ms. It preflights the six documented tools before browser startup and distinguishes `terminal-executable-missing`, context-specific `terminal-command-nonzero`, `terminal-command-timeout`, `terminal-episode-timeout`, and artifact-write failures. Only `PATH` is retained for environment comparison.
+
+
+## SQLite project library
+
+Database configuration currently belongs to the persistence module. When a caller explicitly invokes `createApplicationProjectLibrary()`, it resolves `ASCEND_DATABASE_URL` as either a local `file:` URL or filesystem path; without it the developer/default database is `<repository>/apps/api/ascend.db`. The current Fastify startup does not call this factory or construct the project library. Persistence resources are constructed explicitly and close idempotently—importing a database module opens no handle. Application startup integration remains deferred with the BL-007 HTTP/API boundary.
+
+From the repository root, initialize or upgrade an explicit local database with `just db-migrate <database-path>`. This command does not use `ASCEND_DATABASE_URL`, does not reset data, and closes before returning. For the three supported committed starting states, the successful JSON outputs are exhaustively:
+
+```json
+{"appliedMigrationIds":["0000_project_library","0001_project_canonical_path_unique"],"currentMigrationId":"0001_project_canonical_path_unique"}
+{"appliedMigrationIds":["0001_project_canonical_path_unique"],"currentMigrationId":"0001_project_canonical_path_unique"}
+{"appliedMigrationIds":[],"currentMigrationId":"0001_project_canonical_path_unique"}
+```
+
+The arrays respectively represent a missing database, the tracked `0000_project_library` prior-version fixture, and a current database rerun.
+
+`0000_project_library` creates `projects`; `0001_project_canonical_path_unique` adds database-enforced uniqueness. The physical schema is exactly `id`, `name`, `canonical_path`, and `created_at`, corresponding to contract fields `id`, `name`, `canonicalPath`, and `createdAt`. The timestamp is finite non-negative safe-integer Unix epoch milliseconds and is returned unchanged.
+
+`ProjectLibrary.create` returns `created`, `existing`, or `invalid`. A duplicate canonical path returns `existing` with the same durable winner, including for concurrent creates. Pre-write validation codes are `empty-id`, `blank-name`, `empty-canonical-path`, and `invalid-created-at`; unexpected driver failures become typed project-persistence errors. `ProjectLibrary.list` returns only the four contract fields in deterministic ID order. A complete in-process restart test creates exactly two records, closes all first-generation resources, constructs a fresh library at the same path, and lists those two once each.
+
+The immediately previous fixture is `test/fixtures/db/0000_project_library.sqlite`, at migration `0000_project_library` with two rows and a companion integrity hash. Tests copy it to a unique database below `<repository>/test-results/bl-005/databases`. The test boundary refuses `<repository>/apps/api/ascend.db`, closes registered handles, removes only its selected database and the `-wal`, `-shm`, and `-journal` sidecars, and verifies cleanup. There is no database reset command.
+
+BL-006 owns filesystem existence and canonicalization policy; this persistence layer stores canonical-path input unchanged. BL-007 owns HTTP/API and UI behavior. This issue adds no Fastify route, network server contract, or project UI.

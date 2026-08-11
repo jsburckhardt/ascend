@@ -39,18 +39,22 @@ artifacts under each application package.
 - `harness checks`: format, lint, typecheck, unit tests, builds, and Playwright E2E
 - `harness boot --json`: aggregate test-backed readiness verdict
 - `just verify-focused <path>`: focused Vitest feedback during implementation
+- `just db-migrate <database-path>`: explicit-path ordered SQLite migration with one JSON consequence
 - `just proof-terminal-parity`: 90-second designated-host direct-vs-integrated terminal sensor
 - `just proof-workbench-presentation`: six-attempt designated-host BL-003 presentation comparison and conditional ADR materialization
 - `just proof-workbench-capacity`: one bounded designated-host 1/3/5/10 diagnostic episode
 - `just proof-workbench-capacity-audit`: short retained-evidence, exact-resource, active-guard, and fixture audit
 - API root test: in-process health interaction and JSON consequence
 - Project-home Playwright test: browser interaction and visible UI consequence
+- BL-005 project-library tests: schema, duplicate, pre-write validation, migration compatibility, close/reopen, complete in-process restart, refusal, and exact-sidecar cleanup consequences
 - BL-001/BL-002 host-process sensor: two real loopback code-server Chromium scenarios—forced integrated-terminal timeout cleanup and passing Explorer, Markdown Preview, and direct-vs-integrated terminal parity—with zero-leak cleanup audits
 
 ## Evidence paths
 
 - Harness command envelopes: standard output
 - Unit coverage: `apps/*/coverage/`
+- BL-005 migrations and prior fixture: `apps/api/drizzle/` and `apps/api/test/fixtures/db/0000_project_library.sqlite`
+- BL-005 disposable database consequences: `test-results/bl-005/databases/` (generated, exact-file cleanup)
 - Playwright artifacts: `test-results/` and `playwright-report/`
 - BL-001 terminal-parity episode: `test-results/bl-001/terminal-parity/episode.json` with direct/integrated raw references (generated, ignored)
 - BL-001 retained AC evidence: `project/work-items/5-bl-001-prove-a-host-code-server-workbench/implementation/00-implementation.md`
@@ -77,7 +81,7 @@ artifacts under each application package.
 
 - Live API/web service startup is not yet part of boot; current readiness is
   test-backed and points to `just run` for interactive servers.
-- SQLite has no supported migrate, fixture, reset, or consequence-check command.
+- SQLite migrate, prior-fixture, and persistence consequence checks are supported; a destructive reset command remains intentionally unsupported.
 - Architecture contracts are not comprehensively executable; BL-003 checks only its evidence-backed presentation decision.
 - No tracked CI workflow proves equivalence with the local `just verify` gate.
 

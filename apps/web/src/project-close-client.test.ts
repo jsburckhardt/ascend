@@ -2,7 +2,9 @@ import { act } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   CLOSE_FAILURE_MESSAGES,
+  loadProjects,
   parseCloseResponse,
+  parseProjectListResponse,
   PROJECT_CLOSE_TIMEOUT_MS,
   sendCloseRequest,
 } from './projects'
@@ -11,7 +13,12 @@ function response(status: number, value: unknown): Response {
   return new Response(JSON.stringify(value), { status })
 }
 
-afterEach(() => vi.useRealTimers())
+afterEach(() => {
+  vi.useRealTimers()
+  vi.unstubAllGlobals()
+})
+
+const BOUNDED_TEXT_FIXTURE_LENGTH = 4_096
 
 describe('close response codec', () => {
   it('accepts only the exact documented envelopes', () => {
@@ -53,6 +60,45 @@ describe('close response codec', () => {
 })
 
 describe('finite stable-ID close transport', () => {
+  it.each([
+    [400, 'invalid_project_id'],
+    [404, 'project_not_found'],
+    [500, 'project_close_failed'],
+  ] as const)(
+    'keeps documented HTTP %i failures definitive and message-safe',
+    async (status, category) => {
+      const sentinel = 'SECRET SQL /private/project stack content'
+      await expect(
+        sendCloseRequest('stable-id', new AbortController().signal, {
+          fetcher: vi.fn<typeof fetch>(async () =>
+            response(status, { error: { category } })
+          ),
+        })
+      ).resolves.toEqual({ kind: 'failure', category })
+      expect(CLOSE_FAILURE_MESSAGES[category]).not.toContain(sentinel)
+      expect(CLOSE_FAILURE_MESSAGES[category]).not.toContain('stable-id')
+    }
+  )
+
+  it.each(['', '\ud800'])(
+    'rejects malformed ID before transmission: %j',
+    async (id) => {
+      const fetcher = vi.fn<typeof fetch>()
+      const transmitted = vi.fn()
+      await expect(
+        sendCloseRequest(id, new AbortController().signal, {
+          fetcher,
+          onTransmitted: transmitted,
+        })
+      ).resolves.toEqual({
+        kind: 'failure',
+        category: 'invalid_project_id',
+      })
+      expect(fetcher).not.toHaveBeenCalled()
+      expect(transmitted).not.toHaveBeenCalled()
+    }
+  )
+
   it('encodes the original ID exactly once for every retry', async () => {
     const urls: string[] = []
     const fetcher = vi.fn<typeof fetch>(async (input) => {
@@ -69,19 +115,30 @@ describe('finite stable-ID close transport', () => {
     expect(decodeURIComponent(urls[0]!.slice('/api/projects/'.length))).toBe(id)
   })
 
-  it('reports pre-send unavailability without fetch or transmission', async () => {
-    const fetcher = vi.fn<typeof fetch>()
-    const transmitted = vi.fn()
-    await expect(
-      sendCloseRequest('id', new AbortController().signal, {
-        fetcher,
-        onTransmitted: transmitted,
-        preSendAvailable: () => false,
-      })
-    ).resolves.toEqual({ kind: 'not_transmitted' })
-    expect(fetcher).not.toHaveBeenCalled()
-    expect(transmitted).not.toHaveBeenCalled()
-  })
+  it.each([
+    ['unavailable', (): boolean => false],
+    [
+      'failed check',
+      (): boolean => {
+        throw new Error('private pre-transmission network sentinel')
+      },
+    ],
+  ] as const)(
+    'reports pre-send %s without fetch or transmission',
+    async (_label, preSendAvailable) => {
+      const fetcher = vi.fn<typeof fetch>()
+      const transmitted = vi.fn()
+      await expect(
+        sendCloseRequest('id', new AbortController().signal, {
+          fetcher,
+          onTransmitted: transmitted,
+          preSendAvailable,
+        })
+      ).resolves.toEqual({ kind: 'not_transmitted' })
+      expect(fetcher).not.toHaveBeenCalled()
+      expect(transmitted).not.toHaveBeenCalled()
+    }
+  )
 
   it('notifies immediately before fetch and preserves known safe categories', async () => {
     const order: string[] = []
@@ -176,5 +233,50 @@ describe('finite stable-ID close transport', () => {
     })
     owner.abort()
     await expect(outcome).resolves.toEqual({ kind: 'unknown' })
+  })
+})
+
+describe('authoritative close refresh codec and text bounds', () => {
+  const oneCharacter = {
+    id: 'i',
+    name: 'n',
+    canonicalPath: 'p',
+    createdAt: 0,
+  }
+  const bounded = {
+    id: 'i'.repeat(BOUNDED_TEXT_FIXTURE_LENGTH),
+    name: '<'.repeat(BOUNDED_TEXT_FIXTURE_LENGTH),
+    canonicalPath: ' /'.repeat(BOUNDED_TEXT_FIXTURE_LENGTH / 2),
+    createdAt: Number.MAX_SAFE_INTEGER,
+  }
+
+  it('accepts one-character and bounded long inert project text exactly', () => {
+    expect(
+      parseProjectListResponse({ projects: [bounded, oneCharacter] })
+    ).toEqual([oneCharacter, bounded])
+    expect(bounded.name).toHaveLength(BOUNDED_TEXT_FIXTURE_LENGTH)
+    expect(bounded.canonicalPath).toHaveLength(BOUNDED_TEXT_FIXTURE_LENGTH)
+  })
+
+  it('rejects invalid, non-JSON, and failed refreshes without partial data', async () => {
+    const cases: Array<[Response, string]> = [
+      [new Response('{', { status: 200 }), 'JSON'],
+      [
+        response(200, {
+          projects: [{ ...oneCharacter, canonicalPath: '' }],
+        }),
+        'Invalid project response',
+      ],
+      [response(503, { projects: [] }), 'request failed'],
+    ]
+    for (const [reply, message] of cases) {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn<typeof fetch>(async () => reply)
+      )
+      await expect(loadProjects(new AbortController().signal)).rejects.toThrow(
+        message
+      )
+    }
   })
 })

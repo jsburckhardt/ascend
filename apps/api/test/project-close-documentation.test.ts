@@ -14,6 +14,10 @@ import {
   PROJECT_CLOSE_FAILED_EVENT,
   PROJECT_NOT_FOUND,
 } from '../src/routes/projects.js'
+import {
+  REQUEST_URL_REDACTION_CENSOR,
+  REQUEST_URL_REDACTION_PATH,
+} from '../src/request-logging.js'
 import { REPOSITORY_ROOT } from './project-database-test-helper.js'
 
 async function text(relative: string): Promise<string> {
@@ -44,6 +48,9 @@ describe('BL-009 close documentation contract', () => {
       'one 200',
       'seven 404',
       'no project-filesystem API',
+      REQUEST_URL_REDACTION_PATH,
+      REQUEST_URL_REDACTION_CENSOR,
+      'encoded or decoded',
       'no migration',
       'stopped',
       'BL-020',
@@ -88,6 +95,14 @@ describe('BL-009 close documentation contract', () => {
       PROJECT_LIST_TIMEOUT_MS.toLocaleString('en-US'),
       'manifest-matrix.json',
       'close-fault-episode.json',
+      'persistence failure',
+      'transport ambiguity',
+      'already absent',
+      'before/after membership',
+      'combined eight',
+      'one-character',
+      '4,096-character',
+      'byte 4,097',
       'integrity',
       'process groups',
       'listeners',

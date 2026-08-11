@@ -13,6 +13,7 @@ import {
   type ProjectLibrary,
 } from './project-library.js'
 import type { ProjectRegistrationService } from './project-registration.js'
+import { withSafeRequestLogging } from './request-logging.js'
 
 export const API_START_FAILED_EVENT = 'api.start.failed' as const
 
@@ -51,7 +52,7 @@ export function createApiServerController(
   options: ApiServerControllerOptions = {}
 ): ApiServerController {
   const server = Fastify({
-    ...(options.fastify ?? { logger: true }),
+    ...withSafeRequestLogging(options.fastify),
     routerOptions: { onBadUrl: sendSafeBadUrl },
   })
   const stopTelemetry = options.stopTelemetry ?? (async () => undefined)

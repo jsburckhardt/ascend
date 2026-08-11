@@ -61,6 +61,7 @@ function Harness({
           open-{id}
         </button>
       ))}
+      <button onClick={() => home.openClose('missing')}>open-missing</button>
       <button onClick={home.cancelClose}>cancel-close</button>
       <button onClick={home.confirmClose}>confirm-close</button>
       <button onClick={home.retryClose}>retry-close</button>
@@ -165,6 +166,46 @@ describe('Project Home close owner', () => {
     expect(screen.getByTestId('focus-target')).toHaveTextContent('heading')
   })
 
+  it.each([
+    ['invalid_project_id', 'retry', 'ID is invalid'],
+    ['project_close_failed', 'retry', 'could not be closed'],
+    ['project_not_found', 'unknown', 'no longer registered'],
+  ] as const)(
+    'maps definitive %s to the exact recovery branch',
+    async (category, phase, message) => {
+      const close = vi.fn<CloseTransport>().mockResolvedValue({
+        kind: 'failure',
+        category,
+      })
+      await mount(close)
+      fireEvent.click(screen.getByText('open-b'))
+      fireEvent.click(screen.getByText('confirm-close'))
+      await act(async () => undefined)
+      expect(screen.getByTestId('phase')).toHaveTextContent(phase)
+      expect(screen.getByTestId('announcement')).toHaveTextContent(message)
+      expect(screen.getByTestId('projects')).toHaveTextContent('a,b,c')
+      expect(close).toHaveBeenCalledOnce()
+    }
+  )
+
+  it('keeps malformed selection inert and makes pre-transmission failure retryable', async () => {
+    const close = vi
+      .fn<CloseTransport>()
+      .mockResolvedValue({ kind: 'not_transmitted' })
+    await mount(close)
+    fireEvent.click(screen.getByText('open-missing'))
+    fireEvent.click(screen.getByText('confirm-close'))
+    expect(close).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByText('open-b'))
+    fireEvent.click(screen.getByText('confirm-close'))
+    await act(async () => undefined)
+    expect(screen.getByTestId('phase')).toHaveTextContent('retry')
+    expect(screen.getByTestId('transmitted')).toHaveTextContent('false')
+    expect(screen.getByTestId('announcement')).toHaveTextContent(
+      'No close request was sent'
+    )
+  })
+
   it('allows same-ID retry only for a definitive no-mutation result', async () => {
     const close = vi
       .fn<CloseTransport>()
@@ -235,6 +276,57 @@ describe('Project Home close owner', () => {
     expect(screen.getByTestId('announcement')).toHaveTextContent(
       'still unknown'
     )
+  })
+
+  it('times out reconciliation, aborts it, and ignores its stale completion', async () => {
+    vi.useFakeTimers()
+    const refresh = deferred<Project[]>()
+    const refreshSignals: AbortSignal[] = []
+    let calls = 0
+    const load = vi.fn<ProjectLoader>((signal) => {
+      calls += 1
+      if (calls === 1) return Promise.resolve(projects)
+      refreshSignals.push(signal)
+      return refresh.promise
+    })
+    const close = vi.fn<CloseTransport>().mockResolvedValue({ kind: 'unknown' })
+    render(<Harness initial={projects} load={load} close={close} />)
+    await act(async () => undefined)
+    fireEvent.click(screen.getByText('open-b'))
+    fireEvent.click(screen.getByText('confirm-close'))
+    await act(async () => undefined)
+    fireEvent.click(screen.getByText('refresh-close'))
+    await act(async () => vi.advanceTimersByTimeAsync(25))
+    expect(refreshSignals[0]?.aborted).toBe(true)
+    expect(screen.getByTestId('phase')).toHaveTextContent('unknown')
+    expect(screen.getByTestId('announcement')).toHaveTextContent(
+      'still unknown'
+    )
+    await act(async () => refresh.resolve([projects[0]!, projects[2]!]))
+    expect(screen.getByTestId('projects')).toHaveTextContent('a,b,c')
+    expect(screen.getByTestId('phase')).toHaveTextContent('unknown')
+  })
+
+  it('suppresses an older close completion while a newer generation owns the ID', async () => {
+    const first = deferred<CloseTransportResult>()
+    const second = deferred<CloseTransportResult>()
+    const close = vi
+      .fn<CloseTransport>()
+      .mockImplementationOnce(() => first.promise)
+      .mockImplementationOnce(() => second.promise)
+    await mount(close)
+    fireEvent.click(screen.getByText('open-b'))
+    fireEvent.click(screen.getByText('confirm-close'))
+    fireEvent.click(screen.getByText('cancel-close'))
+    fireEvent.click(screen.getByText('open-b'))
+    fireEvent.click(screen.getByText('confirm-close'))
+    await act(async () =>
+      first.resolve({ kind: 'success', id: 'b', disposition: 'closed' })
+    )
+    expect(screen.getByTestId('phase')).toHaveTextContent('pending')
+    expect(screen.getByTestId('projects')).toHaveTextContent('a,b,c')
+    await act(async () => second.resolve({ kind: 'unknown' }))
+    expect(screen.getByTestId('phase')).toHaveTextContent('unknown')
   })
 
   it('invalidates pre-transmission cancellation and unmount completion', async () => {

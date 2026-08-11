@@ -39,13 +39,16 @@ const gamma: Project = {
 interface Deferred<T> {
   promise: Promise<T>
   resolve(value: T): void
+  reject(reason: unknown): void
 }
 function deferred<T>(): Deferred<T> {
   let resolve!: (value: T) => void
-  const promise = new Promise<T>((yes) => {
+  let reject!: (reason: unknown) => void
+  const promise = new Promise<T>((yes, no) => {
     resolve = yes
+    reject = no
   })
-  return { promise, resolve }
+  return { promise, resolve, reject }
 }
 
 beforeEach(() => {
@@ -185,6 +188,62 @@ describe('accessible Close project interaction', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Project closed')
   })
 
+  it.each([
+    [
+      'invalid_project_id',
+      'The project ID is invalid. Retry this project.',
+      'Retry',
+    ],
+    [
+      'project_close_failed',
+      'The project could not be closed. Retry this project.',
+      'Retry',
+    ],
+    [
+      'project_not_found',
+      'The project is no longer registered. Refresh projects to reconcile.',
+      'Refresh projects',
+    ],
+  ] as const)(
+    'renders the definitive %s branch with fixed safe recovery',
+    async (category, message, recovery) => {
+      const close = vi.fn<CloseTransport>().mockResolvedValue({
+        kind: 'failure',
+        category,
+      })
+      await ready(close, [alpha, beta])
+      await open(beta.name)
+      await userEvent
+        .setup()
+        .click(screen.getByRole('button', { name: 'Confirm' }))
+      const dialog = await screen.findByRole('dialog')
+      expect(dialog).toHaveTextContent(message)
+      expect(
+        within(dialog).getByRole('button', { name: recovery })
+      ).toBeVisible()
+      expect(screen.getByRole('button', { name: 'Close Beta' })).toBeVisible()
+      expect(dialog.textContent).not.toContain('SECRET SQL /private stack')
+    }
+  )
+
+  it('renders a definitive pre-transmission failure with same-ID Retry', async () => {
+    const close = vi.fn<CloseTransport>().mockResolvedValue({
+      kind: 'not_transmitted',
+    })
+    await ready(close, [alpha])
+    await open(alpha.name)
+    await userEvent
+      .setup()
+      .click(screen.getByRole('button', { name: 'Confirm' }))
+    expect(await screen.findByRole('button', { name: 'Retry' })).toBeVisible()
+    expect(screen.getByRole('dialog')).toHaveTextContent(
+      'No close request was sent. Retry this project.'
+    )
+    expect(
+      screen.getByRole('button', { name: 'Close ' + alpha.name })
+    ).toBeVisible()
+  })
+
   it('keeps the card and offers same-ID Retry for definitive safe failure', async () => {
     const close = vi
       .fn<CloseTransport>()
@@ -255,6 +314,72 @@ describe('accessible Close project interaction', () => {
       screen.queryByRole('button', { name: 'Close ' + alpha.name })
     ).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Close Beta' })).toHaveFocus()
+  })
+
+  it.each(['failed', 'invalid'] as const)(
+    'keeps unknown recovery locked after a %s authoritative refresh',
+    async (kind) => {
+      const refresh = deferred<Project[]>()
+      const close = vi
+        .fn<CloseTransport>()
+        .mockResolvedValue({ kind: 'unknown' })
+      await ready(close, [alpha, beta], [refresh.promise])
+      await open(beta.name)
+      await userEvent
+        .setup()
+        .click(screen.getByRole('button', { name: 'Confirm' }))
+      await userEvent
+        .setup()
+        .click(await screen.findByRole('button', { name: 'Refresh projects' }))
+      await act(async () => {
+        if (kind === 'failed')
+          refresh.reject(new Error('private list sentinel'))
+        else refresh.resolve([alpha, alpha])
+      })
+      expect(
+        await screen.findByRole('button', { name: 'Refresh projects' })
+      ).toBeVisible()
+      expect(screen.getByRole('dialog')).toHaveTextContent('still unknown')
+      expect(screen.getByRole('button', { name: 'Close Beta' })).toBeVisible()
+    }
+  )
+
+  it('renders one-character and bounded long project names and paths as inert text', async () => {
+    const fixtureLength = 4_096
+    const one: Project = {
+      id: 'i',
+      name: 'n',
+      canonicalPath: 'p',
+      createdAt: 1,
+    }
+    const bounded: Project = {
+      id: 'i'.repeat(fixtureLength),
+      name: '<script>'.repeat(fixtureLength / 8),
+      canonicalPath: '&>'.repeat(fixtureLength / 2),
+      createdAt: 2,
+    }
+    const { view } = await ready(vi.fn<CloseTransport>(), [one, bounded])
+    expect(screen.getByRole('heading', { name: 'n' })).toBeVisible()
+    expect(screen.getByText('p')).toBeVisible()
+    expect(
+      screen.getByRole('heading', { name: bounded.name }).textContent
+    ).toBe(bounded.name)
+    expect(screen.getByText(bounded.canonicalPath).textContent).toBe(
+      bounded.canonicalPath
+    )
+    await open(one.name)
+    expect(screen.getByRole('dialog', { name: 'Close n?' })).toHaveTextContent(
+      CLOSE_DIALOG_BODY
+    )
+    await userEvent
+      .setup()
+      .click(screen.getByRole('button', { name: 'Cancel' }))
+    await open(bounded.name)
+    expect(
+      screen.getByRole('dialog', { name: 'Close ' + bounded.name + '?' })
+        .textContent
+    ).toContain(bounded.name)
+    expect(view.container.querySelector('script')).toBeNull()
   })
 
   it('aborts on unmount and suppresses a late close result', async () => {

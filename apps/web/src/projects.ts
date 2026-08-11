@@ -293,7 +293,20 @@ export async function sendCloseRequest(
   ownerSignal: AbortSignal,
   options: CloseTransportOptions = {}
 ): Promise<CloseTransportResult> {
-  if (id.length === 0 || options.preSendAvailable?.() === false) {
+  if (id.length === 0) {
+    return { kind: 'failure', category: 'invalid_project_id' }
+  }
+  let endpoint: string
+  try {
+    endpoint = projectCloseEndpoint(id)
+  } catch {
+    return { kind: 'failure', category: 'invalid_project_id' }
+  }
+  try {
+    if (options.preSendAvailable?.() === false) {
+      return { kind: 'not_transmitted' }
+    }
+  } catch {
     return { kind: 'not_transmitted' }
   }
   const timeoutController = new AbortController()
@@ -304,13 +317,10 @@ export async function sendCloseRequest(
   const signal = AbortSignal.any([ownerSignal, timeoutController.signal])
   try {
     options.onTransmitted?.()
-    const response = await (options.fetcher ?? fetch)(
-      projectCloseEndpoint(id),
-      {
-        method: 'DELETE',
-        signal,
-      }
-    )
+    const response = await (options.fetcher ?? fetch)(endpoint, {
+      method: 'DELETE',
+      signal,
+    })
     const text = await response.text()
     const value: unknown = JSON.parse(text)
     return parseCloseResponse(response.status, value, id)

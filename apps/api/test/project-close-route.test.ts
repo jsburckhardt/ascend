@@ -6,6 +6,12 @@ import {
   type ProjectCloseService,
 } from '../src/project-close.js'
 import { createProjectLibrary } from '../src/project-library.js'
+import {
+  REQUEST_URL_REDACTION_CENSOR,
+  REQUEST_URL_REDACTION_PATH,
+  safeRequestLoggerOptions,
+  withSafeRequestLogging,
+} from '../src/request-logging.js'
 import type { Project } from '../src/project-persistence.js'
 import {
   INVALID_PROJECT_ID,
@@ -135,12 +141,16 @@ describe('DELETE /api/projects/:id', () => {
     })
   })
 
-  it('redacts response, headers, and structured logs', async () => {
-    const sentinel = 'SECRET SELECT /private/database stack project-content'
+  it('redacts DELETE IDs from access logs, headers, body, and safe events', async () => {
+    const sentinel =
+      'PROJECT-ID SECRET SELECT /private/database stack project-content'
+    const encodedSentinel = encodeURIComponent(sentinel)
     const logs: string[] = []
-    const app = Fastify({
-      logger: { stream: { write: (line: string) => logs.push(line) } },
-    })
+    const app = Fastify(
+      withSafeRequestLogging({
+        logger: { stream: { write: (line: string) => logs.push(line) } },
+      })
+    )
     await app.register(appPlugin, {
       createProjectLibrary: async () => ({
         create: vi.fn(),
@@ -162,17 +172,58 @@ describe('DELETE /api/projects/:id', () => {
     try {
       const response = await app.inject({
         method: 'DELETE',
-        url: '/api/projects/' + encodeURIComponent(sentinel),
+        url: '/api/projects/' + encodedSentinel,
       })
-      const observable =
-        response.body + JSON.stringify(response.headers) + logs.join('')
+      const logged = logs.join('')
       expect(response.statusCode).toBe(500)
-      expect(observable).toContain(PROJECT_CLOSE_FAILED)
-      expect(observable).toContain(PROJECT_CLOSE_FAILED_EVENT)
-      expect(observable).not.toContain(sentinel)
+      expect(response.json()).toEqual({
+        error: { category: PROJECT_CLOSE_FAILED },
+      })
+      expect(response.headers['content-type']).toMatch(/^application\/json\b/u)
+      expect(JSON.stringify(response.headers)).not.toContain(sentinel)
+      expect(response.body).not.toContain(sentinel)
+      expect(logged).toContain(PROJECT_CLOSE_FAILED_EVENT)
+      expect(logged).toContain(REQUEST_URL_REDACTION_CENSOR)
+      expect(logged).not.toContain(sentinel)
+      expect(logged).not.toContain(encodedSentinel)
+      expect(logged).not.toContain('/api/projects/PROJECT-ID')
     } finally {
       await app.close()
     }
+  })
+
+  it('preserves configured logger redactions while enforcing request URL redaction', () => {
+    expect(
+      safeRequestLoggerOptions({
+        redact: { paths: ['req.headers.authorization'], censor: '[safe]' },
+      })
+    ).toMatchObject({
+      redact: {
+        paths: ['req.headers.authorization', REQUEST_URL_REDACTION_PATH],
+        censor: '[safe]',
+      },
+    })
+    expect(withSafeRequestLogging(undefined)).toMatchObject({
+      logger: {
+        redact: {
+          paths: [REQUEST_URL_REDACTION_PATH],
+          censor: REQUEST_URL_REDACTION_CENSOR,
+        },
+      },
+    })
+    expect(withSafeRequestLogging({ logger: false })).toEqual({ logger: false })
+    expect(withSafeRequestLogging({ logger: true })).toMatchObject({
+      logger: { redact: { paths: [REQUEST_URL_REDACTION_PATH] } },
+    })
+    expect(
+      safeRequestLoggerOptions({ redact: ['req.headers.cookie'] })
+    ).toMatchObject({
+      redact: {
+        paths: ['req.headers.cookie', REQUEST_URL_REDACTION_PATH],
+        censor: REQUEST_URL_REDACTION_CENSOR,
+      },
+    })
+    expect(withSafeRequestLogging({})).toEqual({})
   })
 
   it('produces exactly one closed and seven not-found responses durably', async () => {

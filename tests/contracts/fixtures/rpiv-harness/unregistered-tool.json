@@ -1,0 +1,4 @@
+{
+  "expectedRule": "APS_TOOL_ALLOWLIST",
+  "source": "<processes>\n<process id=\"caller\">\nUSE `eng-harness-flow`\n</process>\n</processes>"
+}

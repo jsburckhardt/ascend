@@ -1,6 +1,13 @@
 import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
+import {
+  parseProcessCalls,
+  registeredAdapterTools,
+  validateApsSource,
+  validateLifecycleHostCall,
+  validateLifecycleSerialization,
+} from './aps-source-validator.js'
 
 export const root = path.resolve(import.meta.dirname, '../..')
 export const apsPath = '.github/agents/aps-v1.2.2.agent.md'
@@ -13,6 +20,11 @@ export const workerPaths = [
 ] as const
 export const targetPaths = [coordinatorPath, ...workerPaths] as const
 export const allProfilePaths = [apsPath, ...targetPaths] as const
+const adapterPath =
+  '.github/skills/agnostic-prompt-standard/platforms/vscode-copilot/adaptor.md'
+const adapterTools = registeredAdapterTools(
+  readFileSync(path.join(root, adapterPath), 'utf8')
+)
 
 export const triggers = [
   'retry or backtrack',
@@ -185,6 +197,9 @@ const inventory = (source: string): Check[] => {
     )
     return keys.join('|') === [...keys].sort().join('|')
   })
+  const diagnostics = validateApsSource(source, adapterTools)
+  const sourceRulePasses = (rule: string): boolean =>
+    !diagnostics.some((diagnostic) => diagnostic.rule === rule)
   return [
     check(
       'APS_SECTION_ORDER',
@@ -205,14 +220,24 @@ const inventory = (source: string): Check[] => {
       'unique 2-24 character symbols'
     ),
     check(
-      'APS_IDS',
-      !/^(?:RUN|USE) (?!`)/m.test(source),
-      'RUN and USE identifiers are backticked'
+      'APS_STATEMENT_IDS',
+      sourceRulePasses('APS_STATEMENT_IDS'),
+      'every RUN/USE BacktickId is grammatical and resolves'
+    ),
+    check(
+      'APS_RUN_ARGUMENTS',
+      sourceRulePasses('APS_RUN_ARGUMENTS'),
+      'every RUN maps declared type/name arguments one-for-one'
+    ),
+    check(
+      'APS_TOOL_ALLOWLIST',
+      sourceRulePasses('APS_TOOL_ALLOWLIST'),
+      'every USE tool is adapter-registered and explicitly allowed'
     ),
     check(
       'APS_WHERE_ORDER',
-      whereSorted,
-      'format WHERE keys are lexicographic'
+      whereSorted && sourceRulePasses('APS_WHERE_ORDER'),
+      'format WHERE and RUN/USE parameter keys are lexicographic'
     ),
     check(
       'APS_FRONTMATTER',
@@ -318,9 +343,10 @@ export const positiveMatrix = (): MatrixRow[] => {
     coordinatorPath,
     check(
       'LIFECYCLE_FRONT_DOOR',
-      seam.includes('USE `/eng-harness-flow --hook <SEAM_HOOK> --json`') &&
+      validateLifecycleHostCall(coordinator).length === 0 &&
+        !coordinator.includes('USE `/eng-harness-flow') &&
         !/\bINVOKE\b|eng-harness-(?:boot|backpressure|retro)/.test(coordinator),
-      'single VS Code host skill front door with JSON output'
+      'registered VS Code host tool invokes only eng-harness-flow with exact hook arguments'
     )
   )
   add(
@@ -351,13 +377,8 @@ export const positiveMatrix = (): MatrixRow[] => {
     coordinatorPath,
     check(
       'LIFECYCLE_SERIALIZATION',
-      ordered(seam, [
-        'ACTIVE_SEAM is not empty',
-        'SET ACTIVE_SEAM := SEAM_ID',
-        'CAPTURE HARNESS_RESULT',
-        'SET ACTIVE_SEAM := ""',
-      ]),
-      'active seam blocks overlap until explicit result'
+      validateLifecycleSerialization(coordinator).length === 0,
+      'active seam blocks overlap and clears only on explicit success or failure'
     )
   )
   add(
@@ -532,18 +553,109 @@ export const positiveMatrix = (): MatrixRow[] => {
       'decision records 49-52 present'
     )
   )
+  const implementer = text(workerPaths[2])
+  const verifier = text(workerPaths[3])
+  const coordinatorCalls = parseProcessCalls(coordinator)
+  const routerRuns = parseProcessCalls(router)
+    .filter((call) => call.kind === 'RUN')
+    .map((call) => call.id)
+  const implementCalls = parseProcessCalls(implementer)
+  const verifyCalls = parseProcessCalls(verifier)
+  const commandValues = (calls: ReturnType<typeof parseProcessCalls>) =>
+    calls
+      .filter((call) => call.kind === 'USE')
+      .map((call) => call.parameters.get('command') ?? '')
+
   add(
-    'regression',
+    'regression/issue-work-item',
     check(
-      'RPIV_REGRESSION',
+      'RPIV_ISSUE_WORK_ITEM',
+      commandValues(coordinatorCalls).some((command) =>
+        command.includes(
+          'gh issue view <ISSUE_NUMBER> --json title,body,labels'
+        )
+      ) &&
+        coordinatorCalls.some(
+          (call) =>
+            call.id === 'search/fileSearch' &&
+            call.parameters.get('pattern') ===
+              '"project/work-items/<ISSUE_NUMBER>-*/**"'
+        ) &&
+        coordinator.includes('EXISTING_WORK_ITEM_COUNT > 1'),
+      'executable issue parsing and unique issue-prefix work-item resolution'
+    )
+  )
+  add(
+    'regression/stage-order',
+    check(
+      'RPIV_STAGE_ORDER',
+      ordered(routerRuns.join('|'), [
+        'dispatch-research',
+        'dispatch-plan',
+        'dispatch-implement',
+        'dispatch-verify',
+      ]) &&
+        [
+          'RESEARCH_RESULT',
+          'PLAN_RESULT',
+          'IMPLEMENT_RESULT',
+          'VERIFY_RESULT',
+        ].every((result) =>
+          coordinator.includes('CAPTURE ' + result + ' from')
+        ),
+      'parsed RUN order and captured typed stage handoffs'
+    )
+  )
+  add(
+    'regression/validation',
+    check(
+      'RPIV_VALIDATION_DELEGATION',
+      commandValues(implementCalls).includes('"just verify-focused"') &&
+        commandValues(implementCalls).includes('"just verify"') &&
+        commandValues(verifyCalls).includes('"just verify"'),
+      'Implement focused/full and Verify independent full validation remain executable'
+    )
+  )
+  add(
+    'regression/documentation',
+    check(
+      'RPIV_DOCUMENTATION_OWNERSHIP',
+      implementer.includes('<process id="update-application-documentation"') &&
+        verifier.includes('<process id="verify-application-documentation"') &&
+        verifier.includes('SET FAILURE_OWNER := "implement"'),
+      'Implement authors and Verify independently inspects documentation'
+    )
+  )
+  add(
+    'regression/commit-handoff',
+    check(
+      'RPIV_COMMIT_HANDOFF',
+      implementCalls.some(
+        (call) =>
+          call.id === 'execute/runInTerminal' &&
+          call.parameters.get('command') === 'COMMIT_COMMAND'
+      ) &&
+        commandValues(implementCalls).includes('"git rev-parse HEAD"') &&
+        commandValues(implementCalls).includes('"git status --porcelain"') &&
+        coordinator.includes(
+          'require expected branch, non-empty commit SHA, clean tree'
+        ),
+      'implementation commit, SHA, and clean-tree handoff remain executable'
+    )
+  )
+  add(
+    'regression/verify-shipping',
+    check(
+      'RPIV_VERIFY_SHIPPING',
       [
-        'Research → Plan → Implement → Verify',
-        'verify-focused',
-        'documentation evidence',
-        'commit SHA',
-        'pull request',
-      ].every((value) => docs.toLowerCase().includes(value.toLowerCase())),
-      'prior stage, validation, documentation, commit, and PR ownership retained'
+        'gh auth status',
+        'git push -u origin',
+        'gh pr create',
+        'gh issue edit',
+      ].every((command) =>
+        commandValues(verifyCalls).some((value) => value.includes(command))
+      ),
+      'Verify retains authentication, checkbox, push, and pull-request ownership'
     )
   )
   return rows.sort((left, right) =>
@@ -553,7 +665,8 @@ export const positiveMatrix = (): MatrixRow[] => {
 
 export type Fixture = {
   expectedRule: string
-  override: Partial<FixtureModel>
+  override?: Partial<FixtureModel>
+  source?: string
 }
 type FixtureModel = {
   lifecycle: string[]
@@ -594,6 +707,23 @@ const baseline: FixtureModel = {
   profileApplied: true,
 }
 export const validateFixture = (fixture: Fixture): string[] => {
+  if (fixture.source) {
+    if (fixture.expectedRule === 'LIFECYCLE_HOST_PARAMETERS')
+      return validateLifecycleHostCall(fixture.source).map(
+        (diagnostic) => diagnostic.rule
+      )
+    if (fixture.expectedRule === 'LIFECYCLE_SERIALIZATION')
+      return validateLifecycleSerialization(fixture.source).map(
+        (diagnostic) => diagnostic.rule
+      )
+    return [
+      ...new Set(
+        validateApsSource(fixture.source, adapterTools, false).map(
+          (diagnostic) => diagnostic.rule
+        )
+      ),
+    ]
+  }
   const value = { ...baseline, ...fixture.override }
   const failures: string[] = []
   if (JSON.stringify(value.lifecycle) !== JSON.stringify(baseline.lifecycle))
@@ -629,6 +759,15 @@ export const validateFixture = (fixture: Fixture): string[] => {
   return failures
 }
 
+export type SeamResult =
+  | 'success'
+  | 'host-unavailable'
+  | 'skill-unavailable'
+  | 'invocation-unavailable'
+  | 'empty-result'
+  | 'malformed-result'
+  | 'non-success-result'
+
 export class SeamSensor {
   private active = false
   private readonly successes = new Set<string>()
@@ -636,8 +775,8 @@ export class SeamSensor {
 
   run(
     identity: string,
-    result: 'success' | 'failed'
-  ): 'success' | 'failed' | 'deduplicated' | 'overlap' {
+    result: SeamResult
+  ): SeamResult | 'deduplicated' | 'overlap' {
     if (this.active) return 'overlap'
     if (this.successes.has(identity)) return 'deduplicated'
     this.active = true
@@ -645,6 +784,14 @@ export class SeamSensor {
     this.active = false
     if (result === 'success') this.successes.add(identity)
     return result
+  }
+
+  canDispatch(identity: string): boolean {
+    return this.successes.has(identity) && !this.active
+  }
+
+  isActive(): boolean {
+    return this.active
   }
 
   begin(): void {

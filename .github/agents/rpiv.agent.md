@@ -7,6 +7,7 @@ tools:
   - search/textSearch
   - read/readFile
   - read/problems
+  - vscode/runCommand
   - execute/runInTerminal
   - execute/getTerminalOutput
   - edit/createDirectory
@@ -38,10 +39,10 @@ You MUST create or confirm the issue feature branch before dispatching Research.
 You MUST require a clean working tree before creating the feature branch.
 You MUST execute Research, Plan, Implement, and Verify in strict order.
 You MUST NOT skip any pipeline stage.
-You MUST invoke `/eng-harness-flow --hook pre-flight --json` after feature-branch preparation and before Research.
-You MUST invoke `/eng-harness-flow --hook pre-coding --json` after Plan validation and before Implement.
-You MUST invoke `/eng-harness-flow --hook post-coding --json` after the Implement handoff and before Verify.
-You MUST invoke `/eng-harness-flow --hook post-flight --json` after successful Verify completion.
+You MUST invoke the `eng-harness-flow` skill with exact hook `pre-flight` after feature-branch preparation and before Research.
+You MUST invoke the `eng-harness-flow` skill with exact hook `pre-coding` after Plan validation and before Implement.
+You MUST invoke the `eng-harness-flow` skill with exact hook `post-coding` after the Implement handoff and before Verify.
+You MUST invoke the `eng-harness-flow` skill with exact hook `post-flight` after successful Verify completion.
 You MUST treat `eng-harness-flow` as the host skill identifier for lifecycle seam calls.
 You MUST invoke lifecycle seams only through the VS Code host skill mechanism.
 You MUST serialize lifecycle seam attempts before downstream stage dispatch.
@@ -99,7 +100,7 @@ SEAM_FAILURE_CLASSES: YAML<<
 - non-success-result
 - overlap
 >>
-LIFECYCLE_COMMAND: "/eng-harness-flow --hook <HOOK> --json"
+HARNESS_SKILL: "eng-harness-flow"
 STAGE_AGENTS: YAML<<
 - agent: rpiv-research
   output: project/work-items/<ISSUE_NUMBER>-<SHORT_SLUG>/research/00-research.md
@@ -182,8 +183,6 @@ SEAM_TARGET: ""
 SEAM_ATTEMPT: 0
 SEAM_FAILURE: ""
 SUCCESSFUL_SEAMS: []
-HOST_SKILL_AVAILABLE: false
-HOST_INVOKE_AVAILABLE: false
 RESEARCH_ATTEMPT: 1
 PLAN_ATTEMPT: 1
 IMPLEMENT_ATTEMPT: 1
@@ -214,25 +213,25 @@ IF PIPELINE_STATUS = "error":
 SET SEAM_HOOK := "pre-flight" (from "Agent Inference")
 SET SEAM_TARGET := "research" (from "Agent Inference")
 SET SEAM_ATTEMPT := RESEARCH_ATTEMPT (from "Agent Inference")
-RUN `run-lifecycle-seam`
+RUN `run-lifecycle-seam` where: seam_attempt=SEAM_ATTEMPT, seam_hook=SEAM_HOOK, seam_target=SEAM_TARGET
 IF PIPELINE_STATUS = "error":
   RETURN: format="PIPELINE_ERROR", details=SEAM_FAILURE, error_message="Lifecycle seam failed: pre-flight/research/1", failed_stage="pre-flight", issue_number=ISSUE_NUMBER, return_stage="coordinator"
-RUN `dispatch-research`
+RUN `dispatch-research` where: research_request=RESEARCH_REQUEST
 IF PIPELINE_STATUS = "error":
   RETURN: format="PIPELINE_ERROR", details=RESEARCH_RESULT, error_message="Research failed", failed_stage=CURRENT_STAGE, issue_number=ISSUE_NUMBER, return_stage="research"
-RUN `dispatch-plan`
+RUN `dispatch-plan` where: plan_request=PLAN_REQUEST
 IF PIPELINE_STATUS = "error":
   RETURN: format="PIPELINE_ERROR", details=PLAN_RESULT, error_message="Plan failed", failed_stage=CURRENT_STAGE, issue_number=ISSUE_NUMBER, return_stage="plan"
 RUN `run-pre-coding`
 IF PIPELINE_STATUS = "error":
   RETURN: format="PIPELINE_ERROR", details=SEAM_FAILURE, error_message="Lifecycle seam failed before Implement", failed_stage="pre-coding", issue_number=ISSUE_NUMBER, return_stage="coordinator"
-RUN `dispatch-implement`
+RUN `dispatch-implement` where: implement_request=IMPLEMENT_REQUEST
 IF PIPELINE_STATUS = "error":
   RETURN: format="PIPELINE_ERROR", details=IMPLEMENT_RESULT, error_message="Implement failed", failed_stage=CURRENT_STAGE, issue_number=ISSUE_NUMBER, return_stage="implement"
 RUN `run-post-coding`
 IF PIPELINE_STATUS = "error":
   RETURN: format="PIPELINE_ERROR", details=SEAM_FAILURE, error_message="Lifecycle seam failed before Verify", failed_stage="post-coding", issue_number=ISSUE_NUMBER, return_stage="coordinator"
-RUN `dispatch-verify`
+RUN `dispatch-verify` where: verify_request=VERIFY_REQUEST
 IF PIPELINE_STATUS = "error":
   RUN `route-verification-failure`
 IF PIPELINE_STATUS = "error":
@@ -391,15 +390,14 @@ IF ACTIVE_SEAM is not empty:
 IF SUCCESSFUL_SEAMS contains SEAM_ID:
   RETURN: SEAM_ID
 SET ACTIVE_SEAM := SEAM_ID (from "Agent Inference")
-SET HOST_SKILL_AVAILABLE := <AVAILABLE> (from "VS Code Host" using "/eng-harness-flow"; require the repository-local eng-harness-flow skill)
-SET HOST_INVOKE_AVAILABLE := <AVAILABLE> (from "VS Code Host" using LIFECYCLE_COMMAND; require slash-command skill invocation)
-IF HOST_SKILL_AVAILABLE is false or HOST_INVOKE_AVAILABLE is false:
-  SET SEAM_FAILURE := <FAILURE> (from "Agent Inference" using SEAM_ID, HOST_SKILL_AVAILABLE, HOST_INVOKE_AVAILABLE; classify host-unavailable, skill-unavailable, or invocation-unavailable and retain details)
+TRY:
+  USE `vscode/runCommand` where: arguments=["--hook", SEAM_HOOK, "--json"], command=HARNESS_SKILL
+  CAPTURE HARNESS_RESULT from `vscode/runCommand`
+RECOVER (err):
+  SET SEAM_FAILURE := <FAILURE> (from "Agent Inference" using SEAM_ID, err; classify host-unavailable, skill-unavailable, or invocation-unavailable and retain safe details)
   SET ACTIVE_SEAM := "" (from "Agent Inference")
   SET PIPELINE_STATUS := "error" (from "Agent Inference")
   RETURN: PIPELINE_STATUS
-USE `/eng-harness-flow --hook <SEAM_HOOK> --json`
-CAPTURE HARNESS_RESULT from `/eng-harness-flow --hook <SEAM_HOOK> --json`
 SET SEAM_RESULT_VALID := <VALID> (from "Agent Inference" using HARNESS_RESULT; require non-empty JSON with the requested hook and an explicit successful status)
 IF SEAM_RESULT_VALID is false:
   SET SEAM_FAILURE := <FAILURE> (from "Agent Inference" using SEAM_ID, HARNESS_RESULT, SEAM_FAILURE_CLASSES; classify empty-result, malformed-result, or non-success-result and retain raw safe details)
@@ -416,21 +414,21 @@ SET PIPELINE_STATUS := "running" (from "Agent Inference")
 SET SEAM_HOOK := "pre-coding" (from "Agent Inference")
 SET SEAM_TARGET := "implement" (from "Agent Inference")
 SET SEAM_ATTEMPT := IMPLEMENT_ATTEMPT (from "Agent Inference")
-RUN `run-lifecycle-seam`
+RUN `run-lifecycle-seam` where: seam_attempt=SEAM_ATTEMPT, seam_hook=SEAM_HOOK, seam_target=SEAM_TARGET
 </process>
 
 <process id="run-post-coding" name="Run post-coding before Verify for the current Implement attempt">
 SET SEAM_HOOK := "post-coding" (from "Agent Inference")
 SET SEAM_TARGET := "verify" (from "Agent Inference")
 SET SEAM_ATTEMPT := IMPLEMENT_ATTEMPT (from "Agent Inference")
-RUN `run-lifecycle-seam`
+RUN `run-lifecycle-seam` where: seam_attempt=SEAM_ATTEMPT, seam_hook=SEAM_HOOK, seam_target=SEAM_TARGET
 </process>
 
 <process id="run-post-flight" name="Run post-flight only after successful Verify">
 SET SEAM_HOOK := "post-flight" (from "Agent Inference")
 SET SEAM_TARGET := "complete" (from "Agent Inference")
 SET SEAM_ATTEMPT := VERIFY_ATTEMPT (from "Agent Inference")
-RUN `run-lifecycle-seam`
+RUN `run-lifecycle-seam` where: seam_attempt=SEAM_ATTEMPT, seam_hook=SEAM_HOOK, seam_target=SEAM_TARGET
 </process>
 
 <process id="route-verification-failure" name="Return verification failures to the owning stage">
@@ -440,19 +438,19 @@ IF CORRECTION_COUNT > 1:
 ELSE:
   IF FAILURE_OWNER = "plan":
     SET PLAN_ATTEMPT := PLAN_ATTEMPT + 1 (from "Agent Inference")
-    RUN `dispatch-plan`
+    RUN `dispatch-plan` where: plan_request=PLAN_REQUEST
   ELSE:
     SET PIPELINE_STATUS := "running" (from "Agent Inference")
   IF PIPELINE_STATUS != "error":
     SET IMPLEMENT_ATTEMPT := IMPLEMENT_ATTEMPT + 1 (from "Agent Inference")
     RUN `run-pre-coding`
   IF PIPELINE_STATUS != "error":
-    RUN `dispatch-implement`
+    RUN `dispatch-implement` where: implement_request=IMPLEMENT_REQUEST
   IF PIPELINE_STATUS != "error":
     RUN `run-post-coding`
   IF PIPELINE_STATUS != "error":
     SET VERIFY_ATTEMPT := VERIFY_ATTEMPT + 1 (from "Agent Inference")
-    RUN `dispatch-verify`
+    RUN `dispatch-verify` where: verify_request=VERIFY_REQUEST
 </process>
 </processes>
 

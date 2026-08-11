@@ -1,0 +1,4 @@
+{
+  "expectedRule": "APS_STATEMENT_IDS",
+  "source": "<processes>\n<process id=\"caller\">\nUSE `/eng-harness-flow --hook pre-flight`\n</process>\n</processes>"
+}

@@ -93,8 +93,10 @@ targets:
     role: worker-observation
   - path: .github/agents/rpiv-verifier.agent.md
     role: worker-observation
-host: vscode-copilot-skill
-lifecycle_front_door: /eng-harness-flow --hook <hook> --json
+host: vscode
+host_tool: vscode/runCommand
+lifecycle_front_door: eng-harness-flow
+lifecycle_parameters: arguments=["--hook", <hook>, "--json"], command=eng-harness-flow
 observation_front_door: harness observe <posix-literal-description> --kind <allowed-kind>
 lifecycle_owner: coordinator
 worker_tool_policy: preserve-existing-frontmatter
@@ -218,7 +220,10 @@ LINT_CHECKS: TEXT<<
 - tag newline rule
 - no tabs
 - no // comments in any section
-- ids in RUN/USE are backticked
+- every RUN provides exactly one type-compatible mapping for every declared process argument
+- every RUN process ID and USE tool ID is a grammatical BacktickId
+- every USE tool is registered by the platform adapter and explicitly allowed by frontmatter
+- slash-command IDs and narrated marker substitutes are rejected as tools
 - where: keys are lexicographic
 - every format:<ID> referenced exists
 - output is exactly one fenced block per turn
@@ -241,7 +246,8 @@ LINT_CHECKS: TEXT<<
 - update mode preserves the target path, agent identity, and unrelated behavior unless explicitly overridden
 - update mode traces every supplied requirement to one or more concrete changes
 - RPIV targets apply RPIV_HARNESS_PROFILE during create, update, and lint
-- RPIV coordinator lifecycle calls use `/eng-harness-flow --hook <hook> --json` through the VS Code host skill
+- RPIV coordinator host parameters are exactly arguments=["--hook", <hook>, "--json"], command=eng-harness-flow in lexicographic key order
+- RPIV coordinator lifecycle calls use the registered `vscode/runCommand` host tool with `arguments=["--hook", <hook>, "--json"], command=eng-harness-flow`
 - RPIV coordinator validates host, skill, tool, empty, malformed, failed, order, correction, identity, deduplication, and serialization cases
 - RPIV workers preserve frontmatter tools, remain leaf workers, and contain no executable lifecycle calls
 - RPIV workers have exact trigger and kind parity, safe literal observation execution, finite checkpoints, retry evidence, and successful-tuple deduplication
@@ -543,7 +549,8 @@ IF OPERATION_MODE = "update":
   FOREACH targetAgent IN EXISTING_AGENTS:
     SET FILE_PATH := targetAgent.path (from "Agent Inference")
     SET AGENT := <AGENT_TEXT> (from "Agent Inference" using INTENT, targetAgent.content, SKILL_CONTENT, FRONTMATTER_TEMPLATE, ADAPTER_TOOLS, AGENT_SKELETON, PLATFORM_CONFIG, FIELD_REQUIREMENTS, SECTION_GUIDE, CROSS_REF, APS_NAMING, COMMON_ERRORS, TOOL_SELECTION, VOCAB_RULES; preserve unrelated content and apply every requirement relevant to this target)
-    RUN `apply-rpiv-profile`
+    SET TARGET_AGENT_PATH := FILE_PATH (from "Agent Inference")
+    RUN `apply-rpiv-profile` where: agent=AGENT, target_agent_path=TARGET_AGENT_PATH
     USE `edit/editFiles` where: content=AGENT, filePath=FILE_PATH
     USE `read/readFile` where: filePath=FILE_PATH
     CAPTURE WRITTEN_AGENT from `read/readFile`
@@ -557,7 +564,8 @@ ELSE:
   SET FILE_PATH := <AGENT_FILE_PATH> (from "Agent Inference" using AGENT_SLUG, PLATFORM_CONFIG.agentsDir, PLATFORM_CONFIG.agentExt)
   SET FILE_PATHS := [FILE_PATH] (from "Agent Inference")
   SET AGENT := <AGENT_TEXT> (from "Agent Inference" using INTENT, SKILL_CONTENT, FRONTMATTER_TEMPLATE, ADAPTER_TOOLS, AGENT_SKELETON, PLATFORM_CONFIG, FIELD_REQUIREMENTS, SECTION_GUIDE, CROSS_REF, APS_NAMING, COMMON_ERRORS, TOOL_SELECTION, VOCAB_RULES)
-  RUN `apply-rpiv-profile`
+  SET TARGET_AGENT_PATH := FILE_PATH (from "Agent Inference")
+  RUN `apply-rpiv-profile` where: agent=AGENT, target_agent_path=TARGET_AGENT_PATH
 USE `edit/createDirectory` where: dirPath=PLATFORM_CONFIG.agentsDir
 IF OPERATION_MODE != "update":
   USE `edit/createFile` where: content=AGENT, filePath=FILE_PATH

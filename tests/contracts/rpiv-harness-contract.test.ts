@@ -12,6 +12,8 @@ import path from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import {
   allProfilePaths,
+  apsPath,
+  coordinatorPath,
   positiveMatrix,
   quotePosix,
   root,
@@ -20,6 +22,7 @@ import {
   validateFixture,
   type Fixture,
 } from './rpiv-harness-validator.js'
+import { signedRunMappings } from './aps-source-validator.js'
 
 const resultDir = path.join(root, 'test-results/issue-23')
 const matrixPath = path.join(resultDir, 'rpiv-harness-contract-matrix.json')
@@ -63,6 +66,32 @@ describe('APS-enforced RPIV harness profile', () => {
     )
   })
 
+  it('maps every declared process signature at every RUN call one-for-one', () => {
+    const expected = new Map([
+      ['apply-rpiv-profile', 2],
+      ['dispatch-research', 1],
+      ['dispatch-plan', 2],
+      ['dispatch-implement', 2],
+      ['dispatch-verify', 2],
+      ['run-lifecycle-seam', 4],
+    ])
+    const mappings = [apsPath, coordinatorPath].flatMap((target) => [
+      ...signedRunMappings(readFileSync(path.join(root, target), 'utf8')),
+    ])
+    expect(new Map(mappings.map(([id, calls]) => [id, calls.length]))).toEqual(
+      expected
+    )
+    for (const [id, calls] of mappings) {
+      expect(calls.length, id).toBeGreaterThan(0)
+      for (const call of calls)
+        expect([...call.parameters.entries()], id + ':' + call.line).toEqual(
+          [...call.parameters.entries()].sort(([left], [right]) =>
+            left.localeCompare(right)
+          )
+        )
+    }
+  })
+
   it('preserves shell-sensitive descriptions as one literal harness argv value', () => {
     const temporary = mkdtempSync(path.join(tmpdir(), 'rpiv-harness-'))
     const executable = path.join(temporary, 'harness')
@@ -93,15 +122,43 @@ describe('APS-enforced RPIV harness profile', () => {
     rmSync(temporary, { recursive: true, force: true })
   })
 
-  it('serializes lifecycle transitions and deduplicates only identical successes', () => {
+  it('executes initial and correction seams with result gating and serialization', () => {
+    const transitions = [
+      'pre-flight|research|1',
+      'pre-coding|implement|1',
+      'post-coding|verify|1',
+      'post-flight|complete|1',
+      'pre-coding|implement|2',
+      'post-coding|verify|2',
+    ] as const
     const sensor = new SeamSensor()
-    expect(sensor.run('pre-coding|implement|1', 'failed')).toBe('failed')
-    expect(sensor.run('pre-coding|implement|1', 'success')).toBe('success')
-    expect(sensor.run('pre-coding|implement|1', 'success')).toBe('deduplicated')
-    expect(sensor.run('pre-coding|implement|2', 'success')).toBe('success')
-    sensor.begin()
-    expect(sensor.run('post-coding|verify|2', 'success')).toBe('overlap')
-    expect(sensor.calls).toBe(3)
+    for (const transition of transitions) {
+      expect(sensor.canDispatch(transition)).toBe(false)
+      expect(sensor.run(transition, 'success')).toBe('success')
+      expect(sensor.canDispatch(transition)).toBe(true)
+    }
+    expect(sensor.run(transitions[1], 'success')).toBe('deduplicated')
+
+    const failures = [
+      'host-unavailable',
+      'skill-unavailable',
+      'invocation-unavailable',
+      'empty-result',
+      'malformed-result',
+      'non-success-result',
+    ] as const
+    for (const failure of failures) {
+      const failed = new SeamSensor()
+      expect(failed.run('pre-coding|implement|1', failure)).toBe(failure)
+      expect(failed.canDispatch('pre-coding|implement|1')).toBe(false)
+      expect(failed.isActive()).toBe(false)
+    }
+
+    const overlap = new SeamSensor()
+    overlap.begin()
+    expect(overlap.run('post-coding|verify|2', 'success')).toBe('overlap')
+    expect(overlap.canDispatch('post-coding|verify|2')).toBe(false)
+    expect(overlap.calls).toBe(0)
   })
 
   it('rejects every deterministic negative fixture for its expected rule only', () => {
@@ -119,6 +176,10 @@ describe('APS-enforced RPIV harness profile', () => {
       })
     for (const result of results)
       expect(result.actual, result.fixture).toEqual([result.expected])
-    expect(results.length).toBeGreaterThanOrEqual(18)
+    writeFileSync(
+      path.join(resultDir, 'rpiv-harness-negative-fixtures.json'),
+      JSON.stringify({ issue: 23, results }, null, 2) + '\n'
+    )
+    expect(results).toHaveLength(25)
   })
 })

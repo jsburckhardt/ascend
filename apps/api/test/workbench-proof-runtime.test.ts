@@ -99,6 +99,20 @@ describe('workbench proof runtime', () => {
     }
     expect(() => parseProofHandle('not-json')).toThrow(ProofError)
     await expect(readProcessStartTime(-1)).resolves.toBeNull()
+
+    const stringAbort = new AbortController()
+    stringAbort.abort('manual-stop')
+    await expect(
+      startWorkbenchProof({ signal: stringAbort.signal })
+    ).rejects.toMatchObject({ code: 'cancelled', message: 'manual-stop' })
+    await expect(
+      startWorkbenchProof({
+        signal: { aborted: true, reason: 42 } as AbortSignal,
+      })
+    ).rejects.toMatchObject({
+      code: 'cancelled',
+      message: 'operation-cancelled',
+    })
   })
 
   it('starts one argument-array process and stops its exact handle twice', async () => {

@@ -1,4 +1,4 @@
-import { mkdir, symlink, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, symlink, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import {
@@ -29,6 +29,16 @@ const project: Project = {
   createdAt: 1,
 }
 
+const REDACTION_SENTINELS = [
+  'SECRET-SECRET',
+  '/private/submitted/path',
+  '/configured/opening/root',
+  'SELECT * FROM projects',
+  'raw-platform-error',
+  'stack-trace-sentinel',
+  'internal-detail-sentinel',
+] as const
+
 function registration(result: RegistrationResult | Error): {
   service: ProjectRegistrationService
   register: ReturnType<typeof vi.fn>
@@ -44,6 +54,70 @@ function registration(result: RegistrationResult | Error): {
 
 function library(): ProjectLibrary {
   return { create: vi.fn(), list: vi.fn(async () => []), close: vi.fn() }
+}
+
+interface RejectedCase {
+  readonly label: string
+  readonly payload: string
+  readonly contentType?: string
+  readonly status: number
+  readonly body: unknown
+  readonly result: RegistrationResult | Error
+  readonly expectedDelegations: number
+}
+
+async function assertRejectedHttpCase(testCase: RejectedCase): Promise<void> {
+  const database = await allocateDatabaseTestContext(
+    'bl008-reject-' + testCase.label.replace(/[^a-z0-9]/gu, '-')
+  )
+  const persisted = await createProjectLibrary(database.databasePath)
+  const owned = registration(testCase.result)
+  const logs: string[] = []
+  let app: Awaited<ReturnType<typeof build>> | undefined
+  try {
+    await persisted.create({
+      id: 'seed-record',
+      name: REDACTION_SENTINELS[0],
+      canonicalPath: REDACTION_SENTINELS[2],
+      createdAt: 7,
+    })
+    const rowsBefore = await persisted.list()
+    app = await build({
+      logger: { stream: { write: (line: string) => logs.push(line) } },
+      createProjectLibrary: async () => persisted,
+      createProjectRegistration: async () => owned.service,
+    })
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/projects',
+      payload: testCase.payload,
+      ...(testCase.contentType === undefined
+        ? {}
+        : { headers: { 'content-type': testCase.contentType } }),
+    })
+    const rowsAfter = await persisted.list()
+    expect(rowsAfter, testCase.label + ' persisted rows').toEqual(rowsBefore)
+    expect(response.statusCode).toBe(testCase.status)
+    expect(response.json()).toEqual(testCase.body)
+    expect(owned.register).toHaveBeenCalledTimes(testCase.expectedDelegations)
+    expect(response.headers['content-type']).toMatch(/^application\/json\b/u)
+    const observable =
+      response.body +
+      '\n' +
+      JSON.stringify(response.headers) +
+      '\n' +
+      logs.join('')
+    for (const sentinel of REDACTION_SENTINELS) {
+      expect(
+        observable,
+        testCase.label + ' redacted ' + sentinel
+      ).not.toContain(sentinel)
+    }
+  } finally {
+    await app?.close()
+    persisted.close()
+    await database.cleanup()
+  }
 }
 
 describe('POST /api/projects contract', () => {
@@ -81,122 +155,115 @@ describe('POST /api/projects contract', () => {
   } as const
 
   it.each(REGISTRATION_FAILURE_CATEGORIES)(
-    'maps typed %s safely',
-    async (category) => {
-      const owned = registration({ category, field: 'path' })
-      const app = await build({
-        createProjectLibrary: async () => library(),
-        createProjectRegistration: async () => owned.service,
-      })
-      const response = await app.inject({
-        method: 'POST',
-        url: '/api/projects',
-        headers: { 'content-type': 'application/json' },
+    'maps typed %s safely with isolated persistence and redaction',
+    async (category) =>
+      assertRejectedHttpCase({
+        label: 'typed-' + category,
         payload: JSON.stringify({
-          path: category === 'path_required' ? '   ' : '/host/path',
+          path: category === 'path_required' ? '   ' : REDACTION_SENTINELS[1],
         }),
+        contentType: 'application/json',
+        status: typedStatuses[category],
+        body: { error: { category, field: 'path' } },
+        result: { category, field: 'path' },
+        expectedDelegations: 1,
       })
-      expect(response.statusCode).toBe(typedStatuses[category])
-      expect(response.json()).toEqual({ error: { category, field: 'path' } })
-      expect(owned.register).toHaveBeenCalledOnce()
-    }
   )
 
-  it.each([
-    ['', undefined],
-    ['{', 'application/json'],
-    ['null', 'application/json'],
-    ['[]', 'application/json'],
-    ['{}', 'application/json'],
-    [JSON.stringify({ path: 1 }), 'application/json'],
-    [JSON.stringify({ path: '/ok', extra: true }), 'application/json'],
-    [JSON.stringify({ path: '/ok' }), 'text/plain'],
-  ])(
-    'rejects malformed contract without delegation: %j',
-    async (payload, contentType) => {
-      const owned = registration({ disposition: 'created', project })
-      const app = await build({
-        createProjectLibrary: async () => library(),
-        createProjectRegistration: async () => owned.service,
-      })
-      const response = await app.inject({
-        method: 'POST',
-        url: '/api/projects',
+  const invalidCases = [
+    ['empty', '', undefined],
+    ['malformed', '{', 'application/json'],
+    ['scalar', 'null', 'application/json'],
+    ['array', '[]', 'application/json'],
+    ['missing', '{}', 'application/json'],
+    ['wrong-type', JSON.stringify({ path: 1 }), 'application/json'],
+    [
+      'extra-key',
+      JSON.stringify({ path: REDACTION_SENTINELS[1], extra: true }),
+      'application/json',
+    ],
+    [
+      'wrong-content-type',
+      JSON.stringify({ path: REDACTION_SENTINELS[1] }),
+      'text/plain',
+    ],
+  ] as const
+
+  it.each(invalidCases)(
+    'rejects %s with per-case row and redaction evidence',
+    async (label, payload, contentType) =>
+      assertRejectedHttpCase({
+        label,
         payload,
-        ...(contentType === undefined
-          ? {}
-          : { headers: { 'content-type': contentType } }),
+        contentType,
+        status: 400,
+        body: { error: { category: INVALID_REGISTRATION_REQUEST } },
+        result: { disposition: 'created', project },
+        expectedDelegations: 0,
       })
-      expect(response.statusCode).toBe(400)
-      expect(response.json()).toEqual({
-        error: { category: INVALID_REGISTRATION_REQUEST },
-      })
-      expect(owned.register).not.toHaveBeenCalled()
-    }
   )
 
-  it('accepts 4096 encoded bytes and rejects byte 4097 before delegation', async () => {
-    const owned = registration({ category: 'path_not_found', field: 'path' })
-    const app = await build({
-      createProjectLibrary: async () => library(),
-      createProjectRegistration: async () => owned.service,
-    })
+  it('enforces the exact encoded bound with isolated rows', async () => {
     const bodyAtBound = JSON.stringify({
       path: 'a'.repeat(PROJECT_REGISTRATION_BODY_LIMIT_BYTES - 11),
     })
     expect(Buffer.byteLength(bodyAtBound)).toBe(
       PROJECT_REGISTRATION_BODY_LIMIT_BYTES
     )
-    const accepted = await app.inject({
-      method: 'POST',
-      url: '/api/projects',
-      headers: { 'content-type': 'application/json' },
+    await assertRejectedHttpCase({
+      label: 'exact-bound-typed-rejection',
       payload: bodyAtBound,
+      contentType: 'application/json',
+      status: 404,
+      body: { error: { category: 'path_not_found', field: 'path' } },
+      result: { category: 'path_not_found', field: 'path' },
+      expectedDelegations: 1,
     })
-    expect(accepted.statusCode).toBe(404)
-    expect(owned.register).toHaveBeenCalledOnce()
     const oversized = bodyAtBound + ' '
     expect(Buffer.byteLength(oversized)).toBe(
       PROJECT_REGISTRATION_BODY_LIMIT_BYTES + 1
     )
-    const rejected = await app.inject({
-      method: 'POST',
-      url: '/api/projects',
-      headers: { 'content-type': 'application/json' },
+    await assertRejectedHttpCase({
+      label: 'oversized',
       payload: oversized,
+      contentType: 'application/json',
+      status: 413,
+      body: { error: { category: REGISTRATION_REQUEST_TOO_LARGE } },
+      result: { disposition: 'created', project },
+      expectedDelegations: 0,
     })
-    expect(rejected.statusCode).toBe(413)
-    expect(rejected.json()).toEqual({
-      error: { category: REGISTRATION_REQUEST_TOO_LARGE },
-    })
-    expect(owned.register).toHaveBeenCalledTimes(1)
   })
 
-  it('redacts unexpected service detail from body and logs', async () => {
-    const sentinel = 'SECRET /private/path SELECT stack INTERNAL'
-    const owned = registration(new Error(sentinel))
-    const app = await build({
-      createProjectLibrary: async () => library(),
-      createProjectRegistration: async () => owned.service,
-    })
-    const response = await app.inject({
-      method: 'POST',
-      url: '/api/projects',
-      headers: { 'content-type': 'application/json' },
-      payload: JSON.stringify({ path: sentinel }),
-    })
-    expect(response.statusCode).toBe(500)
-    expect(response.json()).toEqual({
-      error: { category: PROJECT_REGISTRATION_FAILED },
-    })
-    expect(response.body).not.toContain(sentinel)
-  })
+  it('redacts unexpected service detail from rows, body, headers, and logs', async () =>
+    assertRejectedHttpCase({
+      label: 'unexpected',
+      payload: JSON.stringify({ path: REDACTION_SENTINELS[1] }),
+      contentType: 'application/json',
+      status: 500,
+      body: { error: { category: PROJECT_REGISTRATION_FAILED } },
+      result: new Error(REDACTION_SENTINELS.join(' ')),
+      expectedDelegations: 1,
+    }))
 })
 
+async function constructRealService(
+  databasePath: string,
+  fixtureRoot: string
+): Promise<ProjectRegistrationService> {
+  const construction = await createProjectRegistrationService({
+    databasePath,
+    configuredHome: fixtureRoot,
+    allowedRoots: [fixtureRoot],
+  })
+  if (construction.status !== 'ready')
+    throw new Error('fixture opening policy failed')
+  return construction.service
+}
+
 describe('POST registration identity integration', () => {
-  it('returns one durable stable ID for sequential and exactly eight concurrent equivalents', async () => {
-    const database = await allocateDatabaseTestContext('bl008-post')
-    const fixture = await allocateRegistrationFixture('bl008-post')
+  it('retains one stable ID for sequential equivalents', async () => {
+    const database = await allocateDatabaseTestContext('bl008-sequential')
+    const fixture = await allocateRegistrationFixture('bl008-sequential')
     const projectPath = path.join(fixture.root, 'project')
     const linkPath = path.join(fixture.root, 'project-link')
     await mkdir(projectPath)
@@ -206,14 +273,7 @@ describe('POST registration identity integration', () => {
     let service: ProjectRegistrationService | undefined
     try {
       listing = await createProjectLibrary(database.databasePath)
-      const construction = await createProjectRegistrationService({
-        databasePath: database.databasePath,
-        configuredHome: fixture.root,
-        allowedRoots: [fixture.root],
-      })
-      if (construction.status !== 'ready')
-        throw new Error('fixture opening policy failed')
-      service = construction.service
+      service = await constructRealService(database.databasePath, fixture.root)
       const app = await build({
         createProjectLibrary: async () => listing!,
         createProjectRegistration: async () => service!,
@@ -229,31 +289,107 @@ describe('POST registration identity integration', () => {
       const equivalent = await post(linkPath)
       expect(first.statusCode).toBe(201)
       expect(equivalent.statusCode).toBe(200)
-      const firstId = first.json<{ project: Project }>().project.id
-      expect(equivalent.json<{ project: Project }>().project.id).toBe(firstId)
-      const concurrent = await Promise.all(
-        Array.from({ length: 8 }, () => post(linkPath))
+      const firstProject = first.json<{ project: Project }>().project
+      expect(Object.keys(firstProject).sort()).toEqual([
+        'canonicalPath',
+        'createdAt',
+        'id',
+        'name',
+      ])
+      expect(equivalent.json<{ project: Project }>().project).toEqual(
+        firstProject
       )
-      expect(concurrent).toHaveLength(8)
-      expect(concurrent.every((response) => response.statusCode === 200)).toBe(
-        true
-      )
-      expect(
-        concurrent.map(
-          (response) => response.json<{ project: Project }>().project.id
-        )
-      ).toEqual(Array(8).fill(firstId))
-      expect((await listing.list()).map(({ id }) => id)).toEqual([firstId])
+      expect(await listing.list()).toEqual([firstProject])
       await app.close()
       listing = undefined
       service = undefined
       const reopened = await createProjectLibrary(database.databasePath)
-      expect((await reopened.list()).map(({ id }) => id)).toEqual([firstId])
+      expect(await reopened.list()).toEqual([firstProject])
       reopened.close()
       expect(
-        await (
-          await import('node:fs/promises')
-        ).readFile(path.join(projectPath, 'content.txt'), 'utf8')
+        await readFile(path.join(projectPath, 'content.txt'), 'utf8')
+      ).toBe('unchanged')
+    } finally {
+      service?.close()
+      listing?.close()
+      await database.cleanup()
+      await fixture.cleanup()
+    }
+  })
+
+  it('proves exactly eight concurrent requests delegate once each and return one created, seven existing', async () => {
+    const database = await allocateDatabaseTestContext('bl008-eight-way')
+    const fixture = await allocateRegistrationFixture('bl008-eight-way')
+    const projectPath = path.join(fixture.root, 'concurrent project')
+    await mkdir(projectPath)
+    await writeFile(path.join(projectPath, 'content.txt'), 'unchanged')
+    let listing: ProjectLibrary | undefined
+    let service: ProjectRegistrationService | undefined
+    try {
+      listing = await createProjectLibrary(database.databasePath)
+      service = await constructRealService(database.databasePath, fixture.root)
+      const delegate = vi
+        .fn(service.register.bind(service))
+        .mockName('BL-006 register')
+      const wrapped: ProjectRegistrationService = {
+        register: delegate,
+        close: () => service!.close(),
+      }
+      const app = await build({
+        createProjectLibrary: async () => listing!,
+        createProjectRegistration: async () => wrapped,
+      })
+      const post = () =>
+        app.inject({
+          method: 'POST',
+          url: '/api/projects',
+          headers: { 'content-type': 'application/json' },
+          payload: JSON.stringify({ path: projectPath }),
+        })
+      const responses = await Promise.all(Array.from({ length: 8 }, post))
+      expect(responses).toHaveLength(8)
+      expect(delegate).toHaveBeenCalledTimes(8)
+      expect(
+        delegate.mock.calls.every(([submitted]) => submitted === projectPath)
+      ).toBe(true)
+      const bodies = responses.map((response) =>
+        response.json<{
+          disposition: 'created' | 'existing'
+          project: Project
+        }>()
+      )
+      expect(
+        bodies.filter(({ disposition }) => disposition === 'created')
+      ).toHaveLength(1)
+      expect(
+        bodies.filter(({ disposition }) => disposition === 'existing')
+      ).toHaveLength(7)
+      const created = bodies.find(
+        ({ disposition }) => disposition === 'created'
+      )!
+      for (const [index, response] of responses.entries()) {
+        const body = bodies[index]!
+        expect(Object.keys(body).sort()).toEqual(['disposition', 'project'])
+        expect(Object.keys(body.project).sort()).toEqual([
+          'canonicalPath',
+          'createdAt',
+          'id',
+          'name',
+        ])
+        expect(body.project).toEqual(created.project)
+        expect(response.statusCode).toBe(
+          body.disposition === 'created' ? 201 : 200
+        )
+      }
+      expect(await listing.list()).toEqual([created.project])
+      await app.close()
+      listing = undefined
+      service = undefined
+      const reopened = await createProjectLibrary(database.databasePath)
+      expect(await reopened.list()).toEqual([created.project])
+      reopened.close()
+      expect(
+        await readFile(path.join(projectPath, 'content.txt'), 'utf8')
       ).toBe('unchanged')
     } finally {
       service?.close()

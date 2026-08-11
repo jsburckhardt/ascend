@@ -34,8 +34,7 @@ export function App({ loadProjectList, registerProject }: AppProperties) {
     home.submit()
   }
 
-  const pendingRegistration =
-    state.activeKind === 'ordinary' || state.activeKind === 'retry'
+  const pendingRegistration = state.activeKind === 'ordinary'
   const recoveryIdle = state.mode === 'unknown'
   const recoveryPending = state.mode === 'recovery-pending'
   const inputDescription = [

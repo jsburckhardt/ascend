@@ -123,4 +123,17 @@ One active owner and monotonic generation govern ordinary, retry, refresh, cance
 
 Native pickers, scanning, clone/import, repository detection, project close, search, user sorting, tags, path mutation, workbench launch, BL-010, and BL-012 remain deferred. Run root commands only: `just verify-open-project`, targeted `just verify-focused <test-path>`, and `just verify`.
 
-The real desktop Chromium episode is keyboard-only and uses disposable loopback listeners, an isolated refused-default database, and content-bearing host fixtures below `test-results/bl-008/open-project`. It proves created, equivalent existing, invalid/corrected, stable identity, no reload, and deferred Open. Recursive manifests prove fixture membership, bytes, links, modes, and timestamps unchanged. Cleanup owns exact process groups, listeners, database plus `-wal`, `-shm`, `-journal`, and allocated fixture roots on success and modeled startup, assertion, timeout, interrupted shutdown, and surviving-descendant paths. Sanitized observed evidence is `test-results/bl-008/open-project/episode.json` and `cleanup-matrix.json`; the bounded episode passed and the residual audit was empty. Harness boot remains non-persistent and test-backed.
+The real desktop Chromium episode is keyboard-only and uses disposable loopback listeners, an isolated refused-default database, and content-bearing host fixtures below `test-results/bl-008/open-project`. It proves created, equivalent existing, invalid/corrected, stable identity, no reload, and deferred Open. Recursive manifests prove fixture membership, bytes, links, modes, and timestamps unchanged. Harness boot remains non-persistent and test-backed.
+
+The bounded episode passed. Retained cleanup evidence maps only executed scenarios; the prior modeled startup placeholders are no longer used:
+
+| Artifact / scenario | Injected event | Retained result |
+|---|---|---|
+| `episode.json` / success | Complete keyboard episode | Graceful API/web stop, absent listeners and process groups, removed database/sidecars and fixture allocation, equal fixture manifest |
+| `cleanup-matrix.json` / `startupFailure` | Rejected startup after resource allocation | Failure observed; independent process-group, listener, database/sidecar, and fixture audits are zero |
+| `cleanup-matrix.json` / `assertionFailure` | Assertion thrown after listener readiness | Failure observed; all four owned-resource audits are zero |
+| `cleanup-matrix.json` / `episodeTimeout` | Executed bounded timeout race | Timeout observed; all four owned-resource audits are zero |
+| `cleanup-matrix.json` / `interruptedGracefulShutdown` | Child ignores SIGTERM | `gracefulStop` is false; exact-group escalation completes and all four owned-resource audits are zero |
+| `cleanup-matrix.json` / `survivingDescendant` | Descendant escapes the parent process group | Survivor is detected and `ownerCleanupPassed` is false; exact-PID test teardown removes it, then `teardownClean` is true and every residual count is zero |
+
+The matrix stores booleans and counts, including each scenario's executed failure, process-group members, listeners, database files, fixtures, descendant count before teardown, and descendant count after teardown. It is not an all-true assertion: the interrupted graceful result and pre-teardown surviving-descendant owner verdict are deliberately false.

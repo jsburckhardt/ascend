@@ -28,9 +28,9 @@ const processGroupId = async (pid: number): Promise<number | null> => {
 export const readProcessGroupMembers = async (
   groupId: number
 ): Promise<number[]> => {
-  const processIds = (await readdir('/proc', { withFileTypes: true }))
-    .filter((entry) => entry.isDirectory() && /^[0-9]+$/u.test(entry.name))
-    .map((entry) => Number(entry.name))
+  const processIds = (await readdir('/proc'))
+    .filter((entry) => /^[0-9]+$/u.test(entry))
+    .map(Number)
   const identities = await Promise.all(
     processIds.map(async (pid) => ({ pid, groupId: await processGroupId(pid) }))
   )

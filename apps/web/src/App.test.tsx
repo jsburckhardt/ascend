@@ -30,6 +30,12 @@ const beta: Project = {
   canonicalPath: '  /projects/<script>/beta  ',
   createdAt: 1,
 }
+const gamma: Project = {
+  id: 'project-gamma',
+  name: 'Gamma Project',
+  canonicalPath: '/projects/gamma',
+  createdAt: 3,
+}
 
 interface Deferred<T> {
   promise: Promise<T>
@@ -248,5 +254,154 @@ describe('Project Home open interaction', () => {
     expect(signal?.aborted).toBe(true)
     await act(async () => list.resolve([alpha]))
     expect(view.container).toBeEmptyDOMElement()
+  })
+
+  it.each(['created', 'existing'] as const)(
+    'completes exact %s retry reconciliation with card focus and request counts',
+    async (disposition) => {
+      const register = vi
+        .fn<RegistrationTransport>()
+        .mockResolvedValueOnce({ kind: 'unknown' })
+        .mockResolvedValueOnce({ kind: 'success', disposition, project: beta })
+      const loader = await ready(register)
+      await submitPath('/retry exact')
+      await userEvent
+        .setup()
+        .click(
+          await screen.findByRole('button', { name: 'Retry same submission' })
+        )
+      const betaOpen = await screen.findByRole('button', {
+        name: 'Open Beta <script> Project',
+      })
+      await waitFor(() => expect(betaOpen).toHaveFocus())
+      expect(screen.getAllByRole('listitem')).toHaveLength(2)
+      expect(screen.getByRole('textbox', { name: 'Host path' })).toHaveValue(
+        '/retry exact'
+      )
+      expect(screen.getByRole('status')).toHaveTextContent(
+        disposition === 'created'
+          ? 'Project created'
+          : 'Project already registered'
+      )
+      expect(register).toHaveBeenCalledTimes(2)
+      expect(register.mock.calls[0]?.[0]).toBe(register.mock.calls[1]?.[0])
+      expect(loader).toHaveBeenCalledOnce()
+    }
+  )
+
+  it('cancels a retry to the same locked recovery state and ignores its stale focused-card success', async () => {
+    const retry = deferred<RegistrationTransportResult>()
+    const register = vi
+      .fn<RegistrationTransport>()
+      .mockResolvedValueOnce({ kind: 'unknown' })
+      .mockImplementationOnce(() => retry.promise)
+    const loader = await ready(register)
+    await submitPath('/retry cancel')
+    await userEvent
+      .setup()
+      .click(
+        await screen.findByRole('button', { name: 'Retry same submission' })
+      )
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    const input = screen.getByRole('textbox', { name: 'Host path' })
+    expect(input).toHaveValue('/retry cancel')
+    expect(input).toHaveAttribute('readonly')
+    expect(screen.getAllByRole('listitem')).toHaveLength(1)
+    expect(screen.getByRole('status')).toHaveTextContent('Retry cancelled')
+    const recovery = screen.getByRole('group', {
+      name: 'Submission outcome unknown recovery',
+    })
+    expect(within(recovery).getAllByRole('button')).toHaveLength(2)
+    await act(async () =>
+      retry.resolve({ kind: 'success', disposition: 'created', project: beta })
+    )
+    expect(screen.getAllByRole('listitem')).toHaveLength(1)
+    expect(input).toHaveValue('/retry cancel')
+    expect(screen.getByRole('status')).toHaveTextContent('Retry cancelled')
+    expect(
+      screen.queryByRole('button', { name: 'Open Beta <script> Project' })
+    ).not.toBeInTheDocument()
+    expect(register).toHaveBeenCalledTimes(2)
+    expect(loader).toHaveBeenCalledOnce()
+  })
+
+  it.each([
+    ['zero', [alpha], 'No new project was observed'],
+    ['one', [alpha, beta], 'Project reconciled'],
+    ['many', [alpha, beta, gamma], 'reconciliation is ambiguous'],
+  ] as const)(
+    'renders exact %s-addition refresh cards, input, focus, announcement, and counts',
+    async (kind, refreshed, announcement) => {
+      const loader = vi
+        .fn<ProjectLoader>()
+        .mockResolvedValueOnce([alpha])
+        .mockResolvedValueOnce([...refreshed])
+      const register = vi
+        .fn<RegistrationTransport>()
+        .mockResolvedValue({ kind: 'unknown' })
+      render(<App loadProjectList={loader} registerProject={register} />)
+      await screen.findByRole('textbox', { name: 'Host path' })
+      await submitPath('/refresh exact')
+      await userEvent
+        .setup()
+        .click(await screen.findByRole('button', { name: 'Refresh projects' }))
+      await waitFor(() => expect(loader).toHaveBeenCalledTimes(2))
+      expect(screen.getAllByRole('listitem')).toHaveLength(refreshed.length)
+      const input = screen.getByRole('textbox', { name: 'Host path' })
+      expect(input).toHaveValue('/refresh exact')
+      expect(screen.getByRole('status')).toHaveTextContent(announcement)
+      expect(register).toHaveBeenCalledOnce()
+      if (kind === 'zero') {
+        expect(input).not.toHaveAttribute('readonly')
+        await waitFor(() => expect(input).toHaveFocus())
+      } else if (kind === 'one') {
+        await waitFor(() =>
+          expect(
+            screen.getByRole('button', {
+              name: 'Open Beta <script> Project',
+            })
+          ).toHaveFocus()
+        )
+      } else {
+        expect(input).toHaveAttribute('readonly')
+        expect(
+          screen.getByRole('button', { name: 'Reset recovery' })
+        ).toBeEnabled()
+        expect(
+          screen
+            .getAllByRole('button', { name: /^Open /u })
+            .some((button) => button === document.activeElement)
+        ).toBe(false)
+      }
+    }
+  )
+
+  it('preserves locked input, cards, focus, announcement, and request counts after failed refresh', async () => {
+    const loader = vi
+      .fn<ProjectLoader>()
+      .mockResolvedValueOnce([alpha])
+      .mockRejectedValueOnce(new Error('invalid or failed list'))
+    const register = vi
+      .fn<RegistrationTransport>()
+      .mockResolvedValue({ kind: 'unknown' })
+    render(<App loadProjectList={loader} registerProject={register} />)
+    await screen.findByRole('textbox', { name: 'Host path' })
+    await submitPath('/refresh failure')
+    await userEvent
+      .setup()
+      .click(await screen.findByRole('button', { name: 'Refresh projects' }))
+    await screen.findByRole('group', {
+      name: 'Submission outcome unknown recovery',
+    })
+    const input = screen.getByRole('textbox', { name: 'Host path' })
+    expect(input).toHaveValue('/refresh failure')
+    expect(input).toHaveAttribute('readonly')
+    expect(screen.getAllByRole('listitem')).toHaveLength(1)
+    expect(screen.getByRole('status')).toHaveTextContent('Refresh failed')
+    expect(
+      screen.getByRole('button', { name: 'Open Alpha Project' })
+    ).not.toHaveFocus()
+    expect(register).toHaveBeenCalledOnce()
+    expect(loader).toHaveBeenCalledTimes(2)
   })
 })

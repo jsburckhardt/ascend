@@ -26,7 +26,9 @@ function emptyProjectRegistration(): ProjectRegistrationService {
 }
 
 export async function build(options: AppOptions = {}) {
-  const app = Fastify()
+  const app = Fastify(
+    options.logger === undefined ? {} : { logger: options.logger }
+  )
   await app.register(appPlugin, {
     ...options,
     createProjectLibrary:

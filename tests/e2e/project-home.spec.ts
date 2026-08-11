@@ -19,6 +19,11 @@ import {
   stopOwnedProcessGroup,
   type OwnedProcessGroupStopResult,
 } from '../../apps/api/test/helpers/project-home-process-group.js'
+import {
+  BL008_CLEANUP_EVIDENCE_PATH,
+  OPEN_PROJECT_CLEANUP_SCENARIOS,
+  runOpenProjectCleanupMatrix,
+} from '../../apps/api/test/helpers/open-project-cleanup.js'
 
 const REPOSITORY_ROOT = path.resolve(import.meta.dirname, '../..')
 export const BL008_EVIDENCE_ROOT = path.join(
@@ -28,7 +33,6 @@ export const BL008_EVIDENCE_ROOT = path.join(
 const DATABASE_ROOT = path.join(BL008_EVIDENCE_ROOT, 'databases')
 const FIXTURE_ROOT = path.join(BL008_EVIDENCE_ROOT, 'fixtures')
 const EPISODE_PATH = path.join(BL008_EVIDENCE_ROOT, 'episode.json')
-const CLEANUP_PATH = path.join(BL008_EVIDENCE_ROOT, 'cleanup-matrix.json')
 const DATABASE_SUFFIXES = ['', '-wal', '-shm', '-journal'] as const
 const GRACEFUL_EXIT_TIMEOUT_MS = 10_000
 const START_TIMEOUT_MS = 15_000
@@ -144,7 +148,7 @@ test('uses only the keyboard to register, reconcile, correct, and defer Open wit
   await mkdir(DATABASE_ROOT, { recursive: true })
   await mkdir(FIXTURE_ROOT, { recursive: true })
   await rm(EPISODE_PATH, { force: true })
-  await rm(CLEANUP_PATH, { force: true })
+  await rm(BL008_CLEANUP_EVIDENCE_PATH, { force: true })
   const databasePath = path.join(
     DATABASE_ROOT,
     'open-project-' + randomUUID() + '.db'
@@ -308,7 +312,6 @@ test('uses only the keyboard to register, reconcile, correct, and defer Open wit
     } finally {
       library.close()
     }
-    summary.ownedCleanup = true
   } finally {
     apiStop ??= await stopOwnedProcessGroup(api, GRACEFUL_EXIT_TIMEOUT_MS)
     webStop = await stopOwnedProcessGroup(web, GRACEFUL_EXIT_TIMEOUT_MS)
@@ -324,29 +327,40 @@ test('uses only the keyboard to register, reconcile, correct, and defer Open wit
     ).every(Boolean)
     await rm(fixtureRoot, { recursive: true, force: true })
     const fixtureAbsent = await pathAbsent(fixtureRoot)
-    const cleanup = {
-      success:
-        apiStop.graceful &&
-        webStop.graceful &&
-        apiListenerAbsent &&
-        webListenerAbsent &&
-        apiGroupAbsent &&
-        webGroupAbsent &&
-        databaseAbsent &&
-        fixtureAbsent,
-      startupFailure: true,
-      assertionFailure: true,
-      episodeTimeout: true,
-      interruptedGracefulShutdown: true,
-      survivingDescendant: true,
-      exactProcessGroups: apiGroupAbsent && webGroupAbsent,
-      listenersAbsent: apiListenerAbsent && webListenerAbsent,
-      databaseAndSidecarsAbsent: databaseAbsent,
-      fixturesAbsent: fixtureAbsent,
-    }
+    summary.ownedCleanup =
+      apiStop.graceful &&
+      webStop.graceful &&
+      apiListenerAbsent &&
+      webListenerAbsent &&
+      apiGroupAbsent &&
+      webGroupAbsent &&
+      databaseAbsent &&
+      fixtureAbsent
     await mkdir(BL008_EVIDENCE_ROOT, { recursive: true })
     await writeFile(EPISODE_PATH, JSON.stringify(summary, null, 2))
-    await writeFile(CLEANUP_PATH, JSON.stringify(cleanup, null, 2))
-    expect(Object.values(cleanup).every(Boolean)).toBe(true)
+    expect(summary.ownedCleanup).toBe(true)
+    expect(summary.fixtureIntegrity).toBe(true)
   }
+})
+
+test('executes retained startup, assertion, timeout, interrupted, and descendant cleanup scenarios', async () => {
+  const matrix = await runOpenProjectCleanupMatrix()
+  expect(matrix.executedScenarioCount).toBe(5)
+  for (const scenario of OPEN_PROJECT_CLEANUP_SCENARIOS) {
+    const evidence = matrix.scenarios[scenario]
+    expect(evidence.executed).toBe(true)
+    expect(evidence.injectedFailureObserved).toBe(true)
+    expect(evidence.processGroupsAbsent).toBe(true)
+    expect(evidence.listenersAbsent).toBe(true)
+    expect(evidence.databaseAndSidecarsAbsent).toBe(true)
+    expect(evidence.fixturesAbsent).toBe(true)
+    expect(evidence.teardownClean).toBe(true)
+  }
+  expect(matrix.scenarios.survivingDescendant.ownerCleanupPassed).toBe(false)
+  expect(matrix.scenarios.survivingDescendant.survivingDescendantDetected).toBe(
+    true
+  )
+  expect(
+    matrix.scenarios.survivingDescendant.survivingDescendantsAfterTeardown
+  ).toBe(0)
 })

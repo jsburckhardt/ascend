@@ -66,7 +66,7 @@ verify-project-registration:
     @node -e "console.log('BL-006 permission-capability: '+JSON.parse(require('node:fs').readFileSync('test-results/bl-006/permission-capability.json','utf8')).status.toUpperCase()+'; controlled-denial: PASS')"
 
 verify-open-project:
-    pnpm exec vitest run apps/api/test/project-registration-route.test.ts apps/api/test/open-project-documentation.test.ts apps/web/src/project-registration-client.test.ts apps/web/src/use-project-home.test.tsx apps/web/src/App.test.tsx --reporter=verbose
+    pnpm exec vitest run apps/api/test/project-registration-route.test.ts apps/api/test/open-project-cleanup-contract.test.ts apps/api/test/open-project-documentation.test.ts apps/web/src/project-registration-client.test.ts apps/web/src/use-project-home.test.tsx apps/web/src/App.test.tsx --reporter=verbose
     pnpm exec playwright test tests/e2e/project-home.spec.ts --project=chromium --workers=1 --retries=0
 
 verify:

@@ -8,6 +8,7 @@ import {
   PROJECT_REGISTRATION_FAILED,
   REGISTRATION_REQUEST_TOO_LARGE,
 } from '../src/routes/projects.js'
+import { OPEN_PROJECT_CLEANUP_SCENARIOS } from './helpers/open-project-cleanup.js'
 import { REPOSITORY_ROOT } from './project-database-test-helper.js'
 
 async function text(relative: string): Promise<string> {
@@ -100,6 +101,12 @@ describe('BL-008 documentation contract', () => {
       'surviving-descendant',
       'test-results/bl-008/open-project/episode.json',
       'cleanup-matrix.json',
+      'ownerCleanupPassed',
+      'teardownClean',
+      'gracefulStop',
+      'exact-PID',
+      'process-group',
+      'database/sidecar',
       'workbench',
       'picker',
       'scan',
@@ -109,6 +116,11 @@ describe('BL-008 documentation contract', () => {
       'BL-012',
     ])
       expect(combined.toLowerCase()).toContain(token.toLowerCase())
+    for (const scenario of OPEN_PROJECT_CLEANUP_SCENARIOS)
+      expect(combined).toContain(scenario)
+    expect(combined).toContain('ownerCleanupPassed: false')
+    expect(combined).toContain('teardownClean: true')
+    expect(combined).toContain('executed')
     expect(files[4]!.match(/^verify-open-project:/gmu)).toHaveLength(1)
     expect(files[3]).toContain('harness checks')
     expect(files[3]).toContain('non-persistent')

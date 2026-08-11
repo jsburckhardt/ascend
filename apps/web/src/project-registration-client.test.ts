@@ -176,4 +176,45 @@ describe('finite registration transport', () => {
       expect(fetcher).toHaveBeenCalledOnce()
     }
   )
+
+  it.each([
+    ['non-JSON success', 200],
+    ['non-JSON error', 503],
+  ] as const)(
+    'classifies %s after fetch invocation as unknown',
+    async (_label, status) => {
+      const fetcher = vi.fn<typeof fetch>(
+        async () =>
+          new Response('<html>not json</html>', {
+            status,
+            headers: { 'content-type': 'text/html' },
+          })
+      )
+      await expect(
+        sendRegistrationPayload('{}', new AbortController().signal, { fetcher })
+      ).resolves.toEqual({ kind: 'unknown' })
+      expect(fetcher).toHaveBeenCalledOnce()
+    }
+  )
+
+  it('treats an owner cancellation after transmission as unknown transport evidence', async () => {
+    const owner = new AbortController()
+    const fetcher = vi.fn<typeof fetch>(
+      (_input, init) =>
+        new Promise((_resolve, reject) => {
+          const signal = init?.signal as AbortSignal
+          signal.addEventListener(
+            'abort',
+            () => reject(new Error('cancelled')),
+            {
+              once: true,
+            }
+          )
+        })
+    )
+    const outcome = sendRegistrationPayload('{}', owner.signal, { fetcher })
+    owner.abort()
+    await expect(outcome).resolves.toEqual({ kind: 'unknown' })
+    expect(fetcher).toHaveBeenCalledOnce()
+  })
 })

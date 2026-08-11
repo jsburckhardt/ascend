@@ -39,11 +39,13 @@ The accepted stack already selects local SQLite and Drizzle. Explicit close owne
 ## Usage Examples
 
 ```ts
-const resource = createDatabase({ databasePath })
-const result = await migrateDatabase(resource)
+const resource = createDatabase(databasePath)
 try {
-  const projects = createProjectRepository(resource.database)
-  // Use the repository through an in-process application service.
+  const result = await migrateDatabase(resource)
+  const projects = createProjectRepository(
+    createDrizzleProjectAdapter(resource.database)
+  )
+  // Use result and projects through an in-process application service.
 } finally {
   resource.close()
 }

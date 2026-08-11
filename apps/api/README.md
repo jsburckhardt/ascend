@@ -25,14 +25,17 @@ Pipe the unchanged handle to `just proof-stop`. Stop validates the saved state a
 
 ## SQLite project library
 
-Application startup resolves `ASCEND_DATABASE_URL` as either a local `file:` URL or filesystem path; without it the developer/default database is `<repository>/apps/api/ascend.db`. Persistence resources are constructed explicitly and close idempotently—importing a database module opens no handle.
+Database configuration currently belongs to the persistence module. When a caller explicitly invokes `createApplicationProjectLibrary()`, it resolves `ASCEND_DATABASE_URL` as either a local `file:` URL or filesystem path; without it the developer/default database is `<repository>/apps/api/ascend.db`. The current Fastify startup does not call this factory or construct the project library. Persistence resources are constructed explicitly and close idempotently—importing a database module opens no handle. Application startup integration remains deferred with the BL-007 HTTP/API boundary.
 
-From the repository root, initialize or upgrade an explicit local database with `just db-migrate <database-path>`. This command does not use `ASCEND_DATABASE_URL`, does not reset data, and prints one of these exact JSON shapes before closing:
+From the repository root, initialize or upgrade an explicit local database with `just db-migrate <database-path>`. This command does not use `ASCEND_DATABASE_URL`, does not reset data, and closes before returning. For the three supported committed starting states, the successful JSON outputs are exhaustively:
 
 ```json
 {"appliedMigrationIds":["0000_project_library","0001_project_canonical_path_unique"],"currentMigrationId":"0001_project_canonical_path_unique"}
+{"appliedMigrationIds":["0001_project_canonical_path_unique"],"currentMigrationId":"0001_project_canonical_path_unique"}
 {"appliedMigrationIds":[],"currentMigrationId":"0001_project_canonical_path_unique"}
 ```
+
+The arrays respectively represent a missing database, the tracked `0000_project_library` prior-version fixture, and a current database rerun.
 
 `0000_project_library` creates `projects`; `0001_project_canonical_path_unique` adds database-enforced uniqueness. The physical schema is exactly `id`, `name`, `canonical_path`, and `created_at`, corresponding to contract fields `id`, `name`, `canonicalPath`, and `createdAt`. The timestamp is finite non-negative safe-integer Unix epoch milliseconds and is returned unchanged.
 

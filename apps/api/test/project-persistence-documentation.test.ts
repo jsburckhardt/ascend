@@ -71,6 +71,32 @@ describe('project persistence documentation contract', () => {
       expect(combined).toContain(token)
     }
 
+    const currentMigrationId = MIGRATION_CATALOG.at(-1)?.id
+    expect(currentMigrationId).toBeDefined()
+    const migrationOutputs = [
+      {
+        appliedMigrationIds: MIGRATION_CATALOG.map(({ id }) => id),
+        currentMigrationId,
+      },
+      {
+        appliedMigrationIds: ['0001_project_canonical_path_unique'],
+        currentMigrationId,
+      },
+      { appliedMigrationIds: [], currentMigrationId },
+    ].map((result) => JSON.stringify(result))
+    for (const output of migrationOutputs) {
+      expect(applicationDocs).toContain(output)
+      expect(apiDocs).toContain(output)
+    }
+
+    expect(applicationDocs).toContain(
+      'Current Fastify startup does not construct the project library'
+    )
+    expect(apiDocs).toContain(
+      'The current Fastify startup does not call this factory or construct the project library'
+    )
+    expect(applicationDocs).toContain('createApplicationProjectLibrary()')
+    expect(apiDocs).toContain('createApplicationProjectLibrary()')
     expect(applicationDocs).toContain('exactly two records once each')
     expect(apiDocs).toContain('adds no Fastify route')
     expect(apiDocs).toContain('refuses `<repository>/apps/api/ascend.db`')

@@ -35,6 +35,14 @@ describe('SQLite persistence lifecycle architecture enforcement', () => {
     expect(decisionLog).toContain(
       'CORE-COMPONENT-260810-sqlite-persistence-lifecycle'
     )
+    expect(component).toContain('const resource = createDatabase(databasePath)')
+    expect(component).toContain(
+      'createDrizzleProjectAdapter(resource.database)'
+    )
+    expect(component).not.toContain('createDatabase({ databasePath })')
+    expect(component).not.toContain(
+      'createProjectRepository(resource.database)'
+    )
     expect(client).toContain('export function createDatabase')
     expect(client).not.toContain('export const database')
     expect(migrations).toContain('MIGRATION_CATALOG')

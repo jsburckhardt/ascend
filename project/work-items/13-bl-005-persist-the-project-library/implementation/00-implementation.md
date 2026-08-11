@@ -6,7 +6,7 @@ Implemented Issue #13 on `feat/13-persist-project-library` within the Plan bound
 
 ## Completed Tasks
 
-- T-1: Added the closeable explicit-path database factory, resolved application default and override, two committed migrations, migration catalog and runner, CLI, and root `db-migrate` recipe.
+- T-1: Added the closeable explicit-path database factory, explicit application-path resolver for callers, two committed migrations, migration catalog and runner, CLI, and root `db-migrate` recipe.
 - T-2: Added the repository-root disposable database lifecycle, default-path refusal, exact sidecar cleanup, deterministic `0000_project_library` fixture, expected values, and fixture hash.
 - T-3: Added the four-field project contract, typed validation and persistence failures, database conflict handling, repository, and closeable `ProjectLibrary`.
 - T-4: Added exact schema and index inspection, bounded sentinel scans, close/reopen checks, sequential and eight-way duplicate proofs, and byte-identical no-mutation validation.
@@ -70,13 +70,15 @@ All T-1 through T-8 statuses are marked Complete in `plan/02-task-breakdown.md`.
 
 ### AC-9
 
-- `docs/README.md` and `apps/api/README.md` document the default, override, explicit command, JSON, IDs, four fields, timestamp representation, outcomes, typed validation, restart proof, fixture, refusal, sidecars, cleanup, no reset, and BL-006/BL-007 exclusions.
-- `.harness/engineering-harness.md` now lists migration and persistence consequence signals and evidence while retaining reset as unsupported.
-- `project-persistence-documentation.test.ts` and `project-persistence-architecture.test.ts` passed against executable constants and adopted architecture.
+- `docs/README.md` and `apps/api/README.md` document the default, override, explicit command, all three supported migration arrays (fresh, prior fixture, and current rerun), IDs, four fields, timestamp representation, outcomes, typed validation, restart proof, fixture, refusal, sidecars, cleanup, no reset, and BL-006/BL-007 exclusions.
+- Both READMEs state that `createApplicationProjectLibrary()` owns configuration resolution when called and that current Fastify startup does not construct the project library.
+- `CORE-COMPONENT-260810-sqlite-persistence-lifecycle.md` uses the committed `createDatabase(databasePath)` and adapter-backed `createProjectRepository(createDrizzleProjectAdapter(resource.database))` interfaces.
+- `.harness/engineering-harness.md` lists migration and persistence consequence signals and evidence while retaining reset as unsupported.
+- `project-persistence-documentation.test.ts` and `project-persistence-architecture.test.ts` passed against executable constants, all supported migration outputs, current startup ownership, and adopted architecture.
 
 ### AC-10
 
-- Final `just verify` exited zero. The latest final run reported API coverage of 88.53% statements, 80.58% branches, 86.39% functions, and 89.44% lines; web coverage remained 100% in all dimensions.
+- Final `just verify` exited zero. The latest final run reported API coverage of 88.53% statements, 80.58% branches, 86.39% functions, and 89.49% lines; web coverage remained 100% in all dimensions.
 - Final package tests passed 180 API tests and one web test. Build passed, Playwright passed three tests with the designated comparison intentionally skipped, and the retained BL-004 audit returned `passed:true`.
 
 ## Focused Validation
@@ -92,24 +94,27 @@ All T-1 through T-8 statuses are marked Complete in `plan/02-task-breakdown.md`.
 | T-7 | `just verify-focused apps/api/test/project-persistence-documentation.test.ts apps/api/test/project-persistence-architecture.test.ts` | 2 passed |
 | T-8 | `just verify-focused` | 38 files and 181 tests passed |
 | T-8 correction | `just verify-focused apps/api/test/project-migrations-integration.test.ts` | 2 passed |
+| Verifier documentation correction | `just verify-focused apps/api/test/project-persistence-documentation.test.ts apps/api/test/project-persistence-architecture.test.ts` | 2 passed |
+| Verifier persistence regression | `just verify-focused apps/api/test/project-*.test.ts` | 12 files and 32 tests passed |
+| Unrelated full-gate retry diagnosis | `just verify-focused apps/api/test/workbench-proof-failures.test.ts` | 4 passed |
 
-Focused and full validation failures were corrected before task completion. Corrections covered relative file URL handling, formatter normalization, repository-root path independence between focused and recursive package runs, and a quote-style-independent documentation assertion.
+Focused and full validation failures were corrected before task completion. Corrections covered relative file URL handling, formatter normalization, repository-root path independence between focused and recursive package runs, quote-style-independent documentation assertions, migration-output completeness, startup ownership, committed architecture signatures, and an unrelated transient workbench cleanup retry.
 
 ## Full Validation
 
 - Command: `just verify`
-- Final result: exit 0
+- Final result: exit 0 after one unrelated transient workbench cleanup failure; the failed file passed focused retry and the complete gate then passed
 - Tool versions: Node.js 22.23.2, pnpm 10.34.5, just 1.42.4
 - Gates passed: formatting, lint, strict type checking, covered package tests, builds, Playwright, and retained BL-004 capacity audit
 - Configured coverage thresholds remained 80% for statements, branches, functions, and lines.
 
 ## Documentation Evidence
 
-- README and configuration: `docs/README.md` and `apps/api/README.md` now describe application default and override behavior.
-- Usage and operations: both READMEs document `just db-migrate <database-path>`, exact JSON, migration order, non-reset behavior, fixture upgrade, and cleanup.
+- README and configuration: `docs/README.md` and `apps/api/README.md` describe persistence-factory default and override behavior, explicitly noting that current Fastify startup does not construct the library.
+- Usage and operations: both READMEs document `just db-migrate <database-path>`, the exhaustive fresh/prior/current JSON output set, migration order, non-reset behavior, fixture upgrade, and cleanup.
 - API documentation: `apps/api/README.md` documents the in-process TypeScript persistence contract; no HTTP API or OpenAPI contract changed because BL-007 remains excluded.
 - Migration notes: the same READMEs describe fresh, rerun, and immediately-prior upgrade behavior. There is no breaking, data-loss, or reset operation.
-- Architecture: `CORE-COMPONENT-260810-sqlite-persistence-lifecycle.md` and `DECISION-LOG.md` record and enforce explicit close ownership, ordered migrations, and default-path-refusing tests. No ADR change was required because the accepted TypeScript monorepo ADR already selected SQLite and Drizzle.
+- Architecture: `CORE-COMPONENT-260810-sqlite-persistence-lifecycle.md` and `DECISION-LOG.md` record and enforce explicit close ownership, ordered migrations, and default-path-refusing tests; the usage example now matches the committed database factory and repository-adapter signatures. No ADR change was required because the accepted TypeScript monorepo ADR already selected SQLite and Drizzle.
 - Harness operations: `.harness/engineering-harness.md` records the new signal, evidence, consequence checks, and remaining reset gap.
 - Deployment: no deployment procedure changed; persistence is local and no server route or runtime startup behavior was added.
 

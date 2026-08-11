@@ -54,16 +54,17 @@ The designated comparison command is just proof-workbench-presentation. It compa
 
 ## Project library persistence
 
-The application resolves its developer database to `<repository>/apps/api/ascend.db`. `ASCEND_DATABASE_URL` overrides that local application path with a `file:` URL or filesystem path. Migration is intentionally separate: it ignores the environment override and requires an explicit filesystem target.
+The persistence module resolves its developer database to `<repository>/apps/api/ascend.db` when `createApplicationProjectLibrary()` is called. `ASCEND_DATABASE_URL` overrides that local persistence path with a `file:` URL or filesystem path. Current Fastify startup does not construct the project library; that application integration remains deferred with the BL-007 HTTP/API boundary. Migration is intentionally separate: it ignores the environment override and requires an explicit filesystem target.
 
 ```text
 just db-migrate <database-path>
 ```
 
-The command creates parent directories and a missing database, never resets data, applies committed migrations in order, closes its SQLite handle, and emits exactly one JSON object. The committed IDs and representative outputs are:
+The command creates parent directories and a missing database, never resets data, applies committed migrations in order, closes its SQLite handle, and emits exactly one JSON object. For the supported missing, immediately prior, and current committed states, the complete output set is:
 
 ```json
 {"appliedMigrationIds":["0000_project_library","0001_project_canonical_path_unique"],"currentMigrationId":"0001_project_canonical_path_unique"}
+{"appliedMigrationIds":["0001_project_canonical_path_unique"],"currentMigrationId":"0001_project_canonical_path_unique"}
 {"appliedMigrationIds":[],"currentMigrationId":"0001_project_canonical_path_unique"}
 ```
 

@@ -258,6 +258,145 @@ const inventory = (source: string): Check[] => {
 export const quotePosix = (value: string): string =>
   `'${value.replaceAll("'", `'"'"'`)}'`
 
+export type CorrectionSeamFailureTrace = {
+  seam: 'pre-coding' | 'post-coding'
+  seamFailureSet: boolean
+  nextStage: 'dispatch-implement' | 'dispatch-verify'
+  nextStageExecuted: boolean
+  returnFormat: string
+  returnedDetails: string
+}
+
+const processBody = (source: string, id: string): string =>
+  source.match(
+    new RegExp(`<process id=\"${id}\"[^>]*>([\\s\\S]*?)<\\/process>`)
+  )?.[1] ?? ''
+
+const indentation = (line: string): number =>
+  line.length - line.trimStart().length
+
+const processSetsSeamFailure = (
+  source: string,
+  id: string,
+  visited = new Set<string>()
+): boolean => {
+  if (visited.has(id)) return false
+  visited.add(id)
+  const body = processBody(source, id)
+  if (/SET SEAM_FAILURE := \{/.test(body)) return true
+  return parseProcessCalls(body)
+    .filter((call) => call.kind === 'RUN')
+    .some((call) => processSetsSeamFailure(source, call.id, visited))
+}
+
+const returnField = (statement: string, field: string): string =>
+  statement.match(new RegExp(`${field}=([^,\\n]+)`))?.[1]?.trim() ?? ''
+
+export const correctionSeamFailureTraces = (
+  source: string
+): CorrectionSeamFailureTrace[] => {
+  const routerLines = processBody(source, 'rpiv-router').split('\n')
+  const routeIndex = routerLines.findIndex((line) =>
+    line.includes('RUN `route-verification-failure`')
+  )
+  const routerTail = routerLines.slice(routeIndex + 1)
+  const seamGuardIndex = routerTail.findIndex(
+    (line) =>
+      line.trim() ===
+      'IF PIPELINE_STATUS = "error" and SEAM_FAILURE is not empty:'
+  )
+  const pipelineReturn =
+    seamGuardIndex === 0 &&
+    indentation(routerTail[1] ?? '') > indentation(routerTail[0] ?? '')
+      ? (routerTail[1]?.trim() ?? '')
+      : ''
+  const correctionLines = processBody(
+    source,
+    'route-verification-failure'
+  ).split('\n')
+  return (
+    [
+      ['pre-coding', 'dispatch-implement'],
+      ['post-coding', 'dispatch-verify'],
+    ] as const
+  ).map(([seam, nextStage]) => {
+    const seamIndex = correctionLines.findIndex((line) =>
+      line.includes(`RUN ` + '`' + `run-${seam}` + '`')
+    )
+    const nextStageIndex = correctionLines.findIndex(
+      (line, index) =>
+        index > seamIndex && line.includes(`RUN ` + '`' + nextStage + '`')
+    )
+    const failureGuardIndex = correctionLines.findIndex(
+      (line, index) =>
+        index > seamIndex &&
+        index < nextStageIndex &&
+        line.trim() === 'IF PIPELINE_STATUS = "error":'
+    )
+    const localReturnIndex = correctionLines.findIndex(
+      (line, index) =>
+        index > failureGuardIndex &&
+        index < nextStageIndex &&
+        line.trim() === 'RETURN: PIPELINE_STATUS'
+    )
+    const guardedReturn =
+      seamIndex >= 0 &&
+      nextStageIndex > seamIndex &&
+      failureGuardIndex === seamIndex + 1 &&
+      localReturnIndex === failureGuardIndex + 1 &&
+      indentation(correctionLines[failureGuardIndex]) ===
+        indentation(correctionLines[seamIndex]) &&
+      indentation(correctionLines[localReturnIndex]) >
+        indentation(correctionLines[failureGuardIndex]) &&
+      indentation(correctionLines[nextStageIndex]) ===
+        indentation(correctionLines[seamIndex])
+    return {
+      seam,
+      seamFailureSet: processSetsSeamFailure(source, `run-${seam}`),
+      nextStage,
+      nextStageExecuted: !guardedReturn,
+      returnFormat: returnField(pipelineReturn, 'format').replaceAll('"', ''),
+      returnedDetails: returnField(pipelineReturn, 'details'),
+    }
+  })
+}
+
+export const validateCorrectionSeamFailurePropagation = (source: string) => {
+  const traces = correctionSeamFailureTraces(source)
+  const seam = processBody(source, 'run-lifecycle-seam')
+  const failureAssignments = [
+    ...seam.matchAll(/SET SEAM_FAILURE := \{([^\n]+)\}/g),
+  ].map((match) => match[1])
+  const typedEvidence =
+    failureAssignments.length > 0 &&
+    failureAssignments.every((assignment) =>
+      [
+        'hook: SEAM_HOOK',
+        'target_stage: SEAM_TARGET',
+        'host_error:',
+        'result: HARNESS_RESULT',
+      ].every((field) => assignment.includes(field))
+    )
+  const valid =
+    typedEvidence &&
+    traces.every(
+      (trace) =>
+        trace.seamFailureSet &&
+        !trace.nextStageExecuted &&
+        trace.returnFormat === 'PIPELINE_ERROR' &&
+        trace.returnedDetails === 'SEAM_FAILURE'
+    )
+  return valid
+    ? []
+    : [
+        {
+          rule: 'CORRECTION_SEAM_FAILURE_PROPAGATION',
+          line: 0,
+          message:
+            'Correction seam failure must stop before dispatch and return typed SEAM_FAILURE evidence',
+        },
+      ]
+}
 export const positiveMatrix = (): MatrixRow[] => {
   const rows: MatrixRow[] = []
   const add = (target: string, result: Check): void => {
@@ -362,6 +501,14 @@ export const positiveMatrix = (): MatrixRow[] => {
         'dispatch-verify',
       ]),
       'Plan and Implement corrections repeat downstream seams'
+    )
+  )
+  add(
+    coordinatorPath,
+    check(
+      'CORRECTION_SEAM_FAILURE_PROPAGATION',
+      validateCorrectionSeamFailurePropagation(coordinator).length === 0,
+      'parsed correction flow stops before stage dispatch and returns typed seam evidence'
     )
   )
   add(
@@ -708,6 +855,10 @@ const baseline: FixtureModel = {
 }
 export const validateFixture = (fixture: Fixture): string[] => {
   if (fixture.source) {
+    if (fixture.expectedRule === 'CORRECTION_SEAM_FAILURE_PROPAGATION')
+      return validateCorrectionSeamFailurePropagation(fixture.source).map(
+        (diagnostic) => diagnostic.rule
+      )
     if (fixture.expectedRule === 'LIFECYCLE_HOST_PARAMETERS')
       return validateLifecycleHostCall(fixture.source).map(
         (diagnostic) => diagnostic.rule

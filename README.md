@@ -39,7 +39,7 @@ just verify
 
 The devcontainer provides Node.js 22, pnpm, just, and code-server. Its post-create script runs `just setup`, including Playwright's Chromium dependencies, so no manually installed host tools are required for repository development.
 
-RPIV harness integration is APS-governed. The coordinator owns serialized lifecycle calls through the registered VS Code `vscode/runCommand` host tool, which invokes only the `eng-harness-flow` skill with exact lifecycle-hook arguments. Research, Plan, Implement, and Verify remain least-privilege leaf workers that capture only their own qualifying friction through `harness observe`. `just verify-rpiv-harness` runs the read-only full APS inventory, 25 negative fixtures, executable lifecycle and regression contracts, and the 113-row documentation/profile matrix.
+RPIV harness integration is APS-governed. The coordinator owns serialized lifecycle calls through the registered VS Code `vscode/runCommand` host tool, which invokes only the `eng-harness-flow` skill with exact lifecycle-hook arguments. Initial and correction seam failures stop before the next stage and return typed `SEAM_FAILURE` details instead of generic verification output. Research, Plan, Implement, and Verify remain least-privilege leaf workers that capture only their own qualifying friction through `harness observe`. `just verify-rpiv-harness` runs the read-only full APS inventory, 26 negative fixtures, executable lifecycle and regression contracts, and the 114-row documentation/profile matrix.
 
 ## Host Workbench Proof
 

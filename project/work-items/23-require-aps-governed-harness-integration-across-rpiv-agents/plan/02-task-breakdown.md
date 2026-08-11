@@ -56,7 +56,7 @@ Add one explicit RPIV harness-profile contract to `.github/agents/aps-v1.2.2.age
 
 ## Task T-2: Harden coordinator lifecycle orchestration and typed handoffs
 
-- **Status:** Complete (verifier corrections applied)
+- **Status:** Complete (correction seam propagation verifier defect fixed)
 - **Complexity:** Large
 - **Dependencies:** T-1
 - **Acceptance Criteria:** AC-2, AC-3, AC-4, AC-5, AC-6, AC-12, AC-14, AC-15, AC-16, AC-17, AC-20
@@ -110,7 +110,7 @@ Give Research, Plan, Implement, and Verify one equivalent bounded observation st
 
 ## Task T-4: Build read-only contract validation and negative fixtures
 
-- **Status:** Complete (verifier corrections applied)
+- **Status:** Complete (correction control/data-flow verifier defect fixed)
 - **Complexity:** Large
 - **Dependencies:** T-2, T-3
 - **Acceptance Criteria:** AC-1, AC-5, AC-6, AC-7, AC-8, AC-9, AC-10, AC-11, AC-12, AC-13, AC-14, AC-15, AC-16, AC-17, AC-18, AC-19, AC-20
@@ -164,7 +164,7 @@ Retain the Plan-stage update to `CORE-COMPONENT-260806-rpiv-stage-contract.md` a
 
 ## Task T-6: Integrate validation and retain delivery evidence
 
-- **Status:** Complete (verifier corrections applied)
+- **Status:** Complete (correction evidence and counts refreshed)
 - **Complexity:** Medium
 - **Dependencies:** T-0, T-4, T-5
 - **Acceptance Criteria:** AC-17, AC-18, AC-19, AC-20, AC-22

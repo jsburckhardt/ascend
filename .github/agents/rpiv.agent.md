@@ -234,6 +234,8 @@ IF PIPELINE_STATUS = "error":
 RUN `dispatch-verify` where: verify_request=VERIFY_REQUEST
 IF PIPELINE_STATUS = "error":
   RUN `route-verification-failure`
+IF PIPELINE_STATUS = "error" and SEAM_FAILURE is not empty:
+  RETURN: format="PIPELINE_ERROR", details=SEAM_FAILURE, error_message="Lifecycle seam failed during correction", failed_stage=SEAM_HOOK, issue_number=ISSUE_NUMBER, return_stage="coordinator"
 IF PIPELINE_STATUS = "error":
   RETURN: format="PIPELINE_ERROR", details=VERIFY_RESULT, error_message="Verification failed after correction", failed_stage=CURRENT_STAGE, issue_number=ISSUE_NUMBER, return_stage=FAILURE_OWNER
 RUN `run-post-flight`
@@ -380,11 +382,11 @@ IF PIPELINE_STATUS != "error":
 <process id="run-lifecycle-seam" name="Invoke and validate one serialized lifecycle seam" args="SEAM_ATTEMPT: Integer, SEAM_HOOK: String, SEAM_TARGET: String">
 SET SEAM_ID := <IDENTITY> (from "Agent Inference" using SEAM_HOOK, SEAM_TARGET, SEAM_ATTEMPT; format <hook>|<target-stage>|<coordinator-stage-attempt>)
 IF SEAM_HOOK not in LIFECYCLE_HOOKS:
-  SET SEAM_FAILURE := {class: "malformed-result", seam: SEAM_ID, detail: "Unsupported lifecycle hook"} (from "Agent Inference")
+  SET SEAM_FAILURE := {attempt: SEAM_ATTEMPT, class: "malformed-result", detail: "Unsupported lifecycle hook", hook: SEAM_HOOK, host_error: "", result: HARNESS_RESULT, seam: SEAM_ID, target_stage: SEAM_TARGET} (from "Agent Inference")
   SET PIPELINE_STATUS := "error" (from "Agent Inference")
   RETURN: PIPELINE_STATUS
 IF ACTIVE_SEAM is not empty:
-  SET SEAM_FAILURE := {class: "overlap", seam: SEAM_ID, active: ACTIVE_SEAM, detail: "A lifecycle seam is already active"} (from "Agent Inference")
+  SET SEAM_FAILURE := {active: ACTIVE_SEAM, attempt: SEAM_ATTEMPT, class: "overlap", detail: "A lifecycle seam is already active", hook: SEAM_HOOK, host_error: "", result: HARNESS_RESULT, seam: SEAM_ID, target_stage: SEAM_TARGET} (from "Agent Inference")
   SET PIPELINE_STATUS := "error" (from "Agent Inference")
   RETURN: PIPELINE_STATUS
 IF SUCCESSFUL_SEAMS contains SEAM_ID:
@@ -394,13 +396,13 @@ TRY:
   USE `vscode/runCommand` where: arguments=["--hook", SEAM_HOOK, "--json"], command=HARNESS_SKILL
   CAPTURE HARNESS_RESULT from `vscode/runCommand`
 RECOVER (err):
-  SET SEAM_FAILURE := <FAILURE> (from "Agent Inference" using SEAM_ID, err; classify host-unavailable, skill-unavailable, or invocation-unavailable and retain safe details)
+  SET SEAM_FAILURE := {attempt: SEAM_ATTEMPT, class: <CLASS>, hook: SEAM_HOOK, host_error: err, result: HARNESS_RESULT, seam: SEAM_ID, target_stage: SEAM_TARGET} (from "Agent Inference" using SEAM_ID, err; classify host-unavailable, skill-unavailable, or invocation-unavailable and retain safe details)
   SET ACTIVE_SEAM := "" (from "Agent Inference")
   SET PIPELINE_STATUS := "error" (from "Agent Inference")
   RETURN: PIPELINE_STATUS
 SET SEAM_RESULT_VALID := <VALID> (from "Agent Inference" using HARNESS_RESULT; require non-empty JSON with the requested hook and an explicit successful status)
 IF SEAM_RESULT_VALID is false:
-  SET SEAM_FAILURE := <FAILURE> (from "Agent Inference" using SEAM_ID, HARNESS_RESULT, SEAM_FAILURE_CLASSES; classify empty-result, malformed-result, or non-success-result and retain raw safe details)
+  SET SEAM_FAILURE := {attempt: SEAM_ATTEMPT, class: <CLASS>, hook: SEAM_HOOK, host_error: "", result: HARNESS_RESULT, seam: SEAM_ID, target_stage: SEAM_TARGET} (from "Agent Inference" using SEAM_ID, HARNESS_RESULT, SEAM_FAILURE_CLASSES; classify empty-result, malformed-result, or non-success-result and retain raw safe details)
   SET ACTIVE_SEAM := "" (from "Agent Inference")
   SET PIPELINE_STATUS := "error" (from "Agent Inference")
   RETURN: PIPELINE_STATUS
@@ -439,18 +441,22 @@ ELSE:
   IF FAILURE_OWNER = "plan":
     SET PLAN_ATTEMPT := PLAN_ATTEMPT + 1 (from "Agent Inference")
     RUN `dispatch-plan` where: plan_request=PLAN_REQUEST
+    IF PIPELINE_STATUS = "error":
+      RETURN: PIPELINE_STATUS
   ELSE:
     SET PIPELINE_STATUS := "running" (from "Agent Inference")
-  IF PIPELINE_STATUS != "error":
-    SET IMPLEMENT_ATTEMPT := IMPLEMENT_ATTEMPT + 1 (from "Agent Inference")
-    RUN `run-pre-coding`
-  IF PIPELINE_STATUS != "error":
-    RUN `dispatch-implement` where: implement_request=IMPLEMENT_REQUEST
-  IF PIPELINE_STATUS != "error":
-    RUN `run-post-coding`
-  IF PIPELINE_STATUS != "error":
-    SET VERIFY_ATTEMPT := VERIFY_ATTEMPT + 1 (from "Agent Inference")
-    RUN `dispatch-verify` where: verify_request=VERIFY_REQUEST
+  SET IMPLEMENT_ATTEMPT := IMPLEMENT_ATTEMPT + 1 (from "Agent Inference")
+  RUN `run-pre-coding`
+  IF PIPELINE_STATUS = "error":
+    RETURN: PIPELINE_STATUS
+  RUN `dispatch-implement` where: implement_request=IMPLEMENT_REQUEST
+  IF PIPELINE_STATUS = "error":
+    RETURN: PIPELINE_STATUS
+  RUN `run-post-coding`
+  IF PIPELINE_STATUS = "error":
+    RETURN: PIPELINE_STATUS
+  SET VERIFY_ATTEMPT := VERIFY_ATTEMPT + 1 (from "Agent Inference")
+  RUN `dispatch-verify` where: verify_request=VERIFY_REQUEST
 </process>
 </processes>
 

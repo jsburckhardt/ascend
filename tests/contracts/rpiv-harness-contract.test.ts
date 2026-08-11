@@ -14,6 +14,7 @@ import {
   allProfilePaths,
   apsPath,
   coordinatorPath,
+  correctionSeamFailureTraces,
   positiveMatrix,
   quotePosix,
   root,
@@ -123,6 +124,28 @@ describe('APS-enforced RPIV harness profile', () => {
   })
 
   it('executes initial and correction seams with result gating and serialization', () => {
+    expect(
+      correctionSeamFailureTraces(
+        readFileSync(path.join(root, coordinatorPath), 'utf8')
+      )
+    ).toEqual([
+      {
+        seam: 'pre-coding',
+        seamFailureSet: true,
+        nextStage: 'dispatch-implement',
+        nextStageExecuted: false,
+        returnFormat: 'PIPELINE_ERROR',
+        returnedDetails: 'SEAM_FAILURE',
+      },
+      {
+        seam: 'post-coding',
+        seamFailureSet: true,
+        nextStage: 'dispatch-verify',
+        nextStageExecuted: false,
+        returnFormat: 'PIPELINE_ERROR',
+        returnedDetails: 'SEAM_FAILURE',
+      },
+    ])
     const transitions = [
       'pre-flight|research|1',
       'pre-coding|implement|1',
@@ -180,6 +203,6 @@ describe('APS-enforced RPIV harness profile', () => {
       path.join(resultDir, 'rpiv-harness-negative-fixtures.json'),
       JSON.stringify({ issue: 23, results }, null, 2) + '\n'
     )
-    expect(results).toHaveLength(25)
+    expect(results).toHaveLength(26)
   })
 })

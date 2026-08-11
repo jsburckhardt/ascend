@@ -16,6 +16,7 @@ import {
 
 export interface ProjectLibrary {
   create(input: Project): Promise<CreateProjectResult>
+  findById(id: string): Promise<Project | undefined>
   list(): Promise<Project[]>
   closeProject(id: string): Promise<CloseProjectResult>
   close(): void
@@ -35,6 +36,7 @@ export async function createProjectLibrary(
     let closed = false
     return {
       create: (input) => repository.create(input),
+      findById: (id) => repository.findById(id),
       list: () => repository.list(),
       closeProject: (id) => repository.closeProject(id),
       close() {

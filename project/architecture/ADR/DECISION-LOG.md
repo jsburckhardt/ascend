@@ -85,3 +85,8 @@ Short, actionable statements derived from ADRs and core-components. More than on
 | 50 | Require every RPIV worker to capture governed friction without lifecycle orchestration | CORE-COMPONENT-260806-rpiv-stage-contract | 2026-08-11 |
 | 51 | Apply one APS harness profile to all RPIV agent generation and linting | CORE-COMPONENT-260806-rpiv-stage-contract | 2026-08-11 |
 | 52 | Preserve failed observation events for retry at finite worker checkpoints | CORE-COMPONENT-260806-rpiv-stage-contract | 2026-08-11 |
+| 53 | Keep runtime identities, ports, handles, and state only in runtime-manager memory | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-11 |
+| 54 | Coalesce concurrent starts and reuse only health-checked running workbenches | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-11 |
+| 55 | Enforce bounded loopback binding, health readiness, collision retries, and exact cleanup | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-11 |
+| 56 | Cancel caller waits independently and reserve shared cancellation for manager shutdown | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-11 |
+| 57 | Emit bounded redacted lifecycle diagnostics and timing without raw canonical paths | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-11 |

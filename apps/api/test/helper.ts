@@ -14,6 +14,7 @@ afterEach(async () => {
 function emptyProjectLibrary(): ProjectLibrary {
   return {
     create: async () => ({ disposition: 'invalid', code: 'empty-id' }),
+    findById: async () => undefined,
     list: async () => [],
     closeProject: async () => ({ disposition: 'project_not_found' }),
     close() {},

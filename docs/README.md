@@ -39,6 +39,10 @@ Application logs are simple structured console records. Logs and telemetry must 
 
 The repository exposes `just proof-start` and `just proof-stop` for one bounded standalone code-server 4.131.0 lifecycle. `just verify` includes five fake failure cases and two real workbench Chromium scenarios: forced integrated-terminal timeout cleanup and passing Explorer, Markdown Preview, and terminal parity, each with exact-handle cleanup. See [`workbench-proof.md`](workbench-proof.md) for the fixed host prerequisites, handle contract, readiness and stop bounds, disposable artifacts, diagnostics, evidence, and troubleshooting. Harness boot remains non-persistent and test-backed.
 
+## In-memory project runtime
+
+Issue #25 adds one internal manager that starts and reuses a persisted project's code-server without adding a route or Project Home action. Runtime identity, port, state, and process ownership remain memory-only; SQLite stays four-field metadata. Launch is non-root, direct argv, exact-canonical-path, and loopback-only. Readiness uses the bounded /healthz/ JSON contract, exactly concurrent calls share one start, caller cancellation affects only its waiter, and application shutdown performs exact bounded group cleanup before persistence closes. See [project-runtime.md](project-runtime.md) for configuration, typed failures, redacted events, commands, designated-host evidence, and deferred boundaries.
+
 ## Source Documents
 
 - [`PRD.md`](../PRD.md) defines the MVP requirements and acceptance criteria.

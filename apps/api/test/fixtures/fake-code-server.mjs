@@ -20,7 +20,25 @@ if (process.env.BL001_CAPTURE_ENV) {
 
 const mode = process.env.BL001_FAKE_MODE
 if (mode === 'early-exit') process.exit(23)
-if (mode === 'timeout') {
+if (mode === 'project-runtime' || mode === 'project-runtime-ignore-term') {
+  const bindIndex = process.argv.indexOf('--bind-addr')
+  const bind = process.argv[bindIndex + 1] ?? ''
+  const port = Number(bind.slice(bind.lastIndexOf(':') + 1))
+  const server = http.createServer((request, response) => {
+    if (request.url === '/stall') return
+    if (request.url === '/healthz/') {
+      response.writeHead(200, { 'content-type': 'application/json' })
+      response.end(JSON.stringify({ status: 'alive' }))
+      return
+    }
+    response.writeHead(404)
+    response.end()
+  })
+  server.listen(port, '127.0.0.1')
+  const stop = () => server.close(() => process.exit(0))
+  if (mode !== 'project-runtime-ignore-term') process.on('SIGTERM', stop)
+  process.on('SIGINT', stop)
+} else if (mode === 'timeout') {
   process.stderr.write('HTTP server listening on http://127.0.0.1:9/\n')
   setInterval(() => undefined, 1_000)
 } else {

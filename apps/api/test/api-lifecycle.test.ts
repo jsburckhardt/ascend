@@ -98,6 +98,7 @@ describe('API project-library lifecycle', () => {
     const close = vi.fn()
     const library: ProjectLibrary = {
       create: vi.fn(),
+      findById: vi.fn(async () => undefined),
       list: vi.fn(async () => []),
       closeProject: vi.fn(),
       close,

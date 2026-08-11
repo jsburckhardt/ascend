@@ -1,0 +1,6 @@
+{
+  "expectedRule": "WORKER_CHECKPOINTS",
+  "override": {
+    "checkpoints": ["after-context", "after-primary-work", "after-validation"]
+  }
+}

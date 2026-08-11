@@ -435,6 +435,9 @@ export const startWorkbenchProof = async (
     }
   }
   const throwIfChildExited = async (): Promise<void> => {
+    // Cooperative cancellation owns classification even when terminating the
+    // child makes its exit observable at the same boundary.
+    throwIfAborted(options.signal)
     const exitCode = await childExitCode()
     if (exitCode !== null) {
       throw new ProofError(
@@ -455,11 +458,20 @@ export const startWorkbenchProof = async (
   }
   let cancellationCleanup: Promise<void> | null = null
   const cancelChild = () => {
-    if (child.pid)
-      cancellationCleanup ??= terminateExactProcessGroup(
-        child.pid,
-        STOP_TIMEOUT_MS
-      )
+    if (!child.pid) return
+    const childPid = child.pid
+    cancellationCleanup ??= (async () => {
+      // Preserve the exact identity before cooperative termination. Under
+      // full-suite load the abort callback can win the first proc read.
+      const identityDeadline = Date.now() + 250
+      let startTimeTicks = discovered.startTimeTicks
+      while (!startTimeTicks && Date.now() < identityDeadline) {
+        startTimeTicks = await readProcessStartTime(childPid)
+        if (!startTimeTicks) await delay(5)
+      }
+      if (startTimeTicks) discovered = { ...discovered, startTimeTicks }
+      await terminateExactProcessGroup(childPid, STOP_TIMEOUT_MS)
+    })()
   }
   options.signal?.addEventListener('abort', cancelChild, { once: true })
 

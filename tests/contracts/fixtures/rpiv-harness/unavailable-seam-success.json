@@ -1,0 +1,6 @@
+{
+  "expectedRule": "LIFECYCLE_FAILURE_GATING",
+  "override": {
+    "unavailableIsSuccess": true
+  }
+}

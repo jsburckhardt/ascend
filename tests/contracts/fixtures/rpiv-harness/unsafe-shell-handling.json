@@ -1,0 +1,6 @@
+{
+  "expectedRule": "WORKER_LITERAL_SHELL",
+  "override": {
+    "literalShell": false
+  }
+}

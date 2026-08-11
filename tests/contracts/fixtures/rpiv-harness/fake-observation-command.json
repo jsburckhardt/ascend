@@ -1,0 +1,6 @@
+{
+  "expectedRule": "WORKER_REAL_OBSERVE",
+  "override": {
+    "observeCommand": "TELL observed friction"
+  }
+}

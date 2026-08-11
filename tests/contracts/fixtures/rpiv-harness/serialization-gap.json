@@ -1,0 +1,4 @@
+{
+  "expectedRule": "LIFECYCLE_SERIALIZATION",
+  "source": "<processes>\n<process id=\"run-lifecycle-seam\">\nSET ACTIVE_SEAM := SEAM_ID (from \"Agent Inference\")\nCAPTURE HARNESS_RESULT from `vscode/runCommand`\nSET SUCCESSFUL_SEAMS := SUCCESSFUL_SEAMS + [SEAM_ID] (from \"Agent Inference\")\n</process>\n</processes>"
+}

@@ -1,0 +1,6 @@
+{
+  "expectedRule": "PLAN_CORRECTION",
+  "override": {
+    "planCorrection": ["plan", "implement", "post-coding", "verify"]
+  }
+}

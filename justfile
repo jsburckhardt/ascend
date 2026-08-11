@@ -54,6 +54,9 @@ proof-workbench-capacity-audit:
 verify-focused *args:
     pnpm exec vitest run {{args}}
 
+verify-rpiv-harness:
+    pnpm exec vitest run tests/contracts/rpiv-harness-contract.test.ts --project contracts --reporter=verbose
+
 verify-project-registration:
     @echo 'BL-006 registration gate: RUNNING'
     pnpm exec vitest run apps/api/test/project-registration-construction.test.ts apps/api/test/project-registration-paths.test.ts apps/api/test/project-registration-persistence.test.ts apps/api/test/project-registration-fixtures.test.ts apps/api/test/project-registration-acceptance.test.ts apps/api/test/project-registration-documentation.test.ts --reporter=verbose
@@ -78,6 +81,7 @@ verify:
     pnpm lint
     pnpm typecheck
     pnpm test
+    just verify-rpiv-harness
     just verify-project-registration
     pnpm build
     pnpm test:e2e

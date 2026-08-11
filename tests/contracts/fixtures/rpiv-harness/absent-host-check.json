@@ -1,0 +1,6 @@
+{
+  "expectedRule": "LIFECYCLE_HOST_CHECKS",
+  "override": {
+    "hostChecks": false
+  }
+}

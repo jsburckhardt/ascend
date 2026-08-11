@@ -1,0 +1,6 @@
+{
+  "expectedRule": "WORKER_RETRY_EVIDENCE",
+  "override": {
+    "retainFailures": false
+  }
+}

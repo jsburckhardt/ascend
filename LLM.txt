@@ -16,12 +16,12 @@ apps/api/                                                   — Fastify lifecycl
 .github/agents/aps-v1.2.2.agent.md                         — APS prompt generator agent
 .github/agents/bootstrap.agent.md                           — Bootstrap agent (new project scaffolding)
 .github/agents/excali.agent.md                              — Excalidraw diagram agent
-.github/agents/rpiv.agent.md                                — rpiv agent (full RPIV pipeline coordinator)
+.github/agents/rpiv.agent.md                                — rpiv agent (RPIV coordinator and sole lifecycle-seam owner)
 .github/agents/onboard-repo.agent.md                        — Onboard-repo agent (introduce Soft Factory to existing repos)
-.github/agents/rpiv-verifier.agent.md                 — rpiv-verifier agent (test validation, commits, PR creation)
-.github/agents/rpiv-implementer.agent.md              — rpiv-implementer agent (code, tests, verification)
-.github/agents/rpiv-planner.agent.md                  — rpiv-planner agent (ADRs, core-components, action plans, task breakdown, test plans)
-.github/agents/rpiv-research.agent.md                 — rpiv-research agent (exploration, scope classification)
+.github/agents/rpiv-verifier.agent.md                 — rpiv-verifier leaf agent (validation, governed friction capture, PR creation)
+.github/agents/rpiv-implementer.agent.md              — rpiv-implementer leaf agent (code, tests, governed friction capture)
+.github/agents/rpiv-planner.agent.md                  — rpiv-planner leaf agent (architecture, plans, governed friction capture)
+.github/agents/rpiv-research.agent.md                 — rpiv-research leaf agent (exploration, classification, governed friction capture)
 .github/agents/issue-generator.agent.md               — Issue-generator agent (structured issue creation with acceptance criteria)
 .github/skills/README.md                              — APS Skill index
 .github/skills/agnostic-prompt-standard/SKILL.md      — APS reference framework Skill

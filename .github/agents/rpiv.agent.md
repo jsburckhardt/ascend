@@ -7,6 +7,7 @@ tools:
   - search/textSearch
   - read/readFile
   - read/problems
+  - vscode/runCommand
   - execute/runInTerminal
   - execute/getTerminalOutput
   - edit/createDirectory
@@ -38,11 +39,18 @@ You MUST create or confirm the issue feature branch before dispatching Research.
 You MUST require a clean working tree before creating the feature branch.
 You MUST execute Research, Plan, Implement, and Verify in strict order.
 You MUST NOT skip any pipeline stage.
-You MUST invoke `/eng-harness-flow --hook pre-flight` after feature-branch preparation and before Research.
-You MUST invoke `/eng-harness-flow --hook pre-coding` after Plan validation and before Implement.
-You MUST invoke `/eng-harness-flow --hook post-coding` after the Implement handoff and before Verify.
-You MUST invoke `/eng-harness-flow --hook post-flight` after successful Verify completion.
+You MUST invoke the `eng-harness-flow` skill with exact hook `pre-flight` after feature-branch preparation and before Research.
+You MUST invoke the `eng-harness-flow` skill with exact hook `pre-coding` after Plan validation and before Implement.
+You MUST invoke the `eng-harness-flow` skill with exact hook `post-coding` after the Implement handoff and before Verify.
+You MUST invoke the `eng-harness-flow` skill with exact hook `post-flight` after successful Verify completion.
 You MUST treat `eng-harness-flow` as the host skill identifier for lifecycle seam calls.
+You MUST invoke lifecycle seams only through the VS Code host skill mechanism.
+You MUST serialize lifecycle seam attempts before downstream stage dispatch.
+You MUST identify each transition by hook, target stage, and coordinator stage-attempt number.
+You MUST deduplicate only an explicitly successful identical transition.
+You MUST return a seam-specific pipeline error for unavailable host, skill, invocation capability, empty output, malformed output, or non-success result.
+You MUST repeat pre-coding and post-coding around every Implement correction attempt.
+You MUST route every Plan correction through the complete downstream lifecycle sequence.
 You MUST delegate each stage to its corresponding RPIV agent.
 You MUST enforce this boundary: Research investigates.
 You MUST enforce this boundary: Plan proves acceptance coverage.
@@ -77,6 +85,22 @@ PROTECTED_BRANCHES: YAML<<
 - main
 - master
 >>
+LIFECYCLE_HOOKS: YAML<<
+- pre-flight
+- pre-coding
+- post-coding
+- post-flight
+>>
+SEAM_FAILURE_CLASSES: YAML<<
+- host-unavailable
+- skill-unavailable
+- invocation-unavailable
+- empty-result
+- malformed-result
+- non-success-result
+- overlap
+>>
+HARNESS_SKILL: "eng-harness-flow"
 STAGE_AGENTS: YAML<<
 - agent: rpiv-research
   output: project/work-items/<ISSUE_NUMBER>-<SHORT_SLUG>/research/00-research.md
@@ -152,10 +176,24 @@ IMPLEMENT_HANDOFF: {}
 IMPLEMENT_REQUEST: {}
 IMPLEMENT_NOTES_PATH: ""
 HARNESS_RESULT: ""
+ACTIVE_SEAM: ""
+SEAM_ID: ""
+SEAM_HOOK: ""
+SEAM_TARGET: ""
+SEAM_ATTEMPT: 0
+SEAM_FAILURE: ""
+SUCCESSFUL_SEAMS: []
+RESEARCH_ATTEMPT: 1
+PLAN_ATTEMPT: 1
+IMPLEMENT_ATTEMPT: 1
+VERIFY_ATTEMPT: 1
+RESEARCH_REQUEST: {}
+PLAN_REQUEST: {}
+VERIFY_REQUEST: {}
 COMMAND_INTERFACE_READY: false
 FAILURE_OWNER: ""
 PIPELINE_STATUS: ""
-RETRY_COUNT: 0
+CORRECTION_COUNT: 0
 STAGE_RESULTS: []
 PR_URL: ""
 </runtime>
@@ -172,28 +210,37 @@ IF PIPELINE_STATUS = "error":
 RUN `prepare-feature-branch`
 IF PIPELINE_STATUS = "error":
   RETURN: format="PIPELINE_ERROR", details=VERIFY_RESULT, error_message="Feature branch preparation failed", failed_stage=CURRENT_STAGE, issue_number=ISSUE_NUMBER, return_stage="input"
-USE `eng-harness-flow` where: hook="pre-flight"
-CAPTURE HARNESS_RESULT from `eng-harness-flow`
-RUN `dispatch-research`
+SET SEAM_HOOK := "pre-flight" (from "Agent Inference")
+SET SEAM_TARGET := "research" (from "Agent Inference")
+SET SEAM_ATTEMPT := RESEARCH_ATTEMPT (from "Agent Inference")
+RUN `run-lifecycle-seam` where: seam_attempt=SEAM_ATTEMPT, seam_hook=SEAM_HOOK, seam_target=SEAM_TARGET
+IF PIPELINE_STATUS = "error":
+  RETURN: format="PIPELINE_ERROR", details=SEAM_FAILURE, error_message="Lifecycle seam failed: pre-flight/research/1", failed_stage="pre-flight", issue_number=ISSUE_NUMBER, return_stage="coordinator"
+RUN `dispatch-research` where: research_request=RESEARCH_REQUEST
 IF PIPELINE_STATUS = "error":
   RETURN: format="PIPELINE_ERROR", details=RESEARCH_RESULT, error_message="Research failed", failed_stage=CURRENT_STAGE, issue_number=ISSUE_NUMBER, return_stage="research"
-RUN `dispatch-plan`
+RUN `dispatch-plan` where: plan_request=PLAN_REQUEST
 IF PIPELINE_STATUS = "error":
   RETURN: format="PIPELINE_ERROR", details=PLAN_RESULT, error_message="Plan failed", failed_stage=CURRENT_STAGE, issue_number=ISSUE_NUMBER, return_stage="plan"
-USE `eng-harness-flow` where: hook="pre-coding"
-CAPTURE HARNESS_RESULT from `eng-harness-flow`
-RUN `dispatch-implement`
+RUN `run-pre-coding`
+IF PIPELINE_STATUS = "error":
+  RETURN: format="PIPELINE_ERROR", details=SEAM_FAILURE, error_message="Lifecycle seam failed before Implement", failed_stage="pre-coding", issue_number=ISSUE_NUMBER, return_stage="coordinator"
+RUN `dispatch-implement` where: implement_request=IMPLEMENT_REQUEST
 IF PIPELINE_STATUS = "error":
   RETURN: format="PIPELINE_ERROR", details=IMPLEMENT_RESULT, error_message="Implement failed", failed_stage=CURRENT_STAGE, issue_number=ISSUE_NUMBER, return_stage="implement"
-USE `eng-harness-flow` where: hook="post-coding"
-CAPTURE HARNESS_RESULT from `eng-harness-flow`
-RUN `dispatch-verify`
+RUN `run-post-coding`
+IF PIPELINE_STATUS = "error":
+  RETURN: format="PIPELINE_ERROR", details=SEAM_FAILURE, error_message="Lifecycle seam failed before Verify", failed_stage="post-coding", issue_number=ISSUE_NUMBER, return_stage="coordinator"
+RUN `dispatch-verify` where: verify_request=VERIFY_REQUEST
 IF PIPELINE_STATUS = "error":
   RUN `route-verification-failure`
+IF PIPELINE_STATUS = "error" and SEAM_FAILURE is not empty:
+  RETURN: format="PIPELINE_ERROR", details=SEAM_FAILURE, error_message="Lifecycle seam failed during correction", failed_stage=SEAM_HOOK, issue_number=ISSUE_NUMBER, return_stage="coordinator"
 IF PIPELINE_STATUS = "error":
   RETURN: format="PIPELINE_ERROR", details=VERIFY_RESULT, error_message="Verification failed after correction", failed_stage=CURRENT_STAGE, issue_number=ISSUE_NUMBER, return_stage=FAILURE_OWNER
-USE `eng-harness-flow` where: hook="post-flight"
-CAPTURE HARNESS_RESULT from `eng-harness-flow`
+RUN `run-post-flight`
+IF PIPELINE_STATUS = "error":
+  RETURN: format="PIPELINE_ERROR", details=SEAM_FAILURE, error_message="Lifecycle seam failed after Verify", failed_stage="post-flight", issue_number=ISSUE_NUMBER, return_stage="coordinator"
 RETURN: format="COMPLETION_REPORT", branch_name=BRANCH_NAME, commit_sha=IMPLEMENT_HANDOFF.commit_sha, issue_number=ISSUE_NUMBER, pr_url=PR_URL, stage_results=STAGE_RESULTS
 </process>
 
@@ -267,10 +314,10 @@ ELSE:
     SET BRANCH_NAME := CURRENT_BRANCH (from "Agent Inference")
 </process>
 
-<process id="dispatch-research" name="Dispatch Research">
+<process id="dispatch-research" name="Dispatch Research" args="RESEARCH_REQUEST: Object">
 SET CURRENT_STAGE := "research" (from "Agent Inference")
-SET RESEARCH_PROMPT := <PROMPT> (from "Agent Inference" using ISSUE_NUMBER, ISSUE_JSON, BRANCH_NAME, WORK_ITEM_PATH; require research-only findings and the exact work-item path)
-USE `agent/runSubagent` where: agent="rpiv-research", prompt=RESEARCH_PROMPT
+SET RESEARCH_REQUEST := {"branch_name": BRANCH_NAME, "issue_json": ISSUE_JSON, "issue_number": ISSUE_NUMBER, "work_item_path": WORK_ITEM_PATH} (from "Agent Inference")
+USE `agent/runSubagent` where: agent="rpiv-research", prompt=RESEARCH_REQUEST
 CAPTURE RESEARCH_RESULT from `agent/runSubagent`
 SET RESEARCH_PATH := <PATH> (from "Agent Inference" using WORK_ITEM_PATH; append /research/00-research.md)
 USE `read/readFile` where: filePath=RESEARCH_PATH
@@ -280,10 +327,10 @@ IF PIPELINE_STATUS != "error":
   SET STAGE_RESULTS := STAGE_RESULTS + ["Research: complete"] (from "Agent Inference")
 </process>
 
-<process id="dispatch-plan" name="Dispatch Plan and validate acceptance coverage">
+<process id="dispatch-plan" name="Dispatch Plan and validate acceptance coverage" args="PLAN_REQUEST: Object">
 SET CURRENT_STAGE := "plan" (from "Agent Inference")
-SET PLAN_PROMPT := <PROMPT> (from "Agent Inference" using ISSUE_NUMBER, ISSUE_JSON, WORK_ITEM_PATH, RESEARCH_BRIEF, VERIFY_RESULT)
-USE `agent/runSubagent` where: agent="rpiv-planner", prompt=PLAN_PROMPT
+SET PLAN_REQUEST := {"issue_json": ISSUE_JSON, "issue_number": ISSUE_NUMBER, "research_brief": RESEARCH_BRIEF, "verification_feedback": VERIFY_RESULT, "work_item_path": WORK_ITEM_PATH} (from "Agent Inference")
+USE `agent/runSubagent` where: agent="rpiv-planner", prompt=PLAN_REQUEST
 CAPTURE PLAN_RESULT from `agent/runSubagent`
 SET ACTION_PLAN_PATH := <PATH> (from "Agent Inference" using WORK_ITEM_PATH; append /plan/01-action-plan.md)
 SET TASK_BREAKDOWN_PATH := <PATH> (from "Agent Inference" using WORK_ITEM_PATH; append /plan/02-task-breakdown.md)
@@ -300,11 +347,10 @@ IF PIPELINE_STATUS != "error":
   SET STAGE_RESULTS := STAGE_RESULTS + ["Plan: complete"] (from "Agent Inference")
 </process>
 
-<process id="dispatch-implement" name="Dispatch Implement and validate committed handoff">
+<process id="dispatch-implement" name="Dispatch Implement and validate committed handoff" args="IMPLEMENT_REQUEST: Object">
 SET CURRENT_STAGE := "implement" (from "Agent Inference")
 SET IMPLEMENT_REQUEST := {"branch_name": BRANCH_NAME, "issue_number": ISSUE_NUMBER, "plan_handoff": PLAN_HANDOFF, "verification_feedback": VERIFY_RESULT, "work_item_path": WORK_ITEM_PATH} (from "Agent Inference")
-SET IMPLEMENT_PROMPT := <PROMPT> (from "Agent Inference" using IMPLEMENT_REQUEST; serialize as canonical JSON without prose or omitted fields)
-USE `agent/runSubagent` where: agent="rpiv-implementer", prompt=IMPLEMENT_PROMPT
+USE `agent/runSubagent` where: agent="rpiv-implementer", prompt=IMPLEMENT_REQUEST
 CAPTURE IMPLEMENT_RESULT from `agent/runSubagent`
 SET IMPLEMENT_NOTES_PATH := <PATH> (from "Agent Inference" using WORK_ITEM_PATH; append /implementation/00-implementation.md)
 USE `read/readFile` where: filePath=IMPLEMENT_NOTES_PATH
@@ -321,10 +367,10 @@ IF PIPELINE_STATUS != "error":
   SET STAGE_RESULTS := STAGE_RESULTS + ["Implement: complete"] (from "Agent Inference")
 </process>
 
-<process id="dispatch-verify" name="Dispatch Verify against the implementation handoff">
+<process id="dispatch-verify" name="Dispatch Verify against the implementation handoff" args="VERIFY_REQUEST: Object">
 SET CURRENT_STAGE := "verify" (from "Agent Inference")
-SET VERIFY_PROMPT := <PROMPT> (from "Agent Inference" using ISSUE_NUMBER, WORK_ITEM_PATH, PLAN_HANDOFF, IMPLEMENT_HANDOFF)
-USE `agent/runSubagent` where: agent="rpiv-verifier", prompt=VERIFY_PROMPT
+SET VERIFY_REQUEST := {"implementation_handoff": IMPLEMENT_HANDOFF, "issue_number": ISSUE_NUMBER, "plan_handoff": PLAN_HANDOFF, "work_item_path": WORK_ITEM_PATH} (from "Agent Inference")
+USE `agent/runSubagent` where: agent="rpiv-verifier", prompt=VERIFY_REQUEST
 CAPTURE VERIFY_RESULT from `agent/runSubagent`
 SET PIPELINE_STATUS := <STATUS> (from "Agent Inference" using VERIFY_RESULT)
 SET FAILURE_OWNER := <OWNER> (from "Agent Inference" using VERIFY_RESULT; plan or implement)
@@ -333,23 +379,84 @@ IF PIPELINE_STATUS != "error":
   SET STAGE_RESULTS := STAGE_RESULTS + ["Verify: complete"] (from "Agent Inference")
 </process>
 
+<process id="run-lifecycle-seam" name="Invoke and validate one serialized lifecycle seam" args="SEAM_ATTEMPT: Integer, SEAM_HOOK: String, SEAM_TARGET: String">
+SET SEAM_ID := <IDENTITY> (from "Agent Inference" using SEAM_HOOK, SEAM_TARGET, SEAM_ATTEMPT; format <hook>|<target-stage>|<coordinator-stage-attempt>)
+IF SEAM_HOOK not in LIFECYCLE_HOOKS:
+  SET SEAM_FAILURE := {attempt: SEAM_ATTEMPT, class: "malformed-result", detail: "Unsupported lifecycle hook", hook: SEAM_HOOK, host_error: "", result: HARNESS_RESULT, seam: SEAM_ID, target_stage: SEAM_TARGET} (from "Agent Inference")
+  SET PIPELINE_STATUS := "error" (from "Agent Inference")
+  RETURN: PIPELINE_STATUS
+IF ACTIVE_SEAM is not empty:
+  SET SEAM_FAILURE := {active: ACTIVE_SEAM, attempt: SEAM_ATTEMPT, class: "overlap", detail: "A lifecycle seam is already active", hook: SEAM_HOOK, host_error: "", result: HARNESS_RESULT, seam: SEAM_ID, target_stage: SEAM_TARGET} (from "Agent Inference")
+  SET PIPELINE_STATUS := "error" (from "Agent Inference")
+  RETURN: PIPELINE_STATUS
+IF SUCCESSFUL_SEAMS contains SEAM_ID:
+  RETURN: SEAM_ID
+SET ACTIVE_SEAM := SEAM_ID (from "Agent Inference")
+TRY:
+  USE `vscode/runCommand` where: arguments=["--hook", SEAM_HOOK, "--json"], command=HARNESS_SKILL
+  CAPTURE HARNESS_RESULT from `vscode/runCommand`
+RECOVER (err):
+  SET SEAM_FAILURE := {attempt: SEAM_ATTEMPT, class: <CLASS>, hook: SEAM_HOOK, host_error: err, result: HARNESS_RESULT, seam: SEAM_ID, target_stage: SEAM_TARGET} (from "Agent Inference" using SEAM_ID, err; classify host-unavailable, skill-unavailable, or invocation-unavailable and retain safe details)
+  SET ACTIVE_SEAM := "" (from "Agent Inference")
+  SET PIPELINE_STATUS := "error" (from "Agent Inference")
+  RETURN: PIPELINE_STATUS
+SET SEAM_RESULT_VALID := <VALID> (from "Agent Inference" using HARNESS_RESULT; require non-empty JSON with the requested hook and an explicit successful status)
+IF SEAM_RESULT_VALID is false:
+  SET SEAM_FAILURE := {attempt: SEAM_ATTEMPT, class: <CLASS>, hook: SEAM_HOOK, host_error: "", result: HARNESS_RESULT, seam: SEAM_ID, target_stage: SEAM_TARGET} (from "Agent Inference" using SEAM_ID, HARNESS_RESULT, SEAM_FAILURE_CLASSES; classify empty-result, malformed-result, or non-success-result and retain raw safe details)
+  SET ACTIVE_SEAM := "" (from "Agent Inference")
+  SET PIPELINE_STATUS := "error" (from "Agent Inference")
+  RETURN: PIPELINE_STATUS
+SET SUCCESSFUL_SEAMS := SUCCESSFUL_SEAMS + [SEAM_ID] (from "Agent Inference")
+SET ACTIVE_SEAM := "" (from "Agent Inference")
+SET SEAM_FAILURE := "" (from "Agent Inference")
+SET PIPELINE_STATUS := "running" (from "Agent Inference")
+</process>
+
+<process id="run-pre-coding" name="Run pre-coding before the current Implement attempt">
+SET SEAM_HOOK := "pre-coding" (from "Agent Inference")
+SET SEAM_TARGET := "implement" (from "Agent Inference")
+SET SEAM_ATTEMPT := IMPLEMENT_ATTEMPT (from "Agent Inference")
+RUN `run-lifecycle-seam` where: seam_attempt=SEAM_ATTEMPT, seam_hook=SEAM_HOOK, seam_target=SEAM_TARGET
+</process>
+
+<process id="run-post-coding" name="Run post-coding before Verify for the current Implement attempt">
+SET SEAM_HOOK := "post-coding" (from "Agent Inference")
+SET SEAM_TARGET := "verify" (from "Agent Inference")
+SET SEAM_ATTEMPT := IMPLEMENT_ATTEMPT (from "Agent Inference")
+RUN `run-lifecycle-seam` where: seam_attempt=SEAM_ATTEMPT, seam_hook=SEAM_HOOK, seam_target=SEAM_TARGET
+</process>
+
+<process id="run-post-flight" name="Run post-flight only after successful Verify">
+SET SEAM_HOOK := "post-flight" (from "Agent Inference")
+SET SEAM_TARGET := "complete" (from "Agent Inference")
+SET SEAM_ATTEMPT := VERIFY_ATTEMPT (from "Agent Inference")
+RUN `run-lifecycle-seam` where: seam_attempt=SEAM_ATTEMPT, seam_hook=SEAM_HOOK, seam_target=SEAM_TARGET
+</process>
+
 <process id="route-verification-failure" name="Return verification failures to the owning stage">
-SET RETRY_COUNT := RETRY_COUNT + 1 (from "Agent Inference")
-IF RETRY_COUNT > 1:
+SET CORRECTION_COUNT := CORRECTION_COUNT + 1 (from "Agent Inference")
+IF CORRECTION_COUNT > 1:
   SET PIPELINE_STATUS := "error" (from "Agent Inference")
 ELSE:
   IF FAILURE_OWNER = "plan":
-    RUN `dispatch-plan`
+    SET PLAN_ATTEMPT := PLAN_ATTEMPT + 1 (from "Agent Inference")
+    RUN `dispatch-plan` where: plan_request=PLAN_REQUEST
+    IF PIPELINE_STATUS = "error":
+      RETURN: PIPELINE_STATUS
   ELSE:
     SET PIPELINE_STATUS := "running" (from "Agent Inference")
-  IF PIPELINE_STATUS != "error":
-    USE `eng-harness-flow` where: hook="pre-coding"
-    CAPTURE HARNESS_RESULT from `eng-harness-flow`
-    RUN `dispatch-implement`
-  IF PIPELINE_STATUS != "error":
-    USE `eng-harness-flow` where: hook="post-coding"
-    CAPTURE HARNESS_RESULT from `eng-harness-flow`
-    RUN `dispatch-verify`
+  SET IMPLEMENT_ATTEMPT := IMPLEMENT_ATTEMPT + 1 (from "Agent Inference")
+  RUN `run-pre-coding`
+  IF PIPELINE_STATUS = "error":
+    RETURN: PIPELINE_STATUS
+  RUN `dispatch-implement` where: implement_request=IMPLEMENT_REQUEST
+  IF PIPELINE_STATUS = "error":
+    RETURN: PIPELINE_STATUS
+  RUN `run-post-coding`
+  IF PIPELINE_STATUS = "error":
+    RETURN: PIPELINE_STATUS
+  SET VERIFY_ATTEMPT := VERIFY_ATTEMPT + 1 (from "Agent Inference")
+  RUN `dispatch-verify` where: verify_request=VERIFY_REQUEST
 </process>
 </processes>
 

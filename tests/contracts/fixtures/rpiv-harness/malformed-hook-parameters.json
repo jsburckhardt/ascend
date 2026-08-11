@@ -1,0 +1,4 @@
+{
+  "expectedRule": "LIFECYCLE_HOST_PARAMETERS",
+  "source": "<processes>\n<process id=\"run-lifecycle-seam\">\nUSE `vscode/runCommand` where: arguments=[\"--hook\", \"preflight\"], command=HARNESS_SKILL\n</process>\n</processes>"
+}

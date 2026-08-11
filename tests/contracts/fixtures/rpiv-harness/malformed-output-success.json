@@ -1,0 +1,6 @@
+{
+  "expectedRule": "OBS_MALFORMED_OUTPUT",
+  "override": {
+    "malformedIsSuccess": true
+  }
+}

@@ -99,6 +99,20 @@ describe('workbench proof runtime', () => {
     }
     expect(() => parseProofHandle('not-json')).toThrow(ProofError)
     await expect(readProcessStartTime(-1)).resolves.toBeNull()
+
+    const stringAbort = new AbortController()
+    stringAbort.abort('manual-stop')
+    await expect(
+      startWorkbenchProof({ signal: stringAbort.signal })
+    ).rejects.toMatchObject({ code: 'cancelled', message: 'manual-stop' })
+    await expect(
+      startWorkbenchProof({
+        signal: { aborted: true, reason: 42 } as AbortSignal,
+      })
+    ).rejects.toMatchObject({
+      code: 'cancelled',
+      message: 'operation-cancelled',
+    })
   })
 
   it('starts one argument-array process and stops its exact handle twice', async () => {
@@ -228,6 +242,35 @@ describe('workbench proof runtime', () => {
       await startWorkbenchProof({
         executablePath: fakeExecutable,
         runRoot: cancelledRoot,
+        startupTimeoutMs: 2_000,
+        environmentOverrides: { BL001_FAKE_MODE: 'timeout' },
+        signal: controller.signal,
+      })
+    } catch (error) {
+      cancelled = error as ProofError
+    }
+    expect(cancelled).toMatchObject({ code: 'cancelled' })
+    expect(cancelled?.discoveredIdentity).toMatchObject({
+      pid: expect.any(Number),
+      startTimeTicks: expect.any(String),
+    })
+    await expect(
+      processIdentityAbsent({
+        pid: cancelled!.discoveredIdentity!.pid!,
+        startTimeTicks: cancelled!.discoveredIdentity!.startTimeTicks!,
+      })
+    ).resolves.toBe(true)
+  })
+
+  it('preserves an established identity during later cooperative cancellation', async () => {
+    const runRoot = await temporaryRoot()
+    const controller = new AbortController()
+    setTimeout(() => controller.abort(new Error('overall-timeout')), 250)
+    let cancelled: ProofError | null = null
+    try {
+      await startWorkbenchProof({
+        executablePath: fakeExecutable,
+        runRoot,
         startupTimeoutMs: 2_000,
         environmentOverrides: { BL001_FAKE_MODE: 'timeout' },
         signal: controller.signal,

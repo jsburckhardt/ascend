@@ -27,6 +27,10 @@ You MUST keep raw project operating commands in the root justfile.
 You MUST treat root justfile recipes as the default validation source for Implement and Verify.
 You MUST require the root justfile to expose verify-focused and verify before RPIV.
 You MUST enforce this RPIV boundary: RPIV orchestrates, Research investigates, Plan proves coverage, Implement builds and provides evidence, Verify decides acceptance and creates the PR.
+You MUST assign pre-flight, pre-coding, post-coding, and post-flight lifecycle seams only to the RPIV coordinator through `/eng-harness-flow --hook <hook> --json`.
+You MUST require Research, Plan, Implement, and Verify to capture only their own governed friction through real `harness observe` calls.
+You MUST preserve every RPIV worker frontmatter tool list and leaf-worker boundary for harness capture.
+You MUST surface unavailable or failed required harness attempts explicitly without success-shaped fallback.
 You MUST require Implement to maintain affected application documentation and Verify to inspect it independently.
 You MUST keep issue acceptance criteria bounded, observable, and executable by configured agents with repository capabilities.
 You MUST update the APS version badge in README.md and the APS_BADGE constant when the APS skill is upgraded.
@@ -179,6 +183,9 @@ rpiv:
     - must execute Research, Plan, Implement, and Verify in strict order
     - must delegate stage work to rpiv-research, rpiv-planner, rpiv-implementer, and rpiv-verifier
     - must validate each stage artifact before proceeding
+    - must serialize and validate pre-flight, pre-coding, post-coding, and post-flight before downstream dispatch
+    - must repeat pre-coding and post-coding for each correction attempt
+    - must fail explicitly when the VS Code host skill or a successful lifecycle result is unavailable
     - Plan to Implement handoff must include the exact work-item path, acceptance criteria, tasks, test plan, and relevant ADRs
     - Implement to Verify handoff must include the exact work-item path, branch, commit SHA, clean-tree proof, implementation evidence, documentation evidence, and test results
     - verification code, test, or application documentation failures return to Implement
@@ -210,6 +217,7 @@ rpiv-research:
     - inspect existing repo code and docs before recording findings
     - record only constraints, risks, relevant ADRs and core-components, and repository findings
     - must not design solutions, create tasks, define tests, or propose architectural artifacts
+    - must capture qualifying stage friction through the existing terminal tool and never invoke lifecycle hooks
 rpiv-planner:
   file: .github/agents/rpiv-planner.agent.md
   purpose: Own the Plan stage — read the research brief, commit architectural decisions via ADRs and core-components, then produce the action plan, task breakdown, and test plan.
@@ -251,6 +259,7 @@ rpiv-planner:
     - every task must have explicit test coverage requirements
     - every task must identify expected evidence
     - tasks must reference relevant ADRs and core-components
+    - must capture qualifying stage friction through the existing terminal tool and never invoke lifecycle hooks
 rpiv-implementer:
   file: .github/agents/rpiv-implementer.agent.md
   purpose: Execute dependency-ordered tasks, maintain tests and application documentation, run configured validation, record evidence, and commit.
@@ -289,6 +298,7 @@ rpiv-implementer:
     - record concrete implementation evidence for every AC ID
     - commit the implementation and hand off a clean working tree
     - must not check GitHub acceptance criteria or claim final verification
+    - must capture qualifying stage friction through the existing terminal tool and never invoke lifecycle hooks
 rpiv-verifier:
   file: .github/agents/rpiv-verifier.agent.md
   purpose: Verify the exact committed implementation and documentation, decide acceptance, update GitHub criteria, push, and open a PR for review.
@@ -330,6 +340,7 @@ rpiv-verifier:
     - must not force-push or use --no-verify
     - must not modify application source code, tests, or application documentation
     - must verify the branch is clean after all commits
+    - must capture qualifying stage friction through the existing terminal tool and never invoke lifecycle hooks
     - must write summary.md to project/work-items/<ISSUE_NUMBER>-<SHORT_DESCRIPTION>/verify/ after PR creation
 issue-generator:
   file: .github/agents/issue-generator.agent.md

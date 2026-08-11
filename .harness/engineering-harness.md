@@ -69,14 +69,16 @@ artifacts under each application package.
 - Harness retrospectives: `.harness/records/retro/`
 
 ## Injection map
-<!-- Where the repo's extant dev/SDD flow calls /eng-harness-flow. One row per seam.
-     Filled by eng-harness-0-adopt Step 3 (with the user's go-ahead). -->
+<!-- Coordinator lifecycle ownership has one row per seam; coding observation has one row per leaf worker. -->
 
 | Seam event | Fires from | What fires it |
 |---|---|---|
 | `pre-flight` | `.github/agents/rpiv.agent.md` | RPIV after feature-branch preparation and before Research |
 | `pre-coding` | `.github/agents/rpiv.agent.md` | RPIV after Plan validation and before Implement |
-| `coding` | `.github/agents/rpiv-implementer.agent.md` | Implementer runs `harness observe` when qualifying friction occurs |
+| `coding` | `.github/agents/rpiv-research.agent.md` | Research runs real `harness observe` capture for its own qualifying friction |
+| `coding` | `.github/agents/rpiv-planner.agent.md` | Plan runs real `harness observe` capture for its own qualifying friction |
+| `coding` | `.github/agents/rpiv-implementer.agent.md` | Implement runs real `harness observe` capture for its own qualifying friction |
+| `coding` | `.github/agents/rpiv-verifier.agent.md` | Verify runs real `harness observe` capture for its own qualifying friction |
 | `post-coding` | `.github/agents/rpiv.agent.md` | RPIV after the Implement handoff and before Verify |
 | `post-flight` | `.github/agents/rpiv.agent.md` | RPIV after successful Verify completion |
 

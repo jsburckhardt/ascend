@@ -1,0 +1,6 @@
+{
+  "expectedRule": "OBS_INPUT_REJECTION",
+  "override": {
+    "rejectBlank": false
+  }
+}

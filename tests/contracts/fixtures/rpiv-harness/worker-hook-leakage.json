@@ -1,0 +1,6 @@
+{
+  "expectedRule": "WORKER_NO_LIFECYCLE",
+  "override": {
+    "workerLifecycle": true
+  }
+}

@@ -1,0 +1,4 @@
+{
+  "expectedRule": "APS_RUN_ARGUMENTS",
+  "source": "<runtime>\nVALUE: \"\"\n</runtime>\n<processes>\n<process id=\"target\" args=\"VALUE: String\">\nRETURN: VALUE\n</process>\n<process id=\"caller\">\nRUN `target`\n</process>\n</processes>"
+}

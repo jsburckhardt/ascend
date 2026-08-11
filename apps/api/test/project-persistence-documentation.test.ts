@@ -89,20 +89,16 @@ describe('project persistence documentation contract', () => {
       expect(apiDocs).toContain(output)
     }
 
-    expect(applicationDocs).toContain(
-      'Current Fastify startup does not construct the project library'
-    )
-    expect(apiDocs).toContain(
-      'The current Fastify startup does not call this factory or construct the project library'
-    )
-    expect(applicationDocs).toContain('createApplicationProjectLibrary()')
-    expect(apiDocs).toContain('createApplicationProjectLibrary()')
-    expect(applicationDocs).toContain('exactly two records once each')
-    expect(apiDocs).toContain('adds no Fastify route')
-    expect(apiDocs).toContain('refuses `<repository>/apps/api/ascend.db`')
+    expect(applicationDocs).toContain('migrations before listening')
+    expect(apiDocs).toContain('Before binding its listener')
+    expect(applicationDocs).toContain('Complete shutdown')
+    expect(apiDocs).toContain('GET /api/projects')
+    expect(apiDocs).toContain('createdAt ASC, id ASC')
+    expect(apiDocs).toContain('refused-default database')
     expect(harnessDocs).toContain(
       'destructive reset command remains intentionally unsupported'
     )
+
     expect(justfile).toContain('db-migrate database_path:')
     for (const { id } of MIGRATION_CATALOG) expect(journal).toContain(id)
     for (const column of ['id', 'name', 'canonical_path', 'created_at']) {

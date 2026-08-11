@@ -65,7 +65,10 @@ export function createDrizzleProjectAdapter(
       return rows[0]
     },
     async list() {
-      return database.select().from(projects).orderBy(asc(projects.id))
+      return database
+        .select()
+        .from(projects)
+        .orderBy(asc(projects.createdAt), asc(projects.id))
     },
   }
 }

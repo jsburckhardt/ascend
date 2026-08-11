@@ -54,7 +54,6 @@ The designated comparison command is just proof-workbench-presentation. It compa
 
 ## Project library persistence
 
-The persistence module resolves its developer database to `<repository>/apps/api/ascend.db` when `createApplicationProjectLibrary()` is called. `ASCEND_DATABASE_URL` overrides that local persistence path with a `file:` URL or filesystem path. Current Fastify startup does not construct the project library; that application integration remains deferred with the BL-007 HTTP/API boundary. Migration is intentionally separate: it ignores the environment override and requires an explicit filesystem target.
 
 ```text
 just db-migrate <database-path>
@@ -70,11 +69,10 @@ The command creates parent directories and a missing database, never resets data
 
 The final `projects` table has exactly four physical columns: `id`, `name`, `canonical_path`, and `created_at`. They map to the `Project` fields `id`, `name`, `canonicalPath`, and `createdAt`; `createdAt` is a finite, non-negative safe integer containing Unix epoch milliseconds. No source text, terminal output, ports, PIDs, handles, environment data, credentials, secrets, or runtime state is part of this schema.
 
-The in-process `ProjectLibrary` creates and lists records. A valid create returns a `created` or `existing` disposition; canonical-path uniqueness is enforced by SQLite, and `existing` carries the durable winning record. Invalid input returns `invalid` with `empty-id`, `blank-name`, `empty-canonical-path`, or `invalid-created-at` before a write. A bounded integration proof closes the complete library/database generation, reconstructs fresh instances at the same path, and recovers exactly two records once each. This adds no HTTP route or UI.
+The in-process `ProjectLibrary` creates and lists records. A valid create returns a `created` or `existing` disposition; canonical-path uniqueness is enforced by SQLite, and `existing` carries the durable winning record. Invalid input returns `invalid` with `empty-id`, `blank-name`, `empty-canonical-path`, or `invalid-created-at` before a write. A bounded integration proof closes the complete library/database generation, reconstructs fresh instances at the same path, and recovers exactly two records once each. BL-007 now exposes this persisted data through the read-only list route and Project Home.
 
 Migration compatibility uses the tracked prior-version fixture `apps/api/test/fixtures/db/0000_project_library.sqlite`, which is at `0000_project_library` and contains exactly two records. BL-005 database tests allocate unique paths below `test-results/bl-005/databases`, refuse `<repository>/apps/api/ascend.db`, close all handles, remove only the selected database plus `-wal`, `-shm`, and `-journal`, and prove those files are absent. The tracked fixture is copied and never mutated.
 
-Filesystem existence, readability, home expansion, and canonicalization are provided by the BL-006 in-process registration boundary documented below. HTTP/API response semantics, routes, and UI remain BL-007 work.
 
 
 ## Canonical filesystem registration
@@ -87,4 +85,18 @@ A project record has exactly stable ID, canonical-basename display name (canonic
 
 just verify-project-registration uses disposable test-results/bl-006/fixtures trees and emits named configuration, registration, persistence, non-mutation, fixture-cleanup, documentation, and permission-capability signals. The generated test-results/bl-006/permission-capability.json says proved only when bounded mode-000 checks are enforceable; otherwise it says skipped with the failed probe result. Controlled denial always proves unreadable configuration and project mappings, and fixture cleanup restores modes and removes only allocated roots.
 
-Repository scanning, clone/import, Git behavior, native pickers, HTTP/network routes, UI/project listing, project close, BL-007/BL-008, and all workbench behavior are explicitly out of scope.
+
+
+The BL-006 registration service remains in-process. Repository scanning, clone/import, Git requirements, native pickers, project close, and workbench launch remain outside registration. BL-007 adds read-only listing and presentation without adding registration.
+
+## Registered Project Home (BL-007)
+
+API startup resolves `ASCEND_DATABASE_URL` (`file:` URL or filesystem path, with `<repository>/apps/api/ascend.db` as the default), opens one closeable project library, and applies or validates committed migrations before listening. Complete shutdown closes Fastify, SQLite, and telemetry once; repeated SIGINT, SIGTERM, and direct stop requests join the same memoized outcome. Restarting against the same database preserves every record. Initialization failure never opens the listener, exits nonzero, and emits the safe `api.start.failed` event with category `project_library_initialization_failed`; raw secrets, SQL, stack text, and database paths are not logged. BL-007 uses the existing migrations and requires no upgrade conversion.
+
+`GET /api/projects` returns `{"projects":[]}` or a projects array whose records contain exactly `id`, `name`, `canonicalPath`, and `createdAt`. Valid records require a non-empty ID, non-blank name, non-empty unchanged canonical path, and finite non-negative safe-integer createdAt. Results are ordered `createdAt ASC, id ASC`. Duplicate IDs, malformed rows, and persistence failures return HTTP 500 as `{"error":{"category":"project_list_failed"}}`, with no projects or partial records.
+
+Vite sends same-origin `/api` traffic to the loopback API. Project Home makes one 5,000 ms-bounded request per mount and shows distinct announced loading, explanatory empty, populated, and actionable failure states. Retry starts one new request. A newer retry aborts or supersedes its predecessor, stale responses cannot update the page, and unmount aborts the current request. Every valid card shows the display name and complete canonical path unchanged as whitespace-preserving text and title. Its keyboard-focusable Open button carries the stable project ID and names the project; activation only announces that opening is not available in BL-007. It performs no navigation, request, or workbench operation, including after repeated activation.
+
+Project registration, close, workbench startup/status, search, sorting controls, tags, path mutation, and fake workbench routing remain BL-008+ scope. Registered projects appear here, but this page does not register them.
+
+Validate through root commands only: `just verify-focused apps/web/src/project-client.test.tsx apps/web/src/App.test.tsx`, `just verify-focused apps/api/test/api-lifecycle.test.ts apps/api/test/project-list-route.test.ts`, `just test-e2e`, and `just verify`. The one desktop Chromium episode owns real Vite and API children at disposable loopback ports and refuses the developer database. It proves empty, restart-populated, keyboard Open identity, one test-launcher-only list fault, and successful retry. Cleanup requests graceful shutdown within 10,000 ms, independently scans every scenario-owned process group to prove no member survives, proves listener absence, and removes only the isolated database plus `-wal`, `-shm`, and `-journal` sidecars. A focused failure-path test proves a surviving descendant makes graceful cleanup fail before bounded escalation removes the group. The observed bounded result passed; sanitized all-true evidence is generated at `test-results/bl-007/project-home/episode.json`. Harness boot remains non-persistent and test-backed.

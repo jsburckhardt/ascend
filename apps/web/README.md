@@ -1,7 +1,9 @@
 # Ascend Web
 
-React and Vite application for Ascend's project-home surface.
+React and Vite Project Home for registered Ascend projects. Use only the root `justfile` commands for setup, development, and validation. Local Vite development proxies same-origin `/api` requests to the API at `http://127.0.0.1:3000`; the owned browser test may override that target for its disposable API.
 
-Use the repository root `justfile` for setup, development, and validation. Package-local commands remain implementation details consumed by the root workspace scripts.
+On each mount Project Home starts one `GET /api/projects` request with a 5,000 ms timeout. It announces loading, explains when no registered projects exist, renders every valid project, or shows one actionable failure with Retry. Each retry owns one new request, aborts or supersedes the previous request, and uses newest-request-wins state; unmount aborts the current request. Malformed records and duplicate IDs fail closed with no cards.
 
-The package includes Tailwind CSS and shadcn/ui foundations. Browser behavior is covered by Vitest and the root Playwright suite.
+Each card displays its name and complete canonical path unchanged as whitespace-preserving text and title. Open is a semantic keyboard-focusable button with `data-project-id` equal to the stable project ID and an accessible project-specific name. Activation, including repeated activation, only publishes a project-associated status that opening is not available in BL-007. It starts no workbench, makes no request, and changes no URL.
+
+Project registration, project close, workbench startup/status, search, sorting controls, tags, path mutation, and fake workbench destinations remain BL-008+ scope. Validate with `just verify-focused apps/web/src/project-client.test.tsx apps/web/src/App.test.tsx`, `just test-e2e`, and `just verify`. The one owned desktop Chromium episode proves empty, restart-populated, keyboard Open identity, controlled failure/retry, 10,000 ms graceful server cleanup, independent owned-process-group absence, listener absence, and exact isolated database/sidecar removal. Its observed bounded all-true summary is `test-results/bl-007/project-home/episode.json`.

@@ -135,15 +135,6 @@ const delay = async (
 const statePath = (runRoot: string, runId: string): string =>
   path.join(runRoot, runId, 'state.json')
 
-const processExists = (pid: number): boolean => {
-  try {
-    process.kill(pid, 0)
-    return true
-  } catch {
-    return false
-  }
-}
-
 const processGroupExists = (pgid: number): boolean => {
   try {
     process.kill(-pgid, 0)
@@ -409,10 +400,52 @@ export const startWorkbenchProof = async (
   closeSync(logDescriptor)
 
   let spawnError: unknown
+  let observedExitCode: number | null = child.exitCode
+  let resolveObservedExit!: (exitCode: number) => void
+  const exitObserved = new Promise<number>((resolve) => {
+    resolveObservedExit = resolve
+  })
   child.once('error', (error) => {
     spawnError = error
   })
+  child.once('exit', (exitCode) => {
+    observedExitCode = exitCode ?? -1
+    resolveObservedExit(observedExitCode)
+  })
   child.unref()
+
+  const childExitCode = async (): Promise<number | null> => {
+    if (observedExitCode !== null) return observedExitCode
+    if (child.exitCode !== null) return child.exitCode
+    if (child.signalCode !== null) return -1
+    if (child.pid === undefined) return -1
+    try {
+      const stat = await readFile(
+        '/proc/' + String(child.pid) + '/stat',
+        'utf8'
+      )
+      const fields = stat.slice(stat.lastIndexOf(')') + 2).split(' ')
+      // Under full-gate load, Node can reap a fast exit after the deadline.
+      // Inspect proc state so an already-zombie child cannot become a timeout.
+      if (fields[0] !== 'Z') return null
+      const waitStatus = Number(fields[49])
+      return Number.isInteger(waitStatus) ? (waitStatus >> 8) & 0xff : -1
+    } catch {
+      return exitObserved
+    }
+  }
+  const throwIfChildExited = async (): Promise<void> => {
+    const exitCode = await childExitCode()
+    if (exitCode !== null) {
+      throw new ProofError(
+        'early-exit',
+        'code-server exited before readiness',
+        {
+          exitCode,
+        }
+      )
+    }
+  }
 
   let discovered: DiscoveredProofIdentity = {
     runId,
@@ -435,10 +468,14 @@ export const startWorkbenchProof = async (
     const identityDeadline = Date.now() + 1_000
     while (!startTimeTicks && Date.now() < identityDeadline) {
       startTimeTicks = await readProcessStartTime(child.pid ?? -1)
-      if (!startTimeTicks) await delay(10, options.signal)
+      if (!startTimeTicks) {
+        await throwIfChildExited()
+        await delay(10, options.signal)
+      }
     }
     discovered = { ...discovered, startTimeTicks }
     if (!child.pid || !startTimeTicks) {
+      await throwIfChildExited()
       throw new ProofError(
         'spawn-failed',
         'Spawned process identity is unavailable'
@@ -454,15 +491,7 @@ export const startWorkbenchProof = async (
           reason: spawnError.message,
         })
       }
-      if (child.exitCode !== null || !processExists(child.pid)) {
-        throw new ProofError(
-          'early-exit',
-          'code-server exited before readiness',
-          {
-            exitCode: child.exitCode ?? -1,
-          }
-        )
-      }
+      await throwIfChildExited()
 
       const output = await readFile(launchLog, 'utf8')
       url = parseLoopbackUrl(output)
@@ -497,6 +526,7 @@ export const startWorkbenchProof = async (
       await delay(50, options.signal)
     }
 
+    await throwIfChildExited()
     throw new ProofError(
       'readiness-timeout',
       'code-server readiness timed out',

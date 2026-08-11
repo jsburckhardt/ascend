@@ -9,6 +9,8 @@ The bootstrap scaffold includes SQLite/Drizzle foundations, structured Fastify l
 | `ASCEND_HOST` | `127.0.0.1` |
 | `ASCEND_PORT` | `3000` |
 | `ASCEND_DATABASE_URL` | `<repository>/apps/api/ascend.db` |
+| `ASCEND_PROJECT_HOME` | configured OS home |
+| `ASCEND_PROJECT_ALLOWED_ROOTS` | configured home; path-delimiter-separated, empty is deny-all |
 
 Use the repository root `justfile` rather than invoking package commands directly.
 
@@ -46,7 +48,7 @@ The immediately previous fixture is `test/fixtures/db/0000_project_library.sqlit
 
 ## Canonical filesystem project registration (BL-006)
 
-createProjectRegistrationService() is an API-owned, in-process boundary over the BL-005 project library. It takes an explicit database path, configuredHome, and allowedRoots; it adds no Fastify route, HTTP contract, environment variable, or network behavior. Construction validates the complete configuration before opening persistence. The configured home and each allowed root must be absolute, existing, readable directories. Each expression is canonicalized once, canonically duplicate roots are deduplicated, and the resulting home/root snapshot is fixed for that service even if configuration symlinks are later retargeted. An empty root list is valid and denies every registration.
+createProjectRegistrationService() is the API-owned BL-006 boundary over the BL-005 project library. It takes an explicit database path, configuredHome, and allowedRoots. BL-008 now delegates its Fastify POST route to this boundary without changing its behavior. Construction validates the complete configuration before opening persistence. The configured home and each allowed root must be absolute, existing, readable directories. Each expression is canonicalized once, canonically duplicate roots are deduplicated, and the resulting home/root snapshot is fixed for that service even if configuration symlinks are later retargeted. An empty root list is valid and denies every registration.
 
 Configuration is all-or-nothing. Failure is exactly invalid_opening_policy with safe field configured_home or indexed allowed_roots[n]; it contains no configured value, platform error, stack, or usable service. Registration accepts only absolute paths, exactly ~, and ~/.... Empty or blank input is path_required; NUL or other unsupported syntax is unsupported_path_syntax. Nonblank input is not globally trimmed, so leading, internal, and trailing whitespace in valid path segments remains in the canonical path and display name. Other safe outcomes, all with only field: path, are path_not_found, path_not_directory, path_unreadable, and outside_opening_policy.
 
@@ -56,26 +58,28 @@ Registration only inspects project filesystems and writes metadata outside the p
 
 
 
-The BL-006 registration service itself remains in-process. Repository scanning, clone/import, Git requirements, native pickers, project close, and workbench launch remain outside registration. BL-007 adds only read-only listing and presentation; registration remains a separate boundary.
+The BL-006 registration service remains the only registration boundary. Repository scanning, clone/import, Git requirements, native pickers, project close, and workbench launch remain outside it.
 
-## Registered project API and lifecycle (BL-007)
+## Project list and registration API (BL-008)
 
-Before binding its listener, the API resolves `ASCEND_DATABASE_URL` as a local `file:` URL or filesystem path, defaulting to `<repository>/apps/api/ascend.db`; creates one closeable project library; and applies or validates every committed migration. A stopped API closes Fastify, the library/database handle, and telemetry through one memoized shutdown promise, so repeated SIGINT, SIGTERM, or direct stop requests join the same safe outcome. A persistence initialization failure prevents listening, exits nonzero, and emits only `{"event":"api.start.failed","category":"project_library_initialization_failed"}` without raw errors, database paths, SQL, stacks, or secrets. Existing data survives complete stop and reconstruction; no new migration or data conversion is required for BL-007.
+Before binding its listener, the API resolves `ASCEND_DATABASE_URL`, constructs both the closeable list library and BL-006 registration service against that explicit path, and validates `ASCEND_PROJECT_HOME` plus `ASCEND_PROJECT_ALLOWED_ROOTS`. Roots use the host path delimiter; an explicit empty value creates the supported deny-all policy. Invalid configuration or persistence fails safely before listener creation. Shutdown closes both SQLite-backed owners and telemetry once. This behavior requires no migration.
 
-`GET /api/projects` is read-only. Empty and populated success use one exact contract:
+`GET /api/projects` returns `{"projects":[]}` or exact four-field records ordered `createdAt ASC, id ASC`; safe list failure remains 500 `{"error":{"category":"project_list_failed"}}`.
 
-```json
-{"projects":[]}
-```
+`POST /api/projects` accepts only `application/json` and exactly `{"path":"string"}`. The encoded body limit is 4,096 bytes. Blank strings delegate to BL-006. Empty or malformed JSON, arrays, scalars, missing or wrong-type path, extra keys, and non-JSON content return 400 `{"error":{"category":"invalid_registration_request"}}` before registration. A 4,097-byte body returns 413 `{"error":{"category":"registration_request_too_large"}}` before registration.
 
-```json
-{"projects":[{"id":"project-id","name":"Display name","canonicalPath":"/complete/canonical/path","createdAt":1786407000000}]}
-```
+Created returns 201 and existing returns 200 with only `{"disposition":"created|existing","project":{"id","name","canonicalPath","createdAt"}}`. The project is exactly the stable BL-006 record; `name` is not accepted from the request. Failure status and category mappings are:
 
-Records contain no other fields. ID and canonical path are non-empty strings, name is non-blank, and createdAt is a finite non-negative safe integer. Duplicate IDs or any malformed row fail closed. Results use the deterministic total order `createdAt ASC, id ASC`, with ID as the final tie-breaker. Any persistence or list-validation failure returns HTTP 500 with only `{"error":{"category":"project_list_failed"}}`; it contains no `projects` field or partial records, and the structured `project.list.failed` event contains only the safe category.
+| Status | Categories |
+|---|---|
+| 400 | `path_required`, `unsupported_path_syntax` |
+| 403 | `path_unreadable`, `outside_opening_policy` |
+| 404 | `path_not_found` |
+| 422 | `path_not_directory` |
+| 500 | `project_registration_failed` |
 
-Local Vite development proxies same-origin `/api` requests to `http://127.0.0.1:3000`. The controlled browser gate may override only that proxy target while starting its owned API; Fastify does not add CORS behavior or a product fault route.
+Typed path bodies contain exactly `{"error":{"category":"...","field":"path"}}`; unexpected failure contains only its category. No response, header, startup outcome, or structured event includes partial projects, submitted or configured paths, platform errors, stacks, SQL, secrets, or internal text. Every contract-valid request delegates exactly once. Equivalent sequential and exactly eight concurrent requests retain one complete stable ID and one durable row.
 
-Use only root commands for validation: `just verify-focused apps/api/test/api-lifecycle.test.ts apps/api/test/project-list-route.test.ts`, `just test-e2e`, and `just verify`. The desktop Chromium gate uses one refused-default database under `test-results/bl-007/project-home/databases`, injects one list failure only through the test launcher library-factory seam, and allows 10,000 ms for each graceful child exit. It then independently inspects every owned process group to prove no process survives and proves both listeners and the selected database plus `-wal`, `-shm`, and `-journal` sidecars are absent. A focused failure-path test retains the distinction between graceful group exit and bounded forced cleanup. The observed bounded run passed, with sanitized all-true evidence at `test-results/bl-007/project-home/episode.json`.
+Use root commands only: `just verify-open-project`, targeted `just verify-focused <test-path>`, and `just verify`. The API matrix uses a refused-default database and isolated SQLite paths and disposable content fixtures, compares manifests, closes every handle, removes only the selected database and `-wal`, `-shm`, `-journal` sidecars, and proves no residue. Browser evidence is generated under `test-results/bl-008/open-project`.
 
-BL-007 adds no registration, project close, workbench startup or status, search, user sorting, tags, path mutation, or fake workbench destination. Those BL-008+ operations remain deferred.
+Open still remains a project-ID deferred browser action. Workbench runtime, picker, scanning, clone/import, project close, search, user sorting, tags, and path mutation are later scope.

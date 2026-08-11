@@ -10,6 +10,7 @@ import {
   createApplicationProjectLibrary,
   type ProjectLibrary,
 } from './project-library.js'
+import type { ProjectRegistrationService } from './project-registration.js'
 
 export const API_START_FAILED_EVENT = 'api.start.failed' as const
 
@@ -32,6 +33,7 @@ export interface ApiServerControllerOptions {
   readonly port?: number
   readonly fastify?: FastifyServerOptions
   readonly createProjectLibrary?: () => Promise<ProjectLibrary>
+  readonly createProjectRegistration?: () => Promise<ProjectRegistrationService>
   readonly stopTelemetry?: () => Promise<void>
   readonly recordStartupFailure?: (event: StartupFailureEvent) => void
 }
@@ -64,6 +66,9 @@ export function createApiServerController(
         await server.register(appPlugin, {
           createProjectLibrary:
             options.createProjectLibrary ?? createApplicationProjectLibrary,
+          ...(options.createProjectRegistration === undefined
+            ? {}
+            : { createProjectRegistration: options.createProjectRegistration }),
         })
         await server.ready()
       } catch (error) {

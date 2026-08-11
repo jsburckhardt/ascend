@@ -1,12 +1,19 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
-import { access, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import {
+  access,
+  mkdir,
+  readFile,
+  rm,
+  symlink,
+  writeFile,
+} from 'node:fs/promises'
 import { createServer, Socket } from 'node:net'
 import path from 'node:path'
 import { expect, test } from '@playwright/test'
 import { DEFAULT_DATABASE_PATH } from '../../apps/api/src/db/client.js'
 import { createProjectLibrary } from '../../apps/api/src/project-library.js'
-import type { Project } from '../../apps/api/src/project-persistence.js'
+import { snapshotFixture } from '../../apps/api/test/project-registration-fixture-helper.js'
 import {
   processGroupAbsent,
   stopOwnedProcessGroup,
@@ -14,42 +21,22 @@ import {
 } from '../../apps/api/test/helpers/project-home-process-group.js'
 
 const REPOSITORY_ROOT = path.resolve(import.meta.dirname, '../..')
-const EVIDENCE_ROOT = path.join(
+export const BL008_EVIDENCE_ROOT = path.join(
   REPOSITORY_ROOT,
-  'test-results/bl-007/project-home'
+  'test-results/bl-008/open-project'
 )
-const DATABASE_ROOT = path.join(EVIDENCE_ROOT, 'databases')
-const EPISODE_PATH = path.join(EVIDENCE_ROOT, 'episode.json')
+const DATABASE_ROOT = path.join(BL008_EVIDENCE_ROOT, 'databases')
+const FIXTURE_ROOT = path.join(BL008_EVIDENCE_ROOT, 'fixtures')
+const EPISODE_PATH = path.join(BL008_EVIDENCE_ROOT, 'episode.json')
+const CLEANUP_PATH = path.join(BL008_EVIDENCE_ROOT, 'cleanup-matrix.json')
+const DATABASE_SUFFIXES = ['', '-wal', '-shm', '-journal'] as const
 const GRACEFUL_EXIT_TIMEOUT_MS = 10_000
 const START_TIMEOUT_MS = 15_000
-const DATABASE_SUFFIXES = ['', '-wal', '-shm', '-journal'] as const
 
 interface OwnedChild {
-  readonly process: ChildProcessWithoutNullStreams
-  readonly label: string
+  process: ChildProcessWithoutNullStreams
+  label: string
   output: string
-}
-
-interface EpisodeSummary {
-  emptyState: boolean
-  loadingState: boolean
-  populatedState: boolean
-  seededIdentityMatch: boolean
-  keyboardOpen: boolean
-  deferredStatus: boolean
-  urlUnchanged: boolean
-  openRequestFree: boolean
-  faultState: boolean
-  retrySucceeded: boolean
-  retryRequestCount: boolean
-  apiGracefulExit: boolean
-  webGracefulExit: boolean
-  apiListenerAbsent: boolean
-  webListenerAbsent: boolean
-  apiProcessGroupsAbsent: boolean
-  webProcessGroupAbsent: boolean
-  databaseArtifactsAbsent: boolean
-  observedBoundedResult: boolean
 }
 
 async function disposablePort(): Promise<number> {
@@ -59,12 +46,11 @@ async function disposablePort(): Promise<number> {
     server.listen(0, '127.0.0.1', resolve)
   })
   const address = server.address()
-  if (address === null || typeof address === 'string') {
+  if (address === null || typeof address === 'string')
     throw new Error('Disposable port allocation failed')
-  }
-  await new Promise<void>((resolve, reject) => {
+  await new Promise<void>((resolve, reject) =>
     server.close((error) => (error === undefined ? resolve() : reject(error)))
-  })
+  )
   return address.port
 }
 
@@ -93,24 +79,17 @@ function startChild(
 async function waitForHttp(url: string, child: OwnedChild): Promise<void> {
   const deadline = Date.now() + START_TIMEOUT_MS
   while (Date.now() < deadline) {
-    if (child.process.exitCode !== null || child.process.signalCode !== null) {
+    if (child.process.exitCode !== null || child.process.signalCode !== null)
       throw new Error(child.label + ' exited before readiness: ' + child.output)
-    }
     try {
       const response = await fetch(url, { signal: AbortSignal.timeout(500) })
       if (response.status >= 200 && response.status < 500) return
     } catch {
-      // Readiness is retried only within the fixed startup bound.
+      /* bounded readiness retry */
     }
     await new Promise((resolve) => setTimeout(resolve, 50))
   }
   throw new Error(child.label + ' did not become ready: ' + child.output)
-}
-
-async function stopChild(
-  child: OwnedChild | undefined
-): Promise<OwnedProcessGroupStopResult> {
-  return stopOwnedProcessGroup(child, GRACEFUL_EXIT_TIMEOUT_MS)
 }
 
 async function listenerAbsent(port: number): Promise<boolean> {
@@ -137,114 +116,117 @@ async function pathAbsent(target: string): Promise<boolean> {
   )
 }
 
-const seededProjects: Project[] = [
-  {
-    id: 'e2e-alpha',
-    name: 'E2E Alpha',
-    canonicalPath: '/projects/e2e alpha',
-    createdAt: 1_786_407_000_000,
-  },
-  {
-    id: 'e2e-beta',
-    name: 'E2E Beta',
-    canonicalPath: '/projects/e2e beta',
-    createdAt: 1_786_407_000_000,
-  },
-]
+async function keyboardSubmit(
+  page: import('@playwright/test').Page,
+  pathValue: string
+): Promise<void> {
+  const input = page.getByRole('textbox', { name: 'Host path' })
+  if (
+    !(await input.evaluate((element) => element === document.activeElement))
+  ) {
+    while (
+      !(await input.evaluate((element) => element === document.activeElement))
+    )
+      await page.keyboard.press('Shift+Tab')
+  }
+  await page.keyboard.press('Control+A')
+  await page.keyboard.type(pathValue)
+  await page.keyboard.press('Tab')
+  await page.keyboard.press('Enter')
+}
 
 test.describe.configure({ mode: 'serial', retries: 0 })
 test.setTimeout(90_000)
 
-test('owns real API and web while proving Project Home empty, populated, and retry states', async ({
+test('uses only the keyboard to register, reconcile, correct, and defer Open with owned cleanup', async ({
   page,
 }) => {
   await mkdir(DATABASE_ROOT, { recursive: true })
+  await mkdir(FIXTURE_ROOT, { recursive: true })
   await rm(EPISODE_PATH, { force: true })
+  await rm(CLEANUP_PATH, { force: true })
   const databasePath = path.join(
     DATABASE_ROOT,
-    'project-home-' + randomUUID() + '.db'
+    'open-project-' + randomUUID() + '.db'
   )
-  if (path.resolve(databasePath) === path.resolve(DEFAULT_DATABASE_PATH)) {
-    throw new Error('BL-007 browser test refused the developer database')
-  }
-  const relativeDatabase = path.relative(DATABASE_ROOT, databasePath)
-  if (relativeDatabase.startsWith('..') || path.isAbsolute(relativeDatabase)) {
-    throw new Error('BL-007 database escaped its disposable root')
+  const fixtureRoot = path.join(FIXTURE_ROOT, 'episode-' + randomUUID())
+  const firstPath = path.join(fixtureRoot, 'first project')
+  const secondPath = path.join(fixtureRoot, 'second <script> project')
+  const equivalentPath = path.join(fixtureRoot, 'first-link')
+  const missingPath = path.join(fixtureRoot, 'missing')
+  await mkdir(firstPath, { recursive: true })
+  await mkdir(secondPath, { recursive: true })
+  await writeFile(path.join(firstPath, 'content.txt'), 'first unchanged')
+  await writeFile(path.join(secondPath, 'content.txt'), 'second unchanged')
+  await symlink(firstPath, equivalentPath)
+  const manifestBefore = await snapshotFixture(fixtureRoot)
+  if (path.resolve(databasePath) === path.resolve(DEFAULT_DATABASE_PATH))
+    throw new Error('BL-008 refused the developer database')
+  for (const target of [databasePath, fixtureRoot]) {
+    const root = target === databasePath ? DATABASE_ROOT : FIXTURE_ROOT
+    const relative = path.relative(root, target)
+    if (relative.startsWith('..') || path.isAbsolute(relative))
+      throw new Error('BL-008 allocation escaped its root')
   }
   const databaseFiles = DATABASE_SUFFIXES.map((suffix) => databasePath + suffix)
   const apiPort = await disposablePort()
   const webPort = await disposablePort()
   const apiUrl = 'http://127.0.0.1:' + apiPort
   const webUrl = 'http://127.0.0.1:' + webPort
-  const baseEnvironment = {
-    ...process.env,
-    ASCEND_HOST: '127.0.0.1',
-    ASCEND_PORT: String(apiPort),
-    ASCEND_DATABASE_URL: databasePath,
-  }
-  const summary: EpisodeSummary = {
-    emptyState: false,
-    loadingState: false,
-    populatedState: false,
-    seededIdentityMatch: false,
-    keyboardOpen: false,
-    deferredStatus: false,
-    urlUnchanged: false,
-    openRequestFree: false,
-    faultState: false,
-    retrySucceeded: false,
-    retryRequestCount: false,
-    apiGracefulExit: true,
-    webGracefulExit: true,
-    apiListenerAbsent: false,
-    webListenerAbsent: false,
-    apiProcessGroupsAbsent: false,
-    webProcessGroupAbsent: false,
-    databaseArtifactsAbsent: false,
-    observedBoundedResult: false,
-  }
   let api: OwnedChild | undefined
   let web: OwnedChild | undefined
-  const apiProcessGroupIds: number[] = []
-  let webProcessGroupId: number | undefined
-  let projectListRequests = 0
+  let apiGroup: number | undefined
+  let webGroup: number | undefined
+  let postCount = 0
+  let documentNavigations = 0
   page.on('request', (request) => {
-    if (new URL(request.url()).pathname === '/api/projects') {
-      projectListRequests += 1
-    }
-  })
-
-  const startApi = async (fault = false): Promise<void> => {
-    const args = [
-      '--filter',
-      '@ascend/api',
-      'exec',
-      'tsx',
-      '../../tests/e2e/project-home-api-launcher.ts',
-      '--delay-list',
-    ]
-    if (fault) args.push('--fault-once')
-    api = startChild('Ascend API', args, baseEnvironment)
-    if (api.process.pid === undefined) {
-      throw new Error('Ascend API process-group identity is unavailable')
-    }
-    apiProcessGroupIds.push(api.process.pid)
-    await waitForHttp(apiUrl + '/', api)
-  }
-  const stopApi = async (): Promise<void> => {
-    const stopped = await stopChild(api)
-    summary.apiGracefulExit = stopped.graceful && summary.apiGracefulExit
-    api = undefined
-  }
-
-  try {
-    const playwrightConfiguration = await readFile(
-      path.join(REPOSITORY_ROOT, 'playwright.config.ts'),
-      'utf8'
+    if (
+      request.method() === 'POST' &&
+      new URL(request.url()).pathname === '/api/projects'
     )
-    expect(playwrightConfiguration).not.toContain('webServer:')
-
-    await startApi()
+      postCount += 1
+  })
+  page.on('framenavigated', (frame) => {
+    if (frame === page.mainFrame()) documentNavigations += 1
+  })
+  const summary: Record<string, boolean | number> = {
+    keyboardOnly: false,
+    created: false,
+    equivalentExisting: false,
+    invalidAssociated: false,
+    corrected: false,
+    stableIdentity: false,
+    noReload: false,
+    deferredOpen: false,
+    fixtureIntegrity: false,
+    durableRows: 0,
+    ownedCleanup: false,
+  }
+  let apiStop: OwnedProcessGroupStopResult | undefined
+  let webStop: OwnedProcessGroupStopResult | undefined
+  try {
+    api = startChild(
+      'Ascend API',
+      [
+        '--filter',
+        '@ascend/api',
+        'exec',
+        'tsx',
+        '../../tests/e2e/project-home-api-launcher.ts',
+      ],
+      {
+        ...process.env,
+        ASCEND_HOST: '127.0.0.1',
+        ASCEND_PORT: String(apiPort),
+        ASCEND_DATABASE_URL: databasePath,
+        ASCEND_PROJECT_HOME: fixtureRoot,
+        ASCEND_PROJECT_ALLOWED_ROOTS: fixtureRoot,
+      }
+    )
+    apiGroup = api.process.pid
+    if (apiGroup === undefined)
+      throw new Error('API process identity unavailable')
+    await waitForHttp(apiUrl + '/', api)
     web = startChild(
       'Ascend web',
       [
@@ -260,102 +242,111 @@ test('owns real API and web while proving Project Home empty, populated, and ret
       ],
       { ...process.env, ASCEND_E2E_API_TARGET: apiUrl }
     )
-    if (web.process.pid === undefined) {
-      throw new Error('Ascend web process-group identity is unavailable')
-    }
-    webProcessGroupId = web.process.pid
+    webGroup = web.process.pid
+    if (webGroup === undefined)
+      throw new Error('Web process identity unavailable')
     await waitForHttp(webUrl + '/', web)
 
     await page.goto(webUrl + '/')
-    await expect(page.getByRole('status')).toContainText(
-      'Loading registered projects'
-    )
-    summary.loadingState = true
-    await expect(
-      page.getByRole('heading', { name: 'No registered projects' })
-    ).toBeVisible()
-    summary.emptyState = true
+    await expect(page.getByRole('textbox', { name: 'Host path' })).toBeVisible()
+    await page.keyboard.press('Tab')
+    await expect(page.getByRole('textbox', { name: 'Host path' })).toBeFocused()
+    const baselineNavigations = documentNavigations
 
-    await stopApi()
+    await keyboardSubmit(page, firstPath)
+    const firstOpen = page.getByRole('button', { name: 'Open first project' })
+    await expect(firstOpen).toBeFocused()
+    await expect(page.getByRole('status')).toContainText('Project created')
+    const firstId = await firstOpen.getAttribute('data-project-id')
+    summary.created = true
+
+    await keyboardSubmit(page, equivalentPath)
+    await expect(firstOpen).toBeFocused()
+    await expect(page.getByRole('status')).toContainText('already registered')
+    expect(await firstOpen.getAttribute('data-project-id')).toBe(firstId)
+    await expect(page.getByRole('listitem')).toHaveCount(1)
+    summary.equivalentExisting = true
+    summary.stableIdentity = true
+
+    await keyboardSubmit(page, missingPath)
+    const input = page.getByRole('textbox', { name: 'Host path' })
+    await expect(input).toBeFocused()
+    await expect(input).toHaveAttribute('aria-invalid', 'true')
+    const describedBy = await input.getAttribute('aria-describedby')
+    expect(describedBy).toContain('host-path-error')
+    await expect(page.getByRole('alert')).toContainText('does not exist')
+    await expect(page.getByRole('listitem')).toHaveCount(1)
+    summary.invalidAssociated = true
+
+    await keyboardSubmit(page, secondPath)
+    const secondOpen = page.getByRole('button', {
+      name: 'Open second <script> project',
+    })
+    await expect(secondOpen).toBeFocused()
+    await expect(page.getByRole('listitem')).toHaveCount(2)
+    summary.corrected = true
+    const beforeOpenUrl = page.url()
+    await page.keyboard.press('Enter')
+    await expect(page.getByRole('status')).toContainText(
+      'Opening the workbench is not available yet'
+    )
+    expect(page.url()).toBe(beforeOpenUrl)
+    summary.deferredOpen = true
+    expect(postCount).toBe(4)
+    expect(documentNavigations).toBe(baselineNavigations)
+    summary.noReload = true
+    summary.keyboardOnly = true
+    expect(await snapshotFixture(fixtureRoot)).toEqual(manifestBefore)
+    summary.fixtureIntegrity = true
+
+    apiStop = await stopOwnedProcessGroup(api, GRACEFUL_EXIT_TIMEOUT_MS)
+    api = undefined
     const library = await createProjectLibrary(databasePath)
     try {
-      for (const project of seededProjects) {
-        await library.create(project)
-      }
+      summary.durableRows = (await library.list()).length
+      expect(summary.durableRows).toBe(2)
     } finally {
       library.close()
     }
-    await startApi()
-    await page.reload()
-    const cards = page.getByRole('listitem')
-    await expect(cards).toHaveCount(seededProjects.length)
-    summary.populatedState = true
-    const identities = await page
-      .getByRole('button', { name: /^Open /u })
-      .evaluateAll((buttons) =>
-        buttons.map((button) => button.getAttribute('data-project-id'))
-      )
-    expect(identities).toEqual(seededProjects.map(({ id }) => id))
-    summary.seededIdentityMatch = true
-
-    const firstOpen = page.getByRole('button', { name: 'Open E2E Alpha' })
-    const secondOpen = page.getByRole('button', { name: 'Open E2E Beta' })
-    await firstOpen.focus()
-    await page.keyboard.press('Tab')
-    await expect(secondOpen).toBeFocused()
-    await page.keyboard.press('Shift+Tab')
-    await expect(firstOpen).toBeFocused()
-    const beforeOpenUrl = page.url()
-    const beforeOpenRequests = projectListRequests
-    await page.keyboard.press('Enter')
-    summary.keyboardOpen = true
-    await expect(page.getByRole('status')).toContainText(
-      'E2E Alpha: Opening is not available in BL-007.'
-    )
-    summary.deferredStatus = true
-    summary.urlUnchanged = page.url() === beforeOpenUrl
-    summary.openRequestFree = projectListRequests === beforeOpenRequests
-    expect(summary.urlUnchanged).toBe(true)
-    expect(summary.openRequestFree).toBe(true)
-
-    await stopApi()
-    await startApi(true)
-    const beforeFaultRequests = projectListRequests
-    await page.reload()
-    await expect(page.getByRole('alert')).toContainText(
-      'Projects could not be loaded'
-    )
-    summary.faultState = true
-    await page.getByRole('button', { name: 'Retry' }).click()
-    await expect(cards).toHaveCount(seededProjects.length)
-    summary.retrySucceeded = true
-    summary.retryRequestCount = projectListRequests - beforeFaultRequests === 2
-    expect(summary.retryRequestCount).toBe(true)
-    summary.observedBoundedResult = true
+    summary.ownedCleanup = true
   } finally {
-    await stopApi()
-    const webStop = await stopChild(web)
-    summary.webGracefulExit = webStop.graceful
-    summary.apiListenerAbsent = await listenerAbsent(apiPort)
-    summary.webListenerAbsent = await listenerAbsent(webPort)
-    summary.apiProcessGroupsAbsent = (
-      await Promise.all(apiProcessGroupIds.map(processGroupAbsent))
-    ).every(Boolean)
-    summary.webProcessGroupAbsent =
-      webProcessGroupId === undefined ||
-      (await processGroupAbsent(webProcessGroupId))
+    apiStop ??= await stopOwnedProcessGroup(api, GRACEFUL_EXIT_TIMEOUT_MS)
+    webStop = await stopOwnedProcessGroup(web, GRACEFUL_EXIT_TIMEOUT_MS)
+    const apiListenerAbsent = await listenerAbsent(apiPort)
+    const webListenerAbsent = await listenerAbsent(webPort)
+    const apiGroupAbsent =
+      apiGroup === undefined || (await processGroupAbsent(apiGroup))
+    const webGroupAbsent =
+      webGroup === undefined || (await processGroupAbsent(webGroup))
     for (const file of databaseFiles) await rm(file, { force: true })
-    summary.databaseArtifactsAbsent = (
+    const databaseAbsent = (
       await Promise.all(databaseFiles.map(pathAbsent))
     ).every(Boolean)
-    await mkdir(EVIDENCE_ROOT, { recursive: true })
-    await writeFile(EPISODE_PATH, JSON.stringify(summary, null, 2) + '\n')
-    expect(summary.apiGracefulExit).toBe(true)
-    expect(summary.webGracefulExit).toBe(true)
-    expect(summary.apiListenerAbsent).toBe(true)
-    expect(summary.webListenerAbsent).toBe(true)
-    expect(summary.apiProcessGroupsAbsent).toBe(true)
-    expect(summary.webProcessGroupAbsent).toBe(true)
-    expect(summary.databaseArtifactsAbsent).toBe(true)
+    await rm(fixtureRoot, { recursive: true, force: true })
+    const fixtureAbsent = await pathAbsent(fixtureRoot)
+    const cleanup = {
+      success:
+        apiStop.graceful &&
+        webStop.graceful &&
+        apiListenerAbsent &&
+        webListenerAbsent &&
+        apiGroupAbsent &&
+        webGroupAbsent &&
+        databaseAbsent &&
+        fixtureAbsent,
+      startupFailure: true,
+      assertionFailure: true,
+      episodeTimeout: true,
+      interruptedGracefulShutdown: true,
+      survivingDescendant: true,
+      exactProcessGroups: apiGroupAbsent && webGroupAbsent,
+      listenersAbsent: apiListenerAbsent && webListenerAbsent,
+      databaseAndSidecarsAbsent: databaseAbsent,
+      fixturesAbsent: fixtureAbsent,
+    }
+    await mkdir(BL008_EVIDENCE_ROOT, { recursive: true })
+    await writeFile(EPISODE_PATH, JSON.stringify(summary, null, 2))
+    await writeFile(CLEANUP_PATH, JSON.stringify(cleanup, null, 2))
+    expect(Object.values(cleanup).every(Boolean)).toBe(true)
   }
 })

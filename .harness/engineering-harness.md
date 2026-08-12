@@ -48,6 +48,7 @@ artifacts under each application package.
 - BL-008 Open Project signal: `just verify-open-project` covers the exact POST, strict client/recovery controller, accessible component, documentation, and one keyboard-only real-web/real-API Chromium episode with fixture integrity and executed scenario-by-scenario cleanup evidence
 - BL-005 project-library tests: schema, duplicate, pre-write validation, migration compatibility, close/reopen, complete in-process restart, refusal, and exact-sidecar cleanup consequences
 - BL-006 project-registration gate: just verify-project-registration emits finite configuration, registration, persistence, non-mutation, fixture-cleanup, documentation, and capability-aware permission signals; harness checks still delegates only to just verify
+- BL-010 project-runtime signal: just verify-project-runtime executes every named fake and host-process path with full recursive manifests; just proof-project-runtime runs the one real manager episode; just proof-project-runtime-residual-audit checks exact retained PID identity and listener inode. Manager shutdown evidence inventories every running or in-flight PID/start identity, process group, port, and listener and records graceful or escalated outcomes. Harness boot remains non-persistent.
 - BL-001/BL-002 host-process sensor: two real loopback code-server Chromium scenarios—forced integrated-terminal timeout cleanup and passing Explorer, Markdown Preview, and direct-vs-integrated terminal parity—with zero-leak cleanup audits
 
 ## Evidence paths
@@ -59,6 +60,7 @@ artifacts under each application package.
 - BL-006 disposable registration fixtures: test-results/bl-006/fixtures/ are generated and removed exactly; test-results/bl-006/permission-capability.json records proved or honest skipped host capability while controlled denial always runs
 - Playwright artifacts: `test-results/` and `playwright-report/`
 - BL-008 Open Project evidence: `test-results/bl-008/open-project/episode.json` maps the executed successful browser episode; `cleanup-matrix.json` maps executed startup failure, assertion failure, episode timeout, interrupted graceful shutdown, and surviving-descendant scenarios to process-group, listener, database-sidecar, fixture, and descendant counts. The survivor records owner cleanup failure before exact-PID teardown and zero residuals afterward.
+- BL-010 project-runtime evidence: test-results/bl-010/project-runtime/fake-matrix.json, episode.json, and residual-audit.json are regenerated and ignored. Committed copies plus the authoritative timing field and complete recursive manifests are under the Issue #25 implementation evidence directory; the retained AC mapping is the implementation record.
 - BL-001 terminal-parity episode: `test-results/bl-001/terminal-parity/episode.json` with direct/integrated raw references (generated, ignored)
 - BL-001 retained AC evidence: `project/work-items/5-bl-001-prove-a-host-code-server-workbench/implementation/00-implementation.md`
 - BL-002 retained AC evidence: `project/work-items/7-bl-002-prove-host-native-terminal-parity/implementation/00-implementation.md`

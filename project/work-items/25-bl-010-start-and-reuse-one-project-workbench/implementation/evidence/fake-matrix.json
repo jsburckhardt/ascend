@@ -1,0 +1,1118 @@
+{
+  "version": 2,
+  "generatedFrom": "project-runtime-acceptance.test.ts",
+  "bounds": {
+    "concurrentCalls": 8,
+    "collisionAttempts": 3,
+    "readinessMs": 15000,
+    "healthAttemptMs": 1000,
+    "gracefulShutdownMs": 2000,
+    "forceShutdownMs": 2000
+  },
+  "typedFailureCategories": [
+    "unknown-project",
+    "canonical-path-invariant",
+    "spawn-error",
+    "executable-missing",
+    "early-exit-code",
+    "early-exit-signal",
+    "address-in-use-exhausted",
+    "readiness-timeout",
+    "health-status-unexpected",
+    "health-body-unexpected",
+    "caller-cancelled",
+    "manager-shutdown"
+  ],
+  "executions": [
+    {
+      "case": "unknown-project",
+      "invocationCount": 1,
+      "observations": [
+        {
+          "name": "category",
+          "actual": "unknown-project"
+        }
+      ]
+    },
+    {
+      "case": "canonical-path-invariant",
+      "invocationCount": 1,
+      "observations": [
+        {
+          "name": "category",
+          "actual": "canonical-path-invariant"
+        },
+        {
+          "name": "launchCount",
+          "actual": 0
+        }
+      ]
+    },
+    {
+      "case": "eight-call-single-flight",
+      "invocationCount": 1,
+      "observations": [
+        {
+          "name": "callerCount",
+          "actual": 8
+        },
+        {
+          "name": "launchCount",
+          "actual": 1
+        },
+        {
+          "name": "pid",
+          "actual": 610
+        }
+      ]
+    },
+    {
+      "case": "healthy-reuse",
+      "invocationCount": 1,
+      "observations": [
+        {
+          "name": "pid",
+          "actual": 610
+        },
+        {
+          "name": "port",
+          "actual": 42610
+        },
+        {
+          "name": "launchCountAfterReuse",
+          "actual": 1
+        }
+      ]
+    },
+    {
+      "case": "port-collision",
+      "invocationCount": 1,
+      "observations": [
+        {
+          "name": "attemptCount",
+          "actual": 3
+        },
+        {
+          "name": "selectedPort",
+          "actual": 43449
+        }
+      ]
+    },
+    {
+      "case": "address-exhaustion",
+      "invocationCount": 1,
+      "observations": [
+        {
+          "name": "category",
+          "actual": "address-in-use-exhausted"
+        },
+        {
+          "name": "attemptCount",
+          "actual": 3
+        },
+        {
+          "name": "controlPort",
+          "actual": 35171
+        }
+      ]
+    },
+    {
+      "case": "spawn-error",
+      "invocationCount": 1,
+      "observations": [
+        {
+          "name": "category",
+          "actual": "spawn-error"
+        }
+      ]
+    },
+    {
+      "case": "executable-missing",
+      "invocationCount": 1,
+      "observations": [
+        {
+          "name": "category",
+          "actual": "executable-missing"
+        }
+      ]
+    },
+    {
+      "case": "early-exit-code",
+      "invocationCount": 1,
+      "observations": [
+        {
+          "name": "category",
+          "actual": "early-exit-code"
+        },
+        {
+          "name": "ownedPidCount",
+          "actual": 1
+        },
+        {
+          "name": "cleanupAudits",
+          "actual": [
+            {
+              "pid": 80169,
+              "processStartTime": "2442579",
+              "port": 33261,
+              "processAbsent": true,
+              "processGroupAbsent": true,
+              "listenerAbsent": true,
+              "outcome": "already-absent"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case": "early-exit-signal",
+      "invocationCount": 1,
+      "observations": [
+        {
+          "name": "category",
+          "actual": "early-exit-signal"
+        },
+        {
+          "name": "ownedPidCount",
+          "actual": 1
+        },
+        {
+          "name": "cleanupAudits",
+          "actual": [
+            {
+              "pid": 80177,
+              "processStartTime": "2442588",
+              "port": 33637,
+              "processAbsent": true,
+              "processGroupAbsent": true,
+              "listenerAbsent": true,
+              "outcome": "already-absent"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case": "readiness-timeout",
+      "invocationCount": 1,
+      "observations": [
+        {
+          "name": "category",
+          "actual": "readiness-timeout"
+        },
+        {
+          "name": "ownedPidCount",
+          "actual": 1
+        },
+        {
+          "name": "cleanupAudits",
+          "actual": [
+            {
+              "pid": 80185,
+              "processStartTime": "2442595",
+              "port": 44317,
+              "processAbsent": true,
+              "processGroupAbsent": true,
+              "listenerAbsent": true,
+              "outcome": "graceful"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case": "health-status",
+      "invocationCount": 1,
+      "observations": [
+        {
+          "name": "category",
+          "actual": "health-status-unexpected"
+        },
+        {
+          "name": "ownedPidCount",
+          "actual": 1
+        },
+        {
+          "name": "cleanupAudits",
+          "actual": [
+            {
+              "pid": 80194,
+              "processStartTime": "2442631",
+              "port": 41515,
+              "processAbsent": true,
+              "processGroupAbsent": true,
+              "listenerAbsent": true,
+              "outcome": "graceful"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case": "health-body",
+      "invocationCount": 1,
+      "observations": [
+        {
+          "name": "category",
+          "actual": "health-body-unexpected"
+        },
+        {
+          "name": "ownedPidCount",
+          "actual": 1
+        },
+        {
+          "name": "cleanupAudits",
+          "actual": [
+            {
+              "pid": 80202,
+              "processStartTime": "2442669",
+              "port": 42367,
+              "processAbsent": true,
+              "processGroupAbsent": true,
+              "listenerAbsent": true,
+              "outcome": "graceful"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case": "caller-cancellation",
+      "invocationCount": 1,
+      "observations": [
+        {
+          "name": "oneCallerCategory",
+          "actual": "caller-cancelled"
+        },
+        {
+          "name": "continuingPid",
+          "actual": 80213
+        },
+        {
+          "name": "allCallerCategories",
+          "actual": ["caller-cancelled", "caller-cancelled"]
+        },
+        {
+          "name": "failedOwnedAudit",
+          "actual": {
+            "pid": 80232,
+            "processStartTime": "2442733",
+            "port": 40279,
+            "processAbsent": true,
+            "processGroupAbsent": true,
+            "listenerAbsent": true
+          }
+        },
+        {
+          "name": "retryPid",
+          "actual": 80240
+        },
+        {
+          "name": "stateBeforeRetry",
+          "actual": "failed"
+        },
+        {
+          "name": "staleRunningInstallCount",
+          "actual": 0
+        }
+      ]
+    },
+    {
+      "case": "manager-shutdown",
+      "invocationCount": 1,
+      "observations": [
+        {
+          "name": "inFlightCategory",
+          "actual": "manager-shutdown"
+        },
+        {
+          "name": "auditCount",
+          "actual": 3
+        },
+        {
+          "name": "outcomes",
+          "actual": ["graceful", "escalated", "graceful"]
+        },
+        {
+          "name": "status",
+          "actual": "ok"
+        }
+      ]
+    },
+    {
+      "case": "failed-attempt-retry",
+      "invocationCount": 1,
+      "observations": [
+        {
+          "name": "participatingCallers",
+          "actual": 8
+        },
+        {
+          "name": "sharedFailureIdentityCount",
+          "actual": 1
+        },
+        {
+          "name": "category",
+          "actual": "health-body-unexpected"
+        },
+        {
+          "name": "failedOwnedPid",
+          "actual": 80251
+        },
+        {
+          "name": "failedOwnedPort",
+          "actual": 43317
+        },
+        {
+          "name": "failedOwnedAudit",
+          "actual": {
+            "pid": 80251,
+            "processStartTime": "2442800",
+            "port": 43317,
+            "processAbsent": true,
+            "processGroupAbsent": true,
+            "listenerAbsent": true
+          }
+        },
+        {
+          "name": "retryCallers",
+          "actual": 8
+        },
+        {
+          "name": "freshPid",
+          "actual": 80265
+        },
+        {
+          "name": "launchCount",
+          "actual": 2
+        }
+      ]
+    },
+    {
+      "case": "post-running-exit",
+      "invocationCount": 1,
+      "observations": [
+        {
+          "name": "exitedPid",
+          "actual": 80273
+        },
+        {
+          "name": "automaticLaunchCount",
+          "actual": 1
+        },
+        {
+          "name": "replacementPid",
+          "actual": 80281
+        },
+        {
+          "name": "explicitLaunchCount",
+          "actual": 2
+        },
+        {
+          "name": "exitCleanup",
+          "actual": {
+            "pid": 80273,
+            "processStartTime": "2442876",
+            "port": 43611,
+            "processAbsent": true,
+            "processGroupAbsent": true,
+            "listenerAbsent": true,
+            "outcome": "already-absent"
+          }
+        }
+      ]
+    },
+    {
+      "case": "bounded-diagnostics",
+      "invocationCount": 1,
+      "observations": [
+        {
+          "name": "category",
+          "actual": "readiness-timeout"
+        },
+        {
+          "name": "diagnosticKeys",
+          "actual": ["attemptCount", "port", "timeoutMs"]
+        }
+      ]
+    },
+    {
+      "case": "redaction-sentinels",
+      "invocationCount": 1,
+      "observations": [
+        {
+          "name": "sentinelMatches",
+          "actual": 0
+        },
+        {
+          "name": "eventKeys",
+          "actual": [
+            "classification",
+            "elapsedMs",
+            "event",
+            "from",
+            "projectId",
+            "to"
+          ]
+        },
+        {
+          "name": "rawPathMatches",
+          "actual": 0
+        }
+      ]
+    },
+    {
+      "case": "exact-process-ownership",
+      "invocationCount": 1,
+      "observations": [
+        {
+          "name": "pidIdentities",
+          "actual": [
+            {
+              "pid": 80293,
+              "processStartTime": "2442932",
+              "port": 35237
+            },
+            {
+              "pid": 80301,
+              "processStartTime": "2442940",
+              "port": 42435
+            },
+            {
+              "pid": 80309,
+              "processStartTime": "2442948",
+              "port": 34221
+            }
+          ]
+        },
+        {
+          "name": "absenceAudits",
+          "actual": [
+            {
+              "pid": 80293,
+              "processStartTime": "2442932",
+              "port": 35237,
+              "processAbsent": true,
+              "processGroupAbsent": true,
+              "listenerAbsent": true,
+              "outcome": "graceful"
+            },
+            {
+              "pid": 80301,
+              "processStartTime": "2442940",
+              "port": 42435,
+              "processAbsent": true,
+              "processGroupAbsent": true,
+              "listenerAbsent": true,
+              "outcome": "escalated"
+            },
+            {
+              "pid": 80309,
+              "processStartTime": "2442948",
+              "port": 34221,
+              "processAbsent": true,
+              "processGroupAbsent": true,
+              "listenerAbsent": true,
+              "outcome": "graceful"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case": "idempotent-shutdown",
+      "invocationCount": 1,
+      "observations": [
+        {
+          "name": "joinedCallCount",
+          "actual": 3
+        },
+        {
+          "name": "sameResultObject",
+          "actual": true
+        },
+        {
+          "name": "auditCount",
+          "actual": 3
+        }
+      ]
+    },
+    {
+      "case": "unrelated-listener-survival",
+      "invocationCount": 1,
+      "observations": [
+        {
+          "name": "listenerStillListening",
+          "actual": true
+        },
+        {
+          "name": "processIdentity",
+          "actual": {
+            "pid": 80316,
+            "processStartTime": "2442953"
+          }
+        },
+        {
+          "name": "processIdentityAfterShutdown",
+          "actual": {
+            "pid": 80316,
+            "processStartTime": "2442953"
+          }
+        }
+      ]
+    },
+    {
+      "case": "project-file-integrity",
+      "invocationCount": 1,
+      "observations": [
+        {
+          "name": "episodeNames",
+          "actual": [
+            "caller-cancellation",
+            "failed-start-and-retry",
+            "manager-shutdown",
+            "post-running-exit-and-replacement",
+            "successful-start-and-reuse"
+          ]
+        },
+        {
+          "name": "differenceCounts",
+          "actual": {
+            "successful-start-and-reuse": 0,
+            "caller-cancellation": 0,
+            "failed-start-and-retry": 0,
+            "post-running-exit-and-replacement": 0,
+            "manager-shutdown": 0
+          }
+        },
+        {
+          "name": "manifestEntryCounts",
+          "actual": {
+            "successful-start-and-reuse": 4,
+            "caller-cancellation": 4,
+            "failed-start-and-retry": 4,
+            "post-running-exit-and-replacement": 4,
+            "manager-shutdown": 4
+          }
+        }
+      ]
+    },
+    {
+      "case": "persistence-minimization",
+      "invocationCount": 1,
+      "observations": [
+        {
+          "name": "rowCount",
+          "actual": 1
+        },
+        {
+          "name": "projectKeys",
+          "actual": ["canonicalPath", "createdAt", "id", "name"]
+        },
+        {
+          "name": "databaseRuntimeMatches",
+          "actual": 0
+        }
+      ]
+    },
+    {
+      "case": "union-residual-audit",
+      "invocationCount": 1,
+      "observations": [
+        {
+          "name": "auditedIdentityCount",
+          "actual": 17
+        },
+        {
+          "name": "residualCount",
+          "actual": 0
+        },
+        {
+          "name": "residualAudits",
+          "actual": []
+        }
+      ]
+    }
+  ],
+  "manifests": {
+    "successful-start-and-reuse": {
+      "before": {
+        "root": "/tmp/bl-010-project-52AwxT",
+        "entries": [
+          {
+            "path": "nested",
+            "kind": "directory",
+            "mode": 493,
+            "size": "4096",
+            "mtimeNs": "1786494531745465381",
+            "ctimeNs": "1786494531745465381",
+            "bytesSha256": null,
+            "linkTarget": null
+          },
+          {
+            "path": "nested/bytes.bin",
+            "kind": "file",
+            "mode": 416,
+            "size": "4",
+            "mtimeNs": "1786494531745465381",
+            "ctimeNs": "1786494531745465381",
+            "bytesSha256": "3d1f57c984978ef98a18378c8166c1cb8ede02c03eeb6aee7e2f121dfeee3e56",
+            "linkTarget": null
+          },
+          {
+            "path": "nested/readme-link",
+            "kind": "symlink",
+            "mode": 511,
+            "size": "12",
+            "mtimeNs": "1786494531745465381",
+            "ctimeNs": "1786494531745465381",
+            "bytesSha256": null,
+            "linkTarget": "../README.md"
+          },
+          {
+            "path": "README.md",
+            "kind": "file",
+            "mode": 420,
+            "size": "20",
+            "mtimeNs": "1786494531745465381",
+            "ctimeNs": "1786494531745465381",
+            "bytesSha256": "1c1946ea3f44d834c985ffc463d58f36c6ba072c5e80b6e265fcee96f973a29a",
+            "linkTarget": null
+          }
+        ]
+      },
+      "after": {
+        "root": "/tmp/bl-010-project-52AwxT",
+        "entries": [
+          {
+            "path": "nested",
+            "kind": "directory",
+            "mode": 493,
+            "size": "4096",
+            "mtimeNs": "1786494531745465381",
+            "ctimeNs": "1786494531745465381",
+            "bytesSha256": null,
+            "linkTarget": null
+          },
+          {
+            "path": "nested/bytes.bin",
+            "kind": "file",
+            "mode": 416,
+            "size": "4",
+            "mtimeNs": "1786494531745465381",
+            "ctimeNs": "1786494531745465381",
+            "bytesSha256": "3d1f57c984978ef98a18378c8166c1cb8ede02c03eeb6aee7e2f121dfeee3e56",
+            "linkTarget": null
+          },
+          {
+            "path": "nested/readme-link",
+            "kind": "symlink",
+            "mode": 511,
+            "size": "12",
+            "mtimeNs": "1786494531745465381",
+            "ctimeNs": "1786494531745465381",
+            "bytesSha256": null,
+            "linkTarget": "../README.md"
+          },
+          {
+            "path": "README.md",
+            "kind": "file",
+            "mode": 420,
+            "size": "20",
+            "mtimeNs": "1786494531745465381",
+            "ctimeNs": "1786494531745465381",
+            "bytesSha256": "1c1946ea3f44d834c985ffc463d58f36c6ba072c5e80b6e265fcee96f973a29a",
+            "linkTarget": null
+          }
+        ]
+      },
+      "differenceCount": 0
+    },
+    "caller-cancellation": {
+      "before": {
+        "root": "/tmp/bl-010-project-52AwxT",
+        "entries": [
+          {
+            "path": "nested",
+            "kind": "directory",
+            "mode": 493,
+            "size": "4096",
+            "mtimeNs": "1786494531745465381",
+            "ctimeNs": "1786494531745465381",
+            "bytesSha256": null,
+            "linkTarget": null
+          },
+          {
+            "path": "nested/bytes.bin",
+            "kind": "file",
+            "mode": 416,
+            "size": "4",
+            "mtimeNs": "1786494531745465381",
+            "ctimeNs": "1786494531745465381",
+            "bytesSha256": "3d1f57c984978ef98a18378c8166c1cb8ede02c03eeb6aee7e2f121dfeee3e56",
+            "linkTarget": null
+          },
+          {
+            "path": "nested/readme-link",
+            "kind": "symlink",
+            "mode": 511,
+            "size": "12",
+            "mtimeNs": "1786494531745465381",
+            "ctimeNs": "1786494531745465381",
+            "bytesSha256": null,
+            "linkTarget": "../README.md"
+          },
+          {
+            "path": "README.md",
+            "kind": "file",
+            "mode": 420,
+            "size": "20",
+            "mtimeNs": "1786494531745465381",
+            "ctimeNs": "1786494531745465381",
+            "bytesSha256": "1c1946ea3f44d834c985ffc463d58f36c6ba072c5e80b6e265fcee96f973a29a",
+            "linkTarget": null
+          }
+        ]
+      },
+      "after": {
+        "root": "/tmp/bl-010-project-52AwxT",
+        "entries": [
+          {
+            "path": "nested",
+            "kind": "directory",
+            "mode": 493,
+            "size": "4096",
+            "mtimeNs": "1786494531745465381",
+            "ctimeNs": "1786494531745465381",
+            "bytesSha256": null,
+            "linkTarget": null
+          },
+          {
+            "path": "nested/bytes.bin",
+            "kind": "file",
+            "mode": 416,
+            "size": "4",
+            "mtimeNs": "1786494531745465381",
+            "ctimeNs": "1786494531745465381",
+            "bytesSha256": "3d1f57c984978ef98a18378c8166c1cb8ede02c03eeb6aee7e2f121dfeee3e56",
+            "linkTarget": null
+          },
+          {
+            "path": "nested/readme-link",
+            "kind": "symlink",
+            "mode": 511,
+            "size": "12",
+            "mtimeNs": "1786494531745465381",
+            "ctimeNs": "1786494531745465381",
+            "bytesSha256": null,
+            "linkTarget": "../README.md"
+          },
+          {
+            "path": "README.md",
+            "kind": "file",
+            "mode": 420,
+            "size": "20",
+            "mtimeNs": "1786494531745465381",
+            "ctimeNs": "1786494531745465381",
+            "bytesSha256": "1c1946ea3f44d834c985ffc463d58f36c6ba072c5e80b6e265fcee96f973a29a",
+            "linkTarget": null
+          }
+        ]
+      },
+      "differenceCount": 0
+    },
+    "failed-start-and-retry": {
+      "before": {
+        "root": "/tmp/bl-010-project-52AwxT",
+        "entries": [
+          {
+            "path": "nested",
+            "kind": "directory",
+            "mode": 493,
+            "size": "4096",
+            "mtimeNs": "1786494531745465381",
+            "ctimeNs": "1786494531745465381",
+            "bytesSha256": null,
+            "linkTarget": null
+          },
+          {
+            "path": "nested/bytes.bin",
+            "kind": "file",
+            "mode": 416,
+            "size": "4",
+            "mtimeNs": "1786494531745465381",
+            "ctimeNs": "1786494531745465381",
+            "bytesSha256": "3d1f57c984978ef98a18378c8166c1cb8ede02c03eeb6aee7e2f121dfeee3e56",
+            "linkTarget": null
+          },
+          {
+            "path": "nested/readme-link",
+            "kind": "symlink",
+            "mode": 511,
+            "size": "12",
+            "mtimeNs": "1786494531745465381",
+            "ctimeNs": "1786494531745465381",
+            "bytesSha256": null,
+            "linkTarget": "../README.md"
+          },
+          {
+            "path": "README.md",
+            "kind": "file",
+            "mode": 420,
+            "size": "20",
+            "mtimeNs": "1786494531745465381",
+            "ctimeNs": "1786494531745465381",
+            "bytesSha256": "1c1946ea3f44d834c985ffc463d58f36c6ba072c5e80b6e265fcee96f973a29a",
+            "linkTarget": null
+          }
+        ]
+      },
+      "after": {
+        "root": "/tmp/bl-010-project-52AwxT",
+        "entries": [
+          {
+            "path": "nested",
+            "kind": "directory",
+            "mode": 493,
+            "size": "4096",
+            "mtimeNs": "1786494531745465381",
+            "ctimeNs": "1786494531745465381",
+            "bytesSha256": null,
+            "linkTarget": null
+          },
+          {
+            "path": "nested/bytes.bin",
+            "kind": "file",
+            "mode": 416,
+            "size": "4",
+            "mtimeNs": "1786494531745465381",
+            "ctimeNs": "1786494531745465381",
+            "bytesSha256": "3d1f57c984978ef98a18378c8166c1cb8ede02c03eeb6aee7e2f121dfeee3e56",
+            "linkTarget": null
+          },
+          {
+            "path": "nested/readme-link",
+            "kind": "symlink",
+            "mode": 511,
+            "size": "12",
+            "mtimeNs": "1786494531745465381",
+            "ctimeNs": "1786494531745465381",
+            "bytesSha256": null,
+            "linkTarget": "../README.md"
+          },
+          {
+            "path": "README.md",
+            "kind": "file",
+            "mode": 420,
+            "size": "20",
+            "mtimeNs": "1786494531745465381",
+            "ctimeNs": "1786494531745465381",
+            "bytesSha256": "1c1946ea3f44d834c985ffc463d58f36c6ba072c5e80b6e265fcee96f973a29a",
+            "linkTarget": null
+          }
+        ]
+      },
+      "differenceCount": 0
+    },
+    "post-running-exit-and-replacement": {
+      "before": {
+        "root": "/tmp/bl-010-project-52AwxT",
+        "entries": [
+          {
+            "path": "nested",
+            "kind": "directory",
+            "mode": 493,
+            "size": "4096",
+            "mtimeNs": "1786494531745465381",
+            "ctimeNs": "1786494531745465381",
+            "bytesSha256": null,
+            "linkTarget": null
+          },
+          {
+            "path": "nested/bytes.bin",
+            "kind": "file",
+            "mode": 416,
+            "size": "4",
+            "mtimeNs": "1786494531745465381",
+            "ctimeNs": "1786494531745465381",
+            "bytesSha256": "3d1f57c984978ef98a18378c8166c1cb8ede02c03eeb6aee7e2f121dfeee3e56",
+            "linkTarget": null
+          },
+          {
+            "path": "nested/readme-link",
+            "kind": "symlink",
+            "mode": 511,
+            "size": "12",
+            "mtimeNs": "1786494531745465381",
+            "ctimeNs": "1786494531745465381",
+            "bytesSha256": null,
+            "linkTarget": "../README.md"
+          },
+          {
+            "path": "README.md",
+            "kind": "file",
+            "mode": 420,
+            "size": "20",
+            "mtimeNs": "1786494531745465381",
+            "ctimeNs": "1786494531745465381",
+            "bytesSha256": "1c1946ea3f44d834c985ffc463d58f36c6ba072c5e80b6e265fcee96f973a29a",
+            "linkTarget": null
+          }
+        ]
+      },
+      "after": {
+        "root": "/tmp/bl-010-project-52AwxT",
+        "entries": [
+          {
+            "path": "nested",
+            "kind": "directory",
+            "mode": 493,
+            "size": "4096",
+            "mtimeNs": "1786494531745465381",
+            "ctimeNs": "1786494531745465381",
+            "bytesSha256": null,
+            "linkTarget": null
+          },
+          {
+            "path": "nested/bytes.bin",
+            "kind": "file",
+            "mode": 416,
+            "size": "4",
+            "mtimeNs": "1786494531745465381",
+            "ctimeNs": "1786494531745465381",
+            "bytesSha256": "3d1f57c984978ef98a18378c8166c1cb8ede02c03eeb6aee7e2f121dfeee3e56",
+            "linkTarget": null
+          },
+          {
+            "path": "nested/readme-link",
+            "kind": "symlink",
+            "mode": 511,
+            "size": "12",
+            "mtimeNs": "1786494531745465381",
+            "ctimeNs": "1786494531745465381",
+            "bytesSha256": null,
+            "linkTarget": "../README.md"
+          },
+          {
+            "path": "README.md",
+            "kind": "file",
+            "mode": 420,
+            "size": "20",
+            "mtimeNs": "1786494531745465381",
+            "ctimeNs": "1786494531745465381",
+            "bytesSha256": "1c1946ea3f44d834c985ffc463d58f36c6ba072c5e80b6e265fcee96f973a29a",
+            "linkTarget": null
+          }
+        ]
+      },
+      "differenceCount": 0
+    },
+    "manager-shutdown": {
+      "before": {
+        "root": "/tmp/bl-010-project-52AwxT",
+        "entries": [
+          {
+            "path": "nested",
+            "kind": "directory",
+            "mode": 493,
+            "size": "4096",
+            "mtimeNs": "1786494531745465381",
+            "ctimeNs": "1786494531745465381",
+            "bytesSha256": null,
+            "linkTarget": null
+          },
+          {
+            "path": "nested/bytes.bin",
+            "kind": "file",
+            "mode": 416,
+            "size": "4",
+            "mtimeNs": "1786494531745465381",
+            "ctimeNs": "1786494531745465381",
+            "bytesSha256": "3d1f57c984978ef98a18378c8166c1cb8ede02c03eeb6aee7e2f121dfeee3e56",
+            "linkTarget": null
+          },
+          {
+            "path": "nested/readme-link",
+            "kind": "symlink",
+            "mode": 511,
+            "size": "12",
+            "mtimeNs": "1786494531745465381",
+            "ctimeNs": "1786494531745465381",
+            "bytesSha256": null,
+            "linkTarget": "../README.md"
+          },
+          {
+            "path": "README.md",
+            "kind": "file",
+            "mode": 420,
+            "size": "20",
+            "mtimeNs": "1786494531745465381",
+            "ctimeNs": "1786494531745465381",
+            "bytesSha256": "1c1946ea3f44d834c985ffc463d58f36c6ba072c5e80b6e265fcee96f973a29a",
+            "linkTarget": null
+          }
+        ]
+      },
+      "after": {
+        "root": "/tmp/bl-010-project-52AwxT",
+        "entries": [
+          {
+            "path": "nested",
+            "kind": "directory",
+            "mode": 493,
+            "size": "4096",
+            "mtimeNs": "1786494531745465381",
+            "ctimeNs": "1786494531745465381",
+            "bytesSha256": null,
+            "linkTarget": null
+          },
+          {
+            "path": "nested/bytes.bin",
+            "kind": "file",
+            "mode": 416,
+            "size": "4",
+            "mtimeNs": "1786494531745465381",
+            "ctimeNs": "1786494531745465381",
+            "bytesSha256": "3d1f57c984978ef98a18378c8166c1cb8ede02c03eeb6aee7e2f121dfeee3e56",
+            "linkTarget": null
+          },
+          {
+            "path": "nested/readme-link",
+            "kind": "symlink",
+            "mode": 511,
+            "size": "12",
+            "mtimeNs": "1786494531745465381",
+            "ctimeNs": "1786494531745465381",
+            "bytesSha256": null,
+            "linkTarget": "../README.md"
+          },
+          {
+            "path": "README.md",
+            "kind": "file",
+            "mode": 420,
+            "size": "20",
+            "mtimeNs": "1786494531745465381",
+            "ctimeNs": "1786494531745465381",
+            "bytesSha256": "1c1946ea3f44d834c985ffc463d58f36c6ba072c5e80b6e265fcee96f973a29a",
+            "linkTarget": null
+          }
+        ]
+      },
+      "differenceCount": 0
+    }
+  },
+  "persistence": {
+    "rowCount": 1,
+    "projectKeys": ["canonicalPath", "createdAt", "id", "name"],
+    "databaseRuntimeMatches": 0
+  },
+  "privacy": {
+    "sentinelMatches": 0,
+    "rawCanonicalPathEventMatches": 0
+  },
+  "unionResiduals": {
+    "auditedIdentityCount": 17,
+    "residualCount": 0,
+    "residualAudits": []
+  }
+}

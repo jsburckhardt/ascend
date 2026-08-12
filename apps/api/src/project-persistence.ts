@@ -22,7 +22,7 @@ export type CloseProjectResult =
 
 export class ProjectPersistenceError extends Error {
   readonly code = 'project-persistence-failed'
-  readonly operation: 'create' | 'list' | 'close'
+  readonly operation: 'create' | 'find' | 'list' | 'close'
 
   constructor(operation: ProjectPersistenceError['operation']) {
     super('Project persistence ' + operation + ' failed')
@@ -34,6 +34,7 @@ export class ProjectPersistenceError extends Error {
 export interface ProjectPersistenceAdapter {
   insert(input: Project): Promise<Project | undefined>
   findByCanonicalPath(canonicalPath: string): Promise<Project | undefined>
+  findById(id: string): Promise<Project | undefined>
   list(): Promise<Project[]>
   deleteById(id: string): Promise<string | undefined>
 }
@@ -68,6 +69,14 @@ export function createDrizzleProjectAdapter(
         .limit(1)
       return rows[0]
     },
+    async findById(id) {
+      const rows = await database
+        .select()
+        .from(projects)
+        .where(eq(projects.id, id))
+        .limit(1)
+      return rows[0]
+    },
     async list() {
       return database
         .select()
@@ -88,6 +97,7 @@ export function createDrizzleProjectAdapter(
 
 export interface ProjectRepository {
   create(input: Project): Promise<CreateProjectResult>
+  findById(id: string): Promise<Project | undefined>
   list(): Promise<Project[]>
   closeProject(id: string): Promise<CloseProjectResult>
 }
@@ -112,6 +122,13 @@ export function createProjectRepository(
         return { disposition: 'existing', project: existing }
       } catch {
         throw new ProjectPersistenceError('create')
+      }
+    },
+    async findById(id) {
+      try {
+        return await adapter.findById(id)
+      } catch {
+        throw new ProjectPersistenceError('find')
       }
     },
     async list() {

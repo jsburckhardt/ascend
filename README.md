@@ -32,6 +32,9 @@ just proof-start
 just proof-stop
 just proof-workbench-capacity
 just proof-workbench-capacity-audit
+just verify-project-runtime
+just proof-project-runtime
+just proof-project-runtime-residual-audit
 just verify
 ```
 
@@ -44,6 +47,10 @@ RPIV harness integration is APS-governed. The coordinator owns serialized lifecy
 ## Host Workbench Proof
 
 On the designated Ubuntu devcontainer, `just proof-start` starts one isolated code-server 4.131.0 against the tracked BL-001 fixture and writes one versioned JSON handle to stdout. Pipe that exact handle to `just proof-stop`; repeated cleanup is safe. The full gate runs the five bounded fake failure cases and two real workbench Chromium scenarios: the forced integrated-terminal timeout cleanup scenario and the passing terminal-parity scenario. See [the workbench proof runbook](docs/workbench-proof.md) for prerequisites, timeouts, diagnostics, evidence, and cleanup boundaries.
+
+## Project Runtime Manager
+
+The API now owns one internal in-memory manager that can start or health-check and reuse a persisted project's code-server. It validates the stable ID and exact canonical path, uses direct non-root loopback launch, coalesces concurrent calls, reports typed bounded failures, and returns graceful or escalated shutdown audits for every exact owned PID/start identity, process group, port, and listener before SQLite closes. This capability has no product route or Project Home wiring yet and persists no runtime identity or state. The retained designated episode is the single source for the observed startup timing versus the 15-second target, PID/port reuse, recursive BL-001 manifest, exact shutdown audit, unrelated-control survival, and zero residuals. See [the project runtime runbook](docs/project-runtime.md).
 
 ## Repository Layout
 

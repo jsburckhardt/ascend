@@ -76,11 +76,22 @@ verify-close-project:
     pnpm exec vitest run apps/api/test/project-close-service.test.ts apps/api/test/project-close-route.test.ts apps/api/test/project-close-non-mutation.test.ts apps/api/test/project-close-documentation.test.ts apps/web/src/project-close-client.test.ts apps/web/src/use-project-close.test.tsx apps/web/src/App.close.test.tsx --reporter=verbose
     pnpm exec playwright test tests/e2e/project-home.spec.ts --project=chromium --workers=1 --retries=0
 
+verify-project-runtime:
+    BL010_ACCEPTANCE=1 pnpm exec vitest run apps/api/test/project-runtime-contract.test.ts apps/api/test/project-runtime-process.test.ts apps/api/test/project-runtime-manager.test.ts apps/api/test/project-runtime-lifecycle.test.ts apps/api/test/project-runtime-acceptance.test.ts --reporter=verbose
+
+proof-project-runtime:
+    BL010_DESIGNATED=1 pnpm exec vitest run apps/api/test/project-runtime-designated.test.ts --reporter=verbose
+
+proof-project-runtime-residual-audit:
+    pnpm --filter @ascend/api exec tsx src/cli/project-runtime-residual-audit.ts
+
 verify:
     pnpm format:check
     pnpm lint
     pnpm typecheck
     pnpm test
+    just proof-project-runtime
+    just proof-project-runtime-residual-audit
     just verify-rpiv-harness
     just verify-project-registration
     pnpm build

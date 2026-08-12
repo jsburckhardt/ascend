@@ -17,6 +17,7 @@ function adapter(): ProjectPersistenceAdapter {
   return {
     insert: vi.fn(async (input: Project) => input),
     findByCanonicalPath: vi.fn(),
+    findById: vi.fn(),
     list: vi.fn(async () => []),
     deleteById: vi.fn(),
   }
@@ -61,13 +62,16 @@ describe('project persistence contract', () => {
     })
   })
 
-  it('wraps unexpected create and list adapter failures without exposing a cause', async () => {
+  it('wraps unexpected create, find, and list failures without exposing a cause', async () => {
     const rawDriverError = new Error('raw sqlite detail')
     const repository = createProjectRepository({
       insert: vi.fn(async () => {
         throw rawDriverError
       }),
       findByCanonicalPath: vi.fn(),
+      findById: vi.fn(async () => {
+        throw rawDriverError
+      }),
       list: vi.fn(async () => {
         throw rawDriverError
       }),
@@ -78,6 +82,7 @@ describe('project persistence contract', () => {
 
     for (const operation of [
       repository.create(validProject),
+      repository.findById(validProject.id),
       repository.list(),
     ]) {
       const error = await operation.catch((value: unknown) => value)

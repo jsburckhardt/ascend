@@ -13,12 +13,12 @@ development servers running. Harness boot remains non-persistent and test-backed
 ## Checks command
 
 `harness checks` wraps the root `just verify` recipe and gates formatting, linting,
-typechecking, unit tests, builds, and Playwright E2E tests. On the designated host, the gate includes bounded BL-001 lifecycle and terminal-parity failures plus two real code-server Chromium scenarios: forced integrated-terminal timeout cleanup and passing terminal parity, each with exact-handle, terminal-command, browser-context, and listener cleanup. The gate ends with the bounded BL-004 retained-evidence, all-discovered-identity, active-guard, and BL-001 fixture-integrity audit; it does not rerun the 1/3/5/10 episode. The designated command uses cooperative deadline cancellation and holds its guard until cleanup, final audit, partial evidence retention, and release finish.
+typechecking, unit tests, builds, and Playwright E2E tests. On the designated host, the gate includes bounded BL-001 lifecycle and terminal-parity failures plus two real code-server Chromium scenarios: forced integrated-terminal timeout cleanup and passing terminal parity, each with exact-handle, terminal-command, browser-context, and listener cleanup. The gate ends with the bounded BL-004 retained-evidence, all-discovered-identity, active-guard, and BL-001 fixture-integrity audit; it does not rerun the 1/3/5/10 episode. The wrapper applies a finite 600,000 ms default budget, configurable with `ASCEND_HARNESS_VERIFY_TIMEOUT_MS` from 120,001 through 3,600,000 ms, while continuing to delegate exactly to `just verify`. The designated command uses cooperative deadline cancellation and holds its guard until cleanup, final audit, partial evidence retention, and release finish.
 
 ## Health check
 
 `harness boot --json` is the aggregate readiness check and reports
-`data.duration_ms` for speed classification. During interactive development,
+`data.duration_ms` for speed classification. It gives the nested checks command its configured verification budget plus 10,000 ms of finite wrapper overhead and reports `data.checks_timeout_ms`. During interactive development,
 the API root at `http://127.0.0.1:3000/` returns
 `{"name":"ascend","status":"ok"}` and the web application is expected at
 `http://127.0.0.1:5173`.

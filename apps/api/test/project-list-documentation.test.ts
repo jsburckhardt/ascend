@@ -49,7 +49,7 @@ describe('BL-007 documentation contract', () => {
       'unmount',
       'whitespace-preserving',
       'keyboard',
-      'workbench is deferred',
+      '/projects/{encodedStableId}/workbench/',
       'POST /api/projects',
     ]) {
       expect(combined).toContain(token)

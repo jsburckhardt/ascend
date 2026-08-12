@@ -9,6 +9,7 @@ import type { Socket } from 'node:net'
 import { StringDecoder } from 'node:string_decoder'
 import { Transform, type TransformCallback } from 'node:stream'
 import { WebSocket, WebSocketServer, type RawData } from 'ws'
+import { hasTrustedFrontDoorHeaders } from './front-door-contract.js'
 import type { ProjectLibrary } from './project-library.js'
 import {
   RuntimeFailure,
@@ -66,6 +67,7 @@ export interface WorkbenchProxyManagerDependencies {
   readonly headerTimeoutMs?: number
   readonly shutdownTimeoutMs?: number
   readonly now?: () => number
+  readonly frontDoorToken?: string
   readonly recordEvent?: (event: WorkbenchSafeEvent) => void
   readonly requestHttp?: (options: RequestOptions) => ClientRequest
   readonly recordWebSocketDiagnostic?: (diagnostic: {
@@ -76,7 +78,7 @@ export interface WorkbenchProxyManagerDependencies {
   }) => void
   readonly recordWebSocketRole?: (observation: {
     connectionOrdinal: number
-    role: WorkbenchConnectionRole | 'unknown'
+    role: WorkbenchConnectionRole | 'cancelled-before-control' | 'unknown'
   }) => void
 }
 
@@ -309,11 +311,25 @@ export function createWorkbenchProxyManager(
     recordEvent(serializeWorkbenchEvent(event))
 
   const stableAuthority = (request: IncomingMessage): string => {
+    const frontDoorAuthority = request.headers['x-ascend-front-door-authority']
+    const frontDoorToken = request.headers['x-ascend-front-door-token']
+    if (hasTrustedFrontDoorHeaders(request.headers)) {
+      if (
+        dependencies.frontDoorToken === undefined ||
+        frontDoorToken !== dependencies.frontDoorToken ||
+        typeof frontDoorAuthority !== 'string' ||
+        !/^(?:127.0.0.1|localhost):(?:[1-9][0-9]{0,4})$/u.test(
+          frontDoorAuthority
+        )
+      )
+        throw workbenchFailure('upstream-invalid-http')
+      return frontDoorAuthority
+    }
     const address =
       request.socket.localAddress === '::ffff:127.0.0.1'
         ? '127.0.0.1'
         : (request.socket.localAddress ?? '127.0.0.1')
-    const host = address.includes(':') ? `[${address}]` : address
+    const host = address.includes(':') ? '[' + address + ']' : address
     return request.socket.localPort === undefined
       ? host
       : host + ':' + String(request.socket.localPort)
@@ -384,6 +400,7 @@ export function createWorkbenchProxyManager(
     let upstreamRequest: ClientRequest | undefined
     let operationFailure: WorkbenchPublicFailure | undefined
     try {
+      stableAuthority(request)
       const target = await resolveTarget(route, controller.signal)
       if (shuttingDown) throw new RuntimeFailure('manager-shutdown')
       const headers = filterWorkbenchHeaders(request.headers, { request: true })
@@ -650,11 +667,14 @@ export function createWorkbenchProxyManager(
     left.on('close', (code, reason) => {
       if (!roleObserved) {
         roleObserved = true
-        recordWebSocketRole({ connectionOrdinal, role: 'unknown' })
+        recordWebSocketRole({
+          connectionOrdinal,
+          role: 'cancelled-before-control',
+        })
       }
       recordWebSocketDiagnostic({ side: 'downstream', event: 'close', code })
       if (right.readyState === WebSocket.OPEN) {
-        if (code === 1006) right.terminate()
+        if (code === 1005 || code === 1006) right.terminate()
         else right.close(code, reason)
       }
       cleanup()
@@ -662,7 +682,7 @@ export function createWorkbenchProxyManager(
     right.on('close', (code, reason) => {
       recordWebSocketDiagnostic({ side: 'upstream', event: 'close', code })
       if (left.readyState === WebSocket.OPEN) {
-        if (code === 1006) left.terminate()
+        if (code === 1005 || code === 1006) left.terminate()
         else left.close(code, reason)
       }
       cleanup()
@@ -708,6 +728,7 @@ export function createWorkbenchProxyManager(
     })
     let upstream: WebSocket | undefined
     try {
+      stableAuthority(request)
       const target = await resolveTarget(route, controller.signal)
       if (shuttingDown) throw new RuntimeFailure('manager-shutdown')
       const wsUrl = new URL(route.upstreamPath, target)

@@ -52,6 +52,7 @@ afterAll(async () => {
     'binary-echo',
     'ping-pong',
     'clean-close',
+    'no-status-close',
     'abnormal-close',
     'handshake-timeout',
     'upstream-refusal',
@@ -147,6 +148,10 @@ const createFixture = async () => {
     const path = request.url ?? ''
     if (path.startsWith('/clean')) {
       socket.close(1000, 'matrix-complete')
+      return
+    }
+    if (path.startsWith('/no-status')) {
+      socket.close()
       return
     }
     if (path.startsWith('/abnormal')) {
@@ -368,6 +373,20 @@ describe('stable workbench WebSocket transport', () => {
     matrixEvidence.push({
       case: 'clean-close',
       ...cleanOutcome,
+      inventory: await observeSocketInventory(fixture, proxy),
+    })
+
+    const noStatus = trackMatrixClient(
+      new WebSocket(
+        `ws://127.0.0.1:${port}/projects/${project.id}/workbench/no-status`
+      )
+    )
+    const noStatusOutcome = await closed(noStatus)
+    expect(noStatusOutcome.code).toBe(1006)
+    matrixEvidence.push({
+      case: 'no-status-close',
+      localObservedCode: noStatusOutcome.code,
+      transmittedReservedCode: 'none',
       inventory: await observeSocketInventory(fixture, proxy),
     })
 

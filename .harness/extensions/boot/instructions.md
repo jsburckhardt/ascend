@@ -4,8 +4,9 @@
 
 Runs `harness checks`, which exercises the web scaffold through Playwright and
 the API through Fastify injection. A successful envelope reports readiness,
-proof mode, checks duration, the development start command, and the expected
-web/API endpoints.
+proof mode, checks duration, the finite checks-wrapper timeout, the development
+start command, and the expected web/API endpoints. Boot derives its bound from
+`ASCEND_HARNESS_VERIFY_TIMEOUT_MS` and adds 10,000 ms of finite wrapper overhead.
 
 ## Your role (the inference part)
 

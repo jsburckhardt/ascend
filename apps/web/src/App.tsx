@@ -11,11 +11,17 @@ import {
   type RegistrationTransport,
 } from './projects'
 import { useProjectHome } from './use-project-home'
+import {
+  browserWorkbenchNavigator,
+  stableWorkbenchUrl,
+  type WorkbenchNavigator,
+} from './workbench-navigation'
 
 export interface AppProperties {
   readonly loadProjectList?: ProjectLoader
   readonly registerProject?: RegistrationTransport
   readonly closeProject?: CloseTransport
+  readonly navigateToWorkbench?: WorkbenchNavigator
 }
 
 export const CLOSE_DIALOG_BODY =
@@ -25,6 +31,7 @@ export function App({
   loadProjectList,
   registerProject,
   closeProject,
+  navigateToWorkbench = browserWorkbenchNavigator,
 }: AppProperties) {
   const home = useProjectHome({
     load: loadProjectList,
@@ -33,11 +40,20 @@ export function App({
   })
   const { state } = home
   const [openAnnouncement, setOpenAnnouncement] = useState('')
+  const [openingProjectId, setOpeningProjectId] = useState<string>()
+  const activationGeneration = useRef(0)
+  const pendingActivation = useRef<
+    { id: string; generation: number } | undefined
+  >(undefined)
   const inputRef = useRef<HTMLInputElement>(null)
   const headingRef = useRef<HTMLHeadingElement>(null)
   const dialogRef = useRef<HTMLDivElement>(null)
   const projectActions = useRef(new Map<string, HTMLButtonElement>())
   const closeActions = useRef(new Map<string, HTMLButtonElement>())
+
+  useEffect(() => {
+    headingRef.current?.focus()
+  }, [])
 
   useEffect(() => {
     if (state.focusTarget === 'heading') {
@@ -104,6 +120,18 @@ export function App({
     home.submit()
   }
 
+  const openWorkbench = (projectId: string, projectName: string): void => {
+    if (pendingActivation.current !== undefined) return
+    const generation = ++activationGeneration.current
+    pendingActivation.current = { id: projectId, generation }
+    setOpeningProjectId(projectId)
+    setOpenAnnouncement(projectName + ': Opening workbench.')
+    queueMicrotask(() => {
+      if (pendingActivation.current?.generation !== generation) return
+      navigateToWorkbench(stableWorkbenchUrl(projectId))
+    })
+  }
+
   const pendingRegistration = state.activeKind === 'ordinary'
   const recoveryIdle = state.mode === 'unknown'
   const recoveryPending = state.mode === 'recovery-pending'
@@ -129,7 +157,12 @@ export function App({
         </h1>
       </header>
 
-      <p aria-live="polite" className="sr-only" role="status">
+      <p
+        aria-live="polite"
+        className="sr-only"
+        id="workbench-opening-status"
+        role="status"
+      >
         {openAnnouncement || state.announcement}
       </p>
 
@@ -284,14 +317,18 @@ export function App({
                 </p>
                 <button
                   aria-label={'Open ' + project.name}
-                  className="mt-5 rounded-md bg-slate-950 px-4 py-2 text-sm font-medium text-white"
+                  className="mt-5 rounded-md bg-slate-950 px-4 py-2 text-sm font-medium text-white focus-visible:outline focus-visible:outline-4 focus-visible:outline-blue-600"
                   data-project-id={project.id}
-                  onClick={() =>
-                    setOpenAnnouncement(
-                      project.name +
-                        ': Opening the workbench is not available yet.'
-                    )
+                  aria-describedby={
+                    openingProjectId === project.id
+                      ? 'workbench-opening-status'
+                      : undefined
                   }
+                  disabled={
+                    openingProjectId !== undefined &&
+                    openingProjectId !== project.id
+                  }
+                  onClick={() => openWorkbench(project.id, project.name)}
                   ref={(element) => {
                     if (element === null)
                       projectActions.current.delete(project.id)

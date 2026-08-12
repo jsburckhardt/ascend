@@ -303,6 +303,11 @@ describe('BL-011 verifier proof corrections', () => {
     ).toBe('ExtensionHost')
     expect(
       classifyWorkbenchConnectionRolePayload(
+        Buffer.from('frame:{"type":"connectionType","desiredConnectionType":3}')
+      )
+    ).toBe('Tunnel')
+    expect(
+      classifyWorkbenchConnectionRolePayload(
         Buffer.from('frame:{"type":"connectionType","desiredConnectionType":7}')
       )
     ).toBe('unknown')

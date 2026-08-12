@@ -31,6 +31,7 @@ Configuration uses environment variables:
 | `ASCEND_DATABASE_URL` | `<repository>/apps/api/ascend.db` | Local application SQLite path; `file:` or filesystem-path overrides are supported |
 | `ASCEND_PROJECT_HOME` | configured OS home | Home used for `~` expansion and opening policy |
 | `ASCEND_PROJECT_ALLOWED_ROOTS` | configured home | Path-delimiter-separated allowed roots; an explicit empty value is deny-all |
+| `ASCEND_HARNESS_VERIFY_TIMEOUT_MS` | `600000` | Harness-only `just verify` budget; integer from 120001 through 3600000 ms |
 | Standard `OTEL_*` variables | OpenTelemetry defaults | Optional observability configuration |
 
 Application logs are simple structured console records. Logs and telemetry must not contain source, terminal, clipboard, prompt, credential, or secret content.
@@ -41,12 +42,17 @@ The repository exposes `just proof-start` and `just proof-stop` for one bounded 
 
 ## In-memory project runtime
 
-Issue #25 adds one internal manager that starts and reuses a persisted project's code-server and is now consumed by the stable workbench proxy route without adding a Project Home action. Runtime identity, port, state, and process ownership remain memory-only; SQLite stays four-field metadata. Launch is non-root, direct argv, exact-canonical-path, and loopback-only. Readiness uses the bounded /healthz/ JSON contract, exactly concurrent calls share one start, and caller cancellation affects only its waiter. Application shutdown inventories every running or in-flight PID/start identity, group, port, and listener, returns graceful or escalated exact-absence audits, and leaves unrelated controls alive before persistence closes. See [project-runtime.md](project-runtime.md) for configuration, typed failures, redacted events, commands, the retained authoritative timing field, and deferred boundaries.
+Issue #25 adds one internal manager that starts and reuses a persisted project's code-server. The stable proxy and Project Home Open now consume it through the browser navigation shell. Runtime identity, port, state, and process ownership remain memory-only; SQLite stays four-field metadata. Launch is non-root, direct argv, exact-canonical-path, and loopback-only. Readiness uses the bounded /healthz/ JSON contract, exactly concurrent calls share one start, and caller cancellation affects only its waiter. Application shutdown inventories every running or in-flight PID/start identity, group, port, and listener, returns graceful or escalated exact-absence audits, and leaves unrelated controls alive before persistence closes. See [project-runtime.md](project-runtime.md) for configuration, typed failures, redacted events, commands, the retained authoritative timing field, and deferred boundaries.
 
 ## Stable workbench routing
 
 Issue #27 routes Ascend-owned workbench HTTP and every WebSocket through `/projects/{projectId}/workbench/`. The only trusted external request class is built-in Markdown Preview over HTTPS with a complete host matching `^vscode-remote\+(?:[a-z0-9]|-[0-9a-f]{4})+\.vscode-resource\.vscode-cdn\.net$`, no credentials or explicit port, and no authority copy in path or query. The fixed `+` is opaque VS Code syntax rather than wildcard permission, and retained evidence contains bounded classes instead of a raw host or encoded-authority token. Designated proof disables the extension gallery with `EXTENSIONS_GALLERY={}`, requires no Open VSX/marketplace access, and inventories six no-retry sockets across three workflows: three Management and three ExtensionHost. See [stable-workbench-routing.md](stable-workbench-routing.md) for transport, failure, disclosure, cleanup, migration, validation, and scope details.
 
+## Project Home and workbench navigation
+
+Issue #29 connects exact Home `/` to `/projects/{encodedStableId}/workbench/` with native full-document history. The API serves an accessible top-level loading/error shell, performs marked same-URL document acquisition, and decorates the acquired full-page workbench with only an Ascend Projects header. Projects returns Home without stopping the reused runtime. Unknown and malformed IDs stay at the stable URL; retryable startup, proxy, generic load, and 15-second document-timeout failures offer same-URL Retry with stale-generation suppression.
+
+Development Vite and deployed front doors must forward /projects HTTP and WebSocket traffic to the API on the Home origin. ASCEND_FRONT_DOOR_TOKEN must align across the web proxy and API: unset local development uses ascend-development-front-door-v1, explicit values must be 16–256 characters, and malformed, partial, or mismatched trusted headers are refused before runtime start. Deployment injects the private authority/token pair and redacts it. No data, schema, or API-payload migration is required; overriding the default is an operational configuration change. Run just verify-home-workbench and just proof-home-workbench-residual-audit.
 ## Source Documents
 
 - [`PRD.md`](../PRD.md) defines the MVP requirements and acceptance criteria.
@@ -119,7 +125,7 @@ Typed failures return only `{"error":{"category":"<category>","field":"path"}}`:
 
 Project Home presents a semantic Open Project form with a persistent `Host path` label and associated absolute, `~`, and `~/...` guidance. It preserves exact input. Blank input and all six typed path failures set `aria-invalid`, associate an alert with the field, announce the specific correction, focus the field, retain text, and change no card. React renders input, locked payload, names, and paths as complete inert whitespace-preserving text.
 
-Created and existing responses upsert by stable ID only, never display text, and restore `createdAt ASC, id ASC`. The exact card Open action is scrolled into view, focused, and announced as created or already registered. Equivalent path expressions therefore activate one unchanged card and one durable record. Open itself remains project-ID identified and keyboard operable but only announces that the workbench is deferred; it starts no workbench, request, or navigation.
+Created and existing responses upsert by stable ID only, never display text, and restore `createdAt ASC, id ASC`. The exact card Open action is scrolled into view, focused, and announced as created or already registered. Equivalent path expressions therefore activate one unchanged card and one durable record. Open remains project-ID identified and keyboard operable and now performs one full-document navigation to `/projects/{encodedStableId}/workbench/`.
 
 Each ordinary or retry registration owns a 10,000 ms bound; each list or recovery refresh owns 5,000 ms. Pending registration blocks repeated submit and exposes active Cancel. Ordinary cancellation, controlled positive pre-send unavailability, and unmount preserve input and cards while invalidating late completion. Once fetch is invoked, timeout, reset or rejection, truncated or unreadable body, non-JSON, undocumented status, or invalid response contract is `Submission outcome unknown`.
 
@@ -129,9 +135,9 @@ One active owner and monotonic generation govern ordinary, retry, refresh, cance
 
 ### Scope and validation
 
-Native pickers, scanning, clone/import, repository detection, running or failed workbench close, search, user sorting, tags, path mutation, workbench launch, BL-010, and BL-012 remain deferred. Run root commands only: `just verify-open-project`, targeted `just verify-focused <test-path>`, and `just verify`.
+Native pickers, scanning, clone/import, repository detection, running or failed workbench close, search, user sorting, tags, path mutation, runtime-status UI, and lifecycle controls remain deferred. Run root commands only: `just verify-open-project`, targeted `just verify-focused <test-path>`, and `just verify`.
 
-The real desktop Chromium episode is keyboard-only and uses disposable loopback listeners, an isolated refused-default database, and content-bearing host fixtures below `test-results/bl-008/open-project`. It proves created, equivalent existing, invalid/corrected, stable identity, no reload, and deferred Open. Recursive manifests prove fixture membership, bytes, links, modes, and timestamps unchanged. Harness boot remains non-persistent and test-backed.
+The real desktop Chromium episode is keyboard-only and uses disposable loopback listeners, an isolated refused-default database, and content-bearing host fixtures below `test-results/bl-008/open-project`. It proves created, equivalent existing, invalid/corrected, stable identity, and no list reload; BL-012 separately proves Open navigation. Recursive manifests prove fixture membership, bytes, links, modes, and timestamps unchanged. Harness boot remains non-persistent and test-backed.
 
 The bounded episode passed. Retained cleanup evidence maps only executed scenarios; the prior modeled startup placeholders are no longer used:
 

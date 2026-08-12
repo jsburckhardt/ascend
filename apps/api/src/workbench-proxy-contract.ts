@@ -339,7 +339,7 @@ export const rewriteServiceWorkerAllowed = (
   prefix: string
 ): string => (value === '/' ? prefix : value)
 
-export type WorkbenchConnectionRole = 'Management' | 'ExtensionHost'
+export type WorkbenchConnectionRole = 'Management' | 'ExtensionHost' | 'Tunnel'
 
 export function classifyWorkbenchConnectionRolePayload(
   payload: Buffer
@@ -349,6 +349,7 @@ export function classifyWorkbenchConnectionRolePayload(
   const match = /"desiredConnectionType"\s*:\s*(\d+)/u.exec(text)
   if (match?.[1] === '1') return 'Management'
   if (match?.[1] === '2') return 'ExtensionHost'
+  if (match?.[1] === '3') return 'Tunnel'
   return 'unknown'
 }
 

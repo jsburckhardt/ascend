@@ -705,4 +705,27 @@ describe('stable workbench HTTP transport', () => {
       expect(response.body.toString()).not.toContain('private')
     }
   })
+
+  it('refuses partial or misaligned trusted front-door headers before runtime start', async () => {
+    const upstreamPort = await listen(createServer())
+    const owned = await api(upstreamPort)
+    for (const headers of [
+      { 'x-ascend-front-door-token': 'wrong-but-bounded-token' },
+      {
+        'x-ascend-front-door-token': 'ascend-development-front-door-v1',
+        'x-ascend-front-door-authority': 'invalid.example:5173',
+      },
+    ]) {
+      const response = await perform(
+        owned.port,
+        '/projects/http-project/workbench/refused',
+        { headers }
+      )
+      expect(response.status).toBe(502)
+      expect(JSON.parse(response.body.toString())).toMatchObject({
+        error: { code: 'workbench_upstream_invalid_response' },
+      })
+    }
+    expect(owned.runtime.start).not.toHaveBeenCalled()
+  })
 })

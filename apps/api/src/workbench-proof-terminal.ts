@@ -24,6 +24,8 @@ import {
   terminateExactProcessGroup,
 } from './workbench-proof-runtime.js'
 
+const TERMINAL_COMMAND_CLEANUP_TIMEOUT_MS = 1_000
+
 export type TerminalProofErrorCode =
   | 'terminal-executable-missing'
   | 'terminal-command-spawn'
@@ -206,7 +208,7 @@ export const runTerminalCommand = async (
     startTimeTicks = await readProcessStartTime(pid)
   }
   if (!startTimeTicks) {
-    await terminateExactProcessGroup(pid, Math.min(timeoutMs, 500))
+    await terminateExactProcessGroup(pid, TERMINAL_COMMAND_CLEANUP_TIMEOUT_MS)
     throw new TerminalProofError(
       'terminal-command-spawn',
       'Terminal command start identity is unavailable',
@@ -222,7 +224,7 @@ export const runTerminalCommand = async (
       context: options.context,
     })
   } catch (error) {
-    await terminateExactProcessGroup(pid, Math.min(timeoutMs, 1_000))
+    await terminateExactProcessGroup(pid, TERMINAL_COMMAND_CLEANUP_TIMEOUT_MS)
     throw new TerminalProofError(
       'terminal-artifact-write',
       'Terminal command identity could not be tracked',
@@ -250,16 +252,21 @@ export const runTerminalCommand = async (
   child.once('error', (error) => {
     spawnError = error
   })
+  let timeoutCleanup: Promise<void> | undefined
   const exitResult = await new Promise<number>((resolve) => {
     const timer = setTimeout(() => {
       timedOut = true
-      void terminateExactProcessGroup(pid, Math.min(timeoutMs, 1_000))
+      timeoutCleanup = terminateExactProcessGroup(
+        pid,
+        TERMINAL_COMMAND_CLEANUP_TIMEOUT_MS
+      )
     }, timeoutMs)
     child.once('close', (code) => {
       clearTimeout(timer)
       resolve(code ?? -1)
     })
   })
+  await timeoutCleanup
   const exactProcessAbsent = await processIdentityAbsent(pid, startTimeTicks)
 
   const capturedSpawnError = spawnError as Error | null

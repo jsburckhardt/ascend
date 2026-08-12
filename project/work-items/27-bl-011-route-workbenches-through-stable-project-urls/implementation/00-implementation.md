@@ -2,7 +2,7 @@
 
 ## Completed Tasks
 
-- T-0: Preserved linked-worktree repository validation and cancellation-versus-early-exit classification with three concurrent cancellation regressions; replaced renderer-specific terminal readiness waits with a bounded exact-once command-start handshake, explicitly focused the terminal input, bounded cancellation PID observation within a 40-second overall episode window, resolved proof commands and evidence paths from each owned worktree root, and gave process-absence observation a finite 5-second load margin.
+- T-0: Preserved linked-worktree repository validation and cancellation-versus-early-exit classification with three concurrent cancellation regressions; replaced renderer-specific terminal readiness waits with a bounded exact-once command-start handshake, explicitly focused the terminal input, bounded cancellation PID observation within a 40-second overall episode window, resolved API-workspace executables plus proof commands and evidence paths from each owned worktree, and gave process-absence observation a finite 5-second load margin.
 - T-1: Preserved the stable proxy contract, exact 23-row public failure catalog, direct `ws` ownership, and loopback-only runtime arguments.
 - T-2: Preserved stable HTTP/upgrade routing, eight-client single-flight startup, and application lifecycle ownership.
 - T-3: Completed byte-preserving HTTP matrices, streamed authority rewriting, chunk-5 cancellation, and downstream-transform completion.

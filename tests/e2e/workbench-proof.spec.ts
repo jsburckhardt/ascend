@@ -553,7 +553,7 @@ test('proves one designated-host workbench with terminal parity', async ({
         terminalCreationActions += 1
         const integratedCommand = `setsid \"${path.join(
           REPOSITORY_ROOT,
-          'node_modules/.bin/tsx'
+          'apps/api/node_modules/.bin/tsx'
         )}\" \"${path.join(
           REPOSITORY_ROOT,
           'apps/api/src/cli/proof-terminal-integrated.ts'

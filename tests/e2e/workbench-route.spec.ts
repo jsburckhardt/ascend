@@ -379,7 +379,7 @@ test('real Chromium derives three stable-route operations and proves observed cl
         await rm(WORKBENCH_ROUTE_TERMINAL_TEMP, { force: true })
         const command = `setsid \"${path.join(
           REPOSITORY_ROOT,
-          'node_modules/.bin/tsx'
+          'apps/api/node_modules/.bin/tsx'
         )}\" \"${path.join(
           REPOSITORY_ROOT,
           'apps/api/src/cli/workbench-route-terminal-proof.ts'

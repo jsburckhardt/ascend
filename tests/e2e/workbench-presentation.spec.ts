@@ -330,7 +330,7 @@ const runRealAttempt = async (
         await terminalInput.focus()
         const command = `setsid \"${path.join(
           REPOSITORY_ROOT,
-          'node_modules/.bin/tsx'
+          'apps/api/node_modules/.bin/tsx'
         )}\" \"${path.join(
           REPOSITORY_ROOT,
           'apps/api/src/cli/proof-terminal-integrated.ts'

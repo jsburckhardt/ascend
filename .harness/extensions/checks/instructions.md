@@ -4,7 +4,7 @@
 
 Runs the repository's canonical `just verify` quality gate: formatting, linting,
 typechecking, unit tests, builds, and Playwright E2E tests. A successful envelope
-contains the command and the last 20 lines of standard output.
+contains the command, applied finite timeout, elapsed duration, and the last 20 lines of standard output. The default budget is 600,000 ms (10 minutes); set `ASCEND_HARNESS_VERIFY_TIMEOUT_MS` to an integer from 120,001 through 3,600,000 ms when a slower designated host needs a different finite bound.
 
 ## Your role (the inference part)
 

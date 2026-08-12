@@ -1,0 +1,123 @@
+import { access, readFile, writeFile } from 'node:fs/promises'
+import path from 'node:path'
+import { pathToFileURL } from 'node:url'
+import { REPOSITORY_ROOT } from '../workbench-proof-contract.js'
+
+export const HOME_WORKBENCH_RESULT_ROOT = path.join(
+  REPOSITORY_ROOT,
+  'test-results/bl-012'
+)
+export const HOME_WORKBENCH_BROWSER_EVIDENCE = path.join(
+  HOME_WORKBENCH_RESULT_ROOT,
+  'browser-continuity.json'
+)
+export const HOME_WORKBENCH_FAILURE_EVIDENCE = path.join(
+  HOME_WORKBENCH_RESULT_ROOT,
+  'browser-failures.json'
+)
+
+const absent = async (target: string): Promise<boolean> =>
+  access(target).then(
+    () => false,
+    () => true
+  )
+
+export const auditHomeWorkbenchResiduals = async (): Promise<
+  Record<string, unknown>
+> => {
+  const evidence = JSON.parse(
+    await readFile(HOME_WORKBENCH_BROWSER_EVIDENCE, 'utf8')
+  ) as {
+    cleanup?: {
+      contexts?: { afterClose?: number }
+      pages?: { afterClose?: number }
+      terminal?: { identityAbsent?: boolean }
+      proxy?: { resourcesAbsent?: boolean }
+      runtime?: {
+        identityAbsent?: boolean
+        listenerAbsent?: boolean
+        shutdownStatus?: string
+      }
+      api?: { listenerAbsent?: boolean }
+      web?: { processGroupAbsent?: boolean; listenerAbsent?: boolean }
+      persistence?: { sqliteSidecars?: unknown[] }
+      fixture?: {
+        integrity?: boolean
+        beforeDigest?: string
+        afterDigest?: string
+      }
+      markerStopped?: boolean
+      outputRemoved?: boolean
+      unrelatedListenerSurvived?: boolean
+    }
+    fixtureIntegrity?: boolean
+  }
+  const failures = JSON.parse(
+    await readFile(HOME_WORKBENCH_FAILURE_EVIDENCE, 'utf8')
+  ) as {
+    cleanup?: {
+      contexts?: number
+      pages?: number
+      proxyResources?: number
+      finalAudit?: {
+        pendingOperations?: number
+        rawSockets?: number
+        webSockets?: number
+      }
+    }
+  }
+  const markerPidAbsent = await absent(
+    path.join(HOME_WORKBENCH_RESULT_ROOT, 'terminal-marker.pid')
+  )
+  const markerOutputAbsent = await absent(
+    path.join(HOME_WORKBENCH_RESULT_ROOT, 'terminal-marker.counter')
+  )
+  const cleanup = evidence.cleanup ?? {}
+  const failureCleanup = failures.cleanup ?? {}
+  const passed =
+    markerPidAbsent &&
+    markerOutputAbsent &&
+    cleanup.contexts?.afterClose === 0 &&
+    cleanup.pages?.afterClose === 0 &&
+    cleanup.terminal?.identityAbsent === true &&
+    cleanup.proxy?.resourcesAbsent === true &&
+    cleanup.runtime?.identityAbsent === true &&
+    cleanup.runtime?.listenerAbsent === true &&
+    cleanup.runtime?.shutdownStatus === 'ok' &&
+    cleanup.api?.listenerAbsent === true &&
+    cleanup.web?.processGroupAbsent === true &&
+    cleanup.web?.listenerAbsent === true &&
+    cleanup.persistence?.sqliteSidecars?.length === 0 &&
+    cleanup.fixture?.integrity === true &&
+    cleanup.fixture.beforeDigest === cleanup.fixture.afterDigest &&
+    cleanup.markerStopped === true &&
+    cleanup.outputRemoved === true &&
+    cleanup.unrelatedListenerSurvived === true &&
+    evidence.fixtureIntegrity === true &&
+    failureCleanup.contexts === 0 &&
+    failureCleanup.pages === 0 &&
+    failureCleanup.proxyResources === 0 &&
+    failureCleanup.finalAudit?.pendingOperations === 0 &&
+    failureCleanup.finalAudit?.rawSockets === 0 &&
+    failureCleanup.finalAudit?.webSockets === 0
+  return {
+    schemaVersion: 1,
+    passed,
+    markerPidAbsent,
+    markerOutputAbsent,
+    cleanup,
+    failureCleanup,
+  }
+}
+
+const main = async (): Promise<void> => {
+  const audit = await auditHomeWorkbenchResiduals()
+  await writeFile(
+    path.join(HOME_WORKBENCH_RESULT_ROOT, 'residual-audit.json'),
+    JSON.stringify(audit, null, 2)
+  )
+  process.stdout.write(JSON.stringify(audit) + '\n')
+  if (audit.passed !== true) process.exitCode = 1
+}
+
+if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) void main()

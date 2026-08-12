@@ -82,8 +82,6 @@ describe('project runtime documentation contract', () => {
       expect(document).toContain(command)
     }
     for (const deferred of [
-      'stable route or proxy',
-      'Project Home navigation or Open wiring',
       'multi-project coordination',
       'user Stop or Restart UI',
       'API-restart reconciliation',
@@ -94,6 +92,10 @@ describe('project runtime documentation contract', () => {
     ]) {
       expect(document).toContain(deferred)
     }
+    expect(document).toContain(
+      'Project Home navigation and Open wiring are now delivered'
+    )
+    expect(document).toContain('BL-012 marked top-level acquisition')
     expect(docsIndex).toContain('project-runtime.md')
     expect(readme).toContain('Project Runtime Manager')
     expect(readme).not.toContain('880 ms')

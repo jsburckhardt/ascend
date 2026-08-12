@@ -223,9 +223,14 @@ describe('Project Home open interaction', () => {
     )
   })
 
-  it('renders path and project metacharacters as inert text and keeps Open deferred', async () => {
-    const initialUrl = window.location.href
-    const { container } = render(<App loadProjectList={async () => [beta]} />)
+  it('renders inert identity and navigates by stable ID for keyboard activation', async () => {
+    const navigate = vi.fn()
+    const { container } = render(
+      <App
+        loadProjectList={async () => [beta]}
+        navigateToWorkbench={navigate}
+      />
+    )
     const open = await screen.findByRole('button', {
       name: 'Open Beta <script> Project',
     })
@@ -236,10 +241,33 @@ describe('Project Home open interaction', () => {
     )
     open.focus()
     await userEvent.setup().keyboard('{Enter}')
-    expect(screen.getByRole('status')).toHaveTextContent(
-      'Opening the workbench is not available yet'
+    await waitFor(() =>
+      expect(navigate).toHaveBeenCalledWith('/projects/project-beta/workbench/')
     )
-    expect(window.location.href).toBe(initialUrl)
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Beta <script> Project: Opening workbench.'
+    )
+  })
+
+  it('joins exactly eight repeated activations into one navigation generation', async () => {
+    const navigate = vi.fn()
+    render(
+      <App
+        loadProjectList={async () => [alpha]}
+        navigateToWorkbench={navigate}
+      />
+    )
+    const open = await screen.findByRole('button', {
+      name: 'Open Alpha Project',
+    })
+    open.focus()
+    for (let index = 0; index < 8; index += 1) fireEvent.click(open)
+    expect(open).toHaveFocus()
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Alpha Project: Opening workbench.'
+    )
+    await waitFor(() => expect(navigate).toHaveBeenCalledOnce())
+    expect(navigate).toHaveBeenCalledWith('/projects/project-alpha/workbench/')
   })
 
   it('aborts ownership on unmount and ignores late completion', async () => {

@@ -10,6 +10,7 @@ This file is the single registry of all architectural decisions and core-compone
 | ADR-260808-governed-engineering-harness | Governed Repository-Local Engineering Harness | Accepted | 2026-08-08 |
 | ADR-260810-full-page-browser-workbench-presentation | Select the Full-Page Browser Workbench Presentation | Accepted | 2026-08-10 |
 | ADR-260812-in-process-workbench-reverse-proxy | In-Process Stable Workbench Reverse Proxy | Accepted | 2026-08-12 |
+| ADR-260812-browser-navigation-shell | Separate Browser Navigation Shell from Workbench Transport | Accepted | 2026-08-12 |
 
 ## Core-Components
 
@@ -117,3 +118,9 @@ Short, actionable statements derived from ADRs and core-components. More than on
 | 80 | Fail unknown, missing, retrying, external, or internal-port WebSocket observations | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-12 |
 | 81 | Emit only bounded host classes for public browser evidence | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-12 |
 | 82 | Treat vscode-remote+ as opaque VS Code label syntax, never wildcard permission | ADR-260812-in-process-workbench-reverse-proxy | 2026-08-12 |
+| 83 | Serve top-level stable workbench navigations through an Ascend-owned bootstrap shell | ADR-260812-browser-navigation-shell | 2026-08-12 |
+| 84 | Acquire upstream workbench documents through the same stable URL with an internal marker | ADR-260812-browser-navigation-shell | 2026-08-12 |
+| 85 | Preserve native document navigation for Home, Projects, refresh, Back, and Forward | ADR-260812-browser-navigation-shell | 2026-08-12 |
+| 86 | Preserve BL-011 transport semantics for marked document loads, descendants, and WebSockets | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-12 |
+| 87 | Render top-level route and load failures accessibly at the unchanged stable URL | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-12 |
+| 88 | Replace failed shell entries on Retry without adding browser history | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-12 |

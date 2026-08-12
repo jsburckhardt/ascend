@@ -22,6 +22,19 @@ import {
   type WorkbenchProxyManager,
 } from './workbench-proxy-manager.js'
 import {
+  parseStableWorkbenchRoute,
+  workbenchFailure,
+  workbenchFailureEnvelope,
+  type StableWorkbenchRoute,
+} from './workbench-proxy-contract.js'
+import {
+  WORKBENCH_DOCUMENT_HEADER,
+  isTopLevelBrowserDocument,
+  isWorkbenchDocumentRequest,
+  renderWorkbenchNavigationShell,
+  renderWorkbenchRouteError,
+} from './workbench-navigation-shell.js'
+import {
   createProjectRegistrationService,
   type ProjectRegistrationService,
 } from './project-registration.js'
@@ -33,6 +46,15 @@ declare module 'fastify' {
     projectClose: ProjectCloseService
     projectRuntime: ProjectRuntimeManager
     workbenchProxy: WorkbenchProxyManager
+    workbenchNavigation: {
+      documentHeader: string
+      invalidFailure: unknown
+      isBrowserDocument(headers: Record<string, unknown>): boolean
+      isMarkedDocument(headers: Record<string, unknown>): boolean
+      parseRoute(rawUrl: string): StableWorkbenchRoute | undefined
+      renderShell(): string
+      renderRouteError(): string
+    }
   }
 }
 
@@ -57,6 +79,7 @@ export interface AppOptions
     library: ProjectLibrary,
     runtime: ProjectRuntimeManager
   ) => WorkbenchProxyManager
+  workbenchDocumentTimeoutMs?: number
   createProjectRuntimeManager?: (
     library: ProjectLibrary,
     recordEvent: (event: RuntimeLifecycleEvent) => void
@@ -113,6 +136,9 @@ const app: FastifyPluginAsync<AppOptions> = async (
         createWorkbenchProxyManager({
           projectLibrary,
           projectRuntime,
+          frontDoorToken:
+            process.env.ASCEND_FRONT_DOOR_TOKEN ??
+            'ascend-development-front-door-v1',
           recordEvent: (event) => fastify.log.info(event),
         }))
     )(library, runtimeManager)
@@ -135,6 +161,18 @@ const app: FastifyPluginAsync<AppOptions> = async (
   fastify.decorate('projectClose', closeService)
   fastify.decorate('projectRuntime', runtimeManager)
   fastify.decorate('workbenchProxy', workbenchProxy)
+  fastify.decorate('workbenchNavigation', {
+    documentHeader: WORKBENCH_DOCUMENT_HEADER,
+    invalidFailure: workbenchFailureEnvelope(
+      workbenchFailure('malformed-project-id')
+    ),
+    isBrowserDocument: isTopLevelBrowserDocument,
+    isMarkedDocument: isWorkbenchDocumentRequest,
+    parseRoute: parseStableWorkbenchRoute,
+    renderShell: () =>
+      renderWorkbenchNavigationShell(opts.workbenchDocumentTimeoutMs),
+    renderRouteError: renderWorkbenchRouteError,
+  })
   fastify.addHook('onClose', async () => {
     await workbenchProxy.shutdown()
     await runtimeManager.shutdown()

@@ -93,6 +93,14 @@ verify-workbench-route:
 proof-workbench-route-residual-audit:
     pnpm --filter @ascend/api exec tsx src/cli/workbench-route-residual-audit.ts
 
+verify-home-workbench:
+    BL012_ACCEPTANCE=1 pnpm exec vitest run apps/api/test/home-workbench-matrix.test.ts apps/api/test/home-workbench-residual-audit.test.ts apps/api/test/workbench-navigation-shell.test.ts apps/web/src/workbench-navigation.test.ts apps/web/src/workbench-shell-browser.test.ts apps/web/src/App.test.tsx --reporter=verbose
+    EXTENSIONS_GALLERY={} BL012_DESIGNATED=1 pnpm exec playwright test tests/e2e/home-workbench.spec.ts tests/e2e/home-workbench-failures.spec.ts --project=chromium --workers=1 --retries=0
+    just proof-home-workbench-residual-audit
+
+proof-home-workbench-residual-audit:
+    pnpm --filter @ascend/api exec tsx src/cli/home-workbench-residual-audit.ts
+
 verify:
     pnpm format:check
     pnpm lint
@@ -106,3 +114,4 @@ verify:
     pnpm test:e2e
     just proof-workbench-capacity-audit
     just verify-workbench-route
+    just verify-home-workbench

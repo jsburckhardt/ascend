@@ -66,6 +66,7 @@ export interface WorkbenchProxyManagerDependencies {
   readonly headerTimeoutMs?: number
   readonly shutdownTimeoutMs?: number
   readonly now?: () => number
+  readonly frontDoorToken?: string
   readonly recordEvent?: (event: WorkbenchSafeEvent) => void
   readonly requestHttp?: (options: RequestOptions) => ClientRequest
   readonly recordWebSocketDiagnostic?: (diagnostic: {
@@ -76,7 +77,7 @@ export interface WorkbenchProxyManagerDependencies {
   }) => void
   readonly recordWebSocketRole?: (observation: {
     connectionOrdinal: number
-    role: WorkbenchConnectionRole | 'unknown'
+    role: WorkbenchConnectionRole | 'cancelled-before-control' | 'unknown'
   }) => void
 }
 
@@ -309,6 +310,17 @@ export function createWorkbenchProxyManager(
     recordEvent(serializeWorkbenchEvent(event))
 
   const stableAuthority = (request: IncomingMessage): string => {
+    const frontDoorAuthority = request.headers['x-ascend-front-door-authority']
+    const frontDoorToken = request.headers['x-ascend-front-door-token']
+    if (
+      dependencies.frontDoorToken !== undefined &&
+      frontDoorToken === dependencies.frontDoorToken &&
+      typeof frontDoorAuthority === 'string' &&
+      /^(?:127\.0\.0\.1|localhost):(?:[1-9][0-9]{0,4})$/u.test(
+        frontDoorAuthority
+      )
+    )
+      return frontDoorAuthority
     const address =
       request.socket.localAddress === '::ffff:127.0.0.1'
         ? '127.0.0.1'
@@ -650,11 +662,14 @@ export function createWorkbenchProxyManager(
     left.on('close', (code, reason) => {
       if (!roleObserved) {
         roleObserved = true
-        recordWebSocketRole({ connectionOrdinal, role: 'unknown' })
+        recordWebSocketRole({
+          connectionOrdinal,
+          role: 'cancelled-before-control',
+        })
       }
       recordWebSocketDiagnostic({ side: 'downstream', event: 'close', code })
       if (right.readyState === WebSocket.OPEN) {
-        if (code === 1006) right.terminate()
+        if (code === 1005 || code === 1006) right.terminate()
         else right.close(code, reason)
       }
       cleanup()
@@ -662,7 +677,7 @@ export function createWorkbenchProxyManager(
     right.on('close', (code, reason) => {
       recordWebSocketDiagnostic({ side: 'upstream', event: 'close', code })
       if (left.readyState === WebSocket.OPEN) {
-        if (code === 1006) left.terminate()
+        if (code === 1005 || code === 1006) left.terminate()
         else left.close(code, reason)
       }
       cleanup()

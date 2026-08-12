@@ -10,7 +10,7 @@ Only controlled positive pre-send unavailability is definitely not transmitted. 
 
 A valid refresh replaces the complete authoritative list and compares only IDs with the pre-submit snapshot. One added ID is focused and reconciled. Zero added IDs preserves authoritative cards, unlocks the original input, and announces no new project. Multiple additions preserve the complete list, select no identity, and require explicit reset before another payload. Failed, timed-out, or invalid refresh preserves current cards and locked payload. One monotonic request generation invalidates stale completion after every request, cancellation, timeout, refresh, reset, newer list, and unmount.
 
-All path, payload, name, and canonical-path values render as inert complete whitespace-preserving React text. Card Open stays a stable-ID, keyboard-operable deferred action; it starts no workbench, request, or navigation. Picker, scanning, clone/import, running or failed workbench close, search, sorting controls, tags, path mutation, BL-010, and BL-012 remain deferred.
+All path, payload, name, and canonical-path values render as inert complete whitespace-preserving React text. Card Open is a stable-ID keyboard action that navigates to `/projects/{encodedStableId}/workbench/` with one trailing slash. Eight repeated activations join one navigation generation. The URL contains no name or canonical path. Picker, scanning, clone/import, running or failed workbench close, search, sorting controls, tags, path mutation, and lifecycle controls remain deferred.
 
 Validate with `just verify-open-project`, targeted `just verify-focused <test-path>`, and `just verify`. The keyboard-only desktop Chromium episode uses isolated database and host fixtures and retains its executed success in `test-results/bl-008/open-project/episode.json`. `cleanup-matrix.json` separately maps executed startup-failure, assertion-failure, episode-timeout, interrupted-graceful-shutdown, and surviving-descendant scenarios to process-group, listener, database/sidecar, and fixture counts. Interrupted graceful shutdown records bounded escalation. The survivor is detected with `ownerCleanupPassed: false` until exact-PID test teardown, then `teardownClean: true`; the documentation does not represent that scenario as an all-true cleanup owner result.
 
@@ -26,3 +26,10 @@ Exact 400 invalid_project_id and 500 project_close_failed outcomes prove no muta
 Use just verify-close-project and just verify. The keyboard-only Chromium success and separate controlled-fault episode retain integrity-before-cleanup and zero-owned-residual evidence. Running or failed workbench close, stop/restart, archive, undo, bulk close, and product cleanup remain BL-020 or later.
 
 The fixed safe close messages are: The project ID is invalid. Retry this project. The project is no longer registered. Refresh projects to reconcile. The project could not be closed. Retry this project. Server-provided error text is never rendered.
+
+
+## Home and workbench navigation (BL-012)
+
+Project Home remains the exact `/` route. Open uses full-document navigation rather than a client router so refresh, Back, Forward, and direct stable URLs retain native browser behavior. Vite forwards `/projects` HTTP and WebSocket traffic to the loopback API on the same browser origin; deployment routing must provide the same ownership. The workbench's Projects link returns to `/` without stopping its runtime. Loading is a polite status; fixed failures are assertive alerts with one-time heading focus. Retry is present only for retryable load failures and does not add history.
+
+No web configuration or migration is added. Validate with `just verify-home-workbench`, focused tests through `just verify-focused`, and the complete `just verify` gate.

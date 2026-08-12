@@ -146,7 +146,7 @@ async function keyboardSubmit(
 test.describe.configure({ mode: 'serial', retries: 0 })
 test.setTimeout(90_000)
 
-test('uses only the keyboard to register, reconcile, correct, and defer Open with owned cleanup', async ({
+test('uses only the keyboard to register, reconcile, correct, and open Workbench with owned cleanup', async ({
   page,
 }) => {
   await mkdir(DATABASE_ROOT, { recursive: true })
@@ -211,7 +211,7 @@ test('uses only the keyboard to register, reconcile, correct, and defer Open wit
     corrected: false,
     stableIdentity: false,
     noReload: false,
-    deferredOpen: false,
+    openNavigation: false,
     closeCancelled: false,
     closeConfirmed: false,
     authoritativeClose: false,
@@ -302,14 +302,6 @@ test('uses only the keyboard to register, reconcile, correct, and defer Open wit
     await expect(secondOpen).toBeFocused()
     await expect(page.getByRole('listitem')).toHaveCount(2)
     summary.corrected = true
-    const beforeOpenUrl = page.url()
-    await page.keyboard.press('Enter')
-    await expect(page.getByRole('status')).toContainText(
-      'Opening the workbench is not available yet'
-    )
-    expect(page.url()).toBe(beforeOpenUrl)
-    summary.deferredOpen = true
-
     await page.keyboard.press('Tab')
     const secondClose = page.getByRole('button', {
       name: 'Close second <script> project',
@@ -353,6 +345,14 @@ test('uses only the keyboard to register, reconcile, correct, and defer Open wit
     expect(postCount).toBe(4)
     expect(documentNavigations).toBe(baselineNavigations)
     summary.noReload = true
+    await firstOpen.focus()
+    await expect(firstOpen).toBeFocused()
+    await page.keyboard.press('Enter')
+    const expectedWorkbenchPath =
+      '/projects/' + encodeURIComponent(firstId ?? '') + '/workbench/'
+    await expect(page).toHaveURL(webUrl + expectedWorkbenchPath)
+    expect(documentNavigations).toBe(baselineNavigations + 1)
+    summary.openNavigation = true
     summary.keyboardOnly = true
     expect(await snapshotFixture(fixtureRoot)).toEqual(manifestBefore)
     summary.fixtureIntegrity = true

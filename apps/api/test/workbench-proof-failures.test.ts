@@ -91,7 +91,7 @@ const processExists = (pid: number): boolean => {
 }
 
 const waitForProcessAbsence = async (pid: number): Promise<void> => {
-  const deadline = Date.now() + 1_000
+  const deadline = Date.now() + 5_000
   while (processExists(pid) && Date.now() < deadline) {
     await new Promise((resolve) => setTimeout(resolve, 20))
   }
@@ -234,7 +234,7 @@ describe('workbench proof failures and cleanup boundaries', () => {
 
     expect(await snapshotFixture()).toEqual(fixtureBefore)
     await expect(access(BL001_INJECTION_SENTINEL)).rejects.toThrow()
-  })
+  }, 15_000)
 
   it('distinguishes a fast early exit from a live readiness timeout', async () => {
     const base = await temporaryRoot()

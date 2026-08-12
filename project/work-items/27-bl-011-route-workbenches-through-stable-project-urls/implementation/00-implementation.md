@@ -2,7 +2,7 @@
 
 ## Completed Tasks
 
-- T-0: Preserved linked-worktree repository validation and cancellation-versus-early-exit classification with three concurrent cancellation regressions; removed renderer-specific terminal readiness waits, explicitly focused the terminal input, bounded cancellation PID observation within a 40-second overall episode window, and resolved proof commands from each owned worktree root.
+- T-0: Preserved linked-worktree repository validation and cancellation-versus-early-exit classification with three concurrent cancellation regressions; removed renderer-specific terminal readiness waits, explicitly focused the terminal input, bounded cancellation PID observation within a 40-second overall episode window, and resolved proof commands from each owned worktree root, and gave process-absence observation a finite 5-second load margin.
 - T-1: Preserved the stable proxy contract, exact 23-row public failure catalog, direct `ws` ownership, and loopback-only runtime arguments.
 - T-2: Preserved stable HTTP/upgrade routing, eight-client single-flight startup, and application lifecycle ownership.
 - T-3: Completed byte-preserving HTTP matrices, streamed authority rewriting, chunk-5 cancellation, and downstream-transform completion.
@@ -44,7 +44,7 @@
 
 ## Validation Evidence
 
-- Repeated prerequisite baseline: three consecutive focused runs each passed 3 files and 17 tests covering worktree ownership, concurrent cancellation, and host terminal bounds.
+- Repeated prerequisite baseline: three consecutive focused runs each passed 3 files and 17 tests covering worktree ownership, concurrent cancellation, and host terminal bounds; three cleanup regression runs each passed all 7 failure/cleanup tests.
 - `just verify-focused`: exit 0 after the final corrections; 75 passed files, 1 skipped; 522 passed tests, 2 skipped.
 - `just verify-workbench-route`: exit 0; 47 Vitest cases, one real designated Chromium scenario, mode-`0600` evidence, and residual `status: ok`.
 - `just test-e2e`: exit 0 after removing renderer-specific baseline waits; 5 Chromium tests passed, 2 designated tests skipped, and capacity residual audit passed.

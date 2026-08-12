@@ -249,6 +249,48 @@ describe('Project Home open interaction', () => {
     )
   })
 
+  it('tabs from the focused Home heading to a maximum inert identity Open action', async () => {
+    const stableId = 'p' + 'x'.repeat(127)
+    const quote = String.fromCharCode(34)
+    const metacharacter =
+      '<img src=x onerror=alert(1)> & ' + quote + 'quoted' + quote
+    const longProject: Project = {
+      id: stableId,
+      name: (metacharacter + 'N'.repeat(4_096)).slice(0, 4_096),
+      canonicalPath: ('/' + metacharacter + 'P'.repeat(4_096)).slice(0, 4_096),
+      createdAt: 4,
+    }
+    const navigate = vi.fn()
+    const user = userEvent.setup()
+    const { container } = render(
+      <App
+        loadProjectList={async () => [longProject]}
+        navigateToWorkbench={navigate}
+      />
+    )
+    const heading = await screen.findByRole('heading', { name: 'Ascend' })
+    await waitFor(() => expect(heading).toHaveFocus())
+    await user.tab()
+    expect(screen.getByRole('textbox', { name: 'Host path' })).toHaveFocus()
+    await user.tab()
+    expect(screen.getByRole('button', { name: 'Open Project' })).toHaveFocus()
+    await user.tab()
+    const open = screen.getByRole('button', {
+      name: 'Open ' + longProject.name,
+    })
+    expect(open).toHaveFocus()
+    expect(open.className).toContain('focus-visible:outline')
+    expect(container.querySelector('img')).toBeNull()
+    expect(open.closest('li')).toHaveTextContent(longProject.name)
+    expect(open.closest('li')).toHaveTextContent(longProject.canonicalPath)
+    await user.keyboard('{Enter}')
+    await waitFor(() =>
+      expect(navigate).toHaveBeenCalledWith(
+        '/projects/' + encodeURIComponent(stableId) + '/workbench/'
+      )
+    )
+  })
+
   it('joins exactly eight repeated activations into one navigation generation', async () => {
     const navigate = vi.fn()
     render(

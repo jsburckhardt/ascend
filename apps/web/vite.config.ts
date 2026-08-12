@@ -4,8 +4,17 @@ import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vitest/config'
 
 const apiTarget = process.env.ASCEND_E2E_API_TARGET ?? 'http://127.0.0.1:3000'
+const configuredFrontDoorToken = process.env.ASCEND_FRONT_DOOR_TOKEN
+if (
+  configuredFrontDoorToken !== undefined &&
+  (configuredFrontDoorToken.length < 16 ||
+    configuredFrontDoorToken.length > 256)
+)
+  throw new Error(
+    'ASCEND_FRONT_DOOR_TOKEN must contain between 16 and 256 characters when configured'
+  )
 const frontDoorToken =
-  process.env.ASCEND_FRONT_DOOR_TOKEN ?? 'ascend-development-front-door-v1'
+  configuredFrontDoorToken ?? 'ascend-development-front-door-v1'
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],

@@ -45,7 +45,7 @@ function browserShell(configuration: BrowserShellConfiguration): void {
       (loading ? 'status' : 'alert') +
       '" aria-live="' +
       (loading ? 'polite' : 'assertive') +
-      '"><h1 tabindex="-1"></h1><p></p><div class="ascend-actions"><a class="ascend-action" href="/">Projects</a></div></section></main>'
+      '"><h1 tabindex="-1"></h1><p></p><div class="ascend-actions"></div></section></main>'
     if (persist)
       window.history.replaceState(
         { ascendWorkbenchFailure: { message, retry } },
@@ -68,6 +68,15 @@ function browserShell(configuration: BrowserShellConfiguration): void {
       })
       document.querySelector('.ascend-actions')?.append(button)
     }
+    const projects = document.createElement('a')
+    projects.className = 'ascend-action'
+    projects.href = '/'
+    projects.textContent = 'Projects'
+    projects.addEventListener('click', () => {
+      generation += 1
+      active?.abort()
+    })
+    document.querySelector('.ascend-actions')?.append(projects)
     heading?.focus()
   }
 

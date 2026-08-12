@@ -124,3 +124,4 @@ Short, actionable statements derived from ADRs and core-components. More than on
 | 86 | Preserve BL-011 transport semantics for marked document loads, descendants, and WebSockets | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-12 |
 | 87 | Render top-level route and load failures accessibly at the unchanged stable URL | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-12 |
 | 88 | Replace failed shell entries on Retry without adding browser history | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-12 |
+| 89 | Authenticate trusted front-door authority metadata with one aligned private token and refuse malformed pairs before runtime resolution | ADR-260812-browser-navigation-shell | 2026-08-12 |

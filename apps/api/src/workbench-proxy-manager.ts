@@ -9,6 +9,7 @@ import type { Socket } from 'node:net'
 import { StringDecoder } from 'node:string_decoder'
 import { Transform, type TransformCallback } from 'node:stream'
 import { WebSocket, WebSocketServer, type RawData } from 'ws'
+import { hasTrustedFrontDoorHeaders } from './front-door-contract.js'
 import type { ProjectLibrary } from './project-library.js'
 import {
   RuntimeFailure,
@@ -312,20 +313,23 @@ export function createWorkbenchProxyManager(
   const stableAuthority = (request: IncomingMessage): string => {
     const frontDoorAuthority = request.headers['x-ascend-front-door-authority']
     const frontDoorToken = request.headers['x-ascend-front-door-token']
-    if (
-      dependencies.frontDoorToken !== undefined &&
-      frontDoorToken === dependencies.frontDoorToken &&
-      typeof frontDoorAuthority === 'string' &&
-      /^(?:127\.0\.0\.1|localhost):(?:[1-9][0-9]{0,4})$/u.test(
-        frontDoorAuthority
+    if (hasTrustedFrontDoorHeaders(request.headers)) {
+      if (
+        dependencies.frontDoorToken === undefined ||
+        frontDoorToken !== dependencies.frontDoorToken ||
+        typeof frontDoorAuthority !== 'string' ||
+        !/^(?:127.0.0.1|localhost):(?:[1-9][0-9]{0,4})$/u.test(
+          frontDoorAuthority
+        )
       )
-    )
+        throw workbenchFailure('upstream-invalid-http')
       return frontDoorAuthority
+    }
     const address =
       request.socket.localAddress === '::ffff:127.0.0.1'
         ? '127.0.0.1'
         : (request.socket.localAddress ?? '127.0.0.1')
-    const host = address.includes(':') ? `[${address}]` : address
+    const host = address.includes(':') ? '[' + address + ']' : address
     return request.socket.localPort === undefined
       ? host
       : host + ':' + String(request.socket.localPort)
@@ -396,6 +400,7 @@ export function createWorkbenchProxyManager(
     let upstreamRequest: ClientRequest | undefined
     let operationFailure: WorkbenchPublicFailure | undefined
     try {
+      stableAuthority(request)
       const target = await resolveTarget(route, controller.signal)
       if (shuttingDown) throw new RuntimeFailure('manager-shutdown')
       const headers = filterWorkbenchHeaders(request.headers, { request: true })
@@ -723,6 +728,7 @@ export function createWorkbenchProxyManager(
     })
     let upstream: WebSocket | undefined
     try {
+      stableAuthority(request)
       const target = await resolveTarget(route, controller.signal)
       if (shuttingDown) throw new RuntimeFailure('manager-shutdown')
       const wsUrl = new URL(route.upstreamPath, target)

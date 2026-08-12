@@ -1,18 +1,28 @@
 import { mkdirSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
-import { describe, expect, it } from 'vitest'
-import { stableWorkbenchUrl } from '../../web/src/workbench-navigation.js'
+import { describe, expect, it, vi } from 'vitest'
+import { createApiServerController } from '../src/api-server.js'
 import {
   HOME_WORKBENCH_API_ROWS,
-  HOME_WORKBENCH_COMPONENT_ROWS,
   validateAcceptanceMatrix,
   type AcceptanceMatrix,
   type AcceptanceMatrixRow,
 } from '../src/home-workbench-evidence.js'
+import type { ProjectLibrary } from '../src/project-library.js'
 import {
-  parseStableWorkbenchRoute,
+  RuntimeFailure,
+  type RuntimeSnapshot,
+} from '../src/project-runtime-contract.js'
+import type { ProjectRuntimeManager } from '../src/project-runtime-manager.js'
+import {
+  WORKBENCH_DOCUMENT_HEADER,
+  WORKBENCH_DOCUMENT_HEADER_VALUE,
+} from '../src/workbench-navigation-shell.js'
+import {
   workbenchFailure,
+  workbenchFailureEnvelope,
 } from '../src/workbench-proxy-contract.js'
+import type { WorkbenchProxyManager } from '../src/workbench-proxy-manager.js'
 
 const bounds = {
   operationMs: 1_000,
@@ -22,137 +32,11 @@ const bounds = {
   overallMs: 30_000,
   cleanupMs: 5_000,
 }
-const resultRoot = path.resolve(
+const resultPath = path.resolve(
   import.meta.dirname,
-  '../../../test-results/bl-012'
+  '../../../test-results/bl-012/api-matrix.json'
 )
-const stableUrl = stableWorkbenchUrl('stable')
-
-const row = (
-  id: string,
-  kind: 'component' | 'api',
-  observed: Partial<AcceptanceMatrixRow> = {}
-): AcceptanceMatrixRow => ({
-  id,
-  executionId: 'bl012-' + kind + '-' + id,
-  executed: true,
-  outcome: 'passed',
-  actionCount: 1,
-  navigationCount: kind === 'component' ? 1 : 0,
-  url: stableUrl,
-  historyLength: kind === 'component' ? 2 : 0,
-  generation: 1,
-  lookupCount: 0,
-  startCount: 0,
-  focus: 'surface-heading',
-  announcement: 'Observed bounded ' + id + ' outcome.',
-  publicError: null,
-  recovery: 'none',
-  staleMutationCount: 0,
-  assertionCount: 3,
-  cleanupCount: 0,
-  ...observed,
-})
-
-const componentMatrix = (): AcceptanceMatrix => {
-  const history = ['/']
-  let index = 0
-  const push = (url: string): void => {
-    history.splice(index + 1)
-    history.push(url)
-    index = history.length - 1
-  }
-  const normalUrl = stableWorkbenchUrl('stable')
-  push(normalUrl)
-  const normal = row('normal-open', 'component', {
-    url: history[index],
-    historyLength: history.length,
-    focus: 'open-control',
-    announcement: 'Stable workbench navigation accepted once.',
-  })
-
-  let accepted = 0
-  let pending = false
-  for (let activation = 0; activation < 8; activation += 1) {
-    if (!pending) {
-      pending = true
-      accepted += 1
-    }
-  }
-
-  const rows: AcceptanceMatrixRow[] = [
-    normal,
-    row('eight-joined-activations', 'component', {
-      actionCount: 8,
-      navigationCount: accepted,
-      focus: 'open-control',
-      announcement: 'Eight activations joined one pending generation.',
-    }),
-    row('pending-interaction', 'component', {
-      navigationCount: 0,
-      historyLength: 1,
-      focus: 'open-control',
-      announcement: 'Opening workbench status remained polite and pending.',
-    }),
-    row('stale-success', 'component', {
-      navigationCount: 0,
-      historyLength: 1,
-      generation: 2,
-      announcement: 'Older successful generation was ignored.',
-    }),
-    row('stale-failure', 'component', {
-      navigationCount: 0,
-      historyLength: 1,
-      generation: 2,
-      announcement: 'Older failed generation was ignored.',
-    }),
-    row('home', 'component', {
-      url: '/',
-      focus: 'surface-heading',
-      announcement: 'Projects returned to Project Home.',
-    }),
-    row('back', 'component', {
-      url: '/',
-      navigationCount: 0,
-      announcement: 'Back revisited Home without a new entry.',
-    }),
-    row('forward', 'component', {
-      navigationCount: 0,
-      announcement: 'Forward revisited the accepted workbench entry.',
-    }),
-    row('refresh', 'component', {
-      navigationCount: 0,
-      announcement: 'Refresh replaced the current document entry.',
-    }),
-    row('retry', 'component', {
-      navigationCount: 0,
-      generation: 2,
-      focus: 'error-heading',
-      announcement: 'Retry replaced one failed acquisition generation.',
-      recovery: 'Retry',
-    }),
-    row('inert-identity', 'component', {
-      url: stableWorkbenchUrl('stable-id'),
-      announcement: 'Long metacharacter display identity remained inert text.',
-      assertionCount: 5,
-    }),
-    row('announcement', 'component', {
-      focus: 'open-control',
-      announcement: 'Project: Opening workbench.',
-    }),
-    row('focus-restoration', 'component', {
-      navigationCount: 0,
-      focus: 'surface-heading',
-      announcement: 'Focus moved once to the current surface heading.',
-    }),
-  ]
-  expect(rows.map((value) => value.id)).toEqual(HOME_WORKBENCH_COMPONENT_ROWS)
-  expect(normal.url).toBe('/projects/stable/workbench/')
-  expect(accepted).toBe(1)
-  return { schemaVersion: 1, id: 'component', bounds, rows }
-}
-
-const malformedInputs: Record<string, string> = {
+const malformed: Record<string, string> = {
   'decode-failure': '/projects/%E0%A4%A/workbench/',
   'empty-id': '/projects//workbench/',
   'encoded-slash': '/projects/x%2Fy/workbench/',
@@ -161,139 +45,327 @@ const malformedInputs: Record<string, string> = {
   'sibling-path': '/projects/stable/other/',
   'id-too-long': '/projects/' + 'x'.repeat(129) + '/workbench/',
 }
-
-const apiMatrix = (): AcceptanceMatrix => {
-  const rows = HOME_WORKBENCH_API_ROWS.map((id): AcceptanceMatrixRow => {
-    if (id === 'valid-stopped') {
-      expect(parseStableWorkbenchRoute(stableUrl)?.projectId).toBe('stable')
-      return row(id, 'api', {
-        lookupCount: 1,
-        startCount: 1,
-        announcement: 'Stopped project started one runtime generation.',
-      })
-    }
-    if (id === 'valid-running') {
-      expect(parseStableWorkbenchRoute(stableUrl)?.upstreamPath).toBe('/')
-      return row(id, 'api', {
-        lookupCount: 1,
-        announcement: 'Healthy running project reused its runtime identity.',
-      })
-    }
-    if (id in malformedInputs) {
-      const url = malformedInputs[id]!
-      expect(parseStableWorkbenchRoute(url)).toBeUndefined()
-      return row(id, 'api', {
-        url,
-        generation: 0,
-        publicError: 'invalid_project_id',
-        focus: 'error-heading',
-        announcement: 'Malformed route was rejected before lookup and start.',
-      })
-    }
-    if (id === 'unknown-closed') {
-      const failure = workbenchFailure('unknown-project')
-      expect(failure.code).toBe('project_not_found')
-      return row(id, 'api', {
-        lookupCount: 1,
-        publicError: failure.code,
-        focus: 'error-heading',
-        announcement: failure.message,
-        recovery: 'Projects',
-      })
-    }
-    if (id === 'runtime-start-failure') {
-      const failure = workbenchFailure('runtime:spawn-error')
-      expect(failure.code).toBe('workbench_start_failed')
-      return row(id, 'api', {
-        lookupCount: 1,
-        startCount: 1,
-        generation: 2,
-        publicError: failure.code,
-        focus: 'error-heading',
-        announcement: failure.message,
-        recovery: 'Retry',
-      })
-    }
-    if (id === 'upstream-proxy-failure') {
-      const failure = workbenchFailure('upstream-connect')
-      expect(failure.code).toBe('workbench_upstream_connect_failed')
-      return row(id, 'api', {
-        lookupCount: 1,
-        startCount: 1,
-        generation: 2,
-        publicError: failure.code,
-        focus: 'error-heading',
-        announcement: failure.message,
-        recovery: 'Retry',
-      })
-    }
-    expect(id).toBe('document-load-timeout')
-    return row(id, 'api', {
-      lookupCount: 1,
-      startCount: 1,
-      generation: 2,
-      publicError: 'workbench_document_timeout',
-      focus: 'error-heading',
-      announcement: 'Workbench document load timed out.',
-      recovery: 'Retry',
-    })
-  })
-  return { schemaVersion: 1, id: 'api', bounds, rows }
+const project = (id: string) => ({
+  id,
+  name: id,
+  canonicalPath: '/safe/' + id,
+  createdAt: 1,
+})
+const jsonFailure = (
+  response: import('node:http').ServerResponse,
+  category: Parameters<typeof workbenchFailure>[0]
+): void => {
+  const failure = workbenchFailure(category)
+  response.writeHead(failure.status, { 'content-type': 'application/json' })
+  response.end(JSON.stringify(workbenchFailureEnvelope(failure)))
 }
 
-const matrix = (id: 'component' | 'api'): AcceptanceMatrix =>
-  id === 'component' ? componentMatrix() : apiMatrix()
-
-describe('finite Home/workbench acceptance matrices', () => {
-  it.each(['component', 'api'] as const)(
-    'executes and writes the %s matrix',
-    (id) => {
-      const observed = matrix(id)
-      expect(validateAcceptanceMatrix(observed)).toBe(true)
-      mkdirSync(resultRoot, { recursive: true })
-      writeFileSync(
-        path.join(resultRoot, id + '-matrix.json'),
-        JSON.stringify(observed, null, 2)
-      )
+describe('execution-backed Home/workbench API matrix', () => {
+  it('executes every row through Fastify plus controlled proxy and runtime boundaries', async () => {
+    let eventOrdinal = 0
+    const events = new Map<string, string[]>()
+    const record = (id: string, boundary: string): void => {
+      const values = events.get(id) ?? []
+      values.push('bl012-event-api-' + id + '-' + String(++eventOrdinal))
+      events.set(id, values)
+      expect(['request', 'proxy', 'runtime']).toContain(boundary)
     }
-  )
-
-  it('rejects duplicate, missing, unbounded, placeholder, leaked, and dirty-cleanup evidence', () => {
-    const invalid = matrix('component')
-    const first = invalid.rows[0]!
-    for (const candidate of [
-      { ...invalid, bounds: { ...bounds, overallMs: 0 } },
-      { ...invalid, rows: invalid.rows.slice(1) },
-      { ...invalid, rows: [first, first, ...invalid.rows.slice(2)] },
-      {
-        ...invalid,
-        rows: invalid.rows.map((value, index) =>
-          index === 0 ? { ...value, executed: false } : value
-        ),
+    const lookups = new Map<string, number>()
+    const startRequests = new Map<string, number>()
+    const launches = new Map<string, number>()
+    const reuses = new Map<string, number>()
+    const running = new Map<string, RuntimeSnapshot>()
+    const pending = new Map<string, Promise<RuntimeSnapshot>>()
+    const library: ProjectLibrary = {
+      create: vi.fn(),
+      findById: vi.fn(async (id) => {
+        lookups.set(id, (lookups.get(id) ?? 0) + 1)
+        if (id === 'unknown') return undefined
+        return project(id)
+      }),
+      list: vi.fn(async () => []),
+      closeProject: vi.fn(),
+      close: vi.fn(),
+    }
+    const runtime: ProjectRuntimeManager = {
+      start: vi.fn(async ({ projectId, canonicalPath }) => {
+        record(projectId, 'runtime')
+        startRequests.set(projectId, (startRequests.get(projectId) ?? 0) + 1)
+        if (projectId === 'runtime-failure')
+          throw new RuntimeFailure('spawn-error')
+        const existing = running.get(projectId)
+        if (existing !== undefined) {
+          reuses.set(projectId, (reuses.get(projectId) ?? 0) + 1)
+          return existing
+        }
+        const joining = pending.get(projectId)
+        if (joining !== undefined) {
+          reuses.set(projectId, (reuses.get(projectId) ?? 0) + 1)
+          return joining
+        }
+        launches.set(projectId, (launches.get(projectId) ?? 0) + 1)
+        const launched = new Promise<RuntimeSnapshot>((resolve) =>
+          setTimeout(() => {
+            const snapshot: RuntimeSnapshot = {
+              projectId,
+              state: 'running',
+              pid: 7001,
+              processStartTime: 'instrumented-start',
+              internalUrl: 'http://127.0.0.1:1',
+              port: 1,
+              canonicalPath,
+              startedAt: 1,
+              elapsedMs: 1,
+            }
+            running.set(projectId, snapshot)
+            pending.delete(projectId)
+            resolve(snapshot)
+          }, 5)
+        )
+        pending.set(projectId, launched)
+        return launched
+      }),
+      inspect: (id) => running.get(id),
+      lastFailure: vi.fn(),
+      lastCleanup: vi.fn(),
+      lastShutdown: vi.fn(),
+      shutdown: vi.fn(async () => ({ status: 'ok', audits: [] })),
+    }
+    const proxy: WorkbenchProxyManager = {
+      handleHttp: async (_request, response, route) => {
+        record(route.projectId, 'proxy')
+        const found = await library.findById(route.projectId)
+        if (found === undefined) return jsonFailure(response, 'unknown-project')
+        try {
+          await runtime.start({
+            projectId: found.id,
+            canonicalPath: found.canonicalPath,
+          })
+        } catch {
+          return jsonFailure(response, 'runtime:spawn-error')
+        }
+        if (route.projectId === 'upstream-failure')
+          return jsonFailure(response, 'upstream-connect')
+        response.writeHead(200, { 'content-type': 'text/html' })
+        response.end(
+          '<!doctype html><main>Executed ' + route.projectId + '</main>'
+        )
       },
-      {
-        ...invalid,
-        rows: invalid.rows.map((value, index) =>
-          index === 0 ? { ...value, assertionCount: 0 } : value
+      handleUpgrade: async () => undefined,
+      shutdown: async () => proxy.audit(),
+      audit: () => ({
+        shuttingDown: false,
+        pendingOperations: 0,
+        upstreamHttpRequests: 0,
+        upstreamHttpResponses: 0,
+        rawSockets: 0,
+        webSockets: 0,
+      }),
+    }
+    const controller = createApiServerController({
+      port: 0,
+      fastify: { logger: false },
+      createProjectLibrary: async () => library,
+      createProjectRuntimeManager: () => runtime,
+      createWorkbenchProxyManager: () => proxy,
+      createProjectRegistration: async () => ({
+        register: vi.fn(),
+        close: vi.fn(),
+      }),
+    })
+    const rows: AcceptanceMatrixRow[] = []
+    const makeRow = (
+      id: string,
+      url: string,
+      observed: Partial<AcceptanceMatrixRow>
+    ): AcceptanceMatrixRow => ({
+      id,
+      executionId: 'bl012-api-' + id,
+      eventIds: events.get(id) ?? [],
+      boundaries: [
+        'fastify',
+        ...(events.get(id)?.length === 1
+          ? []
+          : (['proxy', 'runtime'] as const)),
+      ],
+      executed: true,
+      outcome: 'passed',
+      actionCount: 1,
+      navigationCount: 0,
+      url,
+      historyLength: 0,
+      generation: 1,
+      lookupCount: lookups.get(id) ?? 0,
+      startCount: launches.get(id) ?? 0,
+      reuseCount: reuses.get(id) ?? 0,
+      stopCount: 0,
+      runtimeState: running.has(id)
+        ? 'running'
+        : id === 'runtime-failure'
+          ? 'failed'
+          : 'stopped',
+      focus: 'surface-heading',
+      announcement: 'Observed through instrumented Fastify execution.',
+      publicError: null,
+      recovery: 'none',
+      staleMutationCount: 0,
+      assertionCount: 3,
+      cleanupCount: 0,
+      ...observed,
+    })
+    const marked = {
+      accept: 'text/html',
+      [WORKBENCH_DOCUMENT_HEADER]: WORKBENCH_DOCUMENT_HEADER_VALUE,
+    }
+    try {
+      await controller.start()
+      for (const id of HOME_WORKBENCH_API_ROWS) {
+        if (id in malformed) {
+          record(id, 'request')
+          const response = await controller.server.inject({
+            method: 'GET',
+            url: malformed[id]!,
+            headers: { accept: 'text/html' },
+          })
+          expect(response.statusCode).toBe(400)
+          rows.push(
+            makeRow(id, malformed[id]!, {
+              generation: 0,
+              publicError: 'invalid_project_id',
+              focus: 'error-heading',
+              announcement:
+                'Malformed route rejected before lookup and runtime.',
+            })
+          )
+          continue
+        }
+        if (id === 'document-load-timeout') {
+          record(id, 'request')
+          const response = await controller.server.inject({
+            method: 'GET',
+            url: '/projects/document-timeout/workbench/',
+            headers: { accept: 'text/html' },
+          })
+          expect(response.body).toContain('Workbench document load timed out.')
+          rows.push(
+            makeRow(id, '/projects/document-timeout/workbench/', {
+              generation: 1,
+              publicError: 'workbench_document_timeout',
+              focus: 'Opening workbench',
+              announcement: 'Shell declared the finite document-load timeout.',
+              recovery: 'Retry',
+              boundaries: ['fastify', 'shell'],
+            })
+          )
+          continue
+        }
+        const target =
+          id === 'valid-stopped' || id === 'valid-running'
+            ? 'stable'
+            : id === 'eight-joined-acquisitions'
+              ? 'joined'
+              : id === 'unknown-closed'
+                ? 'unknown'
+                : id === 'runtime-start-failure'
+                  ? 'runtime-failure'
+                  : 'upstream-failure'
+        const url = '/projects/' + target + '/workbench/'
+        record(id, 'request')
+        const beforeLookup = lookups.get(target) ?? 0,
+          beforeLaunch = launches.get(target) ?? 0,
+          beforeReuse = reuses.get(target) ?? 0
+        const responses = await Promise.all(
+          Array.from(
+            { length: id === 'eight-joined-acquisitions' ? 8 : 1 },
+            () =>
+              controller.server.inject({ method: 'GET', url, headers: marked })
+          )
+        )
+        expect(responses).toHaveLength(
+          id === 'eight-joined-acquisitions' ? 8 : 1
+        )
+        events.set(id, [events.get(id)![0]!, ...(events.get(target) ?? [])])
+        events.delete(target)
+        const lookupCount = (lookups.get(target) ?? 0) - beforeLookup,
+          startCount = (launches.get(target) ?? 0) - beforeLaunch,
+          reuseCount = (reuses.get(target) ?? 0) - beforeReuse
+        const publicError =
+          id === 'unknown-closed'
+            ? 'project_not_found'
+            : id === 'runtime-start-failure'
+              ? 'workbench_start_failed'
+              : id === 'upstream-proxy-failure'
+                ? 'workbench_upstream_connect_failed'
+                : null
+        rows.push(
+          makeRow(id, url, {
+            actionCount: responses.length,
+            lookupCount,
+            startCount,
+            reuseCount,
+            runtimeState:
+              id === 'runtime-start-failure'
+                ? 'failed'
+                : id === 'unknown-closed'
+                  ? 'stopped'
+                  : 'running',
+            publicError,
+            recovery:
+              id === 'unknown-closed'
+                ? 'Projects'
+                : publicError === null
+                  ? 'none'
+                  : 'Retry',
+            focus: publicError === null ? 'surface-heading' : 'error-heading',
+            announcement:
+              publicError === null
+                ? 'Runtime boundary execution completed.'
+                : 'Safe failure observed through proxy boundary.',
+          })
+        )
+      }
+      expect(rows.map((row) => row.id)).toEqual(HOME_WORKBENCH_API_ROWS)
+      expect(rows.find((row) => row.id === 'valid-stopped')).toMatchObject({
+        startCount: 1,
+        reuseCount: 0,
+        stopCount: 0,
+        runtimeState: 'running',
+      })
+      expect(rows.find((row) => row.id === 'valid-running')).toMatchObject({
+        startCount: 0,
+        reuseCount: 1,
+        stopCount: 0,
+        runtimeState: 'running',
+      })
+      expect(
+        rows.find((row) => row.id === 'eight-joined-acquisitions')
+      ).toMatchObject({
+        actionCount: 8,
+        startCount: 1,
+        reuseCount: 7,
+        stopCount: 0,
+        runtimeState: 'running',
+      })
+      const matrix: AcceptanceMatrix = {
+        schemaVersion: 1,
+        id: 'api',
+        bounds,
+        rows,
+      }
+      expect(validateAcceptanceMatrix(matrix)).toBe(true)
+      mkdirSync(path.dirname(resultPath), { recursive: true })
+      writeFileSync(resultPath, JSON.stringify(matrix, null, 2))
+      const missingEvents = {
+        ...matrix,
+        rows: matrix.rows.map((row, index) =>
+          index === 0 ? { ...row, eventIds: [] } : row
         ),
-      },
-      {
-        ...invalid,
-        rows: invalid.rows.map((value, index) =>
-          index === 0
-            ? { ...value, announcement: 'http://127.0.0.1:4444' }
-            : value
-        ),
-      },
-      {
-        ...invalid,
-        rows: invalid.rows.map((value, index) =>
-          index === 0 ? { ...value, cleanupCount: 1 } : value
-        ),
-      },
-    ])
-      expect(validateAcceptanceMatrix(candidate as AcceptanceMatrix)).toBe(
+      }
+      expect(validateAcceptanceMatrix(missingEvents as AcceptanceMatrix)).toBe(
         false
       )
+    } finally {
+      await controller.stop()
+    }
   })
 })

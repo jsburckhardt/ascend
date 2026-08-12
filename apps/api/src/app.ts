@@ -1,4 +1,5 @@
 import { homedir } from 'node:os'
+import { resolveFrontDoorToken } from './front-door-contract.js'
 import path, { join } from 'node:path'
 import AutoLoad, { type AutoloadPluginOptions } from '@fastify/autoload'
 import { type FastifyPluginAsync, type FastifyServerOptions } from 'fastify'
@@ -136,9 +137,7 @@ const app: FastifyPluginAsync<AppOptions> = async (
         createWorkbenchProxyManager({
           projectLibrary,
           projectRuntime,
-          frontDoorToken:
-            process.env.ASCEND_FRONT_DOOR_TOKEN ??
-            'ascend-development-front-door-v1',
+          frontDoorToken: resolveFrontDoorToken(),
           recordEvent: (event) => fastify.log.info(event),
         }))
     )(library, runtimeManager)

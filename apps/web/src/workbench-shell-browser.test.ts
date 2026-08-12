@@ -1,5 +1,6 @@
 /// <reference types="node" />
 import { cleanup, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { renderWorkbenchNavigationShell } from '../../api/src/workbench-navigation-shell'
 
@@ -85,6 +86,11 @@ describe('workbench shell browser behavior', () => {
       within(document.body).getByRole('heading', {
         name: 'Workbench unavailable',
       })
+    ).toHaveFocus()
+    within(document.body).getByRole('button', { name: 'Retry' }).focus()
+    await userEvent.setup({ document }).tab()
+    expect(
+      within(document.body).getByRole('link', { name: 'Projects' })
     ).toHaveFocus()
   })
 
@@ -216,4 +222,59 @@ describe('workbench shell browser behavior', () => {
       within(document.body).getByRole('button', { name: 'Retry' })
     ).toBeVisible()
   })
+
+  it.each(['success', 'failure'] as const)(
+    'invalidates stale %s settlement after newer Home ownership',
+    async (settlement) => {
+      window.history.replaceState(null, '', '/projects/stable/workbench/')
+      let settle!: (value: Response) => void
+      const pending = new Promise<Response>((resolve) => {
+        settle = resolve
+      })
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(() => pending)
+      )
+      executeShell()
+      expect(
+        within(document.body).getByRole('heading', {
+          name: 'Opening workbench',
+        })
+      ).toHaveFocus()
+      const projects = within(document.body).getByRole('link', {
+        name: 'Projects',
+      })
+      projects.addEventListener('click', (event) => event.preventDefault())
+      projects.click()
+      window.history.replaceState(null, '', '/')
+      document.body.innerHTML =
+        '<main><h1 tabindex="-1">Ascend</h1><article>Stable project card</article><p role="status">Home owns this surface.</p></main>'
+      const homeHeading = within(document.body).getByRole('heading', {
+        name: 'Ascend',
+      })
+      homeHeading.focus()
+      const before = document.body.innerHTML
+      settle(
+        settlement === 'success'
+          ? ({
+              ok: true,
+              url: 'http://ascend.test/projects/stable/workbench/',
+              headers: new Headers({ 'content-type': 'text/html' }),
+              text: async () => '<html><body>Stale success</body></html>',
+            } as Response)
+          : await response('workbench_upstream_reset')
+      )
+      await new Promise((resolve) => window.setTimeout(resolve, 0))
+      expect(window.location.pathname).toBe('/')
+      expect(document.body.innerHTML).toBe(before)
+      expect(homeHeading).toHaveFocus()
+      expect(within(document.body).getByRole('status')).toHaveTextContent(
+        'Home owns this surface.'
+      )
+      expect(document.body).not.toHaveTextContent('Stale success')
+      expect(
+        within(document.body).getByText('Stable project card')
+      ).toBeVisible()
+    }
+  )
 })

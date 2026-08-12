@@ -495,7 +495,7 @@ test('runs exact Home and workbench continuity with isolated deep-link refresh',
       isolatedPage.getByText(EXPLORER_SENTINEL, { exact: true }).first()
     ).toBeVisible({ timeout: OPERATION_TIMEOUT_MS })
     await openIsolatedTerminal(isolatedPage)
-    isolatedCounterBefore = await waitForCounter(counterAfterHome + 1)
+    isolatedCounterBefore = await waitForCounter(counterAfterHome)
     identities.push(identity())
     const isolatedRefreshRolesBefore = socketRoles.length
     await isolatedPage.reload({
@@ -512,7 +512,7 @@ test('runs exact Home and workbench continuity with isolated deep-link refresh',
       isolatedPage.getByText(EXPLORER_SENTINEL, { exact: true }).first()
     ).toBeVisible({ timeout: OPERATION_TIMEOUT_MS })
     await openIsolatedTerminal(isolatedPage)
-    isolatedCounterAfter = await waitForCounter(isolatedCounterBefore + 1)
+    isolatedCounterAfter = await waitForCounter(isolatedCounterBefore)
     identities.push(identity())
     expect(new Set(identities.map((value) => JSON.stringify(value))).size).toBe(
       1

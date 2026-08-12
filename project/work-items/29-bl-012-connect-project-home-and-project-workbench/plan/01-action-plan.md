@@ -99,6 +99,6 @@
 - **Architecture:** adds one global ADR and updates the stable proxy component/decision log because top-level HTML navigation must be separated from BL-011 exact JSON transport failures.
 - **Web:** changes Project Home Open behavior, adds navigation-generation state and shell/header assets, and proxies stable HTTP/WebSocket paths in development; no client router dependency is added.
 - **API/proxy:** centralizes the existing duplicated route parser, adds top-level shell/document-acquisition distinction and bounded safe error translation, while retaining BL-010 runtime ownership and BL-011 descendant transport.
-- **Persistence/configuration:** no schema, migration, persisted runtime identity, or project-model change; document the configurable harness verification budget and same-origin route topology.
+- **Persistence/configuration:** no schema, data, persisted runtime identity, or project-model change; document the configurable harness verification budget, same-origin route topology, and the existing private ASCEND_FRONT_DOOR_TOKEN alignment/refusal contract for local and deployed proxies.
 - **Tests/evidence/docs:** adds focused component/API/browser matrices, two continuity workflows, one controlled failure episode, cleanup/residual evidence, and updates root, web, API, routing, runtime, harness, and docs-index surfaces.
 - **Excluded:** multi-project coordination, Stop/Restart/Close/status controls, custom IDE features, public networking/authentication/TLS, multi-host routing, and persisted runtime state.

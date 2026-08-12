@@ -50,6 +50,9 @@ test('runs exactly four controlled browser failure cases with one recovery actio
     'Set BL012_DESIGNATED=1 for controlled Home/workbench failures'
   )
   test.setTimeout(OVERALL_TIMEOUT_MS)
+  const episodeStartedAt = Date.now()
+  const startupStartedAt = Date.now()
+  let startupEndedAt: number | undefined
   const project = {
     id: 'controlled',
     name: 'Controlled',
@@ -143,10 +146,17 @@ test('runs exactly four controlled browser failure cases with one recovery actio
   const page = await context.newPage()
   try {
     const app = await controller.start()
+    startupEndedAt = Date.now()
     const address = app.server.address()
     if (address === null || typeof address === 'string')
       throw new Error('Missing controlled API address')
     const origin = 'http://127.0.0.1:' + address.port
+    await page.route(origin + '/', async (route) =>
+      route.fulfill({
+        contentType: 'text/html',
+        body: '<main><h1>Ascend</h1><article>Controlled project card</article></main><script>const h=document.querySelector(String.fromCharCode(104,49));h?.setAttribute(String.fromCharCode(116,97,98,105,110,100,101,120),String.fromCharCode(45,49));h?.focus()</script>',
+      })
+    )
     for (const specification of [
       {
         id: 'unknown',
@@ -177,6 +187,7 @@ test('runs exactly four controlled browser failure cases with one recovery actio
         expectedStarts: 1,
       },
     ]) {
+      const caseStartedAt = Date.now()
       const stableUrl = origin + '/projects/' + specification.id + '/workbench/'
       await page.goto(stableUrl, {
         waitUntil: 'domcontentloaded',
@@ -192,9 +203,22 @@ test('runs exactly four controlled browser failure cases with one recovery actio
       await expect(page.getByRole('alert')).toContainText(specification.message)
       expect(page.url()).toBe(stableUrl)
       const historyBefore = await page.evaluate(() => history.length)
+      await page.keyboard.press('Tab')
+      if (specification.action === 'Projects') {
+        await expect(page.getByRole('link', { name: 'Projects' })).toBeFocused()
+      } else {
+        await expect(page.getByRole('button', { name: 'Retry' })).toBeFocused()
+        await page.keyboard.press('Tab')
+        await expect(page.getByRole('link', { name: 'Projects' })).toBeFocused()
+      }
+      const recoveryStartedAt = Date.now()
       if (specification.action === 'Projects') {
         await page.getByRole('link', { name: 'Projects' }).click()
         await expect(page).toHaveURL(origin + '/')
+        await expect(
+          page.getByRole('heading', { name: 'Ascend' })
+        ).toBeFocused()
+        await expect(page.getByText('Controlled project card')).toBeVisible()
       } else {
         await page.getByRole('button', { name: 'Retry' }).click()
         await expect(
@@ -203,11 +227,19 @@ test('runs exactly four controlled browser failure cases with one recovery actio
         await expect(page.getByRole('link', { name: 'Projects' })).toBeVisible()
         expect(page.url()).toBe(stableUrl)
         if (specification.id === 'timeout') {
+          await page.goto(origin + '/', { waitUntil: 'domcontentloaded' })
+          const homeHeading = page.getByRole('heading', { name: 'Ascend' })
+          await expect(homeHeading).toBeFocused()
+          await expect(page.getByText('Controlled project card')).toBeVisible()
+          const homeHtml = await page.locator('body').innerHTML()
           releaseTimeoutStale()
           await expect.poll(() => lateSettlements.get('timeout') ?? 0).toBe(1)
-          await expect(
-            page.getByText('Recovered timeout', { exact: true })
-          ).toBeVisible()
+          await expect(page).toHaveURL(origin + '/')
+          await expect(page.locator('body')).toHaveJSProperty(
+            'innerHTML',
+            homeHtml
+          )
+          await expect(homeHeading).toBeFocused()
         }
       }
       expect(lookups.get(specification.id) ?? 0).toBe(
@@ -216,6 +248,8 @@ test('runs exactly four controlled browser failure cases with one recovery actio
       expect(starts.get(specification.id) ?? 0).toBe(
         specification.expectedStarts
       )
+      const recoveryEndedAt = Date.now()
+      const caseEndedAt = Date.now()
       records.push({
         id: specification.id,
         executions: 1,
@@ -238,9 +272,20 @@ test('runs exactly four controlled browser failure cases with one recovery actio
         focus: 'error-heading',
         announcement: 'assertive-alert',
         resourcesAfterCase: proxy.audit(),
+        timing: {
+          startMs: caseStartedAt,
+          endMs: caseEndedAt,
+          durationMs: caseEndedAt - caseStartedAt,
+          recoveryStartMs: recoveryStartedAt,
+          recoveryEndMs: recoveryEndedAt,
+          recoveryDurationMs: recoveryEndedAt - recoveryStartedAt,
+        },
         bounds: {
+          startupMs: 5_000,
           documentMs: DOCUMENT_TIMEOUT_MS,
           operationMs: 2_000,
+          recoveryMs: 5_000,
+          overallMs: OVERALL_TIMEOUT_MS,
           cleanupMs: CLEANUP_TIMEOUT_MS,
         },
       })
@@ -267,7 +312,26 @@ test('runs exactly four controlled browser failure cases with one recovery actio
       RESULT_PATH,
       JSON.stringify(
         {
-          schemaVersion: 1,
+          schemaVersion: 2,
+          timing: {
+            startMs: episodeStartedAt,
+            endMs: Date.now(),
+            durationMs: Date.now() - episodeStartedAt,
+            startupStartMs: startupStartedAt,
+            startupEndMs:
+              typeof startupEndedAt === 'number' ? startupEndedAt : Date.now(),
+            startupDurationMs:
+              (typeof startupEndedAt === 'number'
+                ? startupEndedAt
+                : Date.now()) - startupStartedAt,
+          },
+          bounds: {
+            startupMs: 5_000,
+            documentMs: DOCUMENT_TIMEOUT_MS,
+            recoveryMs: 5_000,
+            overallMs: OVERALL_TIMEOUT_MS,
+            cleanupMs: CLEANUP_TIMEOUT_MS,
+          },
           records,
           cleanup: { contexts: 0, pages: 0, proxyResources: 0, finalAudit },
         },

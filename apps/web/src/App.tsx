@@ -52,6 +52,10 @@ export function App({
   const closeActions = useRef(new Map<string, HTMLButtonElement>())
 
   useEffect(() => {
+    headingRef.current?.focus()
+  }, [])
+
+  useEffect(() => {
     if (state.focusTarget === 'heading') {
       headingRef.current?.focus()
       return
@@ -313,7 +317,7 @@ export function App({
                 </p>
                 <button
                   aria-label={'Open ' + project.name}
-                  className="mt-5 rounded-md bg-slate-950 px-4 py-2 text-sm font-medium text-white"
+                  className="mt-5 rounded-md bg-slate-950 px-4 py-2 text-sm font-medium text-white focus-visible:outline focus-visible:outline-4 focus-visible:outline-blue-600"
                   data-project-id={project.id}
                   aria-describedby={
                     openingProjectId === project.id

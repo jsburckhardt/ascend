@@ -11,6 +11,10 @@ export const HOME_WORKBENCH_BROWSER_EVIDENCE = path.join(
   HOME_WORKBENCH_RESULT_ROOT,
   'browser-continuity.json'
 )
+export const HOME_WORKBENCH_REAL_PROCESS_EVIDENCE = path.join(
+  HOME_WORKBENCH_RESULT_ROOT,
+  'browser-real-process.json'
+)
 export const HOME_WORKBENCH_FAILURE_EVIDENCE = path.join(
   HOME_WORKBENCH_RESULT_ROOT,
   'browser-failures.json'
@@ -66,6 +70,21 @@ export const auditHomeWorkbenchResiduals = async (): Promise<
       }
     }
   }
+  const realProcess = JSON.parse(
+    await readFile(HOME_WORKBENCH_REAL_PROCESS_EVIDENCE, 'utf8')
+  ) as {
+    cleanup?: {
+      contexts?: { after?: number }
+      pages?: { after?: number }
+      terminal?: { markerAbsent?: boolean }
+      proxy?: { socketsAfterContextClose?: number }
+      runtime?: { identityAbsent?: boolean; listenerAbsent?: boolean }
+      api?: { groupAbsent?: boolean; listenerAbsent?: boolean }
+      web?: { groupAbsent?: boolean; listenerAbsent?: boolean }
+      database?: { absent?: boolean }
+      passed?: boolean
+    }
+  }
   const markerPidAbsent = await absent(
     path.join(HOME_WORKBENCH_RESULT_ROOT, 'terminal-marker.pid')
   )
@@ -74,6 +93,7 @@ export const auditHomeWorkbenchResiduals = async (): Promise<
   )
   const cleanup = evidence.cleanup ?? {}
   const failureCleanup = failures.cleanup ?? {}
+  const realCleanup = realProcess.cleanup
   const passed =
     markerPidAbsent &&
     markerOutputAbsent &&
@@ -99,7 +119,19 @@ export const auditHomeWorkbenchResiduals = async (): Promise<
     failureCleanup.proxyResources === 0 &&
     failureCleanup.finalAudit?.pendingOperations === 0 &&
     failureCleanup.finalAudit?.rawSockets === 0 &&
-    failureCleanup.finalAudit?.webSockets === 0
+    failureCleanup.finalAudit?.webSockets === 0 &&
+    realCleanup?.contexts?.after === 0 &&
+    realCleanup?.pages?.after === 0 &&
+    realCleanup?.terminal?.markerAbsent === true &&
+    realCleanup?.proxy?.socketsAfterContextClose === 0 &&
+    realCleanup?.runtime?.identityAbsent === true &&
+    realCleanup?.runtime?.listenerAbsent === true &&
+    realCleanup?.api?.groupAbsent === true &&
+    realCleanup?.api?.listenerAbsent === true &&
+    realCleanup?.web?.groupAbsent === true &&
+    realCleanup?.web?.listenerAbsent === true &&
+    realCleanup?.database?.absent === true &&
+    realCleanup?.passed === true
   return {
     schemaVersion: 1,
     passed,
@@ -107,6 +139,7 @@ export const auditHomeWorkbenchResiduals = async (): Promise<
     markerOutputAbsent,
     cleanup,
     failureCleanup,
+    realProcessCleanup: realCleanup,
   }
 }
 

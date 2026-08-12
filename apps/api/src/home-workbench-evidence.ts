@@ -17,6 +17,7 @@ export const HOME_WORKBENCH_COMPONENT_ROWS = [
 export const HOME_WORKBENCH_API_ROWS = [
   'valid-stopped',
   'valid-running',
+  'eight-joined-acquisitions',
   'decode-failure',
   'empty-id',
   'encoded-slash',
@@ -42,6 +43,10 @@ export interface AcceptanceBounds {
 export interface AcceptanceMatrixRow {
   readonly id: string
   readonly executionId: string
+  readonly eventIds: readonly string[]
+  readonly boundaries: readonly (
+    'react' | 'browser-history' | 'shell' | 'fastify' | 'runtime' | 'proxy'
+  )[]
   readonly executed: true
   readonly outcome: 'passed'
   readonly actionCount: number
@@ -51,6 +56,9 @@ export interface AcceptanceMatrixRow {
   readonly generation: number
   readonly lookupCount: number
   readonly startCount: number
+  readonly reuseCount: number
+  readonly stopCount: number
+  readonly runtimeState: 'stopped' | 'starting' | 'running' | 'failed'
   readonly focus: string
   readonly announcement: string
   readonly publicError: string | null
@@ -78,18 +86,36 @@ export const validateAcceptanceMatrix = (matrix: AcceptanceMatrix): boolean => {
   const bounds = Object.values(matrix.bounds)
   const ids = matrix.rows.map((row) => row.id)
   const executionIds = matrix.rows.map((row) => row.executionId)
+  const eventIds = matrix.rows.flatMap((row) => row.eventIds)
   return (
     matrix.schemaVersion === 1 &&
     bounds.every((bound) => Number.isSafeInteger(bound) && bound > 0) &&
     matrix.rows.length === expected.length &&
     new Set(ids).size === ids.length &&
     new Set(executionIds).size === executionIds.length &&
+    eventIds.length >= matrix.rows.length &&
+    new Set(eventIds).size === eventIds.length &&
     expected.every((id, index) => ids[index] === id) &&
     matrix.rows.every(
       (row) =>
         row.executed === true &&
         row.outcome === 'passed' &&
         /^bl012-(?:component|api)-[a-z0-9-]+$/u.test(row.executionId) &&
+        row.eventIds.length > 0 &&
+        row.eventIds.every((eventId) =>
+          /^bl012-event-(?:component|api)-[a-z0-9-]+-[0-9]+$/u.test(eventId)
+        ) &&
+        row.boundaries.length > 0 &&
+        row.boundaries.every((boundary) =>
+          [
+            'react',
+            'browser-history',
+            'shell',
+            'fastify',
+            'runtime',
+            'proxy',
+          ].includes(boundary)
+        ) &&
         row.url.startsWith('/') &&
         !protectedEvidence.test(JSON.stringify(row)) &&
         [
@@ -99,6 +125,8 @@ export const validateAcceptanceMatrix = (matrix: AcceptanceMatrix): boolean => {
           row.generation,
           row.lookupCount,
           row.startCount,
+          row.reuseCount,
+          row.stopCount,
           row.staleMutationCount,
           row.assertionCount,
           row.cleanupCount,

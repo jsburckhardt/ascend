@@ -5,6 +5,7 @@ import {
   auditHomeWorkbenchResiduals,
   HOME_WORKBENCH_BROWSER_EVIDENCE,
   HOME_WORKBENCH_FAILURE_EVIDENCE,
+  HOME_WORKBENCH_REAL_PROCESS_EVIDENCE,
   HOME_WORKBENCH_RESULT_ROOT,
 } from '../src/cli/home-workbench-residual-audit.js'
 
@@ -50,6 +51,22 @@ describe('Home/workbench residual audit', () => {
           pages: 0,
           proxyResources: 0,
           finalAudit: { pendingOperations: 0, rawSockets: 0, webSockets: 0 },
+        },
+      })
+    )
+    await writeFile(
+      HOME_WORKBENCH_REAL_PROCESS_EVIDENCE,
+      JSON.stringify({
+        cleanup: {
+          contexts: { after: 0 },
+          pages: { after: 0 },
+          terminal: { markerAbsent: true },
+          proxy: { socketsAfterContextClose: 0 },
+          runtime: { identityAbsent: true, listenerAbsent: true },
+          api: { groupAbsent: true, listenerAbsent: true },
+          web: { groupAbsent: true, listenerAbsent: true },
+          database: { absent: true },
+          passed: true,
         },
       })
     )

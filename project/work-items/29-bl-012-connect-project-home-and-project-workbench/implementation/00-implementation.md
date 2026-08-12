@@ -56,3 +56,24 @@
 - `.harness/engineering-harness.md`, checks/boot instructions, and the 2026-08-12 harness change record: configurable 600000 ms checks budget and 10000 ms boot overhead.
 - `ADR-260812-browser-navigation-shell.md`, stable-proxy core component, and decision log: accepted same-origin shell/transport boundary and socket/close semantics.
 - Migration note: no schema, data, API-payload, application configuration, or persisted-runtime migration is required.
+
+## Verifier correction evidence at aceb3a4
+
+- AC-1, AC-2, AC-7, AC-14, AC-18, AC-19, AC-20: component-matrix.json and api-matrix.json now come from React events, browser History events, Fastify requests, and instrumented runtime/proxy calls. Every row carries unique execution/event IDs; validation rejects absent event IDs. The eight-join API row records 8 requests, 1 launch, 7 joins/reuses, 0 stops, and running state.
+- AC-3, AC-15, AC-17: Home receives one mount focus; real tab execution reaches Home Open and shell Retry then Projects. Projects invalidates the shell generation before navigation. Stale success and failure settle after a newer Home surface and leave its URL, DOM, focus, status announcement, and card unchanged.
+- AC-4 through AC-6, AC-8, AC-21 through AC-23: browser-real-process.json is produced by a built API process group, Vite process group, isolated SQLite database, real runtime/proxy, main context, and storage-empty context. The integrated terminal visibly repeats pwd -P, host user, hostname, canonical-directory digest, and increasing counters before Home, after reopen, after fresh direct navigation, and after refresh. Raw terminal values are transient; evidence retains booleans and bounded counters only.
+- AC-8: the fresh context explicitly clears/asserts cookies, localStorage, sessionStorage, CacheStorage, service workers, and Chromium browser cache before its one direct stable navigation; then it refreshes exactly once.
+- AC-10 through AC-13, AC-17, AC-24: browser-failures.json records startup, each case, each recovery, and overall start/end/duration values with finite startup, document, recovery, overall, and cleanup bounds. Error heading focus and Retry/Projects tab order execute in Chromium.
+- AC-16: App.test.tsx executes a 128-character stable ID with 4,096-character markup-bearing name and path through the real React component, verifies inert DOM, and observes only the stable-ID route.
+- AC-23, AC-26: the real browser proof assigns an ID and safe class to every observed request, response, browser log, and WebSocket and transiently scans trusted token/header sentinels. Public evidence retains no URLs, response bodies, log bodies, terminal values, canonical paths, trusted headers, tokens, or internal authorities.
+- AC-25, AC-28: the residual audit now requires exact real-process context/page, proxy-socket, terminal PID/file, runtime identity/listener, API/web process-group/listener, and SQLite artifact cleanup in addition to fixture/control-listener evidence.
+- AC-27, AC-29: README, package READMEs, docs index, stable-routing runbook, ADR, core component, decision log, action-plan impact, and task documentation now describe ASCEND_FRONT_DOOR_TOKEN defaults, 16–256-character validation, aligned trusted headers, refusal, local/deployment handling, redaction, finite proof bounds, evidence interpretation, exact cleanup, and no data/schema/API-payload migration. This clarification adds no public authentication, networking, TLS, multi-host routing, lifecycle UI, or persisted runtime identity.
+
+Corrective focused results: just verify-focused passed 566 tests with 2 skips; just verify-home-workbench passed 44 Vitest tests, 3 Chromium scenarios, and the independent residual audit. Full validation is recorded below after the final just verify run. Final acceptance remains owned by Verify.
+## Final corrective validation record
+
+- just verify-focused: PASS — 83 files passed, 1 skipped; 566 tests passed, 2 skipped.
+- just verify-home-workbench: PASS — 44 Vitest tests, 3 designated Chromium scenarios, and expanded residual audit.
+- just verify: PASS — formatting, lint, typecheck, unit coverage, build, all E2E, and BL-010/011/012 gates.
+- harness boot: PASS — ready, canonical checks proof, 310885 ms duration, 610000 ms finite timeout.
+- Final acceptance remains owned by Verify.

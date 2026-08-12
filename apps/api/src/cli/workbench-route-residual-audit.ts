@@ -13,8 +13,10 @@ import {
   WORKBENCH_MARKDOWN_WEBVIEW_HOST_GRAMMAR,
 } from '../workbench-route-proof-observation.js'
 import {
+  validateWorkbenchAcceptanceCleanup,
   validateWorkbenchFailureMatrix,
   validateWorkbenchRedactionProof,
+  validateWorkbenchRouteHeaderMatrix,
 } from '../workbench-proxy-contract.js'
 import {
   mergeWorkbenchRouteEvidence,
@@ -45,6 +47,8 @@ export interface WorkbenchRouteResidualResult {
   readonly browserEvidenceComplete: boolean
   readonly failureMatrixComplete: boolean
   readonly redactionEvidenceComplete: boolean
+  readonly acceptanceCleanupComplete: boolean
+  readonly routeHeaderMatrixComplete: boolean
   readonly observedInventoryCount: number
   readonly pendingInventoryEntries: number
   readonly controlListenerObservations: number
@@ -322,6 +326,12 @@ export async function auditWorkbenchRouteResidual(
   const redactionEvidenceComplete = validateWorkbenchRedactionProof(
     retainedEvidence.redaction
   )
+  const acceptanceCleanupComplete = validateWorkbenchAcceptanceCleanup(
+    retainedEvidence.cleanup
+  )
+  const routeHeaderMatrixComplete = retainedEvidence.matrices.some((matrix) =>
+    validateWorkbenchRouteHeaderMatrix(matrix)
+  )
   const requiredSectionsComplete =
     requiredPrefixes.every((required) =>
       matrixIds.some((id) => id.startsWith(required))
@@ -353,7 +363,9 @@ export async function auditWorkbenchRouteResidual(
       requiredSectionsComplete &&
       inventories.length > 0 &&
       pendingInventoryEntries === 0 &&
-      controlListenerObservations > 0
+      controlListenerObservations > 0 &&
+      acceptanceCleanupComplete &&
+      routeHeaderMatrixComplete
         ? 'ok'
         : 'failed',
     evidenceFileCount: files.length,
@@ -371,6 +383,8 @@ export async function auditWorkbenchRouteResidual(
     browserEvidenceComplete,
     failureMatrixComplete,
     redactionEvidenceComplete,
+    acceptanceCleanupComplete,
+    routeHeaderMatrixComplete,
     observedInventoryCount: inventories.length,
     pendingInventoryEntries,
     controlListenerObservations,

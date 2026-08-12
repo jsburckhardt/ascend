@@ -9,11 +9,13 @@ import {
 import {
   WORKBENCH_FAILURE_TABLE,
   WORKBENCH_FAILURE_TABLE_SHA256,
+  WORKBENCH_HOP_BY_HOP_HEADERS,
 } from '../src/workbench-proxy-contract.js'
 import {
   mergeWorkbenchRouteEvidence,
   readWorkbenchRouteEvidence,
   WORKBENCH_ROUTE_EVIDENCE_FILE,
+  type WorkbenchRouteEvidence,
 } from '../src/workbench-route-evidence.js'
 import {
   WORKBENCH_BROWSER_CLASSIFIER_VECTORS,
@@ -139,6 +141,74 @@ const boundedRedactionProof = {
   })),
 }
 
+const completeHeaderDirection = WORKBENCH_HOP_BY_HOP_HEADERS.map((name) => ({
+  name,
+  injectedAtStableRoute: true,
+  injectedValueAbsentAfterProxy: true,
+}))
+const executableHeaderMatrix = {
+  id: 'V-4',
+  transport: 'stable-route-fake-upstream',
+  requestCases: completeHeaderDirection,
+  responseCases: completeHeaderDirection,
+  requestConnectionToken: {
+    injectedAtStableRoute: true,
+    injectedValueAbsentAfterProxy: true,
+  },
+  responseConnectionToken: {
+    injectedAtStableRoute: true,
+    injectedValueAbsentAfterProxy: true,
+  },
+}
+
+const completeAcceptanceCleanup = {
+  securityFixtureSocketCount: 0,
+  securityFixtureSocketStates: [{ destroyed: true, closed: true }],
+  fixtureSocketStates: [{ destroyed: true, closed: true }],
+  securityScenarioCleanup: {
+    preCleanup: {
+      fixtureServerListening: true,
+      fixtureSocketCount: 1,
+      fixtureSocketStates: [{ destroyed: false, closed: false }],
+    },
+    finalCleanup: {
+      proxyInventory: {
+        pendingOperations: 0,
+        upstreamHttpRequests: 0,
+        upstreamHttpResponses: 0,
+        rawSockets: 0,
+        webSockets: 0,
+      },
+      fixtureServerListening: false,
+      fixtureSocketCount: 0,
+      fixtureSocketStates: [{ destroyed: true, closed: true }],
+      downstreamSocketStates: [{ closed: true }],
+      upstreamWebSocketStates: [{ closed: true }],
+    },
+  },
+  concurrencyScenarioCleanup: {
+    preCleanup: {
+      fixtureServerListening: true,
+      fixtureSocketCount: 4,
+      fixtureSocketStates: [{ destroyed: false, closed: false }],
+    },
+    finalCleanup: {
+      proxyInventory: {
+        pendingOperations: 0,
+        upstreamHttpRequests: 0,
+        upstreamHttpResponses: 0,
+        rawSockets: 0,
+        webSockets: 0,
+      },
+      fixtureServerListening: false,
+      fixtureSocketCount: 0,
+      fixtureSocketStates: [{ destroyed: true, closed: true }],
+      downstreamSocketStates: [{ closed: true }],
+      upstreamWebSocketStates: [{ closed: true }],
+    },
+  },
+}
+
 describe('restricted stable-route evidence and residual audit', () => {
   it('atomically creates, merges, and repairs the sole owner-readable evidence file', async () => {
     await mergeWorkbenchRouteEvidence({
@@ -177,7 +247,7 @@ describe('restricted stable-route evidence and residual audit', () => {
       cleanup: { residualWorkspaceBootstrap: 'observed' },
     })
     const current = await readWorkbenchRouteEvidence()
-    const result = await auditWorkbenchRouteResidual({
+    const validEvidence: WorkbenchRouteEvidence = {
       ...current,
       browser: {
         ...correctedBrowser,
@@ -189,20 +259,22 @@ describe('restricted stable-route evidence and residual audit', () => {
       matrices: [
         { id: 'V-2' },
         { id: 'V-3' },
-        { id: 'V-4' },
+        executableHeaderMatrix,
         { id: 'V-5' },
         { id: 'V-6' },
         executableFailureMatrix,
         { id: 'V-8', unrelatedControlObservedAt: 1 },
       ],
       cleanup: {
+        ...completeAcceptanceCleanup,
         browserContexts: {
           opened: ['context-1'],
           closed: ['context-1'],
           pending: [],
         },
       },
-    })
+    }
+    const result = await auditWorkbenchRouteResidual(validEvidence)
     expect(result).toMatchObject({
       status: 'ok',
       evidenceFileCount: 1,
@@ -211,8 +283,25 @@ describe('restricted stable-route evidence and residual audit', () => {
       listenersAbsent: true,
       requiredSectionsComplete: true,
       pendingInventoryEntries: 0,
+      acceptanceCleanupComplete: true,
+      routeHeaderMatrixComplete: true,
     })
-  })
+    const contradictory = await auditWorkbenchRouteResidual({
+      ...validEvidence,
+      cleanup: {
+        ...validEvidence.cleanup,
+        securityFixtureSocketCount: 1,
+        fixtureSocketStates: Array.from({ length: 4 }, () => ({
+          destroyed: false,
+          closed: false,
+        })),
+      },
+    })
+    expect(contradictory).toMatchObject({
+      status: 'failed',
+      acceptanceCleanupComplete: false,
+    })
+  }, 10_000)
 
   it('rejects stale, unsafe, extra, marketplace, and unclassified browser evidence', () => {
     expect(correctedBrowserEvidenceComplete(correctedBrowser)).toBe(true)

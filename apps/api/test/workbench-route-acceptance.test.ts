@@ -59,12 +59,70 @@ const project = {
 const controllers: ApiServerController[] = []
 const servers: Array<Server | NetServer> = []
 const sockets = new Set<Socket>()
+const socketHistory = new Set<Socket>()
+const closedSockets = new WeakSet<Socket>()
+const observeSocket = (socket: Socket, active?: Set<Socket>): void => {
+  active?.add(socket)
+  socket.once('close', () => {
+    closedSockets.add(socket)
+    active?.delete(socket)
+  })
+}
+const awaitSocketClose = async (socket: Socket): Promise<void> => {
+  if (closedSockets.has(socket)) return
+  await new Promise<void>((resolve) => {
+    socket.once('close', () => resolve())
+    socket.destroy()
+  })
+}
+const socketState = (socket: Socket) => ({
+  destroyed: socket.destroyed,
+  closed: closedSockets.has(socket),
+})
+const stopController = async (
+  controller: ApiServerController
+): Promise<void> => {
+  await controller.stop()
+  const index = controllers.indexOf(controller)
+  if (index >= 0) controllers.splice(index, 1)
+}
+const closeServer = async (
+  server: Server | NetServer,
+  ownedSockets: readonly Socket[]
+): Promise<void> => {
+  const closed = new Promise<void>((resolve) => server.close(() => resolve()))
+  if ('closeAllConnections' in server) server.closeAllConnections()
+  await Promise.all(ownedSockets.map(awaitSocketClose))
+  await closed
+  const index = servers.indexOf(server)
+  if (index >= 0) servers.splice(index, 1)
+}
+const closeWebSocketServer = async (
+  server: WebSocketServer,
+  clients: readonly WebSocket[]
+): Promise<void> => {
+  await Promise.all(
+    clients.map(
+      (client) =>
+        new Promise<void>((resolve) => {
+          if (client.readyState === WebSocket.CLOSED) {
+            resolve()
+            return
+          }
+          client.once('close', () => resolve())
+          client.terminate()
+        })
+    )
+  )
+  await new Promise<void>((resolve) => server.close(() => resolve()))
+}
 afterEach(async () => {
   await Promise.all(
     controllers.splice(0).map((controller) => controller.stop())
   )
   for (const socket of sockets) socket.destroy()
   sockets.clear()
+  socketHistory.clear()
   for (const server of servers.splice(0)) {
     if ('closeAllConnections' in server) server.closeAllConnections()
     await new Promise<void>((resolve) => server.close(() => resolve()))
@@ -72,8 +130,8 @@ afterEach(async () => {
 })
 const listen = async (server: Server | NetServer): Promise<number> => {
   server.on('connection', (socket) => {
-    sockets.add(socket)
-    socket.once('close', () => sockets.delete(socket))
+    socketHistory.add(socket)
+    observeSocket(socket, sockets)
   })
   await new Promise<void>((resolve, reject) => {
     server.once('error', reject)
@@ -85,7 +143,8 @@ const listen = async (server: Server | NetServer): Promise<number> => {
 const get = (
   port: number,
   path: string,
-  clientSockets?: Set<Socket>
+  clientSockets?: Set<Socket>,
+  clientSocketHistory?: Socket[]
 ): Promise<{ status: number; body: string }> =>
   new Promise((resolve, reject) => {
     const request = httpRequest(
@@ -108,8 +167,8 @@ const get = (
       }
     )
     request.once('socket', (socket) => {
-      clientSockets?.add(socket)
-      socket.once('close', () => clientSockets?.delete(socket))
+      clientSocketHistory?.push(socket)
+      observeSocket(socket, clientSockets)
     })
     request.once('error', reject)
     request.end()
@@ -124,6 +183,10 @@ const open = (port: number, suffix: string): Promise<WebSocket> =>
   })
 const closeWebSocket = async (socket: WebSocket): Promise<void> =>
   new Promise((resolve) => {
+    if (socket.readyState === WebSocket.CLOSED) {
+      resolve()
+      return
+    }
     socket.once('close', () => resolve())
     socket.close(1000, 'done')
   })
@@ -462,12 +525,16 @@ describe('BL-011 executable acceptance coordinator', () => {
       noServer: true,
       perMessageDeflate: false,
     })
+    const securityUpstreamWebSockets: WebSocket[] = []
+    const securityDownstreamWebSockets: WebSocket[] = []
+    const securityHttpClientSockets: Socket[] = []
     upstream.on('upgrade', (request, socket, head) =>
       wss.handleUpgrade(request, socket, head, (client) =>
         wss.emit('connection', client, request)
       )
     )
-    wss.on('connection', (client, request) =>
+    wss.on('connection', (client, request) => {
+      securityUpstreamWebSockets.push(client)
       client.once('message', (data) => {
         const channel = request.url?.startsWith('/terminal')
           ? 'terminal'
@@ -475,7 +542,7 @@ describe('BL-011 executable acceptance coordinator', () => {
         observedFrames[channel] = data.toString()
         client.send(channel + '-accepted')
       })
-    )
+    })
     upstreamPort = await listen(upstream)
     const securityProject = {
       ...project,
@@ -552,6 +619,7 @@ describe('BL-011 executable acceptance coordinator', () => {
             authorization: 'Bearer AUTHORIZATION_SENTINEL_27',
             cookie: 'session=COOKIE_SENTINEL_27',
             'content-length': String(body.length),
+            connection: 'close',
           },
         },
         (response) => {
@@ -566,6 +634,10 @@ describe('BL-011 executable acceptance coordinator', () => {
           )
         }
       )
+      request.once('socket', (socket) => {
+        securityHttpClientSockets.push(socket)
+        observeSocket(socket)
+      })
       request.once('error', reject)
       request.end(body)
     })
@@ -582,11 +654,19 @@ describe('BL-011 executable acceptance coordinator', () => {
             '/workbench/' +
             suffix
         )
+        securityDownstreamWebSockets.push(client)
+        let acknowledgement: string | undefined
         client.once('open', () => client.send(payload))
         client.once('message', (data) => {
-          const value = data.toString()
+          acknowledgement = data.toString()
           client.close(1000, 'redaction-complete')
-          resolve(value)
+        })
+        client.once('close', () => {
+          if (acknowledgement === undefined) {
+            reject(new Error('Security fixture closed before acknowledgement'))
+            return
+          }
+          resolve(acknowledgement)
         })
         client.once('error', reject)
       })
@@ -698,14 +778,70 @@ describe('BL-011 executable acceptance coordinator', () => {
       scans,
     }
     expect(validateWorkbenchRedactionProof(redaction)).toBe(true)
+    const securityFixtureSockets = [...socketHistory]
+    const securityPreCleanup = {
+      proxyInventory: app.workbenchProxy.audit(),
+      fixtureServerListening: upstream.listening,
+      fixtureSocketCount: sockets.size,
+      fixtureSocketStates: securityFixtureSockets.map(socketState),
+    }
+    await closeWebSocketServer(wss, securityUpstreamWebSockets)
+    await stopController(controller)
+    await closeServer(upstream, securityFixtureSockets)
+    await Promise.all(securityHttpClientSockets.map(awaitSocketClose))
+    const securityFinalCleanup = {
+      proxyInventory: app.workbenchProxy.audit(),
+      fixtureServerListening: upstream.listening,
+      fixtureSocketCount: sockets.size,
+      fixtureSocketStates: securityFixtureSockets.map(socketState),
+      downstreamSocketStates: [
+        ...securityHttpClientSockets.map((socket) => ({
+          closed: closedSockets.has(socket),
+        })),
+        ...securityDownstreamWebSockets.map((socket) => ({
+          closed: socket.readyState === WebSocket.CLOSED,
+        })),
+      ],
+      upstreamWebSocketStates: securityUpstreamWebSockets.map((socket) => ({
+        closed: socket.readyState === WebSocket.CLOSED,
+      })),
+    }
+    expect(securityFinalCleanup).toMatchObject({
+      fixtureServerListening: false,
+      fixtureSocketCount: 0,
+      proxyInventory: {
+        pendingOperations: 0,
+        upstreamHttpRequests: 0,
+        upstreamHttpResponses: 0,
+        rawSockets: 0,
+        webSockets: 0,
+      },
+    })
+    expect(securityFinalCleanup.fixtureSocketStates).not.toHaveLength(0)
+    expect(securityFinalCleanup.fixtureSocketStates).toEqual(
+      securityFinalCleanup.fixtureSocketStates.map(() => ({
+        destroyed: true,
+        closed: true,
+      }))
+    )
+    expect(securityFinalCleanup.downstreamSocketStates).toEqual(
+      securityFinalCleanup.downstreamSocketStates.map(() => ({ closed: true }))
+    )
+    expect(securityFinalCleanup.upstreamWebSocketStates).toEqual(
+      securityFinalCleanup.upstreamWebSocketStates.map(() => ({ closed: true }))
+    )
     await mergeWorkbenchRouteEvidence({
       redaction,
       cleanup: {
-        securityProxyInventory: app.workbenchProxy.audit(),
-        securityFixtureSocketCount: sockets.size,
+        securityProxyInventory: securityFinalCleanup.proxyInventory,
+        securityFixtureSocketCount: securityFinalCleanup.fixtureSocketCount,
+        securityFixtureSocketStates: securityFinalCleanup.fixtureSocketStates,
+        securityScenarioCleanup: {
+          preCleanup: securityPreCleanup,
+          finalCleanup: securityFinalCleanup,
+        },
       },
     })
-    wss.close()
   })
 
   it('releases exactly four HTTP and four upgrades into one BL-010 launch/readiness sequence', async () => {
@@ -716,14 +852,16 @@ describe('BL-011 executable acceptance coordinator', () => {
       noServer: true,
       perMessageDeflate: false,
     })
+    const concurrencyUpstreamWebSockets: WebSocket[] = []
     upstream.on('upgrade', (request, socket, head) =>
       wss.handleUpgrade(request, socket, head, (client) => {
         wss.emit('connection', client, request)
       })
     )
-    wss.on('connection', (client) =>
+    wss.on('connection', (client) => {
+      concurrencyUpstreamWebSockets.push(client)
       client.on('message', (data, binary) => client.send(data, { binary }))
-    )
+    })
     const upstreamPort = await listen(upstream)
     const launchGate = deferred<ReadyRuntime>()
     const exit = deferred<{
@@ -800,8 +938,14 @@ describe('BL-011 executable acceptance coordinator', () => {
     const app = await controller.start()
     const apiPort = (app.server.address() as AddressInfo).port
     const prefix = `/projects/${project.id}/workbench/`
+    const concurrencyHttpClientSockets: Socket[] = []
     const httpOperations = Array.from({ length: 4 }, (_, index) =>
-      get(apiPort, prefix + `http-${index}`)
+      get(
+        apiPort,
+        prefix + `http-${index}`,
+        undefined,
+        concurrencyHttpClientSockets
+      )
     )
     const webSocketOperations = Array.from({ length: 4 }, (_, index) =>
       open(apiPort, `socket-${index}`)
@@ -837,6 +981,62 @@ describe('BL-011 executable acceptance coordinator', () => {
         rawSockets: 0,
       })
     )
+    const concurrencyFixtureSockets = [...socketHistory]
+    const concurrencyPreCleanup = {
+      proxyInventory: app.workbenchProxy.audit(),
+      fixtureServerListening: upstream.listening,
+      fixtureSocketCount: sockets.size,
+      fixtureSocketStates: concurrencyFixtureSockets.map(socketState),
+    }
+    await closeWebSocketServer(wss, concurrencyUpstreamWebSockets)
+    await stopController(controller)
+    await closeServer(upstream, concurrencyFixtureSockets)
+    await Promise.all(concurrencyHttpClientSockets.map(awaitSocketClose))
+    const concurrencyFinalCleanup = {
+      proxyInventory: app.workbenchProxy.audit(),
+      fixtureServerListening: upstream.listening,
+      fixtureSocketCount: sockets.size,
+      fixtureSocketStates: concurrencyFixtureSockets.map(socketState),
+      downstreamSocketStates: [
+        ...concurrencyHttpClientSockets.map((socket) => ({
+          closed: closedSockets.has(socket),
+        })),
+        ...webSocketResults.map((socket) => ({
+          closed: socket.readyState === WebSocket.CLOSED,
+        })),
+      ],
+      upstreamWebSocketStates: concurrencyUpstreamWebSockets.map((socket) => ({
+        closed: socket.readyState === WebSocket.CLOSED,
+      })),
+    }
+    expect(concurrencyFinalCleanup).toMatchObject({
+      fixtureServerListening: false,
+      fixtureSocketCount: 0,
+      proxyInventory: {
+        pendingOperations: 0,
+        upstreamHttpRequests: 0,
+        upstreamHttpResponses: 0,
+        rawSockets: 0,
+        webSockets: 0,
+      },
+    })
+    expect(concurrencyFinalCleanup.fixtureSocketStates).not.toHaveLength(0)
+    expect(concurrencyFinalCleanup.fixtureSocketStates).toEqual(
+      concurrencyFinalCleanup.fixtureSocketStates.map(() => ({
+        destroyed: true,
+        closed: true,
+      }))
+    )
+    expect(concurrencyFinalCleanup.downstreamSocketStates).toEqual(
+      concurrencyFinalCleanup.downstreamSocketStates.map(() => ({
+        closed: true,
+      }))
+    )
+    expect(concurrencyFinalCleanup.upstreamWebSocketStates).toEqual(
+      concurrencyFinalCleanup.upstreamWebSocketStates.map(() => ({
+        closed: true,
+      }))
+    )
     await mergeWorkbenchRouteEvidence({
       matrices: [
         {
@@ -852,15 +1052,15 @@ describe('BL-011 executable acceptance coordinator', () => {
         },
       ],
       cleanup: {
-        concurrentProxyInventory: app.workbenchProxy.audit(),
-        fixtureSocketStates: [...sockets].map((socket) => ({
-          destroyed: socket.destroyed,
-        })),
+        concurrentProxyInventory: concurrencyFinalCleanup.proxyInventory,
+        fixtureSocketStates: concurrencyFinalCleanup.fixtureSocketStates,
+        concurrencyScenarioCleanup: {
+          preCleanup: concurrencyPreCleanup,
+          finalCleanup: concurrencyFinalCleanup,
+        },
       },
       residualAudit: {},
     })
-    for (const client of wss.clients) client.terminate()
-    wss.close()
   })
 
   it('returns precommit 503 during bounded shutdown and preserves an unrelated listener', async () => {

@@ -3,6 +3,7 @@ import { buildRuntimeArgv } from '../src/project-runtime-process.js'
 import {
   WORKBENCH_FAILURE_TABLE,
   WORKBENCH_FAILURE_TABLE_SHA256,
+  WORKBENCH_HOP_BY_HOP_HEADERS,
   decodeWorkbenchProjectId,
   filterWorkbenchHeaders,
   parseStableWorkbenchRoute,
@@ -13,8 +14,10 @@ import {
   serializeWorkbenchEvent,
   tokenizeWorkbenchProjectId,
   validateRestrictedEvidence,
+  validateWorkbenchAcceptanceCleanup,
   validateWorkbenchFailureMatrix,
   validateWorkbenchRedactionProof,
+  validateWorkbenchRouteHeaderMatrix,
   workbenchFailure,
   workbenchFailureEnvelope,
 } from '../src/workbench-proxy-contract.js'
@@ -76,6 +79,41 @@ describe('stable workbench proxy contract', () => {
       authorization: 'Bearer retained-end-to-end',
       etag: 'tag',
     })
+  })
+
+  it('requires executable stable-route evidence for every hop header direction', () => {
+    const completeDirection = WORKBENCH_HOP_BY_HOP_HEADERS.map((name) => ({
+      name,
+      injectedAtStableRoute: true,
+      injectedValueAbsentAfterProxy: true,
+    }))
+    const matrix = {
+      id: 'V-4',
+      transport: 'stable-route-fake-upstream',
+      requestCases: completeDirection,
+      responseCases: completeDirection,
+      requestConnectionToken: {
+        injectedAtStableRoute: true,
+        injectedValueAbsentAfterProxy: true,
+      },
+      responseConnectionToken: {
+        injectedAtStableRoute: true,
+        injectedValueAbsentAfterProxy: true,
+      },
+    }
+    expect(validateWorkbenchRouteHeaderMatrix(matrix)).toBe(true)
+    expect(
+      validateWorkbenchRouteHeaderMatrix({
+        ...matrix,
+        requestCases: completeDirection.slice(1),
+      })
+    ).toBe(false)
+    expect(
+      validateWorkbenchRouteHeaderMatrix({
+        ...matrix,
+        transport: 'filter-helper',
+      })
+    ).toBe(false)
   })
 
   it('rewrites redirects, cookies, and service worker scope', () => {
@@ -161,6 +199,70 @@ describe('stable workbench proxy contract', () => {
     ).toMatchObject({ elapsedMs: 0, classification: 'manager-shutdown' })
     expect(validateRestrictedEvidence(null)).toBe(false)
     expect(validateRestrictedEvidence([])).toBe(false)
+  })
+
+  it('rejects contradictory pre-cleanup socket snapshots as final evidence', () => {
+    const finalCleanup = {
+      proxyInventory: {
+        pendingOperations: 0,
+        upstreamHttpRequests: 0,
+        upstreamHttpResponses: 0,
+        rawSockets: 0,
+        webSockets: 0,
+      },
+      fixtureServerListening: false,
+      fixtureSocketCount: 0,
+      fixtureSocketStates: [{ destroyed: true, closed: true }],
+      downstreamSocketStates: [{ closed: true }],
+      upstreamWebSocketStates: [{ closed: true }],
+    }
+    const completeCleanup = {
+      securityFixtureSocketCount: 0,
+      securityFixtureSocketStates: [{ destroyed: true, closed: true }],
+      fixtureSocketStates: [{ destroyed: true, closed: true }],
+      securityScenarioCleanup: {
+        preCleanup: {
+          fixtureServerListening: true,
+          fixtureSocketCount: 1,
+          fixtureSocketStates: [{ destroyed: false, closed: false }],
+        },
+        finalCleanup,
+      },
+      concurrencyScenarioCleanup: {
+        preCleanup: {
+          fixtureServerListening: true,
+          fixtureSocketCount: 4,
+          fixtureSocketStates: [{ destroyed: false, closed: false }],
+        },
+        finalCleanup,
+      },
+    }
+    expect(validateWorkbenchAcceptanceCleanup(completeCleanup)).toBe(true)
+
+    const contradictoryArtifact = {
+      ...completeCleanup,
+      securityFixtureSocketCount: 1,
+      fixtureSocketStates: Array.from({ length: 4 }, () => ({
+        destroyed: false,
+        closed: false,
+      })),
+    }
+    expect(validateWorkbenchAcceptanceCleanup(contradictoryArtifact)).toBe(
+      false
+    )
+    expect(
+      validateWorkbenchAcceptanceCleanup({
+        ...completeCleanup,
+        concurrencyScenarioCleanup: {
+          ...completeCleanup.concurrencyScenarioCleanup,
+          finalCleanup: {
+            ...finalCleanup,
+            fixtureSocketCount: 1,
+            fixtureSocketStates: [{ destroyed: false, closed: false }],
+          },
+        },
+      })
+    ).toBe(false)
   })
 
   it('rejects local-only failure evidence, disabled logging, and wrong payload channels', () => {

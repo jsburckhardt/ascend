@@ -231,7 +231,7 @@ export function parseStableWorkbenchRoute(
   return { projectId, prefix, upstreamPath: '/' + (match[2] ?? '') + query }
 }
 
-const HOP_BY_HOP_HEADERS = new Set([
+export const WORKBENCH_HOP_BY_HOP_HEADERS = Object.freeze([
   'connection',
   'keep-alive',
   'proxy-authenticate',
@@ -241,6 +241,7 @@ const HOP_BY_HOP_HEADERS = new Set([
   'transfer-encoding',
   'upgrade',
 ])
+const HOP_BY_HOP_HEADERS = new Set(WORKBENCH_HOP_BY_HOP_HEADERS)
 const UPGRADE_HEADERS = new Set([
   'connection',
   'upgrade',
@@ -529,6 +530,93 @@ export function validateWorkbenchRedactionProof(value: unknown): boolean {
         Number(location.occurrences) >= 0
     ) &&
     tokenLocations.some((location) => Number(location?.occurrences) > 0)
+  )
+}
+
+const completeHeaderDirection = (value: unknown): boolean => {
+  if (
+    !Array.isArray(value) ||
+    value.length !== WORKBENCH_HOP_BY_HOP_HEADERS.length
+  )
+    return false
+  return value.every((entry, index) => {
+    const record = evidenceRecord(entry)
+    return (
+      record?.name === WORKBENCH_HOP_BY_HOP_HEADERS[index] &&
+      record.injectedAtStableRoute === true &&
+      record.injectedValueAbsentAfterProxy === true
+    )
+  })
+}
+
+export function validateWorkbenchRouteHeaderMatrix(value: unknown): boolean {
+  const matrix = evidenceRecord(value)
+  const requestExtension = evidenceRecord(matrix?.requestConnectionToken)
+  const responseExtension = evidenceRecord(matrix?.responseConnectionToken)
+  return (
+    matrix?.id === 'V-4' &&
+    matrix.transport === 'stable-route-fake-upstream' &&
+    completeHeaderDirection(matrix.requestCases) &&
+    completeHeaderDirection(matrix.responseCases) &&
+    requestExtension?.injectedAtStableRoute === true &&
+    requestExtension.injectedValueAbsentAfterProxy === true &&
+    responseExtension?.injectedAtStableRoute === true &&
+    responseExtension.injectedValueAbsentAfterProxy === true
+  )
+}
+
+const closedSocketStates = (value: unknown): boolean =>
+  Array.isArray(value) &&
+  value.length > 0 &&
+  value.every((state) => {
+    const record = evidenceRecord(state)
+    return record?.destroyed === true && record.closed === true
+  })
+
+const closedWebSocketStates = (value: unknown): boolean =>
+  Array.isArray(value) &&
+  value.length > 0 &&
+  value.every((state) => evidenceRecord(state)?.closed === true)
+
+const completeScenarioCleanup = (value: unknown): boolean => {
+  const scenario = evidenceRecord(value)
+  const before = evidenceRecord(scenario?.preCleanup)
+  const final = evidenceRecord(scenario?.finalCleanup)
+  const proxy = evidenceRecord(final?.proxyInventory)
+  return (
+    scenario !== undefined &&
+    before !== undefined &&
+    before.fixtureServerListening === true &&
+    Number.isSafeInteger(before.fixtureSocketCount) &&
+    Number(before.fixtureSocketCount) >= 0 &&
+    Array.isArray(before.fixtureSocketStates) &&
+    before.fixtureSocketStates.length > 0 &&
+    final !== undefined &&
+    final.fixtureSocketCount === 0 &&
+    final.fixtureServerListening === false &&
+    proxy !== undefined &&
+    proxy.pendingOperations === 0 &&
+    proxy.upstreamHttpRequests === 0 &&
+    proxy.upstreamHttpResponses === 0 &&
+    proxy.rawSockets === 0 &&
+    proxy.webSockets === 0 &&
+    Array.isArray(final.fixtureSocketStates) &&
+    final.fixtureSocketStates.length === before.fixtureSocketStates.length &&
+    closedSocketStates(final.fixtureSocketStates) &&
+    closedWebSocketStates(final.downstreamSocketStates) &&
+    closedWebSocketStates(final.upstreamWebSocketStates)
+  )
+}
+
+export function validateWorkbenchAcceptanceCleanup(value: unknown): boolean {
+  const cleanup = evidenceRecord(value)
+  return (
+    cleanup !== undefined &&
+    cleanup.securityFixtureSocketCount === 0 &&
+    closedSocketStates(cleanup.securityFixtureSocketStates) &&
+    closedSocketStates(cleanup.fixtureSocketStates) &&
+    completeScenarioCleanup(cleanup.securityScenarioCleanup) &&
+    completeScenarioCleanup(cleanup.concurrencyScenarioCleanup)
   )
 }
 

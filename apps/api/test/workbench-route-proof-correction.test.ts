@@ -415,14 +415,16 @@ describe('BL-011 verifier proof corrections', () => {
     await mergeWorkbenchRouteEvidence({
       matrices: [
         {
-          id: 'V-4',
+          id: 'V-4-contract',
           requestCases,
           responseCases,
           requestExtension,
           responseExtension,
         },
       ],
-      cleanup: { headerCaseCount: requestCases.length + responseCases.length },
+      cleanup: {
+        headerContractCaseCount: requestCases.length + responseCases.length,
+      },
       residualAudit: {},
     })
   })

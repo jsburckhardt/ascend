@@ -16,6 +16,10 @@ import type { ProjectLibrary } from '../src/project-library.js'
 import { RuntimeFailure } from '../src/project-runtime-contract.js'
 import type { ProjectRuntimeManager } from '../src/project-runtime-manager.js'
 import { mergeWorkbenchRouteEvidence } from '../src/workbench-route-evidence.js'
+import {
+  validateWorkbenchRouteHeaderMatrix,
+  WORKBENCH_HOP_BY_HOP_HEADERS,
+} from '../src/workbench-proxy-contract.js'
 import { createWorkbenchProxyManager } from '../src/workbench-proxy-manager.js'
 
 const project = {
@@ -412,6 +416,120 @@ describe('stable workbench HTTP transport', () => {
     expect(headers.headers['x-end-to-end']).toBe('kept')
     expect(headers.headers['x-remove']).toBeUndefined()
     expect(new Set(observedHosts)).toEqual(new Set([`127.0.0.1:${port}`]))
+  })
+
+  it('strips every required hop header bidirectionally through the stable route', async () => {
+    const requestObservations = new Map<string, string | undefined>()
+    const requestConnectionToken = 'x-bl011-request-connection-token'
+    const responseConnectionToken = 'x-bl011-response-connection-token'
+    const requestValue = (name: string): string =>
+      name === 'connection'
+        ? requestConnectionToken
+        : name === 'transfer-encoding'
+          ? 'gzip, chunked'
+          : 'bl011-request-' + name
+    const responseValue = (name: string): string =>
+      name === 'connection'
+        ? responseConnectionToken
+        : name === 'transfer-encoding'
+          ? 'gzip, chunked'
+          : 'bl011-response-' + name
+    const upstreamPort = await listen(
+      createServer((request, response) => {
+        const name = request.url?.slice(1) ?? ''
+        requestObservations.set(
+          requestConnectionToken,
+          Array.isArray(request.headers[requestConnectionToken])
+            ? request.headers[requestConnectionToken]?.join(', ')
+            : request.headers[requestConnectionToken]
+        )
+        requestObservations.set(
+          name,
+          Array.isArray(request.headers[name])
+            ? request.headers[name]?.join(', ')
+            : request.headers[name]
+        )
+        const headers: Record<string, string> = {
+          'content-type': 'application/octet-stream',
+          'content-length': '2',
+          [name]: responseValue(name),
+        }
+        if (name === 'connection')
+          headers[responseConnectionToken] = 'remove-response-extension'
+        if (name === 'transfer-encoding' || name === 'trailer') {
+          delete headers['content-length']
+          headers['transfer-encoding'] =
+            name === 'transfer-encoding' ? responseValue(name) : 'chunked'
+        }
+        response.writeHead(200, headers)
+        response.end('ok')
+      })
+    )
+    const { port } = await api(upstreamPort)
+    const prefix = `/projects/${project.id}/workbench/`
+    const requestCases: Array<Record<string, unknown>> = []
+    const responseCases: Array<Record<string, unknown>> = []
+    let requestConnectionTokenRemoved = false
+    let responseConnectionTokenRemoved = false
+    for (const name of WORKBENCH_HOP_BY_HOP_HEADERS) {
+      const injectedRequestValue = requestValue(name)
+      const headers: Record<string, string> = {
+        [name]: injectedRequestValue,
+      }
+      if (name === 'connection')
+        headers[requestConnectionToken] = 'remove-request-extension'
+      else headers.connection = 'close'
+      if (name === 'trailer') headers['transfer-encoding'] = 'chunked'
+      const result = await perform(port, prefix + name, { headers })
+      const observedRequest = requestObservations.get(name)
+      const observedResponse = result.headers[name]
+      expect(result.status).toBe(200)
+      expect(result.body.toString()).toBe('ok')
+      expect(observedRequest).not.toBe(injectedRequestValue)
+      expect(observedResponse).not.toBe(responseValue(name))
+      if (!['connection', 'transfer-encoding'].includes(name)) {
+        expect(observedRequest).toBeUndefined()
+        expect(observedResponse).toBeUndefined()
+      }
+      if (name === 'connection') {
+        requestConnectionTokenRemoved =
+          requestObservations.get(requestConnectionToken) === undefined
+        responseConnectionTokenRemoved =
+          result.headers[responseConnectionToken] === undefined
+      }
+      requestCases.push({
+        name,
+        injectedAtStableRoute: true,
+        injectedValueAbsentAfterProxy: observedRequest !== injectedRequestValue,
+      })
+      responseCases.push({
+        name,
+        injectedAtStableRoute: true,
+        injectedValueAbsentAfterProxy: observedResponse !== responseValue(name),
+      })
+    }
+    const matrix = {
+      id: 'V-4',
+      transport: 'stable-route-fake-upstream',
+      requestCases,
+      responseCases,
+      requestConnectionToken: {
+        injectedAtStableRoute: true,
+        injectedValueAbsentAfterProxy: requestConnectionTokenRemoved,
+      },
+      responseConnectionToken: {
+        injectedAtStableRoute: true,
+        injectedValueAbsentAfterProxy: responseConnectionTokenRemoved,
+      },
+    }
+    expect(validateWorkbenchRouteHeaderMatrix(matrix)).toBe(true)
+    await mergeWorkbenchRouteEvidence({
+      matrices: [matrix],
+      cleanup: {
+        headerRouteCaseCount: requestCases.length + responseCases.length,
+      },
+      residualAudit: {},
+    })
   })
 
   it('streams 32 by 16 KiB under delayed consumption and propagates a post-chunk-5 abort', async () => {

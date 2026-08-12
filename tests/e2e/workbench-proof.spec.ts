@@ -284,20 +284,33 @@ const openIntegratedTerminal = async (page: Page): Promise<void> => {
     .getByRole('textbox', { name: /^Terminal /u })
     .first()
   await expect(terminalInput).toBeAttached({ timeout: 10_000 })
+  await terminalInput.focus()
+}
 
-  const readinessPath = path.join(BL001_ROOT, 'terminal-shell-ready')
-  await rm(readinessPath, { force: true })
+const startTerminalCommandOnce = async (
+  page: Page,
+  command: string,
+  startEvidencePath: string,
+  lockName: string
+): Promise<void> => {
+  const lockPath = path.join(BL001_ROOT, lockName)
+  await rm(lockPath, { recursive: true, force: true })
+  const terminalInput = page
+    .getByRole('textbox', { name: /^Terminal /u })
+    .first()
   for (let attempt = 0; attempt < 3; attempt += 1) {
     await terminalInput.focus()
-    await page.keyboard.insertText(`/usr/bin/touch "${readinessPath}"`)
+    await page.keyboard.insertText(
+      `if /usr/bin/mkdir "${lockPath}" 2>/dev/null; then exec ${command}; fi`
+    )
     await page.keyboard.press('Enter')
     const deadline = Date.now() + 10_000
     while (Date.now() < deadline) {
-      if (await pathExists(readinessPath)) return
+      if (await pathExists(startEvidencePath)) return
       await new Promise((resolve) => setTimeout(resolve, 50))
     }
   }
-  throw new Error('Integrated terminal shell did not accept readiness command')
+  throw new Error('Integrated terminal did not start its exact-once command')
 }
 
 test.describe.configure({ mode: 'serial' })
@@ -348,16 +361,16 @@ test('cancels an in-progress real integrated command on overall timeout', async 
           page.getByText(EXPLORER_SENTINEL, { exact: true }).first()
         ).toBeVisible()
         await openIntegratedTerminal(page)
-        await page.keyboard.insertText(
-          `/usr/local/bin/node \"${path.join(
-            REPOSITORY_ROOT,
-            'tests/e2e/fixtures/terminal-timeout-command.mjs'
-          )}\" \"${timeoutCommandPidFile}\"`
+        const timeoutCommand = `/usr/local/bin/node \"${path.join(
+          REPOSITORY_ROOT,
+          'tests/e2e/fixtures/terminal-timeout-command.mjs'
+        )}\" \"${timeoutCommandPidFile}\"`
+        await startTerminalCommandOnce(
+          page,
+          timeoutCommand,
+          timeoutCommandPidFile,
+          'timeout-command-started'
         )
-        await page.keyboard.press('Enter')
-        await expect
-          .poll(() => pathExists(timeoutCommandPidFile), { timeout: 40_000 })
-          .toBe(true)
         const identity = JSON.parse(
           await readFile(timeoutCommandPidFile, 'utf8')
         ) as TrackedCommandIdentity
@@ -546,8 +559,12 @@ test('proves one designated-host workbench with terminal parity', async ({
           'apps/api/src/cli/proof-terminal-integrated.ts'
         )}\"`
         signal.throwIfAborted()
-        await page.keyboard.insertText(integratedCommand)
-        await page.keyboard.press('Enter')
+        await startTerminalCommandOnce(
+          page,
+          integratedCommand,
+          INTEGRATED_COMMAND_IDENTITIES,
+          'integrated-command-started'
+        )
         await expect
           .poll(() => pathExists(INTEGRATED_RAW_EVIDENCE), { timeout: 45_000 })
           .toBe(true)

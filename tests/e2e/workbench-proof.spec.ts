@@ -284,7 +284,20 @@ const openIntegratedTerminal = async (page: Page): Promise<void> => {
     .getByRole('textbox', { name: /^Terminal /u })
     .first()
   await expect(terminalInput).toBeAttached({ timeout: 10_000 })
-  await terminalInput.focus()
+
+  const readinessPath = path.join(BL001_ROOT, 'terminal-shell-ready')
+  await rm(readinessPath, { force: true })
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    await terminalInput.focus()
+    await page.keyboard.insertText(`/usr/bin/touch "${readinessPath}"`)
+    await page.keyboard.press('Enter')
+    const deadline = Date.now() + 10_000
+    while (Date.now() < deadline) {
+      if (await pathExists(readinessPath)) return
+      await new Promise((resolve) => setTimeout(resolve, 50))
+    }
+  }
+  throw new Error('Integrated terminal shell did not accept readiness command')
 }
 
 test.describe.configure({ mode: 'serial' })

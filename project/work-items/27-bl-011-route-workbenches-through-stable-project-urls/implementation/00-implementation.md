@@ -45,9 +45,15 @@
 ## Validation Evidence
 
 - Repeated prerequisite baseline: three consecutive focused runs each passed 3 files and 17 tests covering worktree ownership, concurrent cancellation, and host terminal bounds; three cleanup regression runs each passed all 7 failure/cleanup tests.
-- `just verify-focused`: exit 0 after the final corrections; 75 passed files, 1 skipped; 522 passed tests, 2 skipped.
-- `just verify-workbench-route`: exit 0; 47 Vitest cases, one real designated Chromium scenario, mode-`0600` evidence, and residual `status: ok`.
-- `just test-e2e`: exit 0 after removing renderer-specific baseline waits; 5 Chromium tests passed, 2 designated tests skipped, and capacity residual audit passed.
-- `just verify` (primary checkout): exit 0 after the final corrections; formatting, lint, type checks, package tests/coverage, builds, all repository gates, baseline Chromium, designated BL-010/BL-011 proofs, public scans, cleanup, and final residual audit passed.
+- `just verify-focused`: exit 0 at the final code revision; 75 passed files and 1 skipped, with 522 passed tests and 2 skipped.
+- `just test-e2e`: repeated final baseline exit 0; 5 Chromium tests passed, 2 designated tests skipped, and the capacity residual audit passed.
+- `just verify-workbench-route`: final designated exit 0; 47 Vitest cases and one real Chromium scenario passed, followed by mode-`0600` residual `status: ok`.
+- Clean linked worktree `just setup && just verify`: exit 0 at `d75cd4e`; setup, the complete repository suite, baseline Chromium, designated route Chromium, scans, and residual audit passed.
+- Primary-checkout `just verify`: exit 0 at the final code revision; formatting, lint, type checks, package tests/coverage, builds, all repository gates, baseline Chromium, designated proofs, public scans, cleanup, and residual audit passed.
+- Restricted/public evidence: regular ignored/untracked mode-`0600` evidence; 3 navigations, 3 workflows, 6 sockets (Management 3, ExtensionHost 3), 0 retries, 1 accepted and 22 rejected classifier vectors, 23 injected failures, 12 zero-match sentinel scans, 0 marketplace/forbidden/public-authority matches, 23 observed inventories, 0 pending entries, and residual `status: ok`.
+
+## Observation Evidence
+
+- Captured harness observations for finalization and stabilization: `DL-400`, `CONF-074`, `DL-401`, `CONF-075`, `DL-402`–`DL-414`, `INS-077`–`INS-085`, `DL-415`, `DL-416`, `SUGG-014`, `DL-420`, `CONF-077`, and `CONF-079`.
 
 These notes record implementation evidence only. Final acceptance remains owned by Verify.

@@ -33,7 +33,23 @@ function runtime(pid: number) {
     pid,
     processStartTime: String(pid * 10),
     exit: exited.promise,
-    terminate: vi.fn(async () => undefined),
+    terminate: vi.fn(async (_graceful, _force, port) => ({
+      pid,
+      processStartTime: String(pid * 10),
+      port,
+      outcome: 'graceful' as const,
+      processAbsent: true,
+      processGroupAbsent: true,
+      listenerAbsent: true,
+    })),
+    audit: vi.fn(async (port) => ({
+      pid,
+      processStartTime: String(pid * 10),
+      port,
+      processAbsent: true,
+      processGroupAbsent: true,
+      listenerAbsent: true,
+    })),
     isAlive: vi.fn(async () => true),
   }
   const ready: ReadyRuntime = {

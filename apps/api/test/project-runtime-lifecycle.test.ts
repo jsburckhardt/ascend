@@ -68,6 +68,8 @@ describe('project runtime lifecycle integration', () => {
       start: vi.fn(),
       inspect: vi.fn(),
       lastFailure: vi.fn(),
+      lastCleanup: vi.fn(),
+      lastShutdown: vi.fn(),
       shutdown: vi.fn(async () => {
         order.push('runtime')
       }),
@@ -141,12 +143,28 @@ describe('project runtime lifecycle integration', () => {
   })
 
   it('cleans a launch that resolves after manager shutdown begins', async () => {
-    const terminate = vi.fn(async () => undefined)
+    const terminate = vi.fn(async (_graceful, _force, port) => ({
+      pid: 500,
+      processStartTime: '5000',
+      port,
+      outcome: 'graceful' as const,
+      processAbsent: true,
+      processGroupAbsent: true,
+      listenerAbsent: true,
+    }))
     const owned: OwnedRuntimeProcess = {
       pid: 500,
       processStartTime: '5000',
       exit: neverExit(),
       terminate,
+      audit: vi.fn(async (port) => ({
+        pid: 500,
+        processStartTime: '5000',
+        port,
+        processAbsent: true,
+        processGroupAbsent: true,
+        listenerAbsent: true,
+      })),
       isAlive: vi.fn(async () => true),
     }
     let resolveLaunch!: (runtime: ReadyRuntime) => void
@@ -180,16 +198,33 @@ describe('project runtime lifecycle integration', () => {
     await rejectedStart
     await shutdown
     expect(terminate).toHaveBeenCalledTimes(1)
-    expect(manager.inspect(project.id)?.state).toBe('failed')
+    expect(manager.inspect(project.id)).toBeUndefined()
+    expect(manager.lastShutdown()?.status).toBe('ok')
   })
 
   it('terminates each exact running owner once with finite escalation bounds', async () => {
-    const terminate = vi.fn(async () => undefined)
+    const terminate = vi.fn(async (_graceful, _force, port) => ({
+      pid: 501,
+      processStartTime: '5010',
+      port,
+      outcome: 'graceful' as const,
+      processAbsent: true,
+      processGroupAbsent: true,
+      listenerAbsent: true,
+    }))
     const owned: OwnedRuntimeProcess = {
       pid: 501,
       processStartTime: '5010',
       exit: neverExit(),
       terminate,
+      audit: vi.fn(async (port) => ({
+        pid: 501,
+        processStartTime: '5010',
+        port,
+        processAbsent: true,
+        processGroupAbsent: true,
+        listenerAbsent: true,
+      })),
       isAlive: vi.fn(async () => true),
     }
     const manager = createProjectRuntimeManager({
@@ -213,7 +248,7 @@ describe('project runtime lifecycle integration', () => {
       manager.shutdown(),
     ])
     expect(terminate).toHaveBeenCalledTimes(1)
-    expect(terminate).toHaveBeenCalledWith(7, 11)
+    expect(terminate).toHaveBeenCalledWith(7, 11, 42501)
     expect(manager.inspect(project.id)).toBeUndefined()
   })
 })

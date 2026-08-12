@@ -50,7 +50,7 @@ On the designated Ubuntu devcontainer, `just proof-start` starts one isolated co
 
 ## Project Runtime Manager
 
-The API now owns one internal in-memory manager that can start or health-check and reuse a persisted project's code-server. It validates the stable ID and exact canonical path, uses direct non-root loopback launch, coalesces concurrent calls, reports typed bounded failures, and cleans exact owned process groups before SQLite closes. This capability has no product route or Project Home wiring yet and persists no runtime identity or state. The designated run observed 880 ms against the 15-second target with PID/port reuse, unchanged BL-001 fixture, and zero residuals. See [the project runtime runbook](docs/project-runtime.md).
+The API now owns one internal in-memory manager that can start or health-check and reuse a persisted project's code-server. It validates the stable ID and exact canonical path, uses direct non-root loopback launch, coalesces concurrent calls, reports typed bounded failures, and returns graceful or escalated shutdown audits for every exact owned PID/start identity, process group, port, and listener before SQLite closes. This capability has no product route or Project Home wiring yet and persists no runtime identity or state. The retained designated episode is the single source for the observed startup timing versus the 15-second target, PID/port reuse, recursive BL-001 manifest, exact shutdown audit, unrelated-control survival, and zero residuals. See [the project runtime runbook](docs/project-runtime.md).
 
 ## Repository Layout
 

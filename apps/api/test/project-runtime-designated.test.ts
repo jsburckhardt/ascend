@@ -23,6 +23,10 @@ import {
   snapshotFixture,
 } from '../src/workbench-proof-contract.js'
 import { terminateExactProcessGroup } from '../src/workbench-proof-runtime.js'
+import {
+  captureRecursiveManifest,
+  recursiveManifestDifferenceCount,
+} from './project-runtime-evidence.js'
 
 const executeFile = promisify(execFile)
 
@@ -35,6 +39,7 @@ describe('designated real project runtime', () => {
     const canonicalPath = await canonicalFixturePath()
     expect(canonicalPath).toBe(BL001_FIXTURE)
     const before = await snapshotFixture()
+    const recursiveBefore = await captureRecursiveManifest(canonicalPath)
 
     const controlListener = createServer()
     await new Promise<void>((resolve, reject) => {
@@ -84,6 +89,7 @@ describe('designated real project runtime', () => {
     let observedHealthBody = ''
     let listenerInode = ''
     let cleanup = { exactProcessAbsent: false, listenerAbsent: false }
+    let shutdownResult: Awaited<ReturnType<typeof manager.shutdown>> | undefined
     try {
       const first = await manager.start({
         projectId: project.id,
@@ -109,6 +115,9 @@ describe('designated real project runtime', () => {
       expect(root?.argv.filter((item) => item === canonicalPath)).toHaveLength(
         1
       )
+      const exactFinalCanonicalItem = root?.argv.at(-1) === canonicalPath
+      const canonicalItemCount =
+        root?.argv.filter((item) => item === canonicalPath).length ?? 0
       const listeners = await readManagedListeners(
         processes.map((row) => row.pid)
       )
@@ -130,8 +139,14 @@ describe('designated real project runtime', () => {
       expect(reused.pid).toBe(first.pid)
       expect(reused.processStartTime).toBe(first.processStartTime)
       expect(reused.port).toBe(first.port)
+      const reuse = {
+        samePidIdentity:
+          reused.pid === first.pid &&
+          reused.processStartTime === first.processStartTime,
+        samePort: reused.port === first.port,
+      }
 
-      await manager.shutdown()
+      shutdownResult = await manager.shutdown()
       cleanup = {
         exactProcessAbsent: (await readProcessStartTime(pid)) !== startTime,
         listenerAbsent: await loopbackListenerIsAbsent(port),
@@ -140,9 +155,33 @@ describe('designated real project runtime', () => {
         exactProcessAbsent: true,
         listenerAbsent: true,
       })
+      expect(shutdownResult).toMatchObject({
+        status: 'ok',
+        audits: [
+          {
+            pid,
+            processStartTime: startTime,
+            port,
+            processAbsent: true,
+            processGroupAbsent: true,
+            listenerAbsent: true,
+          },
+        ],
+      })
       expect(await snapshotFixture()).toEqual(before)
+      const recursiveAfter = await captureRecursiveManifest(canonicalPath)
+      const fixtureDifferenceCount = recursiveManifestDifferenceCount(
+        recursiveBefore,
+        recursiveAfter
+      )
+      expect(fixtureDifferenceCount).toBe(0)
       expect(controlListener.listening).toBe(true)
       expect(await readProcessStartTime(controlPid)).toBe(controlStart)
+      const unrelatedControls = {
+        processSurvived:
+          (await readProcessStartTime(controlPid)) === controlStart,
+        listenerSurvived: controlListener.listening,
+      }
 
       const artifact = {
         version: 1,
@@ -158,7 +197,7 @@ describe('designated real project runtime', () => {
           acceptedBodyStatuses: ['alive', 'expired'],
           observedBodyStatus: observedHealthBody,
         },
-        argv: { exactFinalCanonicalItem: true, canonicalItemCount: 1 },
+        argv: { exactFinalCanonicalItem, canonicalItemCount },
         listener: { address: '127.0.0.1', port, inode: listenerInode },
         process: {
           pid,
@@ -166,17 +205,28 @@ describe('designated real project runtime', () => {
           uid: 1000,
           user: 'vscode',
         },
-        reuse: { samePidIdentity: true, samePort: true },
+        reuse,
         timing: {
           observedElapsedMs: first.elapsedMs,
           targetMs: 15000,
           withinTarget: first.elapsedMs < 15000,
         },
         eventCount: events.length,
-        fixtureIntegrity: { unchanged: true },
-        shutdown: cleanup,
-        unrelatedControls: { processSurvived: true, listenerSurvived: true },
-        unionResiduals: { pidIdentities: 0, listeners: 0 },
+        fixtureIntegrity: {
+          differenceCount: fixtureDifferenceCount,
+          before: recursiveBefore,
+          after: recursiveAfter,
+        },
+        shutdown: {
+          ...cleanup,
+          managerStatus: shutdownResult.status,
+          audits: shutdownResult.audits,
+        },
+        unrelatedControls,
+        unionResiduals: {
+          pidIdentities: cleanup.exactProcessAbsent ? 0 : 1,
+          listeners: cleanup.listenerAbsent ? 0 : 1,
+        },
       }
       const evidencePath = path.resolve(
         'test-results/bl-010/project-runtime/episode.json'

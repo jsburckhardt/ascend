@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "checked": {
+    "pidIdentities": 1,
+    "listenerInodes": 1,
+    "port": 41569
+  },
+  "residuals": {
+    "pidIdentities": 0,
+    "listeners": 0
+  },
+  "status": "ok"
+}

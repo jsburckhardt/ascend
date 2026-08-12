@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process'
 import { constants as fsConstants } from 'node:fs'
-import { access, readFile } from 'node:fs/promises'
+import { access, readFile, readdir } from 'node:fs/promises'
 import { createConnection, createServer } from 'node:net'
 import os from 'node:os'
 import {
@@ -19,11 +19,32 @@ export interface RuntimeExit {
   readonly addressInUse: boolean
 }
 
+export type RuntimeTerminationOutcome =
+  'already-absent' | 'graceful' | 'escalated'
+
+export interface RuntimeResourceAudit {
+  readonly pid: number
+  readonly processStartTime: string
+  readonly port: number
+  readonly processAbsent: boolean
+  readonly processGroupAbsent: boolean
+  readonly listenerAbsent: boolean
+}
+
+export interface RuntimeTerminationAudit extends RuntimeResourceAudit {
+  readonly outcome: RuntimeTerminationOutcome
+}
+
 export interface OwnedRuntimeProcess {
   readonly pid: number
   readonly processStartTime: string
   readonly exit: Promise<RuntimeExit>
-  terminate(gracefulMs: number, forceMs: number): Promise<void>
+  terminate(
+    gracefulMs: number,
+    forceMs: number,
+    port: number
+  ): Promise<RuntimeTerminationAudit>
+  audit(port: number): Promise<RuntimeResourceAudit>
   isAlive(): Promise<boolean>
 }
 
@@ -70,6 +91,11 @@ export interface ReadyRuntime {
   readonly readinessAttempts: readonly HealthAttempt[]
 }
 
+export interface RuntimeOwnershipRecord {
+  readonly process: OwnedRuntimeProcess
+  readonly port: number
+}
+
 export async function readProcessStartTime(
   pid: number
 ): Promise<string | null> {
@@ -85,34 +111,92 @@ async function delay(milliseconds: number): Promise<void> {
   await new Promise<void>((resolve) => setTimeout(resolve, milliseconds))
 }
 
+async function processGroupIsAbsent(processGroupId: number): Promise<boolean> {
+  let entries: string[]
+  try {
+    entries = await readdir('/proc')
+  } catch {
+    return false
+  }
+  for (const entry of entries) {
+    if (!/^\d+$/u.test(entry)) continue
+    try {
+      const content = await readFile('/proc/' + entry + '/stat', 'utf8')
+      const fields = content.slice(content.lastIndexOf(')') + 2).split(' ')
+      if (Number(fields[2]) === processGroupId) return false
+    } catch {
+      // The process exited during the bounded scan.
+    }
+  }
+  return true
+}
+
+async function auditRuntimeResource(
+  pid: number,
+  startTime: string,
+  port: number
+): Promise<RuntimeResourceAudit> {
+  return {
+    pid,
+    processStartTime: startTime,
+    port,
+    processAbsent: (await readProcessStartTime(pid)) !== startTime,
+    processGroupAbsent: await processGroupIsAbsent(pid),
+    listenerAbsent: await loopbackListenerIsAbsent(port),
+  }
+}
+
 async function terminateGroup(
   pid: number,
   startTime: string,
+  port: number,
   gracefulMs: number,
   forceMs: number
-): Promise<void> {
+): Promise<RuntimeTerminationAudit> {
   const alive = async () => (await readProcessStartTime(pid)) === startTime
-  if (!(await alive())) return
-  try {
-    process.kill(-pid, 'SIGTERM')
-  } catch {
-    return
+  const initial = await auditRuntimeResource(pid, startTime, port)
+  if (
+    initial.processAbsent &&
+    initial.processGroupAbsent &&
+    initial.listenerAbsent
+  ) {
+    return { ...initial, outcome: 'already-absent' }
+  }
+  if (await alive()) {
+    try {
+      process.kill(-pid, 'SIGTERM')
+    } catch {
+      // The exact owner exited between identity validation and signalling.
+    }
   }
   const gracefulDeadline = Date.now() + gracefulMs
-  while (Date.now() < gracefulDeadline && (await alive())) await delay(20)
-  if (!(await alive())) return
-  try {
-    process.kill(-pid, 'SIGKILL')
-  } catch {
-    return
+  let audit = await auditRuntimeResource(pid, startTime, port)
+  while (
+    Date.now() < gracefulDeadline &&
+    (!audit.processAbsent || !audit.processGroupAbsent || !audit.listenerAbsent)
+  ) {
+    await delay(20)
+    audit = await auditRuntimeResource(pid, startTime, port)
+  }
+  if (audit.processAbsent && audit.processGroupAbsent && audit.listenerAbsent) {
+    return { ...audit, outcome: 'graceful' }
+  }
+  if (!audit.processGroupAbsent) {
+    try {
+      process.kill(-pid, 'SIGKILL')
+    } catch {
+      // The exact owned group exited between audit and escalation.
+    }
   }
   const forceDeadline = Date.now() + forceMs
-  while (Date.now() < forceDeadline && (await alive())) await delay(20)
-  if (await alive()) {
-    throw new RuntimeFailure('manager-shutdown', {
-      timeoutMs: gracefulMs + forceMs,
-    })
+  while (
+    Date.now() < forceDeadline &&
+    (!audit.processAbsent || !audit.processGroupAbsent || !audit.listenerAbsent)
+  ) {
+    await delay(20)
+    audit = await auditRuntimeResource(pid, startTime, port)
   }
+  return { ...audit, outcome: 'escalated' }
 }
 
 export async function loopbackListenerIsAbsent(port: number): Promise<boolean> {
@@ -248,8 +332,9 @@ export const nodeRuntimeProcessAdapter: RuntimeProcessAdapter = {
       pid,
       processStartTime,
       exit,
-      terminate: (gracefulMs, forceMs) =>
-        terminateGroup(pid, processStartTime, gracefulMs, forceMs),
+      terminate: (gracefulMs, forceMs, port) =>
+        terminateGroup(pid, processStartTime, port, gracefulMs, forceMs),
+      audit: (port) => auditRuntimeResource(pid, processStartTime, port),
       isAlive: async () =>
         (await readProcessStartTime(pid)) === processStartTime,
     }
@@ -330,6 +415,8 @@ export async function launchReadyRuntime(input: {
   readonly canonicalPath: string
   readonly signal: AbortSignal
   readonly dependencies?: RuntimeProcessDependencies
+  readonly onOwned?: (record: RuntimeOwnershipRecord) => void
+  readonly onCleanup?: (audit: RuntimeTerminationAudit) => void
 }): Promise<ReadyRuntime> {
   const dependencies = input.dependencies ?? defaultRuntimeProcessDependencies
   await dependencies.process.assertLaunchable(input.config)
@@ -353,6 +440,7 @@ export async function launchReadyRuntime(input: {
       if (error instanceof RuntimeAddressInUseError) continue
       throw error
     }
+    input.onOwned?.({ process: owned, port })
     const internalUrl = 'http://127.0.0.1:' + String(port)
     const attempts: HealthAttempt[] = []
     const startedAt = dependencies.now()
@@ -379,10 +467,12 @@ export async function launchReadyRuntime(input: {
         ])
         if ('collision' in verdict) {
           collided = true
-          await owned.terminate(
+          const cleanup = await owned.terminate(
             input.config.gracefulShutdownMs,
-            input.config.forceShutdownMs
+            input.config.forceShutdownMs,
+            port
           )
+          input.onCleanup?.(cleanup)
           break
         }
         attempts.push(verdict)
@@ -418,10 +508,12 @@ export async function launchReadyRuntime(input: {
         attemptCount: attempts.length,
       })
     } catch (error) {
-      await owned.terminate(
+      const cleanup = await owned.terminate(
         input.config.gracefulShutdownMs,
-        input.config.forceShutdownMs
+        input.config.forceShutdownMs,
+        port
       )
+      input.onCleanup?.(cleanup)
       throw error instanceof RuntimeFailure
         ? error
         : failure('manager-shutdown')

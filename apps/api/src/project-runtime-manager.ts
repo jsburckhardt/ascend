@@ -12,7 +12,10 @@ import {
   defaultRuntimeProcessDependencies,
   launchReadyRuntime,
   type ReadyRuntime,
+  type RuntimeOwnershipRecord,
   type RuntimeProcessDependencies,
+  type RuntimeResourceAudit,
+  type RuntimeTerminationAudit,
 } from './project-runtime-process.js'
 
 export interface ProjectRuntimeStartInput {
@@ -21,11 +24,18 @@ export interface ProjectRuntimeStartInput {
   readonly signal?: AbortSignal
 }
 
+export interface RuntimeShutdownResult {
+  readonly status: 'ok' | 'failed'
+  readonly audits: readonly RuntimeTerminationAudit[]
+}
+
 export interface ProjectRuntimeManager {
   start(input: ProjectRuntimeStartInput): Promise<RuntimeSnapshot>
   inspect(projectId: string): RuntimeSnapshot | undefined
   lastFailure(projectId: string): RuntimeFailure | undefined
-  shutdown(): Promise<void>
+  lastCleanup(projectId: string): RuntimeTerminationAudit | undefined
+  lastShutdown(): RuntimeShutdownResult | undefined
+  shutdown(): Promise<RuntimeShutdownResult>
 }
 
 export interface ProjectRuntimeManagerDependencies {
@@ -37,6 +47,8 @@ export interface ProjectRuntimeManagerDependencies {
     readonly canonicalPath: string
     readonly signal: AbortSignal
     readonly dependencies: RuntimeProcessDependencies
+    readonly onOwned?: (record: RuntimeOwnershipRecord) => void
+    readonly onCleanup?: (audit: RuntimeTerminationAudit) => void
   }) => Promise<ReadyRuntime>
   readonly now?: () => number
   readonly recordEvent?: (event: RuntimeLifecycleEvent) => void
@@ -53,6 +65,11 @@ interface RunningRuntime {
   readonly generation: symbol
   readonly ready: ReadyRuntime
   readonly snapshot: RuntimeSnapshot
+}
+
+interface ManagedOwnership extends RuntimeOwnershipRecord {
+  readonly projectId: string
+  readonly generation: symbol
 }
 
 function callerWait<T>(
@@ -91,8 +108,29 @@ export function createProjectRuntimeManager(
   const running = new Map<string, RunningRuntime>()
   const failed = new Map<string, RuntimeSnapshot>()
   const failureOutcomes = new Map<string, RuntimeFailure>()
-  let shutdownPromise: Promise<void> | undefined
+  const cleanupOutcomes = new Map<string, RuntimeTerminationAudit>()
+  const ownership = new Map<string, ManagedOwnership>()
+  let shutdownPromise: Promise<RuntimeShutdownResult> | undefined
+  let shutdownResult: RuntimeShutdownResult | undefined
   let shuttingDown = false
+
+  const ownershipKey = (record: RuntimeOwnershipRecord): string =>
+    [record.process.pid, record.process.processStartTime, record.port].join(':')
+
+  const registerOwnership = (
+    projectId: string,
+    generation: symbol,
+    record: RuntimeOwnershipRecord
+  ): void => {
+    ownership.set(ownershipKey(record), { projectId, generation, ...record })
+  }
+
+  const recordCleanup = (
+    projectId: string,
+    audit: RuntimeTerminationAudit
+  ): void => {
+    cleanupOutcomes.set(projectId, Object.freeze({ ...audit }))
+  }
 
   const emit = (event: RuntimeLifecycleEvent): void => {
     recordEvent(serializeRuntimeEvent(event))
@@ -133,9 +171,13 @@ export function createProjectRuntimeManager(
       if (running.get(input.projectId)?.generation === current.generation) {
         running.delete(input.projectId)
       }
-      await current.ready.process.terminate(
-        config.gracefulShutdownMs,
-        config.forceShutdownMs
+      recordCleanup(
+        input.projectId,
+        await current.ready.process.terminate(
+          config.gracefulShutdownMs,
+          config.forceShutdownMs,
+          current.ready.port
+        )
       )
     }
 
@@ -171,11 +213,19 @@ export function createProjectRuntimeManager(
           canonicalPath: input.canonicalPath,
           signal: controller.signal,
           dependencies: processDependencies,
+          onOwned: (record) =>
+            registerOwnership(input.projectId, generation, record),
+          onCleanup: (audit) => recordCleanup(input.projectId, audit),
         })
+        registerOwnership(input.projectId, generation, ready)
         if (shuttingDown || controller.signal.aborted) {
-          await ready.process.terminate(
-            config.gracefulShutdownMs,
-            config.forceShutdownMs
+          recordCleanup(
+            input.projectId,
+            await ready.process.terminate(
+              config.gracefulShutdownMs,
+              config.forceShutdownMs,
+              ready.port
+            )
           )
           throw new RuntimeFailure('manager-shutdown')
         }
@@ -201,8 +251,12 @@ export function createProjectRuntimeManager(
           to: 'running',
           elapsedMs: snapshot.elapsedMs,
         })
-        void ready.process.exit.then((exit) => {
-          if (running.get(input.projectId)?.generation !== generation) return
+        const exitWork = ready.process.exit.then(async (exit) => {
+          if (
+            shuttingDown ||
+            running.get(input.projectId)?.generation !== generation
+          )
+            return
           running.delete(input.projectId)
           const elapsedMs = Math.max(0, now() - startedAt)
           failed.set(
@@ -222,6 +276,11 @@ export function createProjectRuntimeManager(
                 : { signal: exit.signal }
             )
           )
+          const audit = await ready.process.audit(ready.port)
+          recordCleanup(input.projectId, {
+            ...audit,
+            outcome: 'already-absent',
+          })
           emit({
             event: 'runtime.exited',
             projectId: input.projectId,
@@ -232,6 +291,7 @@ export function createProjectRuntimeManager(
               exit.signal === null ? 'early-exit-code' : 'early-exit-signal',
           })
         })
+        void exitWork
         return snapshot
       } catch (error) {
         const runtimeFailure =
@@ -272,23 +332,95 @@ export function createProjectRuntimeManager(
     return callerWait(operation, input.signal)
   }
 
-  const shutdown = (): Promise<void> => {
+  const shutdown = (): Promise<RuntimeShutdownResult> => {
     shutdownPromise ??= (async () => {
       shuttingDown = true
       for (const entry of inFlight.values()) entry.controller.abort()
+      const runningAtShutdown = [...running.entries()]
+      running.clear()
+      const terminationOutcomes = new Map<string, RuntimeTerminationAudit>()
+      await Promise.all(
+        runningAtShutdown.map(async ([projectId, entry]) => {
+          const audit = await entry.ready.process.terminate(
+            config.gracefulShutdownMs,
+            config.forceShutdownMs,
+            entry.ready.port
+          )
+          terminationOutcomes.set(ownershipKey(entry.ready), audit)
+          recordCleanup(projectId, audit)
+        })
+      )
       await Promise.allSettled(
         [...inFlight.values()].map((entry) => entry.operation)
       )
-      await Promise.all(
-        [...running.values()].map((entry) =>
-          entry.ready.process.terminate(
-            config.gracefulShutdownMs,
-            config.forceShutdownMs
+      for (const record of ownership.values()) {
+        const key = ownershipKey(record)
+        if (terminationOutcomes.has(key)) continue
+        const prior = cleanupOutcomes.get(record.projectId)
+        if (
+          prior !== undefined &&
+          [prior.pid, prior.processStartTime, prior.port].join(':') === key
+        ) {
+          terminationOutcomes.set(key, prior)
+          continue
+        }
+        const audit = await record.process.terminate(
+          config.gracefulShutdownMs,
+          config.forceShutdownMs,
+          record.port
+        )
+        terminationOutcomes.set(key, audit)
+        recordCleanup(record.projectId, audit)
+      }
+      const audited: RuntimeTerminationAudit[] = []
+      for (const [key, record] of ownership) {
+        const resource: RuntimeResourceAudit = await record.process.audit(
+          record.port
+        )
+        const termination = terminationOutcomes.get(key)
+        audited.push(
+          Object.freeze({
+            ...resource,
+            outcome: termination?.outcome ?? 'already-absent',
+          })
+        )
+      }
+      for (const [key, termination] of terminationOutcomes) {
+        if (
+          audited.some(
+            (audit) =>
+              [audit.pid, audit.processStartTime, audit.port].join(':') === key
           )
         )
-      )
-      running.clear()
+          continue
+        const record = runningAtShutdown
+          .map(([, entry]) => entry.ready)
+          .find((ready) => ownershipKey(ready) === key)
+        const resource =
+          record === undefined
+            ? termination
+            : await record.process.audit(record.port)
+        audited.push(
+          Object.freeze({ ...resource, outcome: termination.outcome })
+        )
+      }
       inFlight.clear()
+      failed.clear()
+      failureOutcomes.clear()
+      ownership.clear()
+      cleanupOutcomes.clear()
+      shutdownResult = Object.freeze({
+        status: audited.every(
+          (audit) =>
+            audit.processAbsent &&
+            audit.processGroupAbsent &&
+            audit.listenerAbsent
+        )
+          ? 'ok'
+          : 'failed',
+        audits: Object.freeze(audited),
+      })
+      return shutdownResult
     })()
     return shutdownPromise
   }
@@ -304,6 +436,12 @@ export function createProjectRuntimeManager(
     },
     lastFailure(projectId) {
       return failureOutcomes.get(projectId)
+    },
+    lastCleanup(projectId) {
+      return cleanupOutcomes.get(projectId)
+    },
+    lastShutdown() {
+      return shutdownResult
     },
     shutdown,
   }

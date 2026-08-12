@@ -29,7 +29,23 @@ function owned(
     pid,
     processStartTime: String(pid * 10),
     exit,
-    terminate: vi.fn(async () => undefined),
+    terminate: vi.fn(async (_graceful, _force, port) => ({
+      pid,
+      processStartTime: String(pid * 10),
+      port,
+      outcome: 'graceful' as const,
+      processAbsent: true,
+      processGroupAbsent: true,
+      listenerAbsent: true,
+    })),
+    audit: vi.fn(async (port) => ({
+      pid,
+      processStartTime: String(pid * 10),
+      port,
+      processAbsent: true,
+      processGroupAbsent: true,
+      listenerAbsent: true,
+    })),
     isAlive: vi.fn(async () => true),
   }
 }
@@ -382,7 +398,7 @@ describe('project runtime process boundary', () => {
         timedOut: false,
       })
     } finally {
-      await ready.process.terminate(500, 500)
+      await ready.process.terminate(500, 500, ready.port)
     }
     await expect(ready.process.isAlive()).resolves.toBe(false)
     await expect(loopbackListenerIsAbsent(ready.port)).resolves.toBe(true)

@@ -77,7 +77,7 @@ verify-close-project:
     pnpm exec playwright test tests/e2e/project-home.spec.ts --project=chromium --workers=1 --retries=0
 
 verify-project-runtime:
-    pnpm exec vitest run apps/api/test/project-runtime-contract.test.ts apps/api/test/project-runtime-process.test.ts apps/api/test/project-runtime-manager.test.ts apps/api/test/project-runtime-lifecycle.test.ts apps/api/test/project-runtime-acceptance.test.ts --reporter=verbose
+    BL010_ACCEPTANCE=1 pnpm exec vitest run apps/api/test/project-runtime-contract.test.ts apps/api/test/project-runtime-process.test.ts apps/api/test/project-runtime-manager.test.ts apps/api/test/project-runtime-lifecycle.test.ts apps/api/test/project-runtime-acceptance.test.ts --reporter=verbose
 
 proof-project-runtime:
     BL010_DESIGNATED=1 pnpm exec vitest run apps/api/test/project-runtime-designated.test.ts --reporter=verbose

@@ -10,10 +10,26 @@ const root = path.resolve(import.meta.dirname, '../../..')
 
 describe('project runtime documentation contract', () => {
   it('documents the executable interface bounds failures and ownership', async () => {
-    const document = await readFile(
-      path.join(root, 'docs/project-runtime.md'),
-      'utf8'
-    )
+    const [document, episodeText, implementation] = await Promise.all([
+      readFile(path.join(root, 'docs/project-runtime.md'), 'utf8'),
+      readFile(
+        path.join(
+          root,
+          'project/work-items/25-bl-010-start-and-reuse-one-project-workbench/implementation/evidence/episode.json'
+        ),
+        'utf8'
+      ),
+      readFile(
+        path.join(
+          root,
+          'project/work-items/25-bl-010-start-and-reuse-one-project-workbench/implementation/00-implementation.md'
+        ),
+        'utf8'
+      ),
+    ])
+    const episode = JSON.parse(episodeText) as {
+      timing: { observedElapsedMs: number; targetMs: number }
+    }
     for (const subject of [
       'ProjectRuntimeManager.start',
       'starting, running, or bounded failed',
@@ -33,7 +49,8 @@ describe('project runtime documentation contract', () => {
       'runtime.start.requested',
       'Raw canonical paths',
       '2,000 ms SIGKILL escalation',
-      '880 ms startup',
+      'graceful, escalated, or already-absent',
+      'timing.observedElapsedMs',
       'zero residuals',
     ]) {
       expect(document).toContain(subject)
@@ -42,6 +59,9 @@ describe('project runtime documentation contract', () => {
       expect(document).toContain(category)
     }
     expect(document).toContain(PROJECT_RUNTIME_DEFAULTS.healthPath)
+    expect(episode.timing.targetMs).toBe(15_000)
+    expect(episode.timing.observedElapsedMs).toBeGreaterThanOrEqual(0)
+    expect(implementation).toContain('timing.observedElapsedMs')
   })
 
   it('names commands, every deferred boundary, and non-persistent harness boot', async () => {
@@ -76,6 +96,8 @@ describe('project runtime documentation contract', () => {
     }
     expect(docsIndex).toContain('project-runtime.md')
     expect(readme).toContain('Project Runtime Manager')
+    expect(readme).not.toContain('880 ms')
+    expect(document).not.toContain('880 ms')
     expect(harness).toContain('BL-010 project-runtime signal')
     expect(harness).toContain('Harness boot remains non-persistent')
     expect(justfile).toContain('verify-project-runtime:')

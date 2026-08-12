@@ -20,15 +20,32 @@ if (process.env.BL001_CAPTURE_ENV) {
 
 const mode = process.env.BL001_FAKE_MODE
 if (mode === 'early-exit') process.exit(23)
-if (mode === 'project-runtime' || mode === 'project-runtime-ignore-term') {
+if (mode === 'early-signal') process.kill(process.pid, 'SIGTERM')
+if (
+  mode === 'project-runtime' ||
+  mode === 'project-runtime-ignore-term' ||
+  mode === 'project-runtime-health-body' ||
+  mode === 'project-runtime-health-status' ||
+  mode === 'project-runtime-delayed-ready'
+) {
   const bindIndex = process.argv.indexOf('--bind-addr')
   const bind = process.argv[bindIndex + 1] ?? ''
   const port = Number(bind.slice(bind.lastIndexOf(':') + 1))
   const server = http.createServer((request, response) => {
     if (request.url === '/stall') return
     if (request.url === '/healthz/') {
-      response.writeHead(200, { 'content-type': 'application/json' })
-      response.end(JSON.stringify({ status: 'alive' }))
+      const status = mode === 'project-runtime-health-status' ? 503 : 200
+      const bodyStatus =
+        mode === 'project-runtime-health-body' ? 'unexpected' : 'alive'
+      const reply = () => {
+        response.writeHead(status, { 'content-type': 'application/json' })
+        response.end(JSON.stringify({ status: bodyStatus }))
+      }
+      if (mode === 'project-runtime-delayed-ready') {
+        setTimeout(reply, 150)
+      } else {
+        reply()
+      }
       return
     }
     response.writeHead(404)
@@ -36,7 +53,11 @@ if (mode === 'project-runtime' || mode === 'project-runtime-ignore-term') {
   })
   server.listen(port, '127.0.0.1')
   const stop = () => server.close(() => process.exit(0))
-  if (mode !== 'project-runtime-ignore-term') process.on('SIGTERM', stop)
+  if (mode === 'project-runtime-ignore-term') {
+    process.on('SIGTERM', () => undefined)
+  } else {
+    process.on('SIGTERM', stop)
+  }
   process.on('SIGINT', stop)
 } else if (mode === 'timeout') {
   process.stderr.write('HTTP server listening on http://127.0.0.1:9/\n')

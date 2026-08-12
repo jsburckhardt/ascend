@@ -41,7 +41,7 @@ The repository exposes `just proof-start` and `just proof-stop` for one bounded 
 
 ## In-memory project runtime
 
-Issue #25 adds one internal manager that starts and reuses a persisted project's code-server without adding a route or Project Home action. Runtime identity, port, state, and process ownership remain memory-only; SQLite stays four-field metadata. Launch is non-root, direct argv, exact-canonical-path, and loopback-only. Readiness uses the bounded /healthz/ JSON contract, exactly concurrent calls share one start, caller cancellation affects only its waiter, and application shutdown performs exact bounded group cleanup before persistence closes. See [project-runtime.md](project-runtime.md) for configuration, typed failures, redacted events, commands, designated-host evidence, and deferred boundaries.
+Issue #25 adds one internal manager that starts and reuses a persisted project's code-server without adding a route or Project Home action. Runtime identity, port, state, and process ownership remain memory-only; SQLite stays four-field metadata. Launch is non-root, direct argv, exact-canonical-path, and loopback-only. Readiness uses the bounded /healthz/ JSON contract, exactly concurrent calls share one start, and caller cancellation affects only its waiter. Application shutdown inventories every running or in-flight PID/start identity, group, port, and listener, returns graceful or escalated exact-absence audits, and leaves unrelated controls alive before persistence closes. See [project-runtime.md](project-runtime.md) for configuration, typed failures, redacted events, commands, the retained authoritative timing field, and deferred boundaries.
 
 ## Source Documents
 

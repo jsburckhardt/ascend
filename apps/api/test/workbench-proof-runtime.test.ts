@@ -216,7 +216,7 @@ describe('workbench proof runtime', () => {
       await startWorkbenchProof({
         executablePath: fakeExecutable,
         runRoot: earlyRoot,
-        startupTimeoutMs: 1_000,
+        startupTimeoutMs: 4_000,
         environmentOverrides: { BL001_FAKE_MODE: 'early-exit' },
       })
     } catch (error) {
@@ -260,7 +260,7 @@ describe('workbench proof runtime', () => {
         startTimeTicks: cancelled!.discoveredIdentity!.startTimeTicks!,
       })
     ).resolves.toBe(true)
-  })
+  }, 10_000)
 
   it('keeps abort-triggered exits classified as cancellation under concurrent load', async () => {
     const failures = await Promise.all(

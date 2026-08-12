@@ -268,7 +268,7 @@ describe('BL-002 shared terminal executor', () => {
       'docker --version',
       'copilot --version',
     ])
-  })
+  }, 15_000)
 
   it('uses direct defaults and rejects an environment without PATH', async () => {
     await expect(

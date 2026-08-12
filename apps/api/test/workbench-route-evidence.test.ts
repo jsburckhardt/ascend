@@ -64,6 +64,9 @@ const correctedBrowser = {
 
 describe('restricted stable-route evidence and residual audit', () => {
   it('atomically creates, merges, and repairs the sole owner-readable evidence file', async () => {
+    await mergeWorkbenchRouteEvidence({
+      cleanup: { cleanWorkspaceBootstrap: 'observed' },
+    })
     const before = await readWorkbenchRouteEvidence()
     await chmod(WORKBENCH_ROUTE_EVIDENCE_FILE, 0o644)
     const updated = await mergeWorkbenchRouteEvidence({
@@ -87,6 +90,9 @@ describe('restricted stable-route evidence and residual audit', () => {
       WORKBENCH_ROUTE_EVIDENCE_FILE,
     ])
     expect(tracked.stdout).toBe('')
+    await mergeWorkbenchRouteEvidence({
+      cleanup: { residualWorkspaceBootstrap: 'observed' },
+    })
     const current = await readWorkbenchRouteEvidence()
     const result = await auditWorkbenchRouteResidual({
       ...current,

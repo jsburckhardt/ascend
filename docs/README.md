@@ -43,6 +43,10 @@ The repository exposes `just proof-start` and `just proof-stop` for one bounded 
 
 Issue #25 adds one internal manager that starts and reuses a persisted project's code-server and is now consumed by the stable workbench proxy route without adding a Project Home action. Runtime identity, port, state, and process ownership remain memory-only; SQLite stays four-field metadata. Launch is non-root, direct argv, exact-canonical-path, and loopback-only. Readiness uses the bounded /healthz/ JSON contract, exactly concurrent calls share one start, and caller cancellation affects only its waiter. Application shutdown inventories every running or in-flight PID/start identity, group, port, and listener, returns graceful or escalated exact-absence audits, and leaves unrelated controls alive before persistence closes. See [project-runtime.md](project-runtime.md) for configuration, typed failures, redacted events, commands, the retained authoritative timing field, and deferred boundaries.
 
+## Stable workbench routing
+
+Issue #27 routes Ascend-owned workbench HTTP and every WebSocket through `/projects/{projectId}/workbench/`. The only trusted external request class is built-in Markdown Preview over HTTPS with a complete host matching `^vscode-remote\+(?:[a-z0-9]|-[0-9a-f]{4})+\.vscode-resource\.vscode-cdn\.net$`, no credentials or explicit port, and no authority copy in path or query. The fixed `+` is opaque VS Code syntax rather than wildcard permission, and retained evidence contains bounded classes instead of a raw host or encoded-authority token. Designated proof disables the extension gallery with `EXTENSIONS_GALLERY={}`, requires no Open VSX/marketplace access, and inventories six no-retry sockets across three workflows: three Management and three ExtensionHost. See [stable-workbench-routing.md](stable-workbench-routing.md) for transport, failure, disclosure, cleanup, migration, validation, and scope details.
+
 ## Source Documents
 
 - [`PRD.md`](../PRD.md) defines the MVP requirements and acceptance criteria.

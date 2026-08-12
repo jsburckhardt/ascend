@@ -11,6 +11,7 @@ import {
   rewriteWorkbenchCookie,
   rewriteWorkbenchRedirect,
   serializeWorkbenchEvent,
+  tokenizeWorkbenchProjectId,
   validateRestrictedEvidence,
   workbenchFailure,
   workbenchFailureEnvelope,
@@ -184,7 +185,7 @@ describe('stable workbench proxy contract', () => {
       })
     ).toEqual({
       event: 'workbench.proxy.completed',
-      projectId: 'p',
+      projectToken: tokenizeWorkbenchProjectId('p'),
       transport: 'http',
       elapsedMs: 1,
     })

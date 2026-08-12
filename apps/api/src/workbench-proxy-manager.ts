@@ -5,6 +5,8 @@ import {
   type ServerResponse,
 } from 'node:http'
 import type { Socket } from 'node:net'
+import { StringDecoder } from 'node:string_decoder'
+import { Transform, type TransformCallback } from 'node:stream'
 import { WebSocket, WebSocketServer, type RawData } from 'ws'
 import type { ProjectLibrary } from './project-library.js'
 import {
@@ -16,6 +18,7 @@ import {
   RedirectRejectedError,
   WORKBENCH_HEADER_TIMEOUT_MS,
   WORKBENCH_SHUTDOWN_TIMEOUT_MS,
+  classifyWorkbenchConnectionRolePayload,
   filterWorkbenchHeaders,
   rewriteServiceWorkerAllowed,
   rewriteWorkbenchCookie,
@@ -24,6 +27,8 @@ import {
   workbenchFailure,
   workbenchFailureEnvelope,
   type StableWorkbenchRoute,
+  type WorkbenchConnectionRole,
+  type WorkbenchEventInput,
   type WorkbenchFailureCategory,
   type WorkbenchPublicFailure,
   type WorkbenchSafeEvent,
@@ -67,6 +72,10 @@ export interface WorkbenchProxyManagerDependencies {
     code?: number
     classification?: string
   }) => void
+  readonly recordWebSocketRole?: (observation: {
+    connectionOrdinal: number
+    role: WorkbenchConnectionRole | 'unknown'
+  }) => void
 }
 
 class UpstreamTimeoutError extends Error {}
@@ -108,19 +117,19 @@ function sendHttpFailure(
   response.end(body)
 }
 
-function sendUpgradeFailure(
+async function sendUpgradeFailure(
   socket: Socket,
   failure: WorkbenchPublicFailure
-): void {
+): Promise<void> {
   if (socket.destroyed) return
   const body = Buffer.from(JSON.stringify(workbenchFailureEnvelope(failure)))
-  socket.end(
+  const payload =
     `HTTP/1.1 ${failure.status} ${failure.status === 504 ? 'Gateway Timeout' : failure.status === 503 ? 'Service Unavailable' : 'Bad Gateway'}\r\n` +
-      'Content-Type: application/json; charset=utf-8\r\n' +
-      `Content-Length: ${body.length}\r\n` +
-      'Cache-Control: no-store\r\nConnection: close\r\n\r\n' +
-      body.toString('utf8')
-  )
+    'Content-Type: application/json; charset=utf-8\r\n' +
+    `Content-Length: ${body.length}\r\n` +
+    'Cache-Control: no-store\r\nConnection: close\r\n\r\n' +
+    body.toString('utf8')
+  await new Promise<void>((resolve) => socket.end(payload, resolve))
 }
 
 function safeTarget(snapshot: RuntimeSnapshot): URL {
@@ -142,6 +151,113 @@ function safeTarget(snapshot: RuntimeSnapshot): URL {
   return target
 }
 
+const textualContentType = (value: string | string[] | undefined): boolean => {
+  const contentType = Array.isArray(value) ? value.join(',') : (value ?? '')
+  return /^(?:text\/|application\/(?:json|javascript|xml|xhtml\+xml))/iu.test(
+    contentType
+  )
+}
+
+const authorityReplacements = (
+  upstreamAuthority: string,
+  stableAuthority: string,
+  prefix: string
+): readonly (readonly [string, string])[] => [
+  [
+    encodeURIComponent('http://' + upstreamAuthority + '/'),
+    encodeURIComponent('http://' + stableAuthority + prefix),
+  ],
+  [
+    encodeURIComponent('ws://' + upstreamAuthority + '/'),
+    encodeURIComponent('ws://' + stableAuthority + prefix),
+  ],
+  [
+    encodeURIComponent('http://' + upstreamAuthority),
+    encodeURIComponent('http://' + stableAuthority + prefix),
+  ],
+  [
+    encodeURIComponent('ws://' + upstreamAuthority),
+    encodeURIComponent('ws://' + stableAuthority + prefix),
+  ],
+  ['http://' + upstreamAuthority + '/', 'http://' + stableAuthority + prefix],
+  ['ws://' + upstreamAuthority + '/', 'ws://' + stableAuthority + prefix],
+  ['http://' + upstreamAuthority, 'http://' + stableAuthority + prefix],
+  ['ws://' + upstreamAuthority, 'ws://' + stableAuthority + prefix],
+  [upstreamAuthority, stableAuthority],
+]
+
+function rewriteAuthorityText(
+  value: string,
+  upstreamAuthority: string,
+  stableAuthority: string,
+  prefix: string
+): string {
+  return authorityReplacements(
+    upstreamAuthority,
+    stableAuthority,
+    prefix
+  ).reduce(
+    (rewritten, [needle, replacement]) =>
+      rewritten.split(needle).join(replacement),
+    value
+  )
+}
+
+class AuthorityRedactionTransform extends Transform {
+  private readonly decoder = new StringDecoder('utf8')
+  private carry = ''
+  private readonly needles: readonly string[]
+
+  constructor(
+    private readonly upstreamAuthority: string,
+    private readonly stableAuthority: string,
+    private readonly prefix: string
+  ) {
+    super()
+    this.needles = authorityReplacements(
+      upstreamAuthority,
+      stableAuthority,
+      prefix
+    ).map(([needle]) => needle)
+  }
+
+  private rewriteText(value: string): string {
+    return rewriteAuthorityText(
+      value,
+      this.upstreamAuthority,
+      this.stableAuthority,
+      this.prefix
+    )
+  }
+
+  override _transform(
+    chunk: Buffer,
+    _encoding: BufferEncoding,
+    callback: TransformCallback
+  ): void {
+    const decoded = this.rewriteText(this.carry + this.decoder.write(chunk))
+    let retainedLength = 0
+    for (const needle of this.needles) {
+      const candidateLength = Math.min(decoded.length, needle.length - 1)
+      for (let length = candidateLength; length > retainedLength; length -= 1) {
+        if (needle.startsWith(decoded.slice(-length))) {
+          retainedLength = length
+          break
+        }
+      }
+    }
+    const boundary = decoded.length - retainedLength
+    this.push(decoded.slice(0, boundary))
+    this.carry = decoded.slice(boundary)
+    callback()
+  }
+
+  override _flush(callback: TransformCallback): void {
+    this.push(this.rewriteText(this.carry + this.decoder.end()))
+    callback()
+  }
+}
+
 export function createWorkbenchProxyManager(
   dependencies: WorkbenchProxyManagerDependencies
 ): WorkbenchProxyManager {
@@ -149,6 +265,9 @@ export function createWorkbenchProxyManager(
   const recordEvent = dependencies.recordEvent ?? (() => undefined)
   const recordWebSocketDiagnostic =
     dependencies.recordWebSocketDiagnostic ?? (() => undefined)
+  const recordWebSocketRole =
+    dependencies.recordWebSocketRole ?? (() => undefined)
+  let webSocketConnectionOrdinal = 0
   const headerTimeoutMs =
     dependencies.headerTimeoutMs ?? WORKBENCH_HEADER_TIMEOUT_MS
   const shutdownTimeoutMs =
@@ -183,7 +302,7 @@ export function createWorkbenchProxyManager(
       webSockets: webSockets.size,
     })
 
-  const emit = (event: WorkbenchSafeEvent): void =>
+  const emit = (event: WorkbenchEventInput): void =>
     recordEvent(serializeWorkbenchEvent(event))
 
   const stableAuthority = (request: IncomingMessage): string => {
@@ -264,6 +383,7 @@ export function createWorkbenchProxyManager(
       const target = await resolveTarget(route, controller.signal)
       if (shuttingDown) throw new RuntimeFailure('manager-shutdown')
       const headers = filterWorkbenchHeaders(request.headers, { request: true })
+      headers['accept-encoding'] = 'identity'
       addTrustedOriginHeaders(headers, request, route.prefix)
       await new Promise<void>((resolve) => {
         let settled = false
@@ -298,6 +418,7 @@ export function createWorkbenchProxyManager(
               upstreamResponse.headers,
               { request: false }
             )
+            const downstreamAuthority = stableAuthority(request)
             const location = upstreamResponse.headers.location
             if (location !== undefined)
               responseHeaders.location = rewriteWorkbenchRedirect(
@@ -316,6 +437,27 @@ export function createWorkbenchProxyManager(
             if (typeof serviceWorker === 'string')
               responseHeaders['service-worker-allowed'] =
                 rewriteServiceWorkerAllowed(serviceWorker, route.prefix)
+            for (const [name, value] of Object.entries(responseHeaders)) {
+              responseHeaders[name] = Array.isArray(value)
+                ? value.map((entry) =>
+                    rewriteAuthorityText(
+                      entry,
+                      target.host,
+                      downstreamAuthority,
+                      route.prefix
+                    )
+                  )
+                : rewriteAuthorityText(
+                    value,
+                    target.host,
+                    downstreamAuthority,
+                    route.prefix
+                  )
+            }
+            const redactAuthorityBody =
+              textualContentType(responseHeaders['content-type']) &&
+              responseHeaders['content-encoding'] === undefined
+            if (redactAuthorityBody) delete responseHeaders['content-length']
             response.writeHead(
               upstreamResponse.statusCode ?? 502,
               responseHeaders
@@ -331,12 +473,19 @@ export function createWorkbenchProxyManager(
             finish()
             return
           }
-          upstreamResponse.once('end', finish)
+          let upstreamEnded = false
+          upstreamResponse.once('end', () => {
+            upstreamEnded = true
+            httpResponses.delete(upstreamResponse)
+          })
           upstreamResponse.once('close', () => {
             httpResponses.delete(upstreamResponse)
-            if (!response.writableEnded && !response.destroyed)
+            if (
+              !upstreamEnded &&
+              !response.writableEnded &&
+              !response.destroyed
+            )
               response.destroy()
-            finish()
           })
           upstreamResponse.once('error', () => {
             if (!response.headersSent)
@@ -344,7 +493,23 @@ export function createWorkbenchProxyManager(
             else response.destroy()
             finish()
           })
-          upstreamResponse.pipe(response)
+          const responseHeaders = upstreamResponse.headers
+          const redactAuthorityBody =
+            textualContentType(responseHeaders['content-type']) &&
+            responseHeaders['content-encoding'] === undefined
+          if (redactAuthorityBody) {
+            upstreamResponse
+              .pipe(
+                new AuthorityRedactionTransform(
+                  target.host,
+                  stableAuthority(request),
+                  route.prefix
+                )
+              )
+              .pipe(response)
+          } else {
+            upstreamResponse.pipe(response)
+          }
         })
         upstreamRequest.once('error', (error) => {
           cleanupRequest()
@@ -358,8 +523,10 @@ export function createWorkbenchProxyManager(
         })
         upstreamRequest.once('close', cleanupRequest)
         request.once('aborted', () => upstreamRequest?.destroy())
+        response.once('finish', finish)
         response.once('close', () => {
           if (!response.writableEnded) upstreamRequest?.destroy()
+          finish()
         })
         controller.signal.addEventListener(
           'abort',
@@ -411,16 +578,44 @@ export function createWorkbenchProxyManager(
     )
   }
 
-  const bridge = (left: WebSocket, right: WebSocket): void => {
+  const bridge = (
+    left: WebSocket,
+    right: WebSocket,
+    connectionOrdinal: number
+  ): void => {
     webSockets.add(left)
     webSockets.add(right)
     let leftQueue = Promise.resolve()
     let rightQueue = Promise.resolve()
+    let roleObserved = false
+    let controlPrefix = Buffer.alloc(0)
+    const observeRole = (data: RawData): void => {
+      if (roleObserved) return
+      const chunk = Array.isArray(data)
+        ? Buffer.concat(data)
+        : Buffer.isBuffer(data)
+          ? data
+          : Buffer.from(data)
+      controlPrefix = Buffer.concat([controlPrefix, chunk]).subarray(
+        0,
+        64 * 1024
+      )
+      const role = classifyWorkbenchConnectionRolePayload(controlPrefix)
+      if (role !== undefined || controlPrefix.length === 64 * 1024) {
+        roleObserved = true
+        recordWebSocketRole({
+          connectionOrdinal,
+          role: role ?? 'unknown',
+        })
+        controlPrefix = Buffer.alloc(0)
+      }
+    }
     const cleanup = (): void => {
       if (left.readyState === WebSocket.CLOSED) webSockets.delete(left)
       if (right.readyState === WebSocket.CLOSED) webSockets.delete(right)
     }
     left.on('message', (data, binary) => {
+      observeRole(data)
       leftQueue = leftQueue
         .then(() => forwardMessage(right, data, binary))
         .catch(() => right.terminate())
@@ -443,6 +638,10 @@ export function createWorkbenchProxyManager(
       if (left.readyState === WebSocket.OPEN) left.pong(data)
     })
     left.on('close', (code, reason) => {
+      if (!roleObserved) {
+        roleObserved = true
+        recordWebSocketRole({ connectionOrdinal, role: 'unknown' })
+      }
       recordWebSocketDiagnostic({ side: 'downstream', event: 'close', code })
       if (right.readyState === WebSocket.OPEN) {
         if (code === 1006) right.terminate()
@@ -486,6 +685,7 @@ export function createWorkbenchProxyManager(
     route: StableWorkbenchRoute
   ): Promise<void> => {
     const startedAt = now()
+    const connectionOrdinal = ++webSocketConnectionOrdinal
     const controller = new AbortController()
     pending.add(controller)
     rawSockets.add(socket)
@@ -583,7 +783,7 @@ export function createWorkbenchProxyManager(
         )
       await new Promise<void>((resolve, reject) => {
         downstreamServer.handleUpgrade(request, socket, head, (downstream) => {
-          bridge(downstream, upstream as WebSocket)
+          bridge(downstream, upstream as WebSocket, connectionOrdinal)
           resolve()
         })
         socket.once('error', reject)
@@ -595,9 +795,9 @@ export function createWorkbenchProxyManager(
         elapsedMs: now() - startedAt,
       })
     } catch (error) {
-      upstream?.terminate()
       const failure = failureFrom(error)
-      sendUpgradeFailure(socket, failure)
+      await sendUpgradeFailure(socket, failure)
+      upstream?.terminate()
       emit({
         event: 'workbench.proxy.failed',
         projectId: route.projectId,
@@ -617,7 +817,6 @@ export function createWorkbenchProxyManager(
       for (const request of httpRequests) request.destroy()
       for (const response of httpResponses) response.destroy()
       for (const webSocket of webSockets) webSocket.terminate()
-      for (const socket of rawSockets) socket.destroy()
       const deadline = now() + shutdownTimeoutMs
       while (
         (pending.size > 0 ||

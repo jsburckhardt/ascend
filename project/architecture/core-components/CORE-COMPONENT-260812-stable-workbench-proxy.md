@@ -22,7 +22,11 @@ This component applies to the Fastify workbench route, raw HTTP forwarding, Node
 - The proxy MUST remove `Connection`, every header token named by `Connection`, `Keep-Alive`, `Proxy-Authenticate`, `Proxy-Authorization`, `TE`, `Trailer`, `Transfer-Encoding`, and `Upgrade` in both HTTP directions. Required WebSocket upgrade fields are allowed only during an upgrade. Client `Host`, `Forwarded`, all `X-Forwarded-*`, and proxy-target headers MUST be discarded; any upstream authority or origin metadata MUST be rebuilt from the trusted stable request origin and selected loopback runtime.
 - Root-relative redirects MUST be prefixed by the stable workbench root. Absolute redirects to the selected loopback authority MUST be rewritten to the stable origin and prefix. Any other absolute authority or unsafe scheme MUST return the declared redirect-rejected failure before commitment. `Service-Worker-Allowed: /` MUST become the stable prefix root.
 - Every `Set-Cookie` path MUST be scoped under the stable prefix: `/` and a missing Path become the prefix root, while `/foo` becomes the prefix plus `foo`. Every Domain attribute MUST be removed. Secure, HttpOnly, SameSite, expiry, and other non-target attributes MUST be preserved.
-- Browser-visible URLs, downstream headers, downstream bodies, redirects, and cookies MUST contain no selected loopback authority. Proxy and access events MUST contain only stable names, safe classifications, elapsed values, and bounded counts; they MUST exclude raw URLs, authorities, paths, authorization, cookies, query or body secrets, command or environment data, and HTTP, WebSocket, or terminal payloads.
+- Browser-visible URLs, downstream headers, downstream bodies, redirects, and cookies MUST contain no selected loopback authority. HTTP forwarding MUST request identity encoding and MUST rewrite a selected authority across textual response-header values and streamed body chunk boundaries to the stable route without buffering the complete body. Proxy and access events MUST contain only stable names, a deterministic one-way project token, safe classifications, elapsed values, and bounded counts; they MUST exclude raw URLs, authorities, paths, authorization, cookies, query or body secrets, command or environment data, and HTTP, WebSocket, or terminal payloads.
+- Browser proof MUST classify each parsed request before applying origin rules. Ascend-owned top-level documents, workbench HTTP/fetch traffic, and every WebSocket MUST use the Ascend origin and stable project prefix. A built-in Markdown Preview resource MAY be trusted only when its URL uses HTTPS, has empty username and password fields, no explicit authority port syntax, and an empty parsed `port` field, and its complete hostname matches `^vscode-remote\+(?:[a-z0-9]|-[0-9a-f]{4})+\.vscode-resource\.vscode-cdn\.net$`. This admits one nonempty VS Code encoded-authority token after URL hostname canonicalization: ASCII letters and digits are lowercase literals and every encoded character is exactly `-` plus four lowercase hexadecimal digits. It rejects the bare suffix, arbitrary prefixes before `+`, free hyphens, malformed escapes, extra sublabels, suffix confusion, credentials, and explicit ports.
+- The fixed `vscode-remote+` text MUST be treated as VS Code opaque-label syntax, not as a wildcard or expanded external-origin permission. The classifier MUST reject HTTP, WebSocket schemes, all external sockets, and any trusted-host candidate whose pathname or query contains the transient raw authority, its percent-encoded form, or the encoded-authority token copied from the left label. Comparisons MAY use those values in memory, but public evidence MUST emit only bounded host, scheme, resource, pathname, query-key, credential, port, and authority-leak classes; it MUST NOT retain raw URLs, hostnames, authorities, encoded-authority tokens, credentials, ports, or authority-bearing path/query values. Every other external HTTP origin and every external WebSocket origin MUST fail proof. Browser-generated `blob:` script URLs MUST remain in the unfiltered inventory as a bounded browser-local, non-network class only when their inherited origin equals the stable Ascend origin; an external-origin blob MUST fail.
+- The designated proof MUST launch code-server with `EXTENSIONS_GALLERY={}` and MUST observe zero Open VSX or other extension-marketplace requests. Marketplace access is unnecessary for Explorer, built-in Markdown Preview, terminal, and stable routing; an observed marketplace request is not covered by the webview exception.
+- Three fresh workbench workflows MUST open exactly six VS Code remote-protocol WebSockets: one Management role (`desiredConnectionType=1`) and one ExtensionHost role (`desiredConnectionType=2`) per workflow. All six MUST be same-origin under the stable prefix with `reconnection=false`. Unknown, duplicate, missing, retry, external-origin, or internal-port socket observations MUST fail. Evidence MUST retain only role and safe URL shape, not handshake payloads or reconnection tokens.
 - WebSocket bridging MUST use finite precommit handshakes, preserve text and binary message bytes and order, propagate ping and pong behavior, preserve clean close codes and reasons, convert an upstream abnormal termination into downstream abnormal termination without transmitting reserved code `1006`, and apply backpressure before accepting more frames. A disconnected downstream MUST cancel only its own pending handshake or upstream peer.
 - The proxy owner MUST inventory pending requests, upstream HTTP streams, handshakes, raw sockets, and upgraded WebSockets in memory. Shutdown MUST reject new work, return the manager-shutdown failure before commitment, close committed streams and upgrades without a second status, settle proxy work within 5,000 ms, and complete before the runtime-manager and persistence shutdown steps. Runtime processes remain exclusively owned by BL-010.
 - Upstream HTTP response headers and WebSocket handshakes MUST each have a 5,000 ms timeout. Test-only shorter injected bounds MAY be used. Every public precommit failure MUST use exactly `{"error":{"code":"<code>","message":"<message>"}}` and the following non-overlapping table:
@@ -65,7 +69,7 @@ This component applies to the Fastify workbench route, raw HTTP forwarding, Node
 - A stopped project receives one BL-010 start/readiness sequence even when HTTP and WebSocket clients arrive together; later requests and reconnects reuse one healthy PID identity and internal port.
 - Client disconnect affects only the matching proxy operation and never stops or invalidates the shared runtime.
 - Every matrix case has a declared finite timeout, generation input, expected digest or exact outcome, and post-case zero-socket audit.
-- Full-page desktop Chromium continues to own the authoritative presentation while every public request and WebSocket remains same-origin under the stable prefix.
+- Full-page desktop Chromium continues to own the authoritative presentation. Every Ascend-owned request and WebSocket remains same-origin under the stable prefix; only the exact grammar-validated isolated Markdown webview HTTPS resource exception is classified separately without retaining its raw host or authority token.
 
 ## Rationale
 
@@ -74,15 +78,17 @@ A dedicated boundary is required because ordinary Fastify parsing and serializat
 ## Usage Examples
 
 ```ts
-const proxy = createWorkbenchProxyManager({
-  findProjectById: (id) => fastify.projectLibrary.findById(id),
-  startRuntime: (input) => fastify.projectRuntime.start(input),
+const controller = createApiServerController({
+  createWorkbenchProxyManager: (projectLibrary, projectRuntime) =>
+    createWorkbenchProxyManager({
+      projectLibrary,
+      projectRuntime,
+    }),
 })
 
-registerWorkbenchRoutes(fastify, proxy)
-fastify.addHook("onClose", async () => {
-  await proxy.shutdown()
-})
+const app = await controller.start()
+// app.workbenchProxy is application-owned and inventories active proxy work.
+await controller.stop()
 ```
 
 ## Integration Guidelines
@@ -92,6 +98,9 @@ fastify.addHook("onClose", async () => {
 - Register proxy shutdown before runtime shutdown, and remove the upgrade listener during shutdown.
 - Use trusted runtime snapshots and stable request origin data only; never reuse client forwarding metadata.
 - Test the complete fake matrices before the designated real Chromium scenario, then run one union residual audit.
+- Set `EXTENSIONS_GALLERY={}` only in the deterministic designated proof environment unless a later product decision changes marketplace behavior.
+- Derive Management and ExtensionHost roles from the initial VS Code control handshake, discard handshake payloads and tokens, and retain only bounded role counts.
+- Parse candidate webview URLs once, compare their hostname and authority forms transiently, and return only bounded public classification fields.
 
 ## Exceptions
 

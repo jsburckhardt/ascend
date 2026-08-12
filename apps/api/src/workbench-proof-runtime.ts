@@ -439,6 +439,10 @@ export const startWorkbenchProof = async (
     // child makes its exit observable at the same boundary.
     throwIfAborted(options.signal)
     const exitCode = await childExitCode()
+    // Abort can terminate the child while childExitCode is awaiting the exit
+    // event. Re-check after observation so cooperative cancellation owns the
+    // boundary instead of racing into an early-exit classification.
+    throwIfAborted(options.signal)
     if (exitCode !== null) {
       throw new ProofError(
         'early-exit',

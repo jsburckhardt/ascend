@@ -86,8 +86,8 @@ proof-project-runtime-residual-audit:
     pnpm --filter @ascend/api exec tsx src/cli/project-runtime-residual-audit.ts
 
 verify-workbench-route:
-    BL011_ACCEPTANCE=1 pnpm exec vitest run apps/api/test/workbench-proxy-contract.test.ts apps/api/test/workbench-proxy-route.test.ts apps/api/test/workbench-proxy-http.test.ts apps/api/test/workbench-proxy-websocket.test.ts apps/api/test/workbench-route-acceptance.test.ts apps/api/test/workbench-route-evidence.test.ts apps/api/test/workbench-route-documentation.test.ts --reporter=verbose
-    BL011_DESIGNATED=1 pnpm exec playwright test tests/e2e/workbench-route.spec.ts --project=chromium --workers=1 --retries=0
+    BL011_ACCEPTANCE=1 pnpm exec vitest run apps/api/test/workbench-capacity-contract.test.ts apps/api/test/workbench-proof-runtime.test.ts apps/api/test/workbench-proxy-contract.test.ts apps/api/test/workbench-proxy-route.test.ts apps/api/test/workbench-proxy-http.test.ts apps/api/test/workbench-proxy-websocket.test.ts apps/api/test/workbench-route-acceptance.test.ts apps/api/test/workbench-route-proof-correction.test.ts apps/api/test/workbench-route-evidence.test.ts apps/api/test/workbench-route-documentation.test.ts --reporter=verbose
+    EXTENSIONS_GALLERY='{}' BL011_DESIGNATED=1 pnpm exec playwright test tests/e2e/workbench-route.spec.ts --project=chromium --workers=1 --retries=0
     just proof-workbench-route-residual-audit
 
 proof-workbench-route-residual-audit:

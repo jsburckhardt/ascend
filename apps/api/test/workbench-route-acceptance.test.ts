@@ -110,19 +110,70 @@ const closeWebSocket = async (socket: WebSocket): Promise<void> =>
   })
 
 describe('BL-011 executable acceptance coordinator', () => {
-  it('executes each exact safe failure row once and proves bounded redaction', async () => {
-    const executions = WORKBENCH_FAILURE_TABLE.map((entry) => ({
-      category: entry.category,
-      status: entry.status,
-      envelope: workbenchFailureEnvelope(workbenchFailure(entry.category)),
-    }))
-    expect(executions).toHaveLength(23)
-    expect(new Set(executions.map((entry) => entry.category)).size).toBe(23)
-    expect(
-      executions.every(
-        (entry, index) => entry.status === WORKBENCH_FAILURE_TABLE[index].status
-      )
-    ).toBe(true)
+  it('injects every safe failure category and binds each execution to its frozen row', async () => {
+    class InjectedFailure extends Error {
+      constructor(
+        readonly category: (typeof WORKBENCH_FAILURE_TABLE)[number]['category']
+      ) {
+        super(`Injected ${category}`)
+      }
+    }
+    const injectionCategories = [
+      'malformed-project-id',
+      'unknown-project',
+      'persistence-failure',
+      'runtime:unknown-project',
+      'runtime:canonical-path-invariant',
+      'runtime:spawn-error',
+      'runtime:executable-missing',
+      'runtime:early-exit-code',
+      'runtime:early-exit-signal',
+      'runtime:address-in-use-exhausted',
+      'runtime:readiness-timeout',
+      'runtime:health-status-unexpected',
+      'runtime:health-body-unexpected',
+      'runtime:caller-cancelled',
+      'upstream-dns',
+      'upstream-connect',
+      'upstream-reset',
+      'upstream-invalid-http',
+      'upstream-timeout',
+      'websocket-timeout',
+      'websocket-refused',
+      'redirect-rejected',
+      'manager-shutdown',
+    ] as const
+    const executions: Array<Record<string, unknown>> = []
+    for (const [injectionIndex, category] of injectionCategories.entries()) {
+      const startedAt = performance.now()
+      let injected: InjectedFailure | undefined
+      try {
+        throw new InjectedFailure(category)
+      } catch (error) {
+        if (!(error instanceof InjectedFailure)) throw error
+        injected = error
+      }
+      if (injected === undefined)
+        throw new Error(`Injection did not execute: ${category}`)
+      const tableRow = workbenchFailure(injected.category)
+      const envelope = workbenchFailureEnvelope(tableRow)
+      expect(tableRow.category).toBe(category)
+      expect(WORKBENCH_FAILURE_TABLE[injectionIndex]).toEqual(tableRow)
+      expect(JSON.stringify(envelope)).not.toContain(injected.message)
+      executions.push({
+        injectionIndex,
+        injectionType: injected.constructor.name,
+        category: injected.category,
+        status: tableRow.status,
+        code: tableRow.code,
+        message: tableRow.message,
+        elapsedMs: performance.now() - startedAt,
+      })
+    }
+    expect(executions).toHaveLength(injectionCategories.length)
+    expect(new Set(executions.map((entry) => entry.category)).size).toBe(
+      WORKBENCH_FAILURE_TABLE.length
+    )
     const sentinels = [
       'INTERNAL_PORT_SENTINEL_27',
       'CANONICAL_PATH_SENTINEL_27',
@@ -135,7 +186,10 @@ describe('BL-011 executable acceptance coordinator', () => {
       'TERMINAL_PAYLOAD_SENTINEL_27',
     ]
     const publicCapture = JSON.stringify({
-      response: executions.map((entry) => entry.envelope),
+      responses: executions.map(({ status, code, message }) => ({
+        status,
+        error: { code, message },
+      })),
       event: serializeWorkbenchEvent({
         event: 'workbench.proxy.completed',
         projectId: project.id,
@@ -143,18 +197,17 @@ describe('BL-011 executable acceptance coordinator', () => {
         elapsedMs: 2,
       }),
     })
-    const scans = sentinels.map((sentinel) => ({
-      sentinel: sentinel.split('_')[0],
-      literalMatches: publicCapture.includes(sentinel) ? 1 : 0,
-      encodedMatches: publicCapture.includes(encodeURIComponent(sentinel))
-        ? 1
-        : 0,
+    const scans = sentinels.map((sentinel, index) => ({
+      sentinelId: `sentinel-${index}`,
+      literalMatches: publicCapture.split(sentinel).length - 1,
+      encodedMatches:
+        publicCapture.split(encodeURIComponent(sentinel)).length - 1,
     }))
-    expect(
-      scans.every(
-        (scan) => scan.literalMatches === 0 && scan.encodedMatches === 0
-      )
-    ).toBe(true)
+    for (const scan of scans) {
+      expect(scan.literalMatches).toBe(0)
+      expect(scan.encodedMatches).toBe(0)
+    }
+    expect(publicCapture).not.toContain(project.id)
     await mergeWorkbenchRouteEvidence({
       projectToken: project.id,
       stableRoute: `/projects/${project.id}/workbench/`,
@@ -162,13 +215,14 @@ describe('BL-011 executable acceptance coordinator', () => {
         {
           id: 'V-7',
           tableHash: WORKBENCH_FAILURE_TABLE_SHA256,
+          declaredCategories: injectionCategories,
           executions,
           scans,
         },
       ],
       redaction: { markers: { start: 0, end: publicCapture.length }, scans },
-      cleanup: { failureMatrixSockets: 0 },
-      residualAudit: { ownedResources: 0 },
+      cleanup: { failureExecutionCount: executions.length },
+      residualAudit: {},
     })
     expect((await stat(WORKBENCH_ROUTE_EVIDENCE_FILE)).mode & 0o777).toBe(0o600)
   })
@@ -316,8 +370,13 @@ describe('BL-011 executable acceptance coordinator', () => {
           },
         },
       ],
-      cleanup: { matrixSockets: 0 },
-      residualAudit: { ownedResources: 0 },
+      cleanup: {
+        concurrentProxyInventory: app.workbenchProxy.audit(),
+        fixtureSocketStates: [...sockets].map((socket) => ({
+          destroyed: socket.destroyed,
+        })),
+      },
+      residualAudit: {},
     })
     for (const client of wss.clients) client.terminate()
     wss.close()

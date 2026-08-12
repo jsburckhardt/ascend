@@ -338,7 +338,20 @@ export const rewriteServiceWorkerAllowed = (
   prefix: string
 ): string => (value === '/' ? prefix : value)
 
-export interface WorkbenchSafeEvent {
+export type WorkbenchConnectionRole = 'Management' | 'ExtensionHost'
+
+export function classifyWorkbenchConnectionRolePayload(
+  payload: Buffer
+): WorkbenchConnectionRole | 'unknown' | undefined {
+  const text = payload.toString('utf8')
+  if (!/[{",]\s*"type"\s*:\s*"connectionType"/u.test(text)) return undefined
+  const match = /"desiredConnectionType"\s*:\s*(\d+)/u.exec(text)
+  if (match?.[1] === '1') return 'Management'
+  if (match?.[1] === '2') return 'ExtensionHost'
+  return 'unknown'
+}
+
+export interface WorkbenchEventInput {
   readonly event:
     | 'workbench.proxy.started'
     | 'workbench.proxy.completed'
@@ -349,12 +362,27 @@ export interface WorkbenchSafeEvent {
   readonly classification?: WorkbenchFailureCategory
 }
 
+export interface WorkbenchSafeEvent {
+  readonly event: WorkbenchEventInput['event']
+  readonly projectToken: string
+  readonly transport: WorkbenchEventInput['transport']
+  readonly elapsedMs: number
+  readonly classification?: WorkbenchFailureCategory
+}
+
+export function tokenizeWorkbenchProjectId(projectId: string): string {
+  return (
+    'project-' +
+    createHash('sha256').update(projectId).digest('hex').slice(0, 16)
+  )
+}
+
 export function serializeWorkbenchEvent(
-  event: WorkbenchSafeEvent
+  event: WorkbenchEventInput
 ): WorkbenchSafeEvent {
   return Object.freeze({
     event: event.event,
-    projectId: event.projectId,
+    projectToken: tokenizeWorkbenchProjectId(event.projectId),
     transport: event.transport,
     elapsedMs: Math.max(0, Math.floor(event.elapsedMs)),
     ...(event.classification === undefined

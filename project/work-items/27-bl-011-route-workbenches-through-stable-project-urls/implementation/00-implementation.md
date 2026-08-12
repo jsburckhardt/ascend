@@ -2,47 +2,49 @@
 
 ## Completed Tasks
 
-- T-1: Encoded the stable proxy contract and direct `ws` ownership.
-- T-2: Integrated stable HTTP and upgrade routes with application lifecycle ownership.
-- T-3: Implemented streaming HTTP forwarding, rewrites, backpressure, faults, and abort propagation.
-- T-4: Implemented bounded WebSocket bridging, frames, controls, close propagation, and reconnect reuse.
-- T-5: Added executable fake-upstream, concurrency, security, failure, and shutdown matrices.
-- T-6: Added the real three-navigation Chromium workflow and terminal proof.
-- T-7: Added restricted evidence and independent residual auditing.
-- T-8: Added paved commands, architecture records, and application documentation.
+- T-0: Preserved linked-worktree repository validation and cancellation-versus-early-exit classification with three concurrent cancellation regressions.
+- T-1: Preserved the stable proxy contract, exact 23-row public failure catalog, direct `ws` ownership, and loopback-only runtime arguments.
+- T-2: Preserved stable HTTP/upgrade routing, eight-client single-flight startup, and application lifecycle ownership.
+- T-3: Completed byte-preserving HTTP matrices, streamed authority rewriting, chunk-5 cancellation, and downstream-transform completion.
+- T-4: Completed the exact bounded WebSocket matrix, named connection-role observation, shutdown outcomes, and peer cleanup.
+- T-5: Executed the payload, header, stream, WebSocket, 23-injected-failure, target-confusion, redaction, concurrency, and shutdown matrices.
+- T-6: Implemented the exact Markdown resource hostname grammar, 23 classifier vectors, bounded browser-local inventory, disabled marketplace proof, and real three-workflow Chromium record.
+- T-7: Enforced bounded restricted evidence, mode `0600`, unfiltered request inventory, six named sockets, public scans, observed cleanup inventories, and residual audits.
+- T-8: Corrected paved validation, API examples, README/runbook content, Plan artifacts, ADR, core-component, and decision log.
 
 ## Acceptance Evidence
 
-- **AC-1:** `workbench.ts`, `workbench-proxy-manager.ts`, and route tests prove base/descendant stable-prefix forwarding through persisted lookup and one loopback-only BL-010 snapshot.
-- **AC-2:** `workbench-route.spec.ts` proves base, nested, WebSocket, Explorer, and Preview traffic stays same-origin under the stable prefix while preserving full-page presentation.
-- **AC-3:** `workbench-proxy-http.test.ts` passes the nested GET, bodyless HEAD, deterministic 257 KiB POST digest, and byte-range matrix with exact status and metadata.
-- **AC-4:** Contract and real-socket HTTP tests prove root-relative and same-upstream redirect rewrites, external redirect rejection, cookie Path scoping, Domain removal, and attribute preservation.
-- **AC-5:** Contract tests and transport fixtures prove hop-by-hop and connection-token filtering in both directions with only required upgrade semantics retained.
-- **AC-6:** The HTTP stream test passes 32 ordered 16 KiB chunks with digest equality, delayed consumption, a chunk-5 abort barrier, upstream closure, and runtime survival.
-- **AC-7:** `workbench-proxy-websocket.test.ts` passes text, 64 KiB binary digest, ping/pong, clean and abnormal close, timeout, refusal, pending-handshake cancel, 16 by 32 KiB ordered backpressure, and two reconnect cases with peer cleanup.
-- **AC-8:** `workbench-route-acceptance.test.ts` releases four HTTP requests and four upgrades together and observes one launch/readiness sequence and one PID/start/port identity.
-- **AC-9:** `WORKBENCH_FAILURE_TABLE` has 23 non-overlapping rows, excludes duplicate runtime manager shutdown, and the acceptance coordinator executes every exact status/code/message row with redaction checks. The HTTP matrix additionally executes lookup, persistence, runtime, invariant, connect, reset, and timeout paths.
-- **AC-10:** Route tests return exact `400` outcomes for all five malformed vectors and exact `404` for a valid unknown ID; contract and HTTP tests strip hostile Host, forwarding, and proxy-target inputs.
-- **AC-11:** Safe-event contracts expose a fixed field set; bounded acceptance and browser evidence report zero literal/encoded sentinel disclosure and stable URLs are the only approved project-token location.
-- **AC-12:** Acceptance, HTTP, and WebSocket tests prove finite precommit shutdown, committed closure, pending handshake cancellation, client abort isolation, and memoized proxy shutdown.
-- **AC-13:** The designated Chromium test passes exactly three fresh navigation workflows with zero retries, one reused runtime identity, Explorer and Preview sentinels, terminal hostname/user/pwd parity, and the predeclared 256 KiB digest.
-- **AC-14:** Fixture and browser cleanup complete; final residual audit reports `status: ok`, one restricted evidence file, two audited identities, absent processes/listeners, and zero public authority matches.
-- **AC-15:** `workbench-route-evidence.ts` atomically maintains the sole ignored `test-results/bl-011/workbench-route-evidence.json` at mode `0600`; Git and public-document scans pass.
-- **AC-16:** The dedicated runbook, README files, runtime guide, ADR, core-component contract, and decision log document behavior, failures, bounds, security, cleanup, commands, and exclusions.
-- **AC-17:** Root focused, stable-route, and full verification recipes exit zero and end the stable-route gate with the Chromium proof and independent clean residual audit.
+- **AC-1:** `workbench-proxy-manager.ts` and route/HTTP tests resolve persisted projects, reuse one loopback BL-010 snapshot, preserve suffix/query, stream selected text safely, and expose no internal authority on public surfaces.
+- **AC-2:** The real Chromium record inventories 124 requests: 92 stable Ascend-owned, 24 exact grammar-valid Markdown resources, and 8 stable-origin non-network browser-local resources. All six WebSockets use the stable prefix; Explorer and Preview pass in all three workflows.
+- **AC-3:** `workbench-proxy-http.test.ts` passes nested GET metadata, bodyless HEAD, deterministic 257 KiB POST digest, and byte-range status/header/body proof; the large transformed JavaScript regression proves complete downstream flush.
+- **AC-4:** Contract and real-socket tests prove root-relative and selected-authority redirect rewrites, external redirect rejection, all three cookie Path outcomes, Domain removal, and preservation of Secure/HttpOnly/SameSite.
+- **AC-5:** Explicit request and response cases strip every named hop header and connection-token extension; WebSocket tests retain only required upgrade semantics.
+- **AC-6:** The executable stream record observes 32 ordered 16 KiB chunks with expected SHA-256, delayed consumption, emitted/received chunk-5 barriers, client abort, upstream close, zero fixture/client/proxy sockets, and a still-running runtime.
+- **AC-7:** `workbench-proxy-websocket.test.ts` executes only text, 64 KiB binary, ping/pong, clean 1000 close/reason, abnormal local-1006 outcome, timeout, refusal, pending-handshake close, 16 ordered 32 KiB frames, and two reconnects; all peer audits close.
+- **AC-8:** `workbench-route-acceptance.test.ts` releases exactly four HTTP requests and four upgrades from one barrier and observes one launch/readiness sequence and one PID/start/port identity.
+- **AC-9:** The predeclared failure table has 23 unique rows and hash `94e986e6dc9461ff80c347fc1495911778141c8325514d67eeb3189ba554b143`. Evidence records exactly 23 injected executions with matching status/code/message and nine redaction scans.
+- **AC-10:** Exact `400` outcomes execute for `../x`, `%2f`, `%5c`, `%00`, and the 129-character ID; a well-formed unknown ID returns `404`, and hostile Host/Forwarded/proxy-target values cannot change the selected fixture.
+- **AC-11:** Controlled traffic carries distinct internal-port, canonical-path, authorization, cookie, query, body, command/environment, WebSocket, and terminal sentinels. Bounded response/log scans report zero literal or encoded matches; restricted browser evidence reports zero raw webview hostname and encoded-token matches.
+- **AC-12:** Barrier-driven tests prove precommit HTTP/upgrade `503`, postcommit stream/socket closure without a second status, client-local cancellation, runtime reuse, bounded settlement, and zero proxy resources.
+- **AC-13:** Chromium executes three fresh navigation and connection workflows, exactly six network sockets (Management 3, ExtensionHost 3), zero retries, one reused runtime identity, zero marketplace/forbidden requests, Explorer/Preview sentinels, and terminal hostname/`vscode`/pwd plus the predeclared 256 KiB digest. The classifier manifest accepts one retained host shape and rejects 22 exact negative vectors.
+- **AC-14:** Cleanup records every context, page, request, WebSocket, proxy resource, runtime identity, and listener. The residual audit reports 23 observed inventories, zero pending entries, absent processes/listeners, and one surviving unrelated-control observation.
+- **AC-15:** `test-results/bl-011/workbench-route-evidence.json` is the sole ignored regular evidence file at mode `0600`. It contains no raw webview hostname/token; the public scan inspected 177 artifacts with zero owned-authority matches.
+- **AC-16:** README/API/index/runtime/proof/runbook documentation records the exact grammar and alphabet, opaque-plus meaning, every forbidden URL class, browser-local boundary, bounded evidence, disabled Open VSX, 3+3 sockets, API examples, failure table, bounds, faults, cleanup, commands, migration statement, and exclusions.
+- **AC-17:** Final `just verify-focused` passes 75 files with 522 tests (one file/two tests skipped). `just verify-workbench-route` passes 47 Vitest cases, the real Chromium workflow, and residual audit. Primary-checkout `just verify` passes formatting, lint, type checks, package tests/coverage, builds, all repository gates, designated proofs, browser tests, and final BL-011 residual audit.
 
 ## Documentation Evidence
 
-- `README.md`, `apps/api/README.md`, and `docs/README.md`: stable-route capability and paved command discovery.
-- `docs/stable-workbench-routing.md`: behavior, complete failure table, finite bounds, security/disclosure, validation, operations, cleanup, migration, and scope exclusions.
-- `docs/project-runtime.md`: BL-010 proxy integration, reuse, and shutdown ordering.
-- `ADR-260812-in-process-workbench-reverse-proxy.md`, `CORE-COMPONENT-260812-stable-workbench-proxy.md`, and `ADR/DECISION-LOG.md`: accepted architecture and component boundaries.
-- API behavior documentation changed in `apps/api/README.md`; no OpenAPI artifact exists for this raw proxy route. No configuration option or default was added. No data/configuration migration is required. Runtime/deployment procedure impact is documented in the stable-routing runbook.
+- `README.md`, `apps/api/README.md`, and `docs/README.md`: exact stable-route capability, origin grammar, six-socket proof, paved commands, and concrete HTTP/WebSocket examples.
+- `docs/stable-workbench-routing.md`: complete transport/failure/header/cookie/WebSocket contract; exact hostname grammar and negatives; bounded evidence; 23 faults; validation, cleanup, migration, and exclusions.
+- `docs/workbench-proof.md` and `docs/project-runtime.md`: proof-only gallery configuration, worktree/cancellation prerequisite order, three workflows, runtime reuse, six channels, cleanup, and residual procedure.
+- `ADR-260812-in-process-workbench-reverse-proxy.md`, `CORE-COMPONENT-260812-stable-workbench-proxy.md`, and `ADR/DECISION-LOG.md`: ownership, exact external-origin exception, browser-local non-network class, marketplace decision, and named-socket architecture.
+- `.prettierignore`: excludes owned linked-worktree directories so primary validation remains worktree-aware without scanning another checkout.
+- No OpenAPI/Swagger artifact exists for this raw proxy route. No application configuration option/default, schema, data, or API migration changed; the proof-only `EXTENSIONS_GALLERY={}` procedure and no-migration statement are documented.
 
 ## Validation Evidence
 
-- `just verify-focused`: passed, 74 files passed and 1 skipped; 512 tests passed and 2 skipped.
-- `just verify-workbench-route`: passed, 7 files and 28 tests; designated Chromium passed; residual audit `status: ok`.
-- `just verify`: passed formatting, lint, type checking, package tests and coverage, builds, repository contracts, designated proofs, Playwright, stable-route matrices, Chromium, and residual audit. API branch coverage was 80.01 percent.
+- `just verify-focused`: exit 0; 75 passed files, 1 skipped; 522 passed tests, 2 skipped.
+- `just verify-workbench-route`: exit 0; 47 Vitest cases, one real Chromium scenario, mode-`0600` evidence, and residual `status: ok`.
+- `just verify` (primary checkout): exit 0; full repository and browser validation, final Chromium 41.3 seconds, residual `status: ok`, 23 observed inventories, zero pending entries, and zero public authority matches.
 
 These notes record implementation evidence only. Final acceptance remains owned by Verify.

@@ -14,6 +14,7 @@ import {
 import type { ProjectLibrary } from '../src/project-library.js'
 import { RuntimeFailure } from '../src/project-runtime-contract.js'
 import type { ProjectRuntimeManager } from '../src/project-runtime-manager.js'
+import { mergeWorkbenchRouteEvidence } from '../src/workbench-route-evidence.js'
 import { createWorkbenchProxyManager } from '../src/workbench-proxy-manager.js'
 
 const project = {
@@ -232,6 +233,78 @@ describe('stable workbench HTTP transport', () => {
     expect(observed[2].digest).toBe(binaryDigest)
     expect(new Set(observed.map((entry) => entry.host))).toEqual(
       new Set([`127.0.0.1:${port}`])
+    )
+    await mergeWorkbenchRouteEvidence({
+      matrices: [
+        {
+          id: 'V-3',
+          declaration: {
+            binaryBytes: binaryInput.length,
+            expectedBinaryDigest: binaryDigest,
+          },
+          rows: [
+            {
+              method: 'GET',
+              status: nested.status,
+              headers: nested.headers,
+              bodyBytes: nested.body.length,
+            },
+            {
+              method: 'HEAD',
+              status: head.status,
+              headers: head.headers,
+              bodyBytes: head.body.length,
+            },
+            {
+              method: 'POST',
+              status: posted.status,
+              headers: posted.headers,
+              bodyBytes: posted.body.length,
+              actualDigest: createHash('sha256')
+                .update(posted.body)
+                .digest('hex'),
+            },
+            {
+              method: 'GET-range',
+              status: ranged.status,
+              headers: ranged.headers,
+              bodyBytes: ranged.body.length,
+            },
+          ],
+          upstreamObservations: observed,
+        },
+      ],
+      cleanup: { payloadObservedRequests: observed.length },
+      residualAudit: {},
+    })
+  })
+
+  it('flushes a complete transformed textual asset before settling', async () => {
+    let upstreamPort = 0
+    const sourcePrefix = 'const payload = ' + 'x'.repeat(2 * 1024 * 1024)
+    const upstream = createServer((_request, response) => {
+      const source =
+        sourcePrefix +
+        '; // http://127.0.0.1:' +
+        String(upstreamPort) +
+        '/asset'
+      response.writeHead(200, {
+        'content-type': 'application/javascript; charset=utf-8',
+        'content-length': String(Buffer.byteLength(source)),
+      })
+      response.end(source)
+    })
+    upstreamPort = await listen(upstream)
+    const { port } = await api(upstreamPort)
+    const route = '/projects/' + project.id + '/workbench/'
+    const result = await perform(port, route + 'large.js')
+    const expected =
+      sourcePrefix + '; // http://127.0.0.1:' + String(port) + route + 'asset'
+    expect(result.status).toBe(200)
+    expect(result.headers['content-length']).toBeUndefined()
+    expect(result.body.length).toBe(Buffer.byteLength(expected))
+    expect(createHash('sha256').update(result.body).digest('hex')).toBe(
+      createHash('sha256').update(expected).digest('hex')
     )
   })
 

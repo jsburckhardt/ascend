@@ -97,7 +97,7 @@ Short, actionable statements derived from ADRs and core-components. More than on
 | 60 | Resolve proxy upstreams only from persisted projects and BL-010 runtime snapshots | ADR-260812-in-process-workbench-reverse-proxy | 2026-08-12 |
 | 61 | Disable generic code-server port-proxy routes behind stable workbench routing | ADR-260812-in-process-workbench-reverse-proxy | 2026-08-12 |
 | 62 | Shut down proxy operations before runtime processes and persistence owners | ADR-260812-in-process-workbench-reverse-proxy | 2026-08-12 |
-| 63 | Require all browser workbench traffic under the stable project prefix | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-12 |
+| 63 | Require all Ascend-owned browser workbench traffic under the stable project prefix | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-12 |
 | 64 | Validate workbench project IDs as one bounded route-safe segment | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-12 |
 | 65 | Strip hop-by-hop and client forwarding headers before trusted loopback forwarding | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-12 |
 | 66 | Rewrite same-runtime redirects, cookie paths, and service-worker scope under stable prefix | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-12 |
@@ -109,3 +109,11 @@ Short, actionable statements derived from ADRs and core-components. More than on
 | 72 | Exclude internal authorities and protected payloads from browser and logging surfaces | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-12 |
 | 73 | Restrict raw authority evidence to one owner-readable ignored local artifact | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-12 |
 | 74 | Preserve BL-010 as the sole runtime process owner | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-12 |
+| 75 | Classify Ascend transport separately from isolated VS Code Markdown webview resources | ADR-260812-in-process-workbench-reverse-proxy | 2026-08-12 |
+| 76 | Disable extension marketplace access during deterministic designated workbench proof | ADR-260812-in-process-workbench-reverse-proxy | 2026-08-12 |
+| 77 | Inventory three Management and three ExtensionHost sockets across three fresh workflows | ADR-260812-in-process-workbench-reverse-proxy | 2026-08-12 |
+| 78 | Allow only HTTPS vscode-remote+<encoded-authority>.vscode-resource.vscode-cdn.net Markdown resources | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-12 |
+| 79 | Reject malformed webview URLs, Open VSX, and every unclassified external origin | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-12 |
+| 80 | Fail unknown, missing, retrying, external, or internal-port WebSocket observations | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-12 |
+| 81 | Emit only bounded host classes for public browser evidence | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-12 |
+| 82 | Treat vscode-remote+ as opaque VS Code label syntax, never wildcard permission | ADR-260812-in-process-workbench-reverse-proxy | 2026-08-12 |

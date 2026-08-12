@@ -106,6 +106,18 @@ Exact DELETE wire examples are:
 
 ## Stable workbench proxy API (BL-011)
 
-`/projects/{projectId}/workbench/` and every descendant are API-owned raw HTTP and WebSocket routes. The ID is one route-safe 1-to-128-character segment. The handler looks up the persisted project, delegates start/reuse to `ProjectRuntimeManager`, and forwards only to its immutable loopback snapshot. It preserves suffixes, queries, bytes, ranges, streams, WebSocket frames, and backpressure. Client authority, forwarding, and proxy-target headers cannot select the upstream.
+`/projects/{projectId}/workbench/` and every descendant are API-owned raw HTTP and WebSocket routes. The ID is one route-safe 1-to-128-character segment. The handler looks up the persisted project, delegates start/reuse to `ProjectRuntimeManager`, and forwards only to its immutable loopback snapshot. It preserves suffixes, queries, bytes, ranges, streams, WebSocket frames, and backpressure. Textual upstream bodies and response headers are streamed through an internal-authority rewrite under the stable route, and proxy logs use a one-way project token rather than the raw project ID. Client authority, forwarding, and proxy-target headers cannot select the upstream.
+
+
+Stable public examples (the project ID selects the persisted runtime; no client target is accepted):
+
+```text
+GET /projects/stable-project-id/workbench/
+GET /projects/stable-project-id/workbench/out/client.js?quality=stable
+HEAD /projects/stable-project-id/workbench/out/client.css
+WebSocket /projects/stable-project-id/workbench/stable-<opaque-route-token>?reconnection=false
+```
+
+Ascend-owned responses and all WebSockets stay under the stable same-origin prefix. Only built-in Markdown webview HTTPS requests whose complete host matches `^vscode-remote\+(?:[a-z0-9]|-[0-9a-f]{4})+\.vscode-resource\.vscode-cdn\.net$` are classified externally. The token after fixed opaque syntax `vscode-remote+` is nonempty: lowercase ASCII letters and digits remain literal, while every encoded character is `-` plus four lowercase hexadecimal digits. Credentials, explicit ports, HTTP, WebSockets, malformed or extra labels, suffix confusion, path/query authority copies, arbitrary origins, and internal-port URLs fail proof; evidence exposes only bounded classes. The designated scenario passes `EXTENSIONS_GALLERY={}`, observes no Open VSX or marketplace traffic, and requires three Management plus three ExtensionHost sockets across three no-retry workflows.
 
 The public failure envelope is `{"error":{"code":"<code>","message":"<message>"}}`. The complete status/code/message table, redirect and cookie rules, five-second bounds, redaction policy, shutdown order, and operational commands are in [`docs/stable-workbench-routing.md`](../../docs/stable-workbench-routing.md). The direct `ws` 8.x dependency owns no-server upgrade bridging. Application close removes the upgrade listener and settles the proxy before runtime and persistence owners. No schema, migration, or configuration option is added.

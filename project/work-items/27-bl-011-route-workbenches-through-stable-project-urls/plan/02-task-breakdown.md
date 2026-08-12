@@ -1,5 +1,29 @@
 # Task Breakdown: BL-011 Stable Project Workbench Routes
 
+## Task T-0: Preserve designated validation prerequisites
+
+- **Status:** Complete prerequisite; preserve through correction
+- **Complexity:** Low
+- **Dependencies:** None
+- **Acceptance Criteria:** AC-13, AC-14, AC-17
+- **Related ADRs:** ADR-260812-in-process-workbench-reverse-proxy; ADR-260808-governed-engineering-harness
+- **Related Core-Components:** CORE-COMPONENT-260808-runtime-lifecycle-error-handling; CORE-COMPONENT-260808-host-process-environment; CORE-COMPONENT-260808-development-standards
+
+### Description
+Preserve the already completed uncommitted validation prerequisites. The capacity prerequisite accepts the primary checkout or a linked worktree only when its Git top level is the repository root and its common directory resolves to the designated Ascend Git directory; unrelated repositories fail before starts. The proof runtime rechecks cancellation after observing child exit so an abort-triggered exit remains typed cancellation rather than racing into early-exit.
+
+### Acceptance Criteria
+- AC-13 and AC-17: The corrected designated browser proof can execute from the feature checkout or an owned linked worktree without weakening repository identity checks.
+- AC-14 and AC-17: Concurrent abort-triggered proof exits classify as cancellation and every discovered process identity is absent afterward.
+
+### Test Coverage
+- V-0 exercises primary checkout, linked worktree, nested-root rejection, unrelated-repository rejection, three concurrent abort-triggered exits, typed cancellation, and exact identity absence.
+- Run these focused unit tests before any designated Chromium rerun and retain them in focused/full command coverage.
+
+### Expected Evidence
+- V-0 focused result naming accepted/rejected repository contexts, three cancellation outcomes, and three absent exact identities.
+- Git diff references for `workbench-capacity-prerequisites.ts`, `workbench-proof-runtime.ts`, and their regression tests.
+
 ## Task T-1: Encode the stable proxy contract and owned dependencies
 
 - **Status:** Complete
@@ -133,78 +157,77 @@ Build one deterministic executable acceptance coordinator with owned fake HTTP/W
 - V-3 through V-8 matrix sections in one versioned mode-`0600` local evidence file.
 - Case manifest showing exact case membership/counts, fixture/client socket union, predeclared expectation hash, and all cleanup outcomes.
 
-## Task T-6: Run the real three-navigation Chromium stable-route scenario
+## Task T-6: Correct the real Chromium ownership and socket inventory proof
 
 - **Status:** Complete
 - **Complexity:** High
-- **Dependencies:** T-3, T-4, T-5
+- **Dependencies:** T-0, T-3, T-4, T-5
 - **Acceptance Criteria:** AC-2, AC-11, AC-13, AC-14, AC-15, AC-17
 - **Related ADRs:** ADR-260810-full-page-browser-workbench-presentation; ADR-260812-in-process-workbench-reverse-proxy
 - **Related Core-Components:** CORE-COMPONENT-260812-stable-workbench-proxy; CORE-COMPONENT-260808-host-process-environment; CORE-COMPONENT-260808-runtime-lifecycle-error-handling; CORE-COMPONENT-260806-agent-executable-acceptance-criteria
 
 ### Description
-Adapt the existing full-page Playwright support to launch the real API, register the BL-001 fixture, and navigate only through the stable route. Use exactly three fresh no-retry navigation/reconnect attempts against one runtime. Preserve Explorer and Preview checks, prove terminal hostname/user/canonical `pwd`, produce 256 KiB from a predeclared deterministic input/digest, capture stable HTTP/WebSocket URLs safely, and close every browser and runtime resource.
+Correct the designated proof without patching VS Code. Add a pure parsed-URL classifier for the exact hostname `^vscode-remote\+(?:[a-z0-9]|-[0-9a-f]{4})+\.vscode-resource\.vscode-cdn\.net$`: HTTPS only, empty credentials and parsed `port`, one nonempty encoded-authority label, and no raw, percent-encoded, or label-encoded authority copy in path/query. Explain and enforce `vscode-remote+` as fixed VS Code opaque-label syntax, not wildcard permission. Use the retained BL-003 host shapes and current BL-011 observation to justify this grammar, but compare authority values only transiently and emit bounded classes without raw host/token data. Launch with `EXTENSIONS_GALLERY={}`, retain three fresh contexts and zero retries, require all Ascend transport and six 3+3 sockets on the stable prefix, and reject every malformed external resource or external socket. Retain stable-origin `blob:` scripts as bounded browser-local non-network inventory and reject external-origin blobs.
 
 ### Acceptance Criteria
-- AC-2: Base, nested resource, Preview, and WebSocket traffic remains same-origin under the stable prefix with the accepted full-page presentation.
-- AC-11: Browser and bounded API captures have zero literal/encoded protected-sentinel matches; only approved stable URLs and the dedicated project-token field contain the opaque ID.
-- AC-13: Operation counts are exactly three navigation, three WebSocket, zero retry; one PID/start/port identity is reused; Explorer, Preview, terminal parity, and 256-KiB expected digest pass.
-- AC-14 and AC-15: Browser contexts/sockets and exact runtime identity/listener are absent after shutdown; restricted results merge into the sole local evidence file.
-- AC-17: The focused and full recipes invoke this serial designated scenario with Playwright retries disabled.
+- AC-2: Ascend-owned base, nested, service, and WebSocket traffic remains same-origin under the stable prefix; only a grammar-valid HTTPS `vscode-remote+<encoded-authority>` Markdown resource is external, and full-page Explorer/Preview behavior remains unchanged.
+- AC-11: Safe evidence stores bounded host/scheme/resource/path/query-key/credential/port/leak and socket-role classes only; no raw URL, hostname, authority token, authority-bearing path/query value, canonical path, payload, handshake, or reconnection token is retained publicly.
+- AC-13: Three navigation workflows and three workbench connection workflows produce six sockets: exactly three Management and three ExtensionHost, zero retries, one runtime identity, all required outcomes, zero marketplace requests, only grammar-valid webview resources, and no raw host or internal port in public evidence.
+- AC-14, AC-15, and AC-17: Every observed request/context/page/socket closes, corrected evidence is restricted, and focused/full gates end in successful residual audit.
 
 ### Test Coverage
-- Add one serial Chromium spec and support modules with operation counters, strict URL/prefix/origin assertions, terminal helper bounds, generated-output digest validation, browser socket tracking, and finally-owned cleanup.
-- Add negative unit tests for retry attempts, wrong counts, authority-bearing URLs, mismatched digest, changed runtime identity, missing cleanup, and stale contexts.
+- V-9 runs the serial real Chromium scenario with marketplace disabled and finite observers attached before navigation.
+- Run exact classifier vectors. Accept `https://vscode-remote+fixture-003a43210.vscode-resource.vscode-cdn.net/out/file.css`. Reject the bare suffix; empty token; `abc+` prefix; free hyphen or malformed four-hex escape; extra sublabel; suffix lookalike; username/password; `:444`; HTTP; `ws`/`wss`; unrelated external host; and synthetic raw, percent-encoded, or label-encoded authority copied into path or query. Also reject Open VSX, internal-port sockets, unknown/duplicate/missing roles, seventh socket, `reconnection=true`, and retained payload/token data.
+- Preserve terminal parity, 256-KiB digest, Explorer, Preview, runtime reuse, redaction, and cleanup assertions.
 
 ### Expected Evidence
-- V-9 Chromium record with host/tool facts, 3/3/0 counts, stable URL inventory, one runtime identity, functional sentinels, terminal parity, output digest, redaction scan, and browser/runtime cleanup.
+- V-9 restricted record containing the exact classifier-vector manifest and verdict counts; three workflows; six safe 3/3 socket records; zero retries/marketplace/forbidden requests; bounded webview classes without raw host/token/path/query data; one runtime identity; functional outcomes; zero sentinel/authority matches; and empty inventories.
 
-## Task T-7: Enforce restricted evidence and union residual cleanup
+## Task T-7: Correct restricted evidence and union residual cleanup
 
 - **Status:** Complete
 - **Complexity:** Medium
-- **Dependencies:** T-5, T-6
+- **Dependencies:** T-6
 - **Acceptance Criteria:** AC-11, AC-14, AC-15, AC-17
 - **Related ADRs:** ADR-260812-in-process-workbench-reverse-proxy; ADR-260808-governed-engineering-harness
 - **Related Core-Components:** CORE-COMPONENT-260812-stable-workbench-proxy; CORE-COMPONENT-260808-runtime-lifecycle-error-handling; CORE-COMPONENT-260808-engineering-harness-delivery-contract; CORE-COMPONENT-260806-project-command-interface
 
 ### Description
-Create one atomic owner-readable local evidence writer under ignored `test-results/bl-011/`, enforce mode `0600`, merge fake and real sections, and reject additional authority-bearing artifacts. Implement a finite residual audit over the union of fixture/client/proxy sockets, browser resources, runtime PID/start identity, process group, and listeners while proving the unrelated control listener survives. Add public-tree and Git scans that exclude only the one restricted file.
+Extend the sole atomic mode-`0600` local evidence record with bounded Ascend/webview/marketplace/forbidden classes, exact classifier-vector verdicts, zero marketplace count, three workflows, six named socket roles, zero retries, and complete close inventories. Raw runtime identity may remain only in that restricted file, but raw webview hostname, extracted encoded-authority token, credentials, and authority-bearing path/query values are unnecessary and must not be retained even there or in command output. Reject stale, assertion-only, or raw-host browser sections while preserving every existing fake matrix, public scan, exact process/socket audit, unrelated-control observation, and final residual command.
 
 ### Acceptance Criteria
-- AC-11: Redaction sections retain marker boundaries and zero-match counts without retaining protected literals outside the restricted record.
-- AC-14: Cleanup captures every owned resource and the final residual audit reports zero owned sockets, processes, and listeners while the control remains alive.
-- AC-15: Exactly one ignored file may contain the raw authority, is `0600`, validates all required sections, and is absent from Git/public scans.
-- AC-17: Both configured gates end with cleanup plus the independent residual command and fail on any unknown or surviving owner.
+- AC-11: Evidence contains bounded classifications rather than raw host/token/authority-bearing URL data, handshake data, or secrets and reports zero literal, percent-encoded, and VS Code label-encoded authority matches on public surfaces.
+- AC-14: Cleanup inventories all six browser sockets and every context/page/request/proxy/runtime owner with no pending entries.
+- AC-15: Exactly one ignored owner-readable file contains necessary restricted runtime details; public artifacts contain no raw hostname, internal authority, encoded-authority token, credential, or port.
+- AC-17: Focused and full gates reject grammar gaps, malformed accepted URLs, missing/stale classification, raw-host evidence, marketplace traffic, incorrect roles, unknown sockets, dirty inventories, or residual owners.
 
 ### Test Coverage
-- Unit/integration tests cover atomic create/update, mode repair/refusal, symlink and extra-file rejection, Git ignored/untracked status, public scan exclusions, union deduplication, exact identity checks, surviving control listener, and dirty residual failures.
-- Run the residual command independently after the focused scenario and at the end of `just verify`.
+- V-10 validates schema, mode, Git/public exclusion, classified origin and role cardinality, zero marketplace requests, all required matrix sections, complete inventories, and residual audit.
+- Negative fixtures cover the bare suffix, arbitrary plus prefix, free/malformed escape, extra sublabel, suffix confusion, credentials, explicit port, HTTP, `ws`/`wss`, path/query authority copies, raw-host/token evidence, prior 3-socket-only evidence, unclassified sockets, reconnection tokens, Open VSX, absent webview evidence, extra files, and pending resources.
 
 ### Expected Evidence
-- V-10 file metadata, section inventory, Git/public scan results, complete owner union, cleanup outcomes, control-listener liveness, and zero residual result.
+- V-10 metadata/schema report, exact positive/negative vector counts, bounded 3-workflow/6-socket/3+3 and webview/marketplace classes, zero raw hostname/token/authority matches, complete owner union, and successful residual audit.
 
-## Task T-8: Add paved validation and complete stable-routing documentation
+## Task T-8: Correct paved validation and stable-routing documentation
 
 - **Status:** Complete
 - **Complexity:** Medium
-- **Dependencies:** T-7
+- **Dependencies:** T-0, T-7
 - **Acceptance Criteria:** AC-16, AC-17
 - **Related ADRs:** ADR-260812-in-process-workbench-reverse-proxy; ADR-260810-full-page-browser-workbench-presentation; ADR-260808-governed-engineering-harness
 - **Related Core-Components:** CORE-COMPONENT-260812-stable-workbench-proxy; CORE-COMPONENT-260806-project-command-interface; CORE-COMPONENT-260806-rpiv-stage-contract; CORE-COMPONENT-260808-development-standards
 
 ### Description
-Add `just verify-workbench-route` and `just proof-workbench-route-residual-audit`, integrate the issue gate serially into `just verify`, and document the stable route in a dedicated runbook plus README/API/docs indexes and the runtime runbook. Replace BL-010 deferral statements only where routing is now delivered, preserve BL-012 and deployment exclusions, and add documentation contract tests and public authority scans.
+Update the stable-routing runbook and application documentation to preserve the exact GitHub criteria while stating their evidence boundary: stable-prefix requirements govern Ascend-owned workbench HTTP/WebSocket traffic; the isolated built-in Markdown resource must satisfy the exact encoded-authority hostname grammar and URL constraints; `+` is opaque VS Code syntax rather than expanded permission; public evidence retains bounded classes only; designated proof disables Open VSX; and three workflows comprise six named sockets. Keep all BL-011 matrices, security, cleanup, migration/configuration statements, and scope exclusions. Order focused/full validation so V-0 and classifier vectors pass before V-9, then cleanup and residual audit remain last.
 
 ### Acceptance Criteria
-- AC-16: Documentation covers stable/base-path behavior; redirect, header, cookie, service-worker, and WebSocket outcomes; the full exact safe-failure table; redaction/disclosure; runtime ownership/reuse; commands/bounds/faults; cleanup observed result; and every Problem exclusion.
-- AC-17: Focused and full root recipes each execute the complete matrices, real Chromium scenario, cleanup, and residual audit with inspectable zero-exit results.
+- AC-16: Documentation records the exact regex and encoding alphabet, opaque `+` meaning, URL credential/port/scheme/path/query constraints, bounded evidence contract, forbidden origins/internal authority, marketplace decision, 3-workflow/6-socket inventory, validation order, and every existing behavior/exclusion.
+- AC-17: Root recipes run V-0 and exact classifier vectors before the corrected designated proof and retain complete matrices, documentation checks, cleanup, and final residual audit.
 
 ### Test Coverage
-- Documentation tests assert every required topic, table row, bound, command, architecture link, updated deferral, and out-of-scope phrase across committed files.
-- Command-interface tests assert recipe presence/order and no duplicated raw command surface; run formatting, lint, type checks, package tests, build, browser tests, focused gate, and full gate.
+- V-10 documentation contracts assert the exact regex, encoding rule, opaque-plus rationale, forbidden URL matrix, bounded-output rule, and every pre-existing required topic/table row.
+- V-11 and V-12 execute the focused and full paved commands, inspect classified browser evidence, and require cleanup/residual success.
 
 ### Expected Evidence
-- V-10 documentation coverage/public scan report.
-- V-11 focused recipe exit-zero record with matrix, browser, cleanup, and residual sections.
-- V-12 full `just verify` exit-zero record ending in the same cleanup and residual outcomes.
+- V-10 documentation subject matrix proving all 17 exact criteria are unchanged and the grammar, rationale, negatives, and evidence boundary are explicit.
+- V-11 and V-12 zero-exit command records with prerequisite, matrix, corrected browser, cleanup, and residual sections.

@@ -15,6 +15,10 @@ export const WORKBENCH_ROUTE_EVIDENCE_ROOT = path.join(
   REPOSITORY_ROOT,
   'test-results/bl-011'
 )
+const WORKBENCH_ROUTE_EVIDENCE_LOCK = path.join(
+  WORKBENCH_ROUTE_EVIDENCE_ROOT,
+  '.writer-lock'
+)
 export const WORKBENCH_ROUTE_EVIDENCE_FILE = path.join(
   WORKBENCH_ROUTE_EVIDENCE_ROOT,
   'workbench-route-evidence.json'
@@ -58,57 +62,75 @@ export async function mergeWorkbenchRouteEvidence(
   update: Partial<WorkbenchRouteEvidence>
 ): Promise<WorkbenchRouteEvidence> {
   await mkdir(WORKBENCH_ROUTE_EVIDENCE_ROOT, { recursive: true, mode: 0o700 })
-  try {
-    const metadata = await lstat(WORKBENCH_ROUTE_EVIDENCE_FILE)
-    if (metadata.isSymbolicLink() || !metadata.isFile())
-      throw new Error('Restricted evidence path must be a regular file')
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
+  const lockDeadline = Date.now() + 5_000
+  for (;;) {
+    try {
+      await mkdir(WORKBENCH_ROUTE_EVIDENCE_LOCK, { mode: 0o700 })
+      break
+    } catch (error) {
+      if (
+        (error as NodeJS.ErrnoException).code !== 'EEXIST' ||
+        Date.now() >= lockDeadline
+      )
+        throw error
+      await new Promise((resolve) => setTimeout(resolve, 5))
+    }
   }
-  const current = await readWorkbenchRouteEvidence()
-  const updatedMatrices = update.matrices ?? []
-  const updatedIds = new Set(
-    updatedMatrices.map((entry) =>
-      typeof entry === 'object' && entry !== null && 'id' in entry
-        ? String(entry.id)
-        : JSON.stringify(entry)
+  try {
+    try {
+      const metadata = await lstat(WORKBENCH_ROUTE_EVIDENCE_FILE)
+      if (metadata.isSymbolicLink() || !metadata.isFile())
+        throw new Error('Restricted evidence path must be a regular file')
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
+    }
+    const current = await readWorkbenchRouteEvidence()
+    const updatedMatrices = update.matrices ?? []
+    const updatedIds = new Set(
+      updatedMatrices.map((entry) =>
+        typeof entry === 'object' && entry !== null && 'id' in entry
+          ? String(entry.id)
+          : JSON.stringify(entry)
+      )
     )
-  )
-  const matrices =
-    update.matrices === undefined
-      ? current.matrices
-      : [
-          ...current.matrices.filter(
-            (entry) =>
-              !updatedIds.has(
-                typeof entry === 'object' && entry !== null && 'id' in entry
-                  ? String(entry.id)
-                  : JSON.stringify(entry)
-              )
-          ),
-          ...updatedMatrices,
-        ]
-  const next: WorkbenchRouteEvidence = {
-    ...current,
-    ...update,
-    schemaVersion: 1,
-    matrices,
-    cleanup: update.cleanup ?? current.cleanup,
-    residualAudit: update.residualAudit ?? current.residualAudit,
-  }
-  if (!validateRestrictedEvidence(next))
-    throw new Error('Restricted workbench evidence update is malformed')
-  const temporary = WORKBENCH_ROUTE_EVIDENCE_FILE + `.tmp-${process.pid}`
-  try {
-    await writeFile(temporary, JSON.stringify(next, null, 2) + '\n', {
-      mode: 0o600,
-      flag: 'wx',
-    })
-    await chmod(temporary, 0o600)
-    await rename(temporary, WORKBENCH_ROUTE_EVIDENCE_FILE)
-    await chmod(WORKBENCH_ROUTE_EVIDENCE_FILE, 0o600)
+    const matrices =
+      update.matrices === undefined
+        ? current.matrices
+        : [
+            ...current.matrices.filter(
+              (entry) =>
+                !updatedIds.has(
+                  typeof entry === 'object' && entry !== null && 'id' in entry
+                    ? String(entry.id)
+                    : JSON.stringify(entry)
+                )
+            ),
+            ...updatedMatrices,
+          ]
+    const next: WorkbenchRouteEvidence = {
+      ...current,
+      ...update,
+      schemaVersion: 1,
+      matrices,
+      cleanup: { ...current.cleanup, ...update.cleanup },
+      residualAudit: { ...current.residualAudit, ...update.residualAudit },
+    }
+    if (!validateRestrictedEvidence(next))
+      throw new Error('Restricted workbench evidence update is malformed')
+    const temporary = WORKBENCH_ROUTE_EVIDENCE_FILE + `.tmp-${process.pid}`
+    try {
+      await writeFile(temporary, JSON.stringify(next, null, 2) + '\n', {
+        mode: 0o600,
+        flag: 'wx',
+      })
+      await chmod(temporary, 0o600)
+      await rename(temporary, WORKBENCH_ROUTE_EVIDENCE_FILE)
+      await chmod(WORKBENCH_ROUTE_EVIDENCE_FILE, 0o600)
+    } finally {
+      await rm(temporary, { force: true })
+    }
+    return next
   } finally {
-    await rm(temporary, { force: true })
+    await rm(WORKBENCH_ROUTE_EVIDENCE_LOCK, { recursive: true, force: true })
   }
-  return next
 }

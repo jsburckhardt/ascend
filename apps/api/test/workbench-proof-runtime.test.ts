@@ -262,6 +262,43 @@ describe('workbench proof runtime', () => {
     ).resolves.toBe(true)
   })
 
+  it('keeps abort-triggered exits classified as cancellation under concurrent load', async () => {
+    const failures = await Promise.all(
+      Array.from({ length: 3 }, async () => {
+        const runRoot = await temporaryRoot()
+        const controller = new AbortController()
+        setTimeout(() => controller.abort(new Error('overall-timeout')), 20)
+        try {
+          await startWorkbenchProof({
+            executablePath: fakeExecutable,
+            runRoot,
+            startupTimeoutMs: 2_000,
+            environmentOverrides: { BL001_FAKE_MODE: 'timeout' },
+            signal: controller.signal,
+          })
+          throw new Error('cancellation unexpectedly resolved')
+        } catch (error) {
+          return error as ProofError
+        }
+      })
+    )
+    expect(failures.map((failure) => failure.code)).toEqual([
+      'cancelled',
+      'cancelled',
+      'cancelled',
+    ])
+    await Promise.all(
+      failures.map((failure) =>
+        expect(
+          processIdentityAbsent({
+            pid: failure.discoveredIdentity!.pid!,
+            startTimeTicks: failure.discoveredIdentity!.startTimeTicks!,
+          })
+        ).resolves.toBe(true)
+      )
+    )
+  })
+
   it('preserves an established identity during later cooperative cancellation', async () => {
     const runRoot = await temporaryRoot()
     const controller = new AbortController()

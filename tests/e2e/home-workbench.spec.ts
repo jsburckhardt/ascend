@@ -16,6 +16,10 @@ import {
 } from '../../apps/api/src/project-runtime-manager.js'
 import { readProcessStartTime } from '../../apps/api/src/project-runtime-process.js'
 import {
+  readManagedListeners,
+  readManagedProcesses,
+} from '../../apps/api/src/workbench-proof-audit.js'
+import {
   createWorkbenchProxyManager,
   type WorkbenchProxyManager,
 } from '../../apps/api/src/workbench-proxy-manager.js'
@@ -38,7 +42,8 @@ import {
   HOME_WORKBENCH_OVERALL_MS,
   HOME_WORKBENCH_STEP_BOUNDS_MS,
   HomeWorkbenchTiming,
-  waitForChildReady,
+  type ProcessHttpReadiness,
+  waitForProcessHttpReady,
 } from './home-workbench-timing.js'
 
 const designated = process.env.BL012_DESIGNATED === '1'
@@ -63,6 +68,31 @@ const disposablePort = async (): Promise<number> => {
     throw new Error('Missing disposable port')
   await new Promise<void>((resolve) => server.close(() => resolve()))
   return address.port
+}
+
+const ownsExactListener = async (
+  rootPid: number,
+  host: string,
+  port: number
+): Promise<boolean> => {
+  const processes = await readManagedProcesses(rootPid)
+  const discovered = await readManagedListeners(
+    processes.map((process) => process.pid)
+  )
+  const candidate = discovered.find(
+    (listener) => listener.address === host && listener.port === port
+  )
+  if (candidate === undefined) return false
+  try {
+    return (await readManagedListeners([candidate.pid], { strict: true })).some(
+      (listener) =>
+        listener.address === host &&
+        listener.port === port &&
+        listener.inode === candidate.inode
+    )
+  } catch {
+    return false
+  }
 }
 
 const previewVisible = async (
@@ -192,6 +222,8 @@ test('runs exact Home and workbench continuity with isolated deep-link refresh',
   let isolatedCounterAfter = 0
   let cleanupPassed = false
   let evidenceWritten = false
+  let apiReadinessEvidence: ProcessHttpReadiness | undefined
+  let webReadinessEvidence: ProcessHttpReadiness | undefined
   timing.record('setup', setupStartedAt)
   try {
     controller = createApiServerController({
@@ -226,13 +258,26 @@ test('runs exact Home and workbench continuity with isolated deep-link refresh',
         close: () => undefined,
       }),
     })
-    const app = await timing.step('apiReadiness', () => controller!.start())
-    const apiAddress = app.server.address()
-    if (apiAddress === null || typeof apiAddress === 'string')
-      throw new Error('Missing API address')
+    const app = await timing.step('apiReadiness', async () => {
+      const started = await controller!.start()
+      const address = started.server.address()
+      if (address === null || typeof address === 'string')
+        throw new Error('Missing API address')
+      apiOrigin = 'http://127.0.0.1:' + address.port
+      const response = await fetch(apiOrigin + '/api/projects', {
+        signal: AbortSignal.timeout(1_000),
+      })
+      const body = await response.text()
+      if (response.status !== 200 || !body.includes('"projects"'))
+        throw new Error('API readiness response was unexpected')
+      apiReadinessEvidence = {
+        logHintAtMs: null,
+        listenerReadyAtMs: Date.now(),
+      }
+      return started
+    })
     const webPort = await disposablePort()
     webOrigin = 'http://127.0.0.1:' + webPort
-    apiOrigin = 'http://127.0.0.1:' + apiAddress.port
     await timing.step('webReadiness', async () => {
       web = spawn(
         process.execPath,
@@ -253,15 +298,15 @@ test('runs exact Home and workbench continuity with isolated deep-link refresh',
           stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
         }
       )
-      await waitForChildReady(
-        web,
-        HOME_WORKBENCH_STEP_BOUNDS_MS.webReadiness,
-        'Web'
-      )
-      const response = await fetch(webOrigin + '/', {
-        signal: AbortSignal.timeout(1_000),
+      webReadinessEvidence = await waitForProcessHttpReady(web, {
+        url: webOrigin + '/',
+        label: 'Web',
+        timeoutMs: HOME_WORKBENCH_STEP_BOUNDS_MS.webReadiness,
+        logHint: 'Local:',
+        expectedStatus: 200,
+        expectedBody: '<div id="root"></div>',
+        ownsListener: () => ownsExactListener(web!.pid!, '127.0.0.1', webPort),
       })
-      if (!response.ok) throw new Error('Web readiness response was not OK')
     })
     const stablePath =
       '/projects/' + encodeURIComponent(project.id) + '/workbench/'
@@ -623,6 +668,16 @@ test('runs exact Home and workbench continuity with isolated deep-link refresh',
               cleanupMs: CLEANUP_TIMEOUT_MS,
               marginMs: HOME_WORKBENCH_MARGIN_MS,
               stepBoundsMs: HOME_WORKBENCH_STEP_BOUNDS_MS,
+            },
+            readiness: {
+              api: {
+                ...apiReadinessEvidence,
+                consequence: 'exact-owned-listener-and-http-projects',
+              },
+              web: {
+                ...webReadinessEvidence,
+                consequence: 'exact-owned-listener-and-http-home',
+              },
             },
             ledger,
             history: {

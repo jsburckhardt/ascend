@@ -1,5 +1,4 @@
 import { spawn } from 'node:child_process'
-import { createConnection } from 'node:net'
 
 const [viteCli, host, portText] = process.argv.slice(2)
 if (viteCli === undefined || host === undefined || portText === undefined) {
@@ -11,35 +10,19 @@ const vite = spawn(
   { stdio: ['ignore', 'pipe', 'pipe'] }
 )
 let output = ''
-let ready = false
-const inspect = (value) => {
+let hintSent = false
+const inspect = (target, value) => {
+  target.write(value)
   output = (output + value.toString('utf8')).slice(-8_192)
-  if (!ready && output.includes('Local:')) {
-    ready = true
-    process.send?.({ status: 'ready' })
+  if (!hintSent && output.includes('Local:')) {
+    hintSent = true
+    process.send?.({ status: 'log-hint' })
   }
 }
-vite.stdout.on('data', inspect)
-vite.stderr.on('data', inspect)
-const observeListener = () => {
-  if (ready || vite.exitCode !== null || vite.signalCode !== null) return
-  const socket = createConnection({ host, port: Number(portText) })
-  socket.once('connect', () => {
-    socket.destroy()
-    if (!ready) {
-      ready = true
-      process.send?.({ status: 'ready' })
-    }
-  })
-  socket.once('error', () => {
-    socket.destroy()
-    setTimeout(observeListener, 25)
-  })
-}
-observeListener()
+vite.stdout.on('data', (value) => inspect(process.stdout, value))
+vite.stderr.on('data', (value) => inspect(process.stderr, value))
 
 vite.once('exit', (code, signal) => {
-  if (!ready) process.send?.({ status: 'failed' })
   process.exitCode = signal === null ? (code ?? 1) : 1
 })
 

@@ -20,6 +20,19 @@ export const HOME_WORKBENCH_FAILURE_EVIDENCE = path.join(
   'browser-failures.json'
 )
 
+interface ReadinessEvidence {
+  readonly api?: {
+    readonly logHintAtMs?: number | null
+    readonly listenerReadyAtMs?: number
+    readonly consequence?: string
+  }
+  readonly web?: {
+    readonly logHintAtMs?: number | null
+    readonly listenerReadyAtMs?: number
+    readonly consequence?: string
+  }
+}
+
 interface BrowserTimingEvidence {
   readonly bounds?: { readonly overallMs?: number }
   readonly timing?: {
@@ -67,6 +80,7 @@ export const auditHomeWorkbenchResiduals = async (): Promise<
   const evidence = JSON.parse(
     await readFile(HOME_WORKBENCH_BROWSER_EVIDENCE, 'utf8')
   ) as {
+    readiness?: ReadinessEvidence
     cleanup?: {
       contexts?: { afterClose?: number }
       pages?: { afterClose?: number }
@@ -112,6 +126,7 @@ export const auditHomeWorkbenchResiduals = async (): Promise<
   ) as {
     bounds?: BrowserTimingEvidence['bounds']
     timing?: BrowserTimingEvidence['timing']
+    readiness?: ReadinessEvidence
     cleanup?: {
       contexts?: { after?: number }
       pages?: { after?: number }
@@ -155,12 +170,36 @@ export const auditHomeWorkbenchResiduals = async (): Promise<
     'evidence',
     'cleanup',
   ])
+  const readinessPassed = (
+    [
+      [evidence.readiness?.api, 'exact-owned-listener-and-http-projects'],
+      [evidence.readiness?.web, 'exact-owned-listener-and-http-home'],
+      [realProcess.readiness?.api, 'exact-owned-listener-and-http-projects'],
+      [realProcess.readiness?.web, 'exact-owned-listener-and-http-home'],
+    ] as const
+  ).every(([readiness, consequence]) => {
+    const logHintAtMs = readiness?.logHintAtMs
+    const listenerReadyAtMs = readiness?.listenerReadyAtMs
+    const hintPassed =
+      logHintAtMs === null ||
+      (typeof logHintAtMs === 'number' &&
+        Number.isSafeInteger(logHintAtMs) &&
+        typeof listenerReadyAtMs === 'number' &&
+        listenerReadyAtMs >= logHintAtMs)
+    return (
+      readiness !== undefined &&
+      hintPassed &&
+      Number.isSafeInteger(listenerReadyAtMs) &&
+      readiness.consequence === consequence
+    )
+  })
   const cleanup = evidence.cleanup ?? {}
   const failureCleanup = failures.cleanup ?? {}
   const realCleanup = realProcess.cleanup
   const passed =
     continuityTimingPassed &&
     realProcessTimingPassed &&
+    readinessPassed &&
     markerPidAbsent &&
     markerOutputAbsent &&
     cleanup.contexts?.afterClose === 0 &&
@@ -206,6 +245,7 @@ export const auditHomeWorkbenchResiduals = async (): Promise<
     timing: {
       continuity: continuityTimingPassed,
       realProcess: realProcessTimingPassed,
+      readiness: readinessPassed,
     },
     cleanup,
     failureCleanup,

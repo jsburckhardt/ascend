@@ -239,6 +239,6 @@ Add `verify-home-workbench` and a standalone residual audit to the root justfile
 
 ## Implement correction record — AC-24 and AC-28
 
-- **T-6 remains Complete:** retained setup, API, web, runtime, workbench, terminal, three-entry, history, deep-link, evidence, and cleanup timings now identify the exact slow boundary. Readiness uses owned process/listener or browser-surface events; runtime and workbench readiness share one acquisition rather than serial duplicate waits.
+- **T-6 remains Complete:** retained setup, API, web, runtime, workbench, terminal, three-entry, history, deep-link, evidence, and cleanup timings identify the exact slow boundary. API and Vite output is only a log hint; readiness repeatedly attributes the reserved listener to the exact launched process tree and requires the expected HTTP project-list or Home status/body before recording the distinct listener-ready timestamp. Runtime and workbench readiness share one acquisition rather than serial duplicate waits.
 - **T-8 remains Complete:** the designated proofs reserve distinct ports, build the API once and launch it directly, stop API/web groups concurrently, reserve cleanup inside the 220,000 ms derived overall bound, and retain partial timing plus cleanup evidence on failure. The independent residual audit rejects missing, failed, or over-bound timing steps.
 - The correction adds no retry, lifecycle UI, persisted runtime identity, API/data/config migration, or architecture-contract change.

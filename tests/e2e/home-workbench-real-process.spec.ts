@@ -21,7 +21,7 @@ import {
   HOME_WORKBENCH_OVERALL_MS,
   HOME_WORKBENCH_STEP_BOUNDS_MS,
   HomeWorkbenchTiming,
-  waitForChildReady,
+  waitForProcessHttpReady,
 } from './home-workbench-timing.js'
 
 const designated = process.env.BL012_DESIGNATED === '1'
@@ -59,41 +59,29 @@ const ports = async (): Promise<readonly [number, number]> => {
   )
   return values
 }
-const waitForOutput = async (
-  child: ChildProcessWithoutNullStreams,
-  expected: string | readonly string[],
-  label: string,
-  timeoutMs = startupMs
-): Promise<string> =>
-  new Promise((resolve, reject) => {
-    let output = ''
-    const inspect = (value: Buffer): void => {
-      output = (output + value.toString('utf8')).slice(-8_192)
-      const candidates = typeof expected === 'string' ? [expected] : expected
-      const match = candidates.find((candidate) => output.includes(candidate))
-      if (match !== undefined) settle(() => resolve(match))
-    }
-    const exited = (): void =>
-      settle(() => reject(new Error(label + ' exited')))
-    const timer = setTimeout(
-      () => settle(() => reject(new Error(label + ' readiness timed out'))),
-      timeoutMs
+const ownsExactListener = async (
+  rootPid: number,
+  host: string,
+  port: number
+): Promise<boolean> => {
+  const processes = await readManagedProcesses(rootPid)
+  const discovered = await readManagedListeners(
+    processes.map((process) => process.pid)
+  )
+  const candidate = discovered.find(
+    (listener) => listener.address === host && listener.port === port
+  )
+  if (candidate === undefined) return false
+  try {
+    return (await readManagedListeners([candidate.pid], { strict: true })).some(
+      (listener) =>
+        listener.address === host &&
+        listener.port === port &&
+        listener.inode === candidate.inode
     )
-    const settle = (complete: () => void): void => {
-      clearTimeout(timer)
-      child.stdout.off('data', inspect)
-      child.stderr.off('data', inspect)
-      child.off('exit', exited)
-      complete()
-    }
-    child.stdout.on('data', inspect)
-    child.stderr.on('data', inspect)
-    child.once('exit', exited)
-  })
-
-const confirmReady = async (url: string, label: string): Promise<void> => {
-  const response = await fetch(url, { signal: AbortSignal.timeout(1_000) })
-  if (!response.ok) throw new Error(label + ' readiness response was not OK')
+  } catch {
+    return false
+  }
 }
 const unavailable = async (url: string): Promise<boolean> => {
   try {
@@ -250,7 +238,11 @@ test('proves visible terminal continuity and fresh storage with real API and web
     fresh: BrowserContext | undefined,
     terminalPid: number | undefined,
     page: Page | undefined,
-    runtime: Awaited<ReturnType<typeof identity>> | undefined
+    runtime: Awaited<ReturnType<typeof identity>> | undefined,
+    apiReadinessEvidence:
+      Awaited<ReturnType<typeof waitForProcessHttpReady>> | undefined,
+    webReadinessEvidence:
+      Awaited<ReturnType<typeof waitForProcessHttpReady>> | undefined
   const logs: string[] = [],
     observations: Observation[] = []
   let ordinal = 0
@@ -356,8 +348,15 @@ test('proves visible terminal continuity and fresh storage with real API and web
       )
       api.stdout.on('data', (value) => logs.push(String(value)))
       api.stderr.on('data', (value) => logs.push(String(value)))
-      await waitForOutput(api, 'Server listening at', 'API')
-      await confirmReady(apiOrigin + '/api/projects', 'API')
+      apiReadinessEvidence = await waitForProcessHttpReady(api, {
+        url: apiOrigin + '/api/projects',
+        label: 'API',
+        timeoutMs: HOME_WORKBENCH_STEP_BOUNDS_MS.apiReadiness,
+        logHint: 'Server listening at',
+        expectedStatus: 200,
+        expectedBody: '"projects"',
+        ownsListener: () => ownsExactListener(api!.pid!, '127.0.0.1', apiPort),
+      })
       const response = await fetch(apiOrigin + '/api/projects', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
@@ -392,12 +391,15 @@ test('proves visible terminal continuity and fresh storage with real API and web
       )
       web.stdout.on('data', (value) => logs.push(String(value)))
       web.stderr.on('data', (value) => logs.push(String(value)))
-      await waitForChildReady(
-        web,
-        HOME_WORKBENCH_STEP_BOUNDS_MS.webReadiness,
-        'Web'
-      )
-      await confirmReady(webOrigin + '/', 'Web')
+      webReadinessEvidence = await waitForProcessHttpReady(web, {
+        url: webOrigin + '/',
+        label: 'Web',
+        timeoutMs: HOME_WORKBENCH_STEP_BOUNDS_MS.webReadiness,
+        logHint: 'Local:',
+        expectedStatus: 200,
+        expectedBody: '<div id="root"></div>',
+        ownsListener: () => ownsExactListener(web!.pid!, '127.0.0.1', webPort),
+      })
     })
     const stable =
       webOrigin + '/projects/' + encodeURIComponent(project.id) + '/workbench/'
@@ -599,6 +601,16 @@ test('proves visible terminal continuity and fresh storage with real API and web
         stepBoundsMs: HOME_WORKBENCH_STEP_BOUNDS_MS,
       },
       timing: timing.summary(),
+      readiness: {
+        api: {
+          ...apiReadinessEvidence,
+          consequence: 'exact-owned-listener-and-http-projects',
+        },
+        web: {
+          ...webReadinessEvidence,
+          consequence: 'exact-owned-listener-and-http-home',
+        },
+      },
       processes: { apiGroup: true, webGroup: true },
       persistence: { isolatedSqlite: true },
       runtime: {

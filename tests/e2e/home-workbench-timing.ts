@@ -41,36 +41,143 @@ const timeoutAfter = (milliseconds: number): Promise<never> =>
     timer.unref()
   })
 
-export const waitForChildReady = async (
+export interface ProcessHttpReadiness {
+  readonly logHintAtMs: number | null
+  readonly listenerReadyAtMs: number
+}
+
+export interface ProcessHttpReadinessOptions {
+  readonly url: string
+  readonly label: string
+  readonly timeoutMs: number
+  readonly logHint: string
+  readonly expectedStatus: number
+  readonly expectedBody: string
+  readonly ownsListener: () => Promise<boolean>
+  readonly signal?: AbortSignal
+  readonly pollIntervalMs?: number
+}
+
+export const waitForProcessHttpReady = async (
   child: ChildProcessWithoutNullStreams,
-  timeoutMs: number,
-  label: string
-): Promise<void> =>
+  options: ProcessHttpReadinessOptions
+): Promise<ProcessHttpReadiness> =>
   new Promise((resolve, reject) => {
+    const startedAtMs = Date.now()
+    const deadlineMs = startedAtMs + options.timeoutMs
+    const pollIntervalMs = options.pollIntervalMs ?? 25
+    let logHintAtMs: number | null = null
+    let settled = false
+    let pollTimer: NodeJS.Timeout | undefined
+    let requestController: AbortController | undefined
+
+    const inspect = (value: Buffer): void => {
+      if (
+        logHintAtMs === null &&
+        value.toString('utf8').includes(options.logHint)
+      ) {
+        logHintAtMs = Date.now()
+      }
+    }
     const message = (value: unknown): void => {
       if (
+        logHintAtMs === null &&
         typeof value === 'object' &&
         value !== null &&
         'status' in value &&
-        value.status === 'ready'
+        value.status === 'log-hint'
       ) {
-        settle(resolve)
+        logHintAtMs = Date.now()
       }
     }
-    const exited = (): void =>
-      settle(() => reject(new Error(label + ' exited before readiness')))
-    const timer = setTimeout(
-      () => settle(() => reject(new Error(label + ' readiness timed out'))),
-      timeoutMs
-    )
-    const settle = (complete: () => void): void => {
-      clearTimeout(timer)
+    const cleanup = (): void => {
+      if (pollTimer !== undefined) clearTimeout(pollTimer)
+      requestController?.abort()
+      child.stdout.off('data', inspect)
+      child.stderr.off('data', inspect)
       child.off('message', message)
       child.off('exit', exited)
+      options.signal?.removeEventListener('abort', cancelled)
+    }
+    const settle = (complete: () => void): void => {
+      if (settled) return
+      settled = true
+      cleanup()
       complete()
     }
+    const exited = (): void =>
+      settle(() =>
+        reject(new Error(options.label + ' exited before HTTP readiness'))
+      )
+    const cancelled = (): void =>
+      settle(() =>
+        reject(new Error(options.label + ' readiness was cancelled'))
+      )
+    const schedule = (): void => {
+      if (settled) return
+      const remainingMs = deadlineMs - Date.now()
+      if (remainingMs <= 0) {
+        settle(() =>
+          reject(new Error(options.label + ' HTTP readiness timed out'))
+        )
+        return
+      }
+      pollTimer = setTimeout(
+        () => void probe(),
+        Math.min(pollIntervalMs, remainingMs)
+      )
+    }
+    const probe = async (): Promise<void> => {
+      if (settled) return
+      if (options.signal?.aborted) {
+        cancelled()
+        return
+      }
+      if (child.exitCode !== null || child.signalCode !== null) {
+        exited()
+        return
+      }
+      try {
+        if (!(await options.ownsListener())) {
+          schedule()
+          return
+        }
+        const remainingMs = deadlineMs - Date.now()
+        if (remainingMs <= 0) {
+          schedule()
+          return
+        }
+        requestController = new AbortController()
+        const response = await fetch(options.url, {
+          signal: AbortSignal.any([
+            requestController.signal,
+            AbortSignal.timeout(Math.min(1_000, remainingMs)),
+          ]),
+        })
+        const body = await response.text()
+        if (
+          response.status === options.expectedStatus &&
+          body.includes(options.expectedBody)
+        ) {
+          const listenerReadyAtMs = Date.now()
+          settle(() => resolve({ logHintAtMs, listenerReadyAtMs }))
+          return
+        }
+      } catch {
+        // The exact owned listener may exist before its HTTP consequence is ready.
+      } finally {
+        requestController = undefined
+      }
+      schedule()
+    }
+
+    child.stdout.on('data', inspect)
+    child.stderr.on('data', inspect)
     child.on('message', message)
     child.once('exit', exited)
+    options.signal?.addEventListener('abort', cancelled, { once: true })
+    if (options.signal?.aborted) cancelled()
+    else void probe()
   })
 
 export class HomeWorkbenchTiming {

@@ -45,6 +45,18 @@ describe('Home/workbench residual audit', () => {
       JSON.stringify({
         ...timingEvidence([...commonSteps, 'history']),
         fixtureIntegrity: true,
+        readiness: {
+          api: {
+            logHintAtMs: null,
+            listenerReadyAtMs: 90,
+            consequence: 'exact-owned-listener-and-http-projects',
+          },
+          web: {
+            logHintAtMs: 100,
+            listenerReadyAtMs: 110,
+            consequence: 'exact-owned-listener-and-http-home',
+          },
+        },
         cleanup: {
           contexts: { afterClose: 0 },
           pages: { afterClose: 0 },
@@ -84,6 +96,18 @@ describe('Home/workbench residual audit', () => {
       HOME_WORKBENCH_REAL_PROCESS_EVIDENCE,
       JSON.stringify({
         ...timingEvidence(commonSteps),
+        readiness: {
+          api: {
+            logHintAtMs: 100,
+            listenerReadyAtMs: 110,
+            consequence: 'exact-owned-listener-and-http-projects',
+          },
+          web: {
+            logHintAtMs: 120,
+            listenerReadyAtMs: 140,
+            consequence: 'exact-owned-listener-and-http-home',
+          },
+        },
         cleanup: {
           contexts: { after: 0 },
           pages: { after: 0 },

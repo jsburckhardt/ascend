@@ -323,6 +323,11 @@ const runRealAttempt = async (
           cwd: canonicalPath,
         })
         await writeJsonAtomic(directPath, direct)
+        const terminalInput = page!
+          .getByRole('textbox', { name: /^Terminal /u })
+          .first()
+        await expect(terminalInput).toBeAttached({ timeout: 10_000 })
+        await terminalInput.focus()
         const command = `setsid \"${path.join(
           REPOSITORY_ROOT,
           'node_modules/.bin/tsx'

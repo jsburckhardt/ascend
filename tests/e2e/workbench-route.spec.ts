@@ -371,6 +371,11 @@ test('real Chromium derives three stable-route operations and proves observed cl
           .locator('.terminal.xterm')
           .first()
           .waitFor({ state: 'visible', timeout: 10_000 })
+        const terminalInput = page
+          .getByRole('textbox', { name: /^Terminal /u })
+          .first()
+        await expect(terminalInput).toBeAttached({ timeout: 10_000 })
+        await terminalInput.focus()
         await rm(WORKBENCH_ROUTE_TERMINAL_TEMP, { force: true })
         const command = `setsid \"${path.join(
           REPOSITORY_ROOT,

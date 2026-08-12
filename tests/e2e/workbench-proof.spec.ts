@@ -280,7 +280,11 @@ const openIntegratedTerminal = async (page: Page): Promise<void> => {
   await page.keyboard.press('Enter')
   const terminal = page.locator('.terminal.xterm').first()
   await expect(terminal).toBeVisible({ timeout: 10_000 })
-  await terminal.click()
+  const terminalInput = page
+    .getByRole('textbox', { name: /^Terminal /u })
+    .first()
+  await expect(terminalInput).toBeAttached({ timeout: 10_000 })
+  await terminalInput.focus()
 }
 
 test.describe.configure({ mode: 'serial' })

@@ -38,6 +38,16 @@ import {
 } from '../../apps/api/src/workbench-proof-contract.js'
 
 const designated = process.env.BL011_DESIGNATED === '1'
+
+const pathExists = async (target: string): Promise<boolean> => {
+  try {
+    await lstat(target)
+    return true
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false
+    throw error
+  }
+}
 test.describe.configure({ mode: 'serial', retries: 0 })
 
 const listenerAbsent = (port: number): Promise<boolean> =>
@@ -366,7 +376,17 @@ test('real Chromium derives three stable-route operations and proves observed cl
         }
 
       if (attempt === 3) {
-        await page.keyboard.press('Control+Shift+Backquote')
+        await page.keyboard.press('F1')
+        await expect(page.locator('.quick-input-widget')).toBeVisible({
+          timeout: 5_000,
+        })
+        await page.keyboard.insertText('Terminal: Create New Terminal')
+        await expect(
+          page
+            .getByText('Terminal: Create New Terminal', { exact: true })
+            .first()
+        ).toBeVisible({ timeout: 5_000 })
+        await page.keyboard.press('Enter')
         await page
           .locator('.terminal.xterm')
           .first()
@@ -387,25 +407,10 @@ test('real Chromium derives three stable-route operations and proves observed cl
         await page.keyboard.insertText(command)
         await page.keyboard.press('Enter')
         await expect
-          .poll(
-            async () => {
-              try {
-                return JSON.parse(
-                  await readFile(WORKBENCH_ROUTE_TERMINAL_TEMP, 'utf8')
-                ) as Record<string, unknown>
-              } catch (error) {
-                if ((error as NodeJS.ErrnoException).code === 'ENOENT')
-                  return undefined
-                throw error
-              }
-            },
-            { timeout: 45_000 }
-          )
-          .toMatchObject({
-            expectedSha256: WORKBENCH_ROUTE_TERMINAL_SHA256,
-            actualSha256: WORKBENCH_ROUTE_TERMINAL_SHA256,
-            passed: true,
+          .poll(() => pathExists(WORKBENCH_ROUTE_TERMINAL_TEMP), {
+            timeout: 45_000,
           })
+          .toBe(true)
         terminal = JSON.parse(
           await readFile(WORKBENCH_ROUTE_TERMINAL_TEMP, 'utf8')
         ) as Record<string, unknown>
@@ -417,6 +422,7 @@ test('real Chromium derives three stable-route operations and proves observed cl
           hostname: os.hostname(),
           user: 'vscode',
           cwd: canonicalPath,
+          expectedCwd: canonicalPath,
           passed: true,
         })
         await rm(WORKBENCH_ROUTE_TERMINAL_TEMP, { force: true })

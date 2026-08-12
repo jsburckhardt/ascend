@@ -59,6 +59,8 @@ Passed for all applicable categories:
 - **DL-294 (`difficulty`):** captured when `rg` was unavailable and inspection used the repository-available fallback.
 - **DL-295 (`difficulty`):** captured for the authoritative full validation wait exceeding 30 seconds.
 - **DL-296 (`difficulty`):** captured when `python` was unavailable and the environment-required `python3` fallback was used.
+- **DL-297 (`difficulty`):** captured when the combined documentation diff exceeded tool output limits and required direct per-file reads.
+- **DL-298 (`difficulty`):** captured when successful full-validation output exceeded display limits and required targeted summary inspection.
 
 ## Result
 

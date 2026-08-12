@@ -288,7 +288,7 @@ test.describe.configure({ mode: 'serial' })
 test('cancels an in-progress real integrated command on overall timeout', async ({
   browser,
 }) => {
-  test.setTimeout(60_000)
+  test.setTimeout(35_000)
   await removeAbsentPriorRuns()
   const tracked = new Map<number, TrackedCommandIdentity>()
   let handle: ProofHandle | null = null
@@ -299,7 +299,7 @@ test('cancels an in-progress real integrated command on overall timeout', async 
 
   await expect(
     runTerminalParityEpisode<ProofHandle, OwnedBrowserContext>({
-      timeoutMs: 40_000,
+      timeoutMs: 20_000,
       preflight: async () => {
         await preflightFixedExecutables(process.env.PATH ?? '')
       },
@@ -332,11 +332,11 @@ test('cancels an in-progress real integrated command on overall timeout', async 
         ).toBeVisible()
         await openIntegratedTerminal(page)
         await page.keyboard.insertText(
-          '/usr/local/bin/node /workspaces/ascend/tests/e2e/fixtures/terminal-timeout-command.mjs'
+          `/usr/local/bin/node \"${path.join(REPOSITORY_ROOT, 'tests/e2e/fixtures/terminal-timeout-command.mjs')}\"`
         )
         await page.keyboard.press('Enter')
         await expect
-          .poll(() => pathExists(timeoutCommandPidFile), { timeout: 40_000 })
+          .poll(() => pathExists(timeoutCommandPidFile), { timeout: 20_000 })
           .toBe(true)
         const identity = JSON.parse(
           await readFile(timeoutCommandPidFile, 'utf8')
@@ -380,7 +380,7 @@ test('cancels an in-progress real integrated command on overall timeout', async 
     })
   ).rejects.toMatchObject({
     code: 'terminal-episode-timeout',
-    details: { timeoutMs: 40_000 },
+    details: { timeoutMs: 20_000 },
   })
 
   expect(tracked.size).toBeGreaterThan(0)
@@ -519,7 +519,7 @@ test('proves one designated-host workbench with terminal parity', async ({
         await openIntegratedTerminal(page)
         terminalCreationActions += 1
         const integratedCommand =
-          'setsid /workspaces/ascend/node_modules/.bin/tsx /workspaces/ascend/apps/api/src/cli/proof-terminal-integrated.ts'
+          `setsid \"${path.join(REPOSITORY_ROOT, 'node_modules/.bin/tsx')}\" \"${path.join(REPOSITORY_ROOT, 'apps/api/src/cli/proof-terminal-integrated.ts')}\"`
         signal.throwIfAborted()
         await page.keyboard.insertText(integratedCommand)
         await page.keyboard.press('Enter')

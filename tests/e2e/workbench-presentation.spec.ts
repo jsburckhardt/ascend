@@ -324,7 +324,7 @@ const runRealAttempt = async (
         })
         await writeJsonAtomic(directPath, direct)
         const command =
-          'setsid /workspaces/ascend/node_modules/.bin/tsx /workspaces/ascend/apps/api/src/cli/proof-terminal-integrated.ts && printf BL003_TERMINAL_COMPLETE\n'
+          `setsid \"${path.join(REPOSITORY_ROOT, 'node_modules/.bin/tsx')}\" \"${path.join(REPOSITORY_ROOT, 'apps/api/src/cli/proof-terminal-integrated.ts')}\" && printf BL003_TERMINAL_COMPLETE\n`
         await page!.keyboard.insertText(command)
         await page!.keyboard.press('Enter')
         const deadline = Date.now() + 45_000

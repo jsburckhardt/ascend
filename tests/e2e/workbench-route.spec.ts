@@ -3,6 +3,7 @@ import { lstat, readFile, rm } from 'node:fs/promises'
 import type { AddressInfo } from 'node:net'
 import { createConnection } from 'node:net'
 import os from 'node:os'
+import path from 'node:path'
 import { expect, test, type BrowserContext } from '@playwright/test'
 import {
   createApiServerController,
@@ -33,6 +34,7 @@ import {
   EXPLORER_SENTINEL,
   MARKDOWN_FIXTURE,
   MARKDOWN_RENDERED_SENTINEL,
+  REPOSITORY_ROOT,
 } from '../../apps/api/src/workbench-proof-contract.js'
 
 const designated = process.env.BL011_DESIGNATED === '1'
@@ -371,7 +373,7 @@ test('real Chromium derives three stable-route operations and proves observed cl
           .waitFor({ state: 'visible', timeout: 10_000 })
         await rm(WORKBENCH_ROUTE_TERMINAL_TEMP, { force: true })
         const command =
-          'setsid /workspaces/ascend/node_modules/.bin/tsx /workspaces/ascend/apps/api/src/cli/workbench-route-terminal-proof.ts\n'
+          `setsid \"${path.join(REPOSITORY_ROOT, 'node_modules/.bin/tsx')}\" \"${path.join(REPOSITORY_ROOT, 'apps/api/src/cli/workbench-route-terminal-proof.ts')}\"\n`
         await page.keyboard.insertText(command)
         await page.keyboard.press('Enter')
         await expect

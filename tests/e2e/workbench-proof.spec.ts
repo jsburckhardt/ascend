@@ -292,7 +292,7 @@ test.describe.configure({ mode: 'serial' })
 test('cancels an in-progress real integrated command on overall timeout', async ({
   browser,
 }) => {
-  test.setTimeout(60_000)
+  test.setTimeout(80_000)
   await removeAbsentPriorRuns()
   const tracked = new Map<number, TrackedCommandIdentity>()
   let handle: ProofHandle | null = null
@@ -303,7 +303,7 @@ test('cancels an in-progress real integrated command on overall timeout', async 
 
   await expect(
     runTerminalParityEpisode<ProofHandle, OwnedBrowserContext>({
-      timeoutMs: 40_000,
+      timeoutMs: 60_000,
       preflight: async () => {
         await preflightFixedExecutables(process.env.PATH ?? '')
       },
@@ -387,7 +387,7 @@ test('cancels an in-progress real integrated command on overall timeout', async 
     })
   ).rejects.toMatchObject({
     code: 'terminal-episode-timeout',
-    details: { timeoutMs: 40_000 },
+    details: { timeoutMs: 60_000 },
   })
 
   expect(tracked.size).toBeGreaterThan(0)

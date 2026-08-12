@@ -63,12 +63,12 @@
 - `just test-e2e`: repeated final baseline exit 0; 5 Chromium tests passed, 2 designated tests skipped, and the capacity residual audit passed.
 - `just verify-workbench-route`: designated exit 0; 50 Vitest cases and one real Chromium scenario passed, followed by mode-`0600` residual `status: ok`, exact V-7/redaction completeness, 23 observed inventories, and zero pending entries.
 - Retained pre-correction clean linked-worktree baseline: `just setup && just verify` exited 0 at `d75cd4e`; correction-specific clean-worktree evidence is reported in the committed Implement handoff.
-- Primary-checkout `just verify`: exit 0 after one diagnosed baseline terminal-parity timeout; `just test-e2e` then passed 5 Chromium tests with 2 designated skips and a clean capacity audit, and the complete rerun passed formatting, lint, type checks, package tests/coverage, builds, all repository gates, baseline Chromium, designated proofs, public scans, cleanup, and residual audit.
+- Primary-checkout `just verify`: exit 0 after diagnosing one baseline terminal-parity timeout and one overlapping prior-handle state; isolated `just test-e2e` passed 5 Chromium tests with 2 designated skips and a clean capacity audit, and the complete rerun passed formatting, lint, type checks, package tests/coverage, builds, all repository gates, baseline Chromium, designated proofs, public scans, cleanup, and residual audit.
 - Restricted/public evidence: regular ignored/untracked mode-`0600` evidence; 3 navigations, 3 workflows, 6 sockets (Management 3, ExtensionHost 3), 0 retries, 1 accepted and 22 rejected classifier vectors, 23 executable failures, 10 marker-bounded protected-sentinel scans, 0 marketplace/forbidden/public-authority matches, 23 observed inventories, 0 pending entries, and residual `status: ok`. The stale `V-7-security` matrix is absent.
 
 ## Observation Evidence
 
-- Captured harness observations for finalization, concurrent-change integration, and correction: `DL-400`, `CONF-074`, `DL-401`, `CONF-075`, `DL-402`–`DL-416`, `INS-077`–`INS-085`, `SUGG-014`, `DL-420`, `CONF-077`, `CONF-079`, `DL-429`, `DL-431`, `CONF-080`, `COORD-053`, `DL-437`, `DL-440`, and `DL-443`.
+- Captured harness observations for finalization, concurrent-change integration, and correction: `DL-400`, `CONF-074`, `DL-401`, `CONF-075`, `DL-402`–`DL-416`, `INS-077`–`INS-085`, `SUGG-014`, `DL-420`, `CONF-077`, `CONF-079`, `DL-429`, `DL-431`, `CONF-080`, `COORD-053`, `DL-437`, `DL-440`, `DL-443`, and `DL-445`.
 - This correction additionally captured `DL-425`, `INS-086`, `DL-426`, `DL-428`, `INS-087`, `DL-430`, `INS-088`, `DL-432`, `DL-433`, `INS-089`, `DL-434`, `DL-435`, `DL-436`, `CONF-081`, `DL-438`, `DL-439`, `DL-441`, `DL-442`, `DL-444`.
 
 These notes record implementation evidence only. Final acceptance remains owned by Verify.

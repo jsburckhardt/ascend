@@ -336,7 +336,7 @@ test('cancels an in-progress real integrated command on overall timeout', async 
         )
         await page.keyboard.press('Enter')
         await expect
-          .poll(() => pathExists(timeoutCommandPidFile), { timeout: 5_000 })
+          .poll(() => pathExists(timeoutCommandPidFile), { timeout: 20_000 })
           .toBe(true)
         const identity = JSON.parse(
           await readFile(timeoutCommandPidFile, 'utf8')

@@ -13,6 +13,10 @@ import {
 import type { ProjectLibrary } from '../src/project-library.js'
 import type { ProjectRuntimeManager } from '../src/project-runtime-manager.js'
 import {
+  deriveProjectOwnerToken,
+  stableProjectRoute,
+} from '../src/project-runtime-contract.js'
+import {
   classifyWorkbenchConnectionRolePayload,
   filterWorkbenchHeaders,
   validateWorkbenchRedactionProof,
@@ -104,12 +108,16 @@ const createApi = async (upstreamPort: number, events: unknown[] = []) => {
     internalUrl: `http://127.0.0.1:${upstreamPort}`,
     port: upstreamPort,
     canonicalPath: project.canonicalPath,
+    stableRoute: stableProjectRoute(project.id),
+    ownerToken: deriveProjectOwnerToken(project.id),
     startedAt: 1,
     elapsedMs: 1,
   })
   const runtime: ProjectRuntimeManager = {
+    register: vi.fn(),
     start: vi.fn(async () => snapshot),
     inspect: vi.fn(() => snapshot),
+    inspectEntries: vi.fn(() => []),
     lastFailure: vi.fn(),
     lastCleanup: vi.fn(),
     lastShutdown: vi.fn(),

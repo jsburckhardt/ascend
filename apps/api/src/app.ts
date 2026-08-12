@@ -17,7 +17,7 @@ import {
   createProjectRuntimeManager,
   type ProjectRuntimeManager,
 } from './project-runtime-manager.js'
-import type { RuntimeLifecycleEvent } from './project-runtime-contract.js'
+import type { RuntimeSafeLifecycleEvent } from './project-runtime-contract.js'
 import {
   createWorkbenchProxyManager,
   type WorkbenchProxyManager,
@@ -83,7 +83,7 @@ export interface AppOptions
   workbenchDocumentTimeoutMs?: number
   createProjectRuntimeManager?: (
     library: ProjectLibrary,
-    recordEvent: (event: RuntimeLifecycleEvent) => void
+    recordEvent: (event: RuntimeSafeLifecycleEvent) => void
   ) => ProjectRuntimeManager
 }
 

@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import os from 'node:os'
 
 export const RUNTIME_STATES = ['starting', 'running', 'failed'] as const
@@ -11,6 +12,8 @@ export interface RuntimeSnapshot {
   readonly internalUrl: string | null
   readonly port: number | null
   readonly canonicalPath: string
+  readonly stableRoute: string
+  readonly ownerToken: string
   readonly startedAt: number
   readonly elapsedMs: number
 }
@@ -99,6 +102,17 @@ export class RuntimeFailure extends Error {
     delete this.stack
     this.diagnostics = Object.freeze(Object.fromEntries(safeEntries))
   }
+}
+
+export function stableProjectRoute(projectId: string): string {
+  return `/projects/${encodeURIComponent(projectId)}/workbench/`
+}
+
+export function deriveProjectOwnerToken(projectId: string): string {
+  return (
+    'project-' +
+    createHash('sha256').update(projectId).digest('hex').slice(0, 16)
+  )
 }
 
 export interface RuntimeLifecycleEvent {
@@ -198,12 +212,21 @@ export function createProjectRuntimeConfig(
   return Object.freeze(config)
 }
 
+export interface RuntimeSafeLifecycleEvent {
+  readonly event: RuntimeLifecycleEvent['event']
+  readonly projectToken: string
+  readonly from: RuntimeLifecycleEvent['from']
+  readonly to: RuntimeLifecycleEvent['to']
+  readonly elapsedMs: number
+  readonly classification?: RuntimeFailureCategory
+}
+
 export function serializeRuntimeEvent(
   event: RuntimeLifecycleEvent
-): RuntimeLifecycleEvent {
+): RuntimeSafeLifecycleEvent {
   return Object.freeze({
     event: event.event,
-    projectId: event.projectId,
+    projectToken: deriveProjectOwnerToken(event.projectId),
     from: event.from,
     to: event.to,
     elapsedMs: Math.max(0, Math.floor(event.elapsedMs)),

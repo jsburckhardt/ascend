@@ -8,6 +8,10 @@ import {
   type ApiServerController,
 } from '../src/api-server.js'
 import type { ProjectLibrary } from '../src/project-library.js'
+import {
+  deriveProjectOwnerToken,
+  stableProjectRoute,
+} from '../src/project-runtime-contract.js'
 import { mergeWorkbenchRouteEvidence } from '../src/workbench-route-evidence.js'
 import type { ProjectRuntimeManager } from '../src/project-runtime-manager.js'
 
@@ -191,6 +195,8 @@ const createApi = async (upstreamPort: number) => {
     internalUrl: `http://127.0.0.1:${upstreamPort}`,
     port: upstreamPort,
     canonicalPath: project.canonicalPath,
+    stableRoute: stableProjectRoute(project.id),
+    ownerToken: deriveProjectOwnerToken(project.id),
     startedAt: 1,
     elapsedMs: 1,
   })

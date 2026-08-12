@@ -13,6 +13,10 @@ import {
   type ApiServerController,
 } from '../src/api-server.js'
 import type { ProjectLibrary } from '../src/project-library.js'
+import {
+  deriveProjectOwnerToken,
+  stableProjectRoute,
+} from '../src/project-runtime-contract.js'
 import { RuntimeFailure } from '../src/project-runtime-contract.js'
 import type { ProjectRuntimeManager } from '../src/project-runtime-manager.js'
 import { mergeWorkbenchRouteEvidence } from '../src/workbench-route-evidence.js'
@@ -85,6 +89,8 @@ const api = async (
     internalUrl: `http://127.0.0.1:${upstreamPort}`,
     port: upstreamPort,
     canonicalPath: project.canonicalPath,
+    stableRoute: stableProjectRoute(project.id),
+    ownerToken: deriveProjectOwnerToken(project.id),
     startedAt: 1,
     elapsedMs: 2,
   })
@@ -632,6 +638,8 @@ describe('stable workbench HTTP transport', () => {
             internalUrl: null,
             port: null,
             canonicalPath,
+            stableRoute: stableProjectRoute(projectId),
+            ownerToken: deriveProjectOwnerToken(projectId),
             startedAt: null,
             elapsedMs: 0,
           }
@@ -652,6 +660,8 @@ describe('stable workbench HTTP transport', () => {
               : 'http://127.0.0.1:' + String(port),
           port,
           canonicalPath,
+          stableRoute: stableProjectRoute(projectId),
+          ownerToken: deriveProjectOwnerToken(projectId),
           startedAt: 1,
           elapsedMs: 0,
         }

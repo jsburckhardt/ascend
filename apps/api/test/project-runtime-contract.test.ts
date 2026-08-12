@@ -6,7 +6,9 @@ import {
   RUNTIME_FAILURE_MESSAGES,
   RuntimeFailure,
   createProjectRuntimeConfig,
+  deriveProjectOwnerToken,
   serializeRuntimeEvent,
+  stableProjectRoute,
   type RuntimeSnapshot,
 } from '../src/project-runtime-contract.js'
 import { createProjectLibrary } from '../src/project-library.js'
@@ -30,6 +32,8 @@ describe('project runtime contract', () => {
       internalUrl: null,
       port: null,
       canonicalPath: '/projects/one',
+      stableRoute: stableProjectRoute('project-1'),
+      ownerToken: deriveProjectOwnerToken('project-1'),
       startedAt: 10,
       elapsedMs: 0,
     }
@@ -38,10 +42,12 @@ describe('project runtime contract', () => {
         'canonicalPath',
         'elapsedMs',
         'internalUrl',
+        'ownerToken',
         'pid',
         'port',
         'processStartTime',
         'projectId',
+        'stableRoute',
         'startedAt',
         'state',
       ].sort()
@@ -96,7 +102,7 @@ describe('project runtime contract', () => {
       })
     ).toEqual({
       event: 'runtime.start.failed',
-      projectId: 'project-1',
+      projectToken: deriveProjectOwnerToken('project-1'),
       from: 'starting',
       to: 'failed',
       elapsedMs: 12,

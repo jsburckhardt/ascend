@@ -37,6 +37,8 @@ just verify-home-workbench
 just proof-home-workbench-residual-audit
 just proof-project-runtime
 just proof-project-runtime-residual-audit
+just verify-project-runtime-isolation
+just proof-project-runtime-isolation-residual-audit
 just verify
 ```
 
@@ -132,3 +134,16 @@ Project Home is the exact `/` route. Activating a card's Open action navigates o
 Direct navigation, refresh, Back, and Forward use native browser history. Unknown or malformed IDs remain at the stable URL with fixed announced errors and Projects recovery. Safe startup, proxy, generic load, and 15-second document-load failures additionally offer same-URL Retry; each retry owns one newer generation, replaces failed history state, aborts obsolete acquisition, and ignores stale settlement. Workbench runtime, terminal, editor, Explorer, and Preview state survive Projects navigation because Projects does not stop the runtime.
 
 Development Vite forwards same-origin /projects HTTP and WebSocket traffic to the API. Vite and the API align the private ASCEND_FRONT_DOOR_TOKEN. Unset local development uses ascend-development-front-door-v1; explicit values must contain 16–256 characters on both processes. Partial, malformed, or mismatched trusted x-ascend-front-door-* headers are refused before runtime start. Deployment proxies must set the same token and trusted authority headers, keep them private, and redact them from logs. This is a configuration/operations correction, not a data, schema, or API-payload migration. Run just verify-home-workbench for event-bound matrices and bounded Chromium proofs. The designated scenarios use a 220-second no-retry overall bound derived from documented setup, API, web, runtime, workbench, terminal, entry, history, deep-link, evidence, and cleanup step bounds plus a 15-second margin, API and Vite startup log lines are hints only; readiness requires the exact launched process tree to own the reserved listener and the expected API project-list or Web Home response to succeed within its step bound. Evidence records the nullable log-hint timestamp separately from the listener-and-HTTP-ready timestamp. The gate then runs just proof-home-workbench-residual-audit for independent cleanup evidence.
+
+
+## Concurrent project runtime isolation (BL-013)
+
+Ascend owns one memory-only runtime entry per active project, keyed only by the persisted stable project ID. Each immutable trusted snapshot carries that project’s PID/start identity, loopback port, canonical path, stable route, start time, and opaque owner token. Eight interleaved starts for each of A, B, and C join one project-local launch (24 calls and three launches); healthy reuse never crosses project boundaries. Runtime-only identity, owner tokens, routes, ports, handles, and ephemeral user-data directories remain absent from SQLite and the four-field public project API.
+
+Failure, cancellation, replacement, proxy, event, and shutdown ownership is project-attributed. Early exit, crash, readiness, health, and proxy failure affect only the selected project. One cancelled waiter does not cancel seven peers; zero remaining waiters cancel and clean only that orphaned project start. Replacement requires one explicit later start and there is no automatic retry. Global shutdown remains the only lifecycle operation: it audits every owned project and leaves unrelated controls untouched. No public Stop or Restart endpoint or UI was added. BL-013 exposes no public Stop capability.
+
+The proxy validates project ID, canonical path, stable route, owner token, loopback URL, and port before forwarding. HTTP, WebSocket, and frame destinations fail closed on cross-project mismatch, and lifecycle/proxy events use the same opaque token without paths, ports, commands, environment, Git, terminal, editor, sentinel, or secret-like content.
+
+Run just verify-project-runtime-isolation for the local fake matrix and the no-retry three-Git-fixture Chromium A/B/C episode, including B termination through repository-only test authority and one explicit replacement. Run just proof-project-runtime-isolation-residual-audit independently for public/restricted evidence policy, per-project/global cleanup, fixture integrity, and zero runtime-data residuals. Generated evidence is under ignored test-results/bl-013/runtime-isolation/; public artifacts contain only safe classes/digests, while at most one raw authority diagnostic is a regular ignored mode-0600 file. Commands use repository-local fixtures, finite bounds, no hosted service, credential, network dependency, or manual judgment.
+
+This proves immediate isolation while all three projects are active. BL-014 session switching or persistence continuity, BL-015 performance targets, public lifecycle controls, broader lifecycle state, restart reconciliation, scheduling, quotas, and multi-host operation remain deferred.

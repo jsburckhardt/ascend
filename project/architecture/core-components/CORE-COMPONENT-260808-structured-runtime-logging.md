@@ -18,6 +18,7 @@ API requests, project registration, workbench lifecycle transitions, health chan
 - Runtime logs MUST be structured records written to standard output or standard error.
 - Fastify's built-in structured logger is the default application logger.
 - Lifecycle event names MUST remain stable and follow the event catalog in `PRD.md`.
+- Multi-project lifecycle and proxy events MUST use the shared deterministic opaque project token; raw project IDs, canonical paths, internal authorities, commands, environment, Git, terminal, editor, and source values MUST NOT be logged.
 - Logs MUST NOT include source contents, terminal contents, command output, clipboard data, prompts, credentials, or secrets.
 - OpenTelemetry defaults and environment configuration MUST provide traces and metrics independently of application log formatting.
 
@@ -26,7 +27,7 @@ API requests, project registration, workbench lifecycle transitions, health chan
 - Operators configure OpenTelemetry through standard `OTEL_*` environment variables.
 
 ### Expectations
-- Failures include an event name, project or runtime identifier when available, and an actionable error.
+- Failures include an event name, opaque project token when available, bounded classification, and an actionable safe error.
 - Startup events include elapsed timing data.
 
 ## Rationale
@@ -36,7 +37,7 @@ Structured console records are sufficient for the local MVP and remain compatibl
 ## Usage Examples
 
 ```ts
-request.log.info({ event: 'runtime.start.succeeded', projectId, elapsedMs })
+request.log.info({ event: 'runtime.start.succeeded', projectToken, elapsedMs })
 ```
 
 ## Integration Guidelines

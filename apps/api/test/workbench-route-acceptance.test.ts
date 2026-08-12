@@ -15,7 +15,9 @@ import {
 import type { ProjectLibrary } from '../src/project-library.js'
 import {
   createProjectRuntimeConfig,
+  deriveProjectOwnerToken,
   RuntimeFailure,
+  stableProjectRoute,
 } from '../src/project-runtime-contract.js'
 import {
   createProjectRuntimeManager,
@@ -275,6 +277,7 @@ describe('BL-011 executable acceptance coordinator', () => {
       close: vi.fn(),
     }
     const runtime: ProjectRuntimeManager = {
+      register: vi.fn(),
       start: vi.fn(async ({ projectId, canonicalPath }) => {
         observeBoundary('runtime-manager')
         const runtimeCategory = runtimeCategories.get(projectId)
@@ -294,11 +297,14 @@ describe('BL-011 executable acceptance coordinator', () => {
           internalUrl: 'http://127.0.0.1:' + String(selectedPort),
           port: selectedPort,
           canonicalPath,
+          stableRoute: stableProjectRoute(projectId),
+          ownerToken: deriveProjectOwnerToken(projectId),
           startedAt: 1,
           elapsedMs: 1,
         })
       }),
       inspect: vi.fn(),
+      inspectEntries: vi.fn(() => []),
       lastFailure: vi.fn(),
       lastCleanup: vi.fn(),
       lastShutdown: vi.fn(),
@@ -558,15 +564,19 @@ describe('BL-011 executable acceptance coordinator', () => {
       internalUrl: 'http://127.0.0.1:' + String(upstreamPort),
       port: upstreamPort,
       canonicalPath: securityProject.canonicalPath,
+      stableRoute: stableProjectRoute(securityProject.id),
+      ownerToken: deriveProjectOwnerToken(securityProject.id),
       startedAt: 1,
       elapsedMs: 1,
     })
     const runtime: ProjectRuntimeManager = {
+      register: vi.fn(),
       start: vi.fn(async ({ canonicalPath }) => {
         runtimeInputs.push(canonicalPath)
         return snapshot
       }),
       inspect: vi.fn(() => snapshot),
+      inspectEntries: vi.fn(() => []),
       lastFailure: vi.fn(),
       lastCleanup: vi.fn(),
       lastShutdown: vi.fn(),
@@ -1076,12 +1086,16 @@ describe('BL-011 executable acceptance coordinator', () => {
       internalUrl: `http://127.0.0.1:${upstreamPort}`,
       port: upstreamPort,
       canonicalPath: project.canonicalPath,
+      stableRoute: stableProjectRoute(project.id),
+      ownerToken: deriveProjectOwnerToken(project.id),
       startedAt: 1,
       elapsedMs: 1,
     })
     const runtime: ProjectRuntimeManager = {
+      register: vi.fn(),
       start: vi.fn(async () => snapshot),
       inspect: vi.fn(() => snapshot),
+      inspectEntries: vi.fn(() => []),
       lastFailure: vi.fn(),
       lastCleanup: vi.fn(),
       lastShutdown: vi.fn(),

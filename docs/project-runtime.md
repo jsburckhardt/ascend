@@ -4,7 +4,7 @@ Issue #25 adds an internal, in-process runtime manager over the persisted four-f
 
 ## Interface and ownership
 
-ProjectRuntimeManager.start({ projectId, canonicalPath, signal? }) validates the exact ID/path pair with ProjectLibrary.findById. It resolves an immutable snapshot with project ID, state, PID and process-start identity, loopback internal URL and port, canonical path, startedAt, and elapsedMs. inspect(projectId) reports starting, running, or bounded failed state; absence represents stopped. lastFailure(projectId) returns the retained typed diagnostic. shutdown() owns cleanup and resolves one memoized status plus an audit row for every owned runtime identity.
+ProjectRuntimeManager.start({ projectId, canonicalPath, signal? }) validates the exact ID/path pair with ProjectLibrary.findById. It resolves an immutable snapshot with project ID, state, PID and process-start identity, loopback internal URL and port, canonical path, stable route, opaque owner token, startedAt, and elapsedMs. inspect(projectId) reports starting, running, or bounded failed state; absence represents stopped. lastFailure(projectId) returns the retained typed diagnostic. shutdown() owns cleanup and resolves one memoized status plus an audit row for every owned runtime identity.
 
 Process handles, PID identities, ports, in-flight operations, and lifecycle state are memory-only and exist only in manager memory. SQLite remains metadata-only with id, name, canonical_path, and created_at; no migration is required. Snapshots and failures never contain a command, environment, credentials, secrets, source or terminal content, command output, stacks, raw errors, or redaction sentinels.
 
@@ -18,7 +18,7 @@ Readiness polls GET /healthz/. Only HTTP 200 plus JSON status equal to alive or 
 
 Exactly concurrent starts for one project join one launch/readiness promise. A later start reuses the same PID identity and port only when the exact process remains alive and the health contract passes. Failed starts are evicted and permit an explicit fresh retry. A post-running exit retains one bounded code-or-signal failure, evicts reuse state, and starts no automatic retry.
 
-Caller cancellation ends only that caller's wait. It does not cancel or mutate shared manager-owned startup, create a duplicate, or affect later callers. Manager shutdown is the shared cancellation boundary.
+Caller cancellation ends only that caller’s wait while other waiters remain. When the last waiter cancels, the manager aborts and cleans only that orphaned project start. Manager shutdown remains the global cancellation boundary.
 
 ## Typed failures
 
@@ -28,7 +28,7 @@ Diagnostics allow only finite attempt count, exit code, signal, health status, t
 
 ## Events and shutdown
 
-Structured events are runtime.start.requested, runtime.start.succeeded, runtime.start.failed, runtime.health.changed, and runtime.exited. Allowed fields are event name, project ID, from/to state, non-negative elapsedMs, and a bounded failure classification. Raw canonical paths and protected development content are excluded.
+Structured events are runtime.start.requested, runtime.start.succeeded, runtime.start.failed, runtime.health.changed, and runtime.exited. Allowed fields are event name, deterministic opaque project token, from/to state, non-negative elapsedMs, and a bounded failure classification. Raw project IDs are excluded. Raw canonical paths and protected development content are excluded.
 
 Application close calls the one manager before registration and SQLite owners close. Repeated shutdown calls join one promise and result, reject new starts, cancel in-flight readiness with manager-shutdown, and prevent late launch or exit completion from installing state after shutdown. The manager inventories running and in-flight ownership, sends SIGTERM only to exact owned groups, waits 2,000 ms, then allows a 2,000 ms SIGKILL escalation. It audits every recorded PID/start identity, process group, port, and loopback listener after termination and returns each graceful, escalated, or already-absent outcome with an aggregate ok or failed status. The designated sensor separately retains the pre-shutdown listener inode. Shutdown does not return with mutable in-flight state or manager-owned background work. Unrelated processes and listeners remain alive.
 
@@ -40,9 +40,18 @@ The designated Ubuntu 24.04.4 host uses code-server 4.131.0, vscode uid 1000, Li
 
 ## Deferred boundaries
 
-The stable route or proxy boundary was deferred to BL-011 and is now delivered. Project Home navigation and Open wiring are now delivered by BL-012 without changing this process boundary. This manager still does not add multi-project coordination, user Stop or Restart UI, API-restart reconciliation, persisted runtime handles or state, auto-sleep, scheduling, or containers. Full-page workbench presentation remains unchanged. Harness boot remains non-persistent and test-backed.
+The stable route or proxy boundary was deferred to BL-011 and is now delivered. Project Home navigation and Open wiring are now delivered by BL-012 without changing this process boundary. BL-013 now provides simultaneous per-project runtime isolation. The multi-project coordination beyond this project-local ownership contract remains deferred. This manager still does not add user Stop or Restart UI, API-restart reconciliation, persisted runtime handles or state, auto-sleep, scheduling, or containers. Full-page workbench presentation remains unchanged. Harness boot remains non-persistent and test-backed.
 
 
 ## Stable-route integration
 
 The BL-011 proxy and BL-012 marked top-level acquisition consume `ProjectRuntimeManager.start` only after route-safe ID validation and persisted lookup. Four HTTP requests plus four WebSocket upgrades released together still join one manager launch/readiness sequence; later requests and reconnect workflows health-check and reuse the same PID/start identity and port. The proxy owns network streams and sockets, while this manager remains the sole process owner. Application shutdown settles the proxy within 5,000 ms before invoking the runtime shutdown described above. See [stable-workbench-routing.md](stable-workbench-routing.md). The designated browser proof supplies `EXTENSIONS_GALLERY={}` through an explicit proof-only runtime configuration, after worktree ownership and cancellation-race prerequisites pass. Three workflows reuse the same runtime identity while opening exactly three Management and three ExtensionHost stable-prefix sockets; no marketplace, retry, arbitrary external, or internal-port transport is accepted.
+
+
+## BL-013 multi-project state and cleanup
+
+One manager-owned Map is keyed only by stable project ID and discriminates registered, starting, running, and failed entries. A separate exact PID/start/port index exists only for cleanup and retains project attribution. A/B/C starts and failures cannot share promises, snapshots, outcomes, waiters, routes, events, or cleanup. Running code-server processes receive distinct ephemeral user-data directories derived from opaque owner token plus runtime port; those directories are removed on process exit or exact termination and are never persisted or returned publicly.
+
+The executable fake matrix issues 24 explicitly interleaved calls, validates five selected-project failure classes, one/all caller cancellation, one explicit replacement, shutdown races, exact nonempty tokenized events, 24 ordered cross-target rows, contract-guard negatives, protected-value scans, and a zero residual union. The designated Chromium episode creates three disposable Git repositories with distinct branches, dirty status, local configuration, Explorer files, editor sentinels, and terminal markers. All three routes remain active; repository-only exact process authority terminates B, A and C retain their identities, and one explicit start replaces only B. The episode is no-retry and makes no session-switching or persistence claim.
+
+Use just verify-project-runtime-isolation for fake plus real evidence and just proof-project-runtime-isolation-residual-audit for an independent audit. The audit checks both public artifacts, at most one ignored regular mode-0600 restricted authority file, three project partitions, global resource counts, ephemeral runtime-data absence, fixture integrity, and unrelated-control survival followed by cleanup. The commands are finite, repository-local, offline, credential-free, and non-manual. BL-014, BL-015, public lifecycle operations, broader lifecycle state, restart reconciliation, scheduling, quotas, and multi-host operation remain outside this contract.

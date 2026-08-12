@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
   createProjectRuntimeConfig,
+  deriveProjectOwnerToken,
   RuntimeFailure,
 } from '../src/project-runtime-contract.js'
 import {
@@ -65,8 +66,10 @@ describe('project runtime lifecycle integration', () => {
       close: vi.fn(() => order.push('registration')),
     }
     const manager: ProjectRuntimeManager = {
+      register: vi.fn(),
       start: vi.fn(),
       inspect: vi.fn(),
+      inspectEntries: vi.fn(() => []),
       lastFailure: vi.fn(),
       lastCleanup: vi.fn(),
       lastShutdown: vi.fn(),
@@ -125,14 +128,14 @@ describe('project runtime lifecycle integration', () => {
     expect(events).toEqual([
       {
         event: 'runtime.start.requested',
-        projectId: project.id,
+        projectToken: deriveProjectOwnerToken(project.id),
         from: 'stopped',
         to: 'starting',
         elapsedMs: expect.any(Number),
       },
       {
         event: 'runtime.start.failed',
-        projectId: project.id,
+        projectToken: deriveProjectOwnerToken(project.id),
         from: 'starting',
         to: 'failed',
         elapsedMs: expect.any(Number),

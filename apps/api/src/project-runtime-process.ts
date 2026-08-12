@@ -1,8 +1,9 @@
 import { spawn } from 'node:child_process'
 import { constants as fsConstants } from 'node:fs'
-import { access, readFile, readdir } from 'node:fs/promises'
+import { access, mkdir, readFile, readdir, rm } from 'node:fs/promises'
 import { createConnection, createServer } from 'node:net'
 import os from 'node:os'
+import path from 'node:path'
 import {
   PROJECT_RUNTIME_DEFAULTS,
   RuntimeFailure,
@@ -53,6 +54,7 @@ export interface RuntimeProcessAdapter {
   launch(input: {
     readonly config: ProjectRuntimeConfig
     readonly canonicalPath: string
+    readonly ownerToken: string
     readonly port: number
   }): Promise<OwnedRuntimeProcess>
 }
@@ -236,7 +238,8 @@ export const nodeRuntimePortProvider: RuntimePortProvider = {
 
 export function buildRuntimeArgv(
   canonicalPath: string,
-  port: number
+  port: number,
+  userDataPath?: string
 ): string[] {
   return [
     '--bind-addr',
@@ -247,6 +250,7 @@ export function buildRuntimeArgv(
     '--disable-update-check',
     '--disable-workspace-trust',
     '--disable-proxy',
+    ...(userDataPath === undefined ? [] : ['--user-data-dir', userDataPath]),
     canonicalPath,
   ]
 }
@@ -263,8 +267,14 @@ export const nodeRuntimeProcessAdapter: RuntimeProcessAdapter = {
       throw new RuntimeFailure('executable-missing')
     }
   },
-  async launch({ config, canonicalPath, port }) {
-    const argv = buildRuntimeArgv(canonicalPath, port)
+  async launch({ config, canonicalPath, ownerToken, port }) {
+    const userDataPath = path.join(
+      os.tmpdir(),
+      'ascend-runtime-data',
+      ownerToken + '-' + String(port)
+    )
+    await mkdir(userDataPath, { recursive: true, mode: 0o700 })
+    const argv = buildRuntimeArgv(canonicalPath, port, userDataPath)
     let child
     try {
       child = spawn(config.executablePath, argv, {
@@ -329,12 +339,22 @@ export const nodeRuntimeProcessAdapter: RuntimeProcessAdapter = {
       )
     }
     child.unref()
+    void exit.then(() => rm(userDataPath, { recursive: true, force: true }))
     return {
       pid,
       processStartTime,
       exit,
-      terminate: (gracefulMs, forceMs, port) =>
-        terminateGroup(pid, processStartTime, port, gracefulMs, forceMs),
+      terminate: async (gracefulMs, forceMs, port) => {
+        const audit = await terminateGroup(
+          pid,
+          processStartTime,
+          port,
+          gracefulMs,
+          forceMs
+        )
+        await rm(userDataPath, { recursive: true, force: true })
+        return audit
+      },
       audit: (port) => auditRuntimeResource(pid, processStartTime, port),
       isAlive: async () =>
         (await readProcessStartTime(pid)) === processStartTime,
@@ -411,9 +431,15 @@ function failure(
   return new RuntimeFailure(category, diagnostics)
 }
 
+const abortFailure = (signal: AbortSignal): RuntimeFailure =>
+  signal.reason instanceof RuntimeFailure
+    ? signal.reason
+    : failure('manager-shutdown')
+
 export async function launchReadyRuntime(input: {
   readonly config: ProjectRuntimeConfig
   readonly canonicalPath: string
+  readonly ownerToken: string
   readonly signal: AbortSignal
   readonly dependencies?: RuntimeProcessDependencies
   readonly onOwned?: (record: RuntimeOwnershipRecord) => void
@@ -427,7 +453,7 @@ export async function launchReadyRuntime(input: {
     attempt <= input.config.collisionAttempts;
     attempt += 1
   ) {
-    if (input.signal.aborted) throw failure('manager-shutdown')
+    if (input.signal.aborted) throw abortFailure(input.signal)
     const port = await dependencies.ports.acquire()
     lastPort = port
     let owned: OwnedRuntimeProcess
@@ -435,6 +461,7 @@ export async function launchReadyRuntime(input: {
       owned = await dependencies.process.launch({
         config: input.config,
         canonicalPath: input.canonicalPath,
+        ownerToken: input.ownerToken,
         port,
       })
     } catch (error) {
@@ -449,7 +476,7 @@ export async function launchReadyRuntime(input: {
     let lastHealthFailure: RuntimeFailure | undefined
     try {
       while (dependencies.now() - startedAt < input.config.readinessTimeoutMs) {
-        if (input.signal.aborted) throw failure('manager-shutdown')
+        if (input.signal.aborted) throw abortFailure(input.signal)
         const verdict = await Promise.race([
           dependencies.health.check(
             internalUrl + PROJECT_RUNTIME_DEFAULTS.healthPath,
@@ -517,7 +544,9 @@ export async function launchReadyRuntime(input: {
       input.onCleanup?.(cleanup)
       throw error instanceof RuntimeFailure
         ? error
-        : failure('manager-shutdown')
+        : input.signal.aborted
+          ? abortFailure(input.signal)
+          : failure('manager-shutdown')
     }
   }
   throw failure('address-in-use-exhausted', {

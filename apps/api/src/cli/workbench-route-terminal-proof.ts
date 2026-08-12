@@ -16,6 +16,13 @@ export const WORKBENCH_ROUTE_TERMINAL_TEMP = path.join(
   'test-results/bl-011/.terminal-proof.json'
 )
 
+const writeTerminalOutput = (chunk: string | Buffer): Promise<void> =>
+  new Promise((resolve, reject) => {
+    process.stdout.write(chunk, (error) =>
+      error === undefined || error === null ? resolve() : reject(error)
+    )
+  })
+
 export async function runWorkbenchRouteTerminalProof(): Promise<number> {
   const canonicalPath = await canonicalFixturePath()
   const output = Buffer.alloc(WORKBENCH_ROUTE_TERMINAL_BYTES)
@@ -40,11 +47,11 @@ export async function runWorkbenchRouteTerminalProof(): Promise<number> {
     recursive: true,
     mode: 0o700,
   })
+  await writeTerminalOutput(output)
+  await writeTerminalOutput(`\nBL011_TERMINAL_SHA256=${digest}\n`)
   await writeFile(WORKBENCH_ROUTE_TERMINAL_TEMP, JSON.stringify(evidence), {
     mode: 0o600,
   })
-  process.stdout.write(output)
-  process.stdout.write(`\nBL011_TERMINAL_SHA256=${digest}\n`)
   return evidence.passed ? 0 : 1
 }
 

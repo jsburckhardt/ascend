@@ -2,13 +2,13 @@
 
 ## Completed Tasks
 
-- T-0: Preserved linked-worktree repository validation and cancellation-versus-early-exit classification with three concurrent cancellation regressions.
+- T-0: Preserved linked-worktree repository validation and cancellation-versus-early-exit classification with three concurrent cancellation regressions; removed renderer-specific terminal readiness waits exposed by parallel baseline validation.
 - T-1: Preserved the stable proxy contract, exact 23-row public failure catalog, direct `ws` ownership, and loopback-only runtime arguments.
 - T-2: Preserved stable HTTP/upgrade routing, eight-client single-flight startup, and application lifecycle ownership.
 - T-3: Completed byte-preserving HTTP matrices, streamed authority rewriting, chunk-5 cancellation, and downstream-transform completion.
 - T-4: Completed the exact bounded WebSocket matrix, named connection-role observation, shutdown outcomes, and peer cleanup.
 - T-5: Executed the payload, header, stream, WebSocket, 23-injected-failure, target-confusion, redaction, concurrency, and shutdown matrices.
-- T-6: Implemented the exact Markdown resource hostname grammar, 23 classifier vectors, bounded browser-local inventory, disabled marketplace proof, and real three-workflow Chromium record.
+- T-6: Implemented the exact Markdown resource hostname grammar, 23 classifier vectors, bounded browser-local inventory, disabled marketplace proof, and real three-workflow Chromium record; terminal completion now waits for atomically written proof evidence after stdout flush rather than xterm renderer internals.
 - T-7: Enforced bounded restricted evidence, mode `0600`, unfiltered request inventory, six named sockets, public scans, observed cleanup inventories, and residual audits.
 - T-8: Corrected paved validation, API examples, README/runbook content, Plan artifacts, ADR, core-component, and decision log.
 
@@ -40,11 +40,14 @@
 - `ADR-260812-in-process-workbench-reverse-proxy.md`, `CORE-COMPONENT-260812-stable-workbench-proxy.md`, and `ADR/DECISION-LOG.md`: ownership, exact external-origin exception, browser-local non-network class, marketplace decision, and named-socket architecture.
 - `.prettierignore`: excludes owned linked-worktree directories so primary validation remains worktree-aware without scanning another checkout.
 - No OpenAPI/Swagger artifact exists for this raw proxy route. No application configuration option/default, schema, data, or API migration changed; the proof-only `EXTENSIONS_GALLERY={}` procedure and no-migration statement are documented.
+- The final synchronization correction changes validation internals only: terminal output is flushed before atomic evidence publication and browser tests no longer depend on `.xterm-rows`; no application documentation behavior changed.
 
 ## Validation Evidence
 
-- `just verify-focused`: exit 0; 75 passed files, 1 skipped; 522 passed tests, 2 skipped.
-- `just verify-workbench-route`: exit 0; 47 Vitest cases, one real Chromium scenario, mode-`0600` evidence, and residual `status: ok`.
-- `just verify` (primary checkout): exit 0; full repository and browser validation, final Chromium 41.3 seconds, residual `status: ok`, 23 observed inventories, zero pending entries, and zero public authority matches.
+- Repeated prerequisite baseline: three consecutive focused runs each passed 3 files and 17 tests covering worktree ownership, concurrent cancellation, and host terminal bounds.
+- `just verify-focused`: exit 0 after the final corrections; 75 passed files, 1 skipped; 522 passed tests, 2 skipped.
+- `just verify-workbench-route`: exit 0; 47 Vitest cases, one real designated Chromium scenario, mode-`0600` evidence, and residual `status: ok`.
+- `just test-e2e`: exit 0 after removing renderer-specific baseline waits; 5 Chromium tests passed, 2 designated tests skipped, and capacity residual audit passed.
+- `just verify` (primary checkout): exit 0 after the final corrections; formatting, lint, type checks, package tests/coverage, builds, all repository gates, baseline Chromium, designated BL-010/BL-011 proofs, public scans, cleanup, and final residual audit passed.
 
 These notes record implementation evidence only. Final acceptance remains owned by Verify.

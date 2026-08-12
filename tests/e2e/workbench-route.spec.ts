@@ -369,14 +369,31 @@ test('real Chromium derives three stable-route operations and proves observed cl
           .locator('.terminal.xterm')
           .first()
           .waitFor({ state: 'visible', timeout: 10_000 })
+        await rm(WORKBENCH_ROUTE_TERMINAL_TEMP, { force: true })
         const command =
           'setsid /workspaces/ascend/node_modules/.bin/tsx /workspaces/ascend/apps/api/src/cli/workbench-route-terminal-proof.ts\n'
         await page.keyboard.insertText(command)
         await page.keyboard.press('Enter')
-        await expect(page.locator('.xterm-rows').last()).toContainText(
-          'BL011_TERMINAL_SHA256=' + WORKBENCH_ROUTE_TERMINAL_SHA256,
-          { timeout: 45_000 }
-        )
+        await expect
+          .poll(
+            async () => {
+              try {
+                return JSON.parse(
+                  await readFile(WORKBENCH_ROUTE_TERMINAL_TEMP, 'utf8')
+                ) as Record<string, unknown>
+              } catch (error) {
+                if ((error as NodeJS.ErrnoException).code === 'ENOENT')
+                  return undefined
+                throw error
+              }
+            },
+            { timeout: 45_000 }
+          )
+          .toMatchObject({
+            expectedSha256: WORKBENCH_ROUTE_TERMINAL_SHA256,
+            actualSha256: WORKBENCH_ROUTE_TERMINAL_SHA256,
+            passed: true,
+          })
         terminal = JSON.parse(
           await readFile(WORKBENCH_ROUTE_TERMINAL_TEMP, 'utf8')
         ) as Record<string, unknown>

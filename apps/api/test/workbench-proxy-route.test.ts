@@ -80,6 +80,7 @@ describe('stable workbench route lifecycle', () => {
     }
     const runtime: ProjectRuntimeManager = {
       start: vi.fn(),
+      ownsSnapshot: vi.fn(() => true),
       inspect: vi.fn(),
       lastFailure: vi.fn(),
       lastCleanup: vi.fn(),

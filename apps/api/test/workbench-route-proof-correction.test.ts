@@ -116,6 +116,7 @@ const createApi = async (upstreamPort: number, events: unknown[] = []) => {
   const runtime: ProjectRuntimeManager = {
     register: vi.fn(),
     start: vi.fn(async () => snapshot),
+    ownsSnapshot: vi.fn(() => true),
     inspect: vi.fn(() => snapshot),
     inspectEntries: vi.fn(() => []),
     lastFailure: vi.fn(),

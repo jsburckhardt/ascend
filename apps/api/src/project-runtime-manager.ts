@@ -52,6 +52,7 @@ export interface ProjectRuntimeManager {
   register(projectId: string, canonicalPath: string): void
   start(input: ProjectRuntimeStartInput): Promise<RuntimeSnapshot>
   inspect(projectId: string): RuntimeSnapshot | undefined
+  ownsSnapshot(snapshot: RuntimeSnapshot): boolean
   inspectEntries(): readonly ProjectRuntimeEntryInspection[]
   lastFailure(projectId: string): RuntimeFailure | undefined
   lastCleanup(projectId: string): RuntimeTerminationAudit | undefined
@@ -561,6 +562,10 @@ export function createProjectRuntimeManager(
       return entry !== undefined && entry.state !== 'registered'
         ? entry.snapshot
         : undefined
+    },
+    ownsSnapshot(snapshot) {
+      const entry = entries.get(snapshot.projectId)
+      return entry?.state === 'running' && entry.snapshot === snapshot
     },
     inspectEntries() {
       return Object.freeze(

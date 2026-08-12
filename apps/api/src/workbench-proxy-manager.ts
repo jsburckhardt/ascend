@@ -382,6 +382,8 @@ export function createWorkbenchProxyManager(
       canonicalPath: project.canonicalPath,
       signal,
     })
+    if (!dependencies.projectRuntime.ownsSnapshot(snapshot))
+      throw new RuntimeFailure('canonical-path-invariant')
     return safeTarget(snapshot, {
       projectId: project.id,
       canonicalPath: project.canonicalPath,

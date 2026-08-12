@@ -128,5 +128,5 @@ Short, actionable statements derived from ADRs and core-components. More than on
 | 90 | Key every project lifecycle entry only by its stable project ID | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-12 |
 | 91 | Include stable route and opaque owner token in every immutable running snapshot | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-12 |
 | 92 | Use one opaque project token across runtime and proxy event attribution | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-12 |
-| 93 | Reject proxy snapshots that mismatch the persisted project or stable route | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-12 |
+| 93 | Reject proxy snapshots that mismatch the persisted project or stable route or are not the exact manager-owned running object | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-12 |
 | 94 | Attribute proxy resource inventories and audits by opaque project token | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-12 |

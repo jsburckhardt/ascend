@@ -4,7 +4,14 @@ import {
   type ChildProcessWithoutNullStreams,
 } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import {
+  lstat,
+  mkdtemp,
+  mkdir,
+  readFile,
+  rm,
+  writeFile,
+} from 'node:fs/promises'
 import { createServer, type Server } from 'node:net'
 import os from 'node:os'
 import path from 'node:path'
@@ -14,18 +21,26 @@ import {
   createApiServerController,
   type ApiServerController,
 } from '../../apps/api/src/api-server.js'
-import type { ProjectLibrary } from '../../apps/api/src/project-library.js'
-import { createProjectRuntimeConfig } from '../../apps/api/src/project-runtime-contract.js'
+import { createProjectLibrary } from '../../apps/api/src/project-library.js'
+import {
+  createProjectRuntimeConfig,
+  deriveProjectOwnerToken,
+} from '../../apps/api/src/project-runtime-contract.js'
 import {
   createProjectRuntimeManager,
   type ProjectRuntimeManager,
 } from '../../apps/api/src/project-runtime-manager.js'
-import { readProcessStartTime } from '../../apps/api/src/project-runtime-process.js'
+import {
+  loopbackListenerIsAbsent,
+  readProcessStartTime,
+} from '../../apps/api/src/project-runtime-process.js'
 import {
   CODE_SERVER_PATH,
   REPOSITORY_ROOT,
 } from '../../apps/api/src/workbench-proof-contract.js'
 import { terminateExactProcessGroup } from '../../apps/api/src/workbench-proof-runtime.js'
+import { classifyWorkbenchConnectionRolePayload } from '../../apps/api/src/workbench-proxy-contract.js'
+import { scanProtectedEvidence } from '../../apps/api/src/project-runtime-isolation-evidence.js'
 import { stopOwnedProcessGroup } from '../../apps/api/test/helpers/project-home-process-group.js'
 
 const executeFile = promisify(execFile)
@@ -73,9 +88,9 @@ const terminalProof = async (
     page.locator('.quick-input-list .monaco-list-row').first()
   ).toBeVisible({ timeout: operationMs })
   await page.keyboard.press('Enter')
-  const terminal = page.locator('.terminal.xterm').first()
+  const terminal = page.locator('.terminal.xterm:visible').last()
   await terminal.waitFor({ state: 'visible', timeout: operationMs })
-  const input = page.getByRole('textbox', { name: /^Terminal /u }).first()
+  const input = page.locator('textarea.xterm-helper-textarea:visible').last()
   await input.focus()
   const command =
     'printf BL013_%s= PWD; pwd -P; printf BL013_%s= ROOT; git rev-parse --show-toplevel; ' +
@@ -102,13 +117,6 @@ const terminalProof = async (
     'BL013_MARKER=' + expected.marker,
   ]
   const matches = required.map((marker) => normalized.includes(marker))
-  if (matches.some((matched) => !matched)) {
-    await writeFile(
-      path.join(resultRoot, 'restricted-authority.json'),
-      JSON.stringify({ text: await terminal.innerText(), expected }, null, 2),
-      { mode: 0o600 }
-    )
-  }
   expect(matches).toEqual([true, true, true, true, true])
   return true
 }
@@ -206,17 +214,9 @@ test('keeps three Git workbenches isolated and explicitly replaces only B', asyn
     })
   )
   const before = await Promise.all(projects.map(fixtureState))
-  const library: ProjectLibrary = {
-    create: async (input) => ({
-      disposition: 'existing',
-      project:
-        projects.find((project) => project.id === input.id) ?? projects[0],
-    }),
-    findById: async (id) => projects.find((project) => project.id === id),
-    list: async () => projects,
-    closeProject: async (id) => ({ disposition: 'closed', id }),
-    close: () => undefined,
-  }
+  const databasePath = path.join(fixtureRoot, 'ascend.sqlite')
+  const library = await createProjectLibrary(databasePath)
+  for (const project of projects) await library.create(project)
   const events: unknown[] = []
   const baseConfig = createProjectRuntimeConfig({
     executablePath: CODE_SERVER_PATH,
@@ -236,9 +236,21 @@ test('keeps three Git workbenches isolated and explicitly replaces only B', asyn
     control.listen(0, '127.0.0.1', resolve)
   })
   let controller: ApiServerController | undefined
+  let application: import('fastify').FastifyInstance | undefined
   let web: ChildProcessWithoutNullStreams | undefined
+  let webProcessStartTime: string | null = null
+  let apiPort = 0
+  let webPort = 0
   const contexts: import('@playwright/test').BrowserContext[] = []
   const socketCounts = new Map<string, number>()
+  const socketRoles = new Map(
+    projects.map((project) => [
+      project.id,
+      { Management: 0, ExtensionHost: 0, unknown: 0 },
+    ])
+  )
+  const terminalExecutions: string[] = []
+  const cleanupMeasurements: Record<string, unknown> = {}
   let cleanupPassed = false
   try {
     controller = createApiServerController({
@@ -254,10 +266,11 @@ test('keeps three Git workbenches isolated and explicitly replaces only B', asyn
         close: () => undefined,
       }),
     })
-    const app = await controller.start()
+    application = await controller.start()
+    const app = application
     const address = app.server.address()
-    const apiPort = typeof address === 'string' ? 0 : address.port
-    const webPort = await disposablePort()
+    apiPort = typeof address === 'string' ? 0 : address.port
+    webPort = await disposablePort()
     web = spawn(
       process.execPath,
       [
@@ -277,6 +290,7 @@ test('keeps three Git workbenches isolated and explicitly replaces only B', asyn
         stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
       }
     )
+    webProcessStartTime = await readProcessStartTime(web.pid!)
     await expect
       .poll(
         async () => {
@@ -290,22 +304,39 @@ test('keeps three Git workbenches isolated and explicitly replaces only B', asyn
         { timeout: operationMs }
       )
       .toBe(200)
+    const trackProjectSockets = (
+      page: Page,
+      project: (typeof projects)[number]
+    ): void => {
+      page.on('websocket', (socket) => {
+        if (
+          !new URL(socket.url()).pathname.startsWith(
+            '/projects/' + project.id + '/workbench/'
+          )
+        )
+          return
+        socketCounts.set(project.id, (socketCounts.get(project.id) ?? 0) + 1)
+        let roleObserved = false
+        socket.on('framesent', ({ payload }) => {
+          if (roleObserved) return
+          const role = classifyWorkbenchConnectionRolePayload(
+            Buffer.isBuffer(payload) ? payload : Buffer.from(payload)
+          )
+          if (role === undefined) return
+          roleObserved = true
+          const counts = socketRoles.get(project.id)!
+          if (role === 'Management' || role === 'ExtensionHost')
+            counts[role] += 1
+          else counts.unknown += 1
+        })
+      })
+    }
     const pages = await Promise.all(
       projects.map(async (project) => {
         const context = await browser.newContext()
         contexts.push(context)
         const page = await context.newPage()
-        page.on('websocket', (socket) => {
-          if (
-            new URL(socket.url()).pathname.startsWith(
-              '/projects/' + project.id + '/workbench/'
-            )
-          )
-            socketCounts.set(
-              project.id,
-              (socketCounts.get(project.id) ?? 0) + 1
-            )
-        })
+        trackProjectSockets(page, project)
         await page.goto(
           'http://127.0.0.1:' +
             String(webPort) +
@@ -323,8 +354,23 @@ test('keeps three Git workbenches isolated and explicitly replaces only B', asyn
             .first()
         ).toContainText(project.editorSentinel, { timeout: operationMs })
         expect(await terminalProof(page, project)).toBe(true)
+        terminalExecutions.push('initial-' + project.label)
         return page
       })
+    )
+    await expect
+      .poll(
+        () => projects.map((project) => ({ ...socketRoles.get(project.id)! })),
+        { timeout: operationMs }
+      )
+      .toEqual(
+        projects.map(() => ({ Management: 1, ExtensionHost: 1, unknown: 0 }))
+      )
+    const initialSocketRoles = Object.fromEntries(
+      projects.map((project) => [
+        project.label,
+        { ...socketRoles.get(project.id)! },
+      ])
     )
     const initial = Object.fromEntries(
       projects.map((project) => {
@@ -359,7 +405,9 @@ test('keeps three Git workbenches isolated and explicitly replaces only B', asyn
     const b = projects[1]
     const oldB = runtime.inspect(b.id)!
     expect(await readProcessStartTime(oldB.pid!)).toBe(oldB.processStartTime)
-    await terminateExactProcessGroup(oldB.pid!, 2_000)
+    const bTermination = terminateExactProcessGroup(oldB.pid!, 2_000)
+    await pages[1].close()
+    await bTermination
     await expect
       .poll(() => runtime.inspect(b.id)?.state, { timeout: operationMs })
       .toBe('failed')
@@ -369,6 +417,14 @@ test('keeps three Git workbenches isolated and explicitly replaces only B', asyn
     expect(digestIdentity(runtime.inspect(projects[2].id)!)).toBe(
       digestIdentity(initial.c)
     )
+    const peerTerminalAfterCrash = await Promise.all(
+      [0, 2].map(async (index) => {
+        const passed = await terminalProof(pages[index], projects[index])
+        terminalExecutions.push('after-b-crash-' + projects[index].label)
+        return passed
+      })
+    )
+    expect(peerTerminalAfterCrash).toEqual([true, true])
     const replacement = await runtime.start({
       projectId: b.id,
       canonicalPath: b.canonicalPath,
@@ -380,87 +436,353 @@ test('keeps three Git workbenches isolated and explicitly replaces only B', asyn
     expect(digestIdentity(runtime.inspect(projects[2].id)!)).toBe(
       digestIdentity(initial.c)
     )
-    await pages[1].reload({
-      waitUntil: 'domcontentloaded',
-      timeout: operationMs,
-    })
+    pages[1] = await contexts[1].newPage()
+    trackProjectSockets(pages[1], b)
+    await pages[1].goto(
+      'http://127.0.0.1:' +
+        String(webPort) +
+        '/projects/' +
+        b.id +
+        '/workbench/',
+      { waitUntil: 'domcontentloaded', timeout: operationMs }
+    )
     await ready(pages[1], b.fileName)
+    expect(await terminalProof(pages[1], b)).toBe(true)
+    terminalExecutions.push('replacement-b')
+    await expect
+      .poll(() => ({ ...socketRoles.get(b.id)! }), { timeout: operationMs })
+      .toEqual({ Management: 2, ExtensionHost: 2, unknown: 0 })
+    expect({ ...socketRoles.get(projects[0].id)! }).toEqual({
+      Management: 1,
+      ExtensionHost: 1,
+      unknown: 0,
+    })
+    expect({ ...socketRoles.get(projects[2].id)! }).toEqual({
+      Management: 1,
+      ExtensionHost: 1,
+      unknown: 0,
+    })
+    const finalSocketRoles = Object.fromEntries(
+      projects.map((project) => [
+        project.label,
+        { ...socketRoles.get(project.id)! },
+      ])
+    )
     const after = await Promise.all(projects.map(fixtureState))
     const integrity = before.map((state, index) =>
       JSON.stringify(state) === JSON.stringify(after[index]) ? 0 : 1
     )
     expect(integrity).toEqual([0, 0, 0])
     expect(control.listening).toBe(true)
+    const replacementSnapshot = runtime.inspect(b.id)!
+    const lifecycleEvents = events.map((event, index) => ({
+      ...(event as Record<string, unknown>),
+      executionId: 'chromium-lifecycle',
+      eventId: 'chromium-event-' + String(index + 1),
+    }))
+    const restrictedEvidence = {
+      schemaVersion: 2,
+      suite: 'BL-013',
+      fixtureRoot,
+      databasePaths: [
+        databasePath,
+        databasePath + '-wal',
+        databasePath + '-shm',
+      ],
+      api: { listenerPort: apiPort, processId: process.pid },
+      web: {
+        listenerPort: webPort,
+        processId: web.pid,
+        processStartTime: webProcessStartTime,
+      },
+      runtimes: projects.map((project) => {
+        const current = runtime.inspect(project.id)!
+        return {
+          projectToken: current.ownerToken,
+          initial: initial[project.label],
+          current: {
+            pid: current.pid,
+            processStartTime: current.processStartTime,
+            port: current.port,
+          },
+          stableRoute: current.stableRoute,
+        }
+      }),
+      control: {
+        listenerPort: (control.address() as import('node:net').AddressInfo)
+          .port,
+        survivedOwnedCleanup: control.listening,
+      },
+      browser: {
+        ownership: 'playwright-runner',
+        ownedContexts: contexts.length,
+      },
+      proxyInventoryBeforeCleanup: app.workbenchProxy.audit(),
+      terminalExecutionIds: [...terminalExecutions],
+      socketRoles: { initial: initialSocketRoles, final: finalSocketRoles },
+      lifecycleEventDigest: digestIdentity({
+        pid: events.length,
+        processStartTime: digestIdentity(replacementSnapshot),
+        port: null,
+      }),
+    }
+    await writeFile(
+      path.join(resultRoot, 'restricted-authority.json'),
+      JSON.stringify(restrictedEvidence, null, 2) + '\n',
+      { mode: 0o600 }
+    )
+    const publicBase = {
+      schemaVersion: 2,
+      scope:
+        'immediate concurrent isolation only; no BL-014 session continuity claim',
+      executionId: 'chromium-three-project-isolation',
+      projects: projects.map((project) => ({
+        projectToken: deriveProjectOwnerToken(project.id),
+        stableRouteDigest: digestIdentity({
+          pid: project.id.length,
+          processStartTime: runtime.inspect(project.id)!.stableRoute,
+          port: null,
+        }),
+        initialIdentityDigest: digestIdentity(initial[project.label]),
+        currentIdentityDigest: digestIdentity(runtime.inspect(project.id)!),
+        explorer: true,
+        editor: true,
+        terminal: true,
+        git: true,
+        socketCount: socketCounts.get(project.id) ?? 0,
+        initialSocketRoles: initialSocketRoles[project.label],
+        finalSocketRoles: finalSocketRoles[project.label],
+      })),
+      pairwiseDistinct: true,
+      bFailure: {
+        outcome: 'typed-failed',
+        oldIdentityDigest: digestIdentity(initial.b),
+        eventObserved: lifecycleEvents.some(
+          (event) =>
+            event.event === 'runtime.exited' &&
+            event.projectToken === deriveProjectOwnerToken(b.id)
+        ),
+      },
+      bReplacement: {
+        outcome: 'one-explicit-new-identity',
+        identityDigest: digestIdentity(replacement),
+        routeDigest: digestIdentity({
+          pid: b.id.length,
+          processStartTime: replacement.stableRoute,
+          port: null,
+        }),
+        projectToken: replacement.ownerToken,
+      },
+      peerTerminalAfterCrash,
+      peersUnchanged: true,
+      lifecycleEvents,
+      terminalExecutionCount: terminalExecutions.length,
+      fixtureIntegrityDifferences: integrity,
+      cleanup: { pending: true },
+    }
+    const protectedValues = [
+      fixtureRoot,
+      ...projects.flatMap((project) => [
+        project.id,
+        project.canonicalPath,
+        project.branch,
+        project.marker,
+        project.editorSentinel,
+      ]),
+      ...Object.values(initial).map((identity) => String(identity.port)),
+      String(replacement.port),
+    ]
+    const publicRedaction = scanProtectedEvidence({
+      scanId: 'chromium-public-protected-scan',
+      kind: 'chromium-public-artifact',
+      sources: [
+        {
+          sourceId: 'three-project-chromium',
+          content: JSON.stringify(publicBase),
+        },
+      ],
+      protectedValues,
+    })
+    expect(publicRedaction.literalMatches).toEqual([])
+    expect(publicRedaction.encodedMatches).toEqual([])
     await writeFile(
       evidencePath,
-      JSON.stringify(
-        {
-          schemaVersion: 1,
-          scope:
-            'immediate concurrent isolation only; no BL-014 session continuity claim',
-          projects: projects.map((project) => ({
-            projectToken: createHash('sha256')
-              .update(project.id)
-              .digest('hex')
-              .slice(0, 16),
-            stableRoute: true,
-            identityDigest: digestIdentity(initial[project.label]),
-            explorer: true,
-            editor: true,
-            terminal: true,
-            git: true,
-            socketCount: socketCounts.get(project.id) ?? 0,
-          })),
-          pairwiseDistinct: true,
-          bFailure: 'typed-failed',
-          bReplacement: 'one-explicit-new-identity',
-          peersUnchanged: true,
-          eventCount: events.length,
-          fixtureIntegrityDifferences: integrity,
-          publicRedaction: { paths: 0, ports: 0, sentinels: 0 },
-          cleanup: { pending: true },
-        },
-        null,
-        2
-      ) + '\n',
+      JSON.stringify({ ...publicBase, publicRedaction }, null, 2) + '\n',
       { mode: 0o600 }
     )
   } finally {
     await Promise.all(
       contexts.map((context) => context.close().catch(() => undefined))
     )
+    const browserContextResiduals = contexts.flatMap((context) =>
+      context.pages()
+    ).length
     if (web?.pid !== undefined)
       await stopOwnedProcessGroup({ process: web }, 5_000)
+    const webProcessResidual =
+      web?.pid === undefined || webProcessStartTime === null
+        ? 0
+        : (await readProcessStartTime(web.pid)) === webProcessStartTime
+          ? 1
+          : 0
     await controller?.stop().catch(() => undefined)
+    const proxyAudit = application?.workbenchProxy.audit()
     const audit = runtime.lastShutdown()
+    const runtimeResiduals =
+      audit?.audits.filter(
+        (row) =>
+          !row.processAbsent || !row.processGroupAbsent || !row.listenerAbsent
+      ).length ?? 1
+    const controlSurvived = control.listening
+    expect(controlSurvived).toBe(true)
+    await closeServer(control)
+    const controlCleaned = !control.listening
+    await rm(fixtureRoot, { recursive: true, force: true })
+    const fixtureResidual = await lstat(fixtureRoot).then(
+      () => 1,
+      () => 0
+    )
+    const databaseResiduals = (
+      await Promise.all(
+        [databasePath, databasePath + '-wal', databasePath + '-shm'].map(
+          (file) =>
+            lstat(file).then(
+              () => true,
+              () => false
+            )
+        )
+      )
+    ).filter(Boolean).length
+    const listenerResiduals = (
+      await Promise.all([
+        loopbackListenerIsAbsent(apiPort),
+        loopbackListenerIsAbsent(webPort),
+        ...(audit?.audits ?? []).map((row) =>
+          Promise.resolve(row.listenerAbsent)
+        ),
+      ])
+    ).filter((absent) => !absent).length
+    const proxyOperationResiduals =
+      proxyAudit === undefined
+        ? 1
+        : proxyAudit.pendingOperations +
+          proxyAudit.upstreamHttpRequests +
+          proxyAudit.upstreamHttpResponses
+    const proxySocketResiduals =
+      proxyAudit === undefined
+        ? 1
+        : proxyAudit.rawSockets + proxyAudit.webSockets
+    const terminalResiduals =
+      terminalExecutions.length === 6
+        ? 0
+        : Math.abs(6 - terminalExecutions.length)
+    Object.assign(cleanupMeasurements, {
+      measurementId: 'chromium-cleanup-measurement',
+      measured: true,
+      checks: [
+        {
+          resourceClass: 'browser-groups',
+          before: contexts.length,
+          after: browserContextResiduals,
+          method: 'playwright-context-page-inventory',
+          executed: true,
+        },
+        {
+          resourceClass: 'proxy-operations',
+          before: [...socketCounts.values()].reduce(
+            (sum, count) => sum + count,
+            0
+          ),
+          after: proxyOperationResiduals,
+          method: 'proxy-manager-audit',
+          executed: true,
+        },
+        {
+          resourceClass: 'runtime-processes',
+          before: audit?.audits.length ?? 0,
+          after: runtimeResiduals,
+          method: 'exact-pid-start-identity-audit',
+          executed: true,
+        },
+        {
+          resourceClass: 'process-groups',
+          before: (audit?.audits.length ?? 0) + (web === undefined ? 0 : 1),
+          after: runtimeResiduals + webProcessResidual,
+          method: 'exact-process-group-and-start-identity-audit',
+          executed: true,
+        },
+        {
+          resourceClass: 'listeners',
+          before: (audit?.audits.length ?? 0) + 2,
+          after: listenerResiduals,
+          method: 'exact-loopback-listener-connect-audit',
+          executed: true,
+        },
+        {
+          resourceClass: 'sockets',
+          before: [...socketCounts.values()].reduce(
+            (sum, count) => sum + count,
+            0
+          ),
+          after: proxySocketResiduals,
+          method: 'proxy-and-browser-socket-inventory',
+          executed: true,
+        },
+        {
+          resourceClass: 'databases',
+          before: 1,
+          after: databaseResiduals,
+          method: 'sqlite-database-and-sidecar-lstat',
+          executed: true,
+        },
+        {
+          resourceClass: 'fixtures',
+          before: projects.length,
+          after: fixtureResidual,
+          method: 'fixture-root-lstat-after-manifest-check',
+          executed: true,
+        },
+        {
+          resourceClass: 'terminal-commands',
+          before: terminalExecutions.length,
+          after: terminalResiduals,
+          method: 'terminal-execution-id-settlement-inventory',
+          executed: true,
+        },
+        {
+          resourceClass: 'background-work',
+          before: events.length + terminalExecutions.length,
+          after: proxyOperationResiduals + runtimeResiduals,
+          method: 'proxy-and-runtime-owner-settlement-audit',
+          executed: true,
+        },
+      ],
+      unrelatedControlSurvived: controlSurvived,
+      unrelatedControlCleaned: controlCleaned,
+    })
     cleanupPassed =
       audit?.status === 'ok' &&
-      audit.audits.every(
-        (row) =>
-          row.processAbsent && row.processGroupAbsent && row.listenerAbsent
-      )
-    expect(control.listening).toBe(true)
-    await closeServer(control)
-    await rm(fixtureRoot, { recursive: true, force: true })
+      (cleanupMeasurements.checks as Array<{ after: number }>).every(
+        ({ after }) => after === 0
+      ) &&
+      controlSurvived &&
+      controlCleaned
   }
   expect(cleanupPassed).toBe(true)
   const evidence = JSON.parse(await readFile(evidencePath, 'utf8')) as Record<
     string,
     unknown
   >
-  evidence.cleanup = {
-    browserContexts: 0,
-    proxyResources: 0,
-    runtimes: 0,
-    processGroups: 0,
-    listeners: 0,
-    databases: 0,
-    terminalCommands: 0,
-    fixtures: 0,
-    unrelatedControlSurvived: true,
-    unrelatedControlCleaned: true,
-  }
+  evidence.cleanup = cleanupMeasurements
   await writeFile(evidencePath, JSON.stringify(evidence, null, 2) + '\n', {
+    mode: 0o600,
+  })
+  const restrictedPath = path.join(resultRoot, 'restricted-authority.json')
+  const restricted = JSON.parse(
+    await readFile(restrictedPath, 'utf8')
+  ) as Record<string, unknown>
+  restricted.cleanup = cleanupMeasurements
+  await writeFile(restrictedPath, JSON.stringify(restricted, null, 2) + '\n', {
     mode: 0o600,
   })
 })

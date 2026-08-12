@@ -32,16 +32,23 @@ describe('BL-013 application documentation contract', () => {
       'BL-014',
       'BL-015',
       'no public Stop',
+      'ownsSnapshot',
+      'schema-version-2',
+      '12 independently executed scenarios',
+      'request/upgrade IDs',
+      'assigned zeros',
+      'Management and one ExtensionHost',
+      'initial/replacement',
     ])
       expect(complete).toContain(phrase)
     expect(readme).toContain(
       'no hosted service, credential, network dependency, or manual judgment'
     )
-    expect(routing).toContain('24 rows must fail closed')
-    expect(runtime).toContain('zero residual union')
+    expect(routing).toContain('24 rows')
+    expect(runtime).toContain('all ten resource classes at zero')
     expect(api).toContain('adds no schema, migration')
     expect(harness).toContain(
-      'no-retry three-Git-fixture Chromium A/B/C episode'
+      'no-retry three-Git-fixture Chromium A/B/C replacement episode'
     )
   })
 })

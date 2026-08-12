@@ -38,7 +38,7 @@ Workbench registration state, start, stop, restart, health detection, backend re
 
 ### Interfaces
 - Callers request lifecycle operations with a persisted stable project identifier and exact stored canonical path.
-- The runtime manager returns typed `starting`, `running`, or `failed` snapshots and typed operation failures; running snapshots expose the stable route and opaque owner token only to trusted in-process consumers.
+- The runtime manager returns typed `starting`, `running`, or `failed` snapshots and typed operation failures; running snapshots expose the stable route and opaque owner token only to trusted in-process consumers, and an in-memory ownership query accepts only the exact immutable snapshot object still installed in the matching running entry.
 - Runtime dependencies expose injectable process, port, health, clock, cancellation, event, and exact-identity audit boundaries for finite validation.
 
 ### Expectations

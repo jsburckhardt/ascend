@@ -96,6 +96,7 @@ const api = async (
   })
   const runtime: ProjectRuntimeManager = {
     start: vi.fn(async () => snapshot),
+    ownsSnapshot: vi.fn(() => true),
     inspect: vi.fn(() => snapshot),
     lastFailure: vi.fn(),
     lastCleanup: vi.fn(),
@@ -666,6 +667,7 @@ describe('stable workbench HTTP transport', () => {
           elapsedMs: 0,
         }
       }),
+      ownsSnapshot: vi.fn(() => true),
       inspect: vi.fn(),
       lastFailure: vi.fn(),
       lastCleanup: vi.fn(),

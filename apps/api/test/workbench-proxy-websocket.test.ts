@@ -202,6 +202,7 @@ const createApi = async (upstreamPort: number) => {
   })
   const runtime: ProjectRuntimeManager = {
     start: vi.fn(async () => snapshot),
+    ownsSnapshot: vi.fn(() => true),
     inspect: vi.fn(() => snapshot),
     lastFailure: vi.fn(),
     lastCleanup: vi.fn(),

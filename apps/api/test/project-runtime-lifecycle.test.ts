@@ -68,6 +68,7 @@ describe('project runtime lifecycle integration', () => {
     const manager: ProjectRuntimeManager = {
       register: vi.fn(),
       start: vi.fn(),
+      ownsSnapshot: vi.fn(() => true),
       inspect: vi.fn(),
       inspectEntries: vi.fn(() => []),
       lastFailure: vi.fn(),

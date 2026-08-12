@@ -303,6 +303,7 @@ describe('BL-011 executable acceptance coordinator', () => {
           elapsedMs: 1,
         })
       }),
+      ownsSnapshot: vi.fn(() => true),
       inspect: vi.fn(),
       inspectEntries: vi.fn(() => []),
       lastFailure: vi.fn(),
@@ -575,6 +576,7 @@ describe('BL-011 executable acceptance coordinator', () => {
         runtimeInputs.push(canonicalPath)
         return snapshot
       }),
+      ownsSnapshot: vi.fn(() => true),
       inspect: vi.fn(() => snapshot),
       inspectEntries: vi.fn(() => []),
       lastFailure: vi.fn(),
@@ -1094,6 +1096,7 @@ describe('BL-011 executable acceptance coordinator', () => {
     const runtime: ProjectRuntimeManager = {
       register: vi.fn(),
       start: vi.fn(async () => snapshot),
+      ownsSnapshot: vi.fn(() => true),
       inspect: vi.fn(() => snapshot),
       inspectEntries: vi.fn(() => []),
       lastFailure: vi.fn(),

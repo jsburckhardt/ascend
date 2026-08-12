@@ -234,13 +234,6 @@ export const nodeRuntimePortProvider: RuntimePortProvider = {
     }),
 }
 
-export function buildRuntimeEnvironment(
-  environment: Readonly<NodeJS.ProcessEnv>,
-  canonicalPath: string
-): NodeJS.ProcessEnv {
-  return { ...environment, PWD: canonicalPath }
-}
-
 export function buildRuntimeArgv(
   canonicalPath: string,
   port: number
@@ -277,7 +270,7 @@ export const nodeRuntimeProcessAdapter: RuntimeProcessAdapter = {
       child = spawn(config.executablePath, argv, {
         cwd: canonicalPath,
         detached: true,
-        env: buildRuntimeEnvironment(config.environment, canonicalPath),
+        env: config.environment,
         stdio: ['ignore', 'ignore', 'pipe'],
       })
     } catch {

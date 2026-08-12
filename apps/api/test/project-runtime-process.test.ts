@@ -6,7 +6,6 @@ import {
 } from '../src/project-runtime-contract.js'
 import {
   buildRuntimeArgv,
-  buildRuntimeEnvironment,
   defaultRuntimeProcessDependencies,
   fetchRuntimeHealthAdapter,
   loopbackListenerIsAbsent,
@@ -115,17 +114,6 @@ describe('project runtime process boundary', () => {
     expect(argv.filter((item) => item === path)).toHaveLength(1)
     expect(argv).toContain('127.0.0.1:41234')
     expect(argv.join(' ')).not.toContain('0.0.0.0')
-  })
-
-  it('aligns the process working-directory environment with the canonical project', () => {
-    const environment = { PATH: '/safe/bin' }
-    expect(
-      buildRuntimeEnvironment(environment, '/projects/linked-worktree')
-    ).toEqual({
-      PATH: '/safe/bin',
-      PWD: '/projects/linked-worktree',
-    })
-    expect(environment).toEqual({ PATH: '/safe/bin' })
   })
 
   it('accepts only the documented status and body and records timing', async () => {

@@ -397,7 +397,7 @@ test('real Chromium derives three stable-route operations and proves observed cl
         await expect(terminalInput).toBeAttached({ timeout: 10_000 })
         await terminalInput.focus()
         await rm(WORKBENCH_ROUTE_TERMINAL_TEMP, { force: true })
-        const command = `setsid \"${path.join(
+        const command = `cd -- \"${canonicalPath}\" && setsid \"${path.join(
           REPOSITORY_ROOT,
           'apps/api/node_modules/.bin/tsx'
         )}\" \"${path.join(

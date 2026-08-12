@@ -332,7 +332,10 @@ test('cancels an in-progress real integrated command on overall timeout', async 
         ).toBeVisible()
         await openIntegratedTerminal(page)
         await page.keyboard.insertText(
-          `/usr/local/bin/node \"${path.join(REPOSITORY_ROOT, 'tests/e2e/fixtures/terminal-timeout-command.mjs')}\"`
+          `/usr/local/bin/node \"${path.join(
+            REPOSITORY_ROOT,
+            'tests/e2e/fixtures/terminal-timeout-command.mjs'
+          )}\"`
         )
         await page.keyboard.press('Enter')
         await expect
@@ -518,8 +521,13 @@ test('proves one designated-host workbench with terminal parity', async ({
 
         await openIntegratedTerminal(page)
         terminalCreationActions += 1
-        const integratedCommand =
-          `setsid \"${path.join(REPOSITORY_ROOT, 'node_modules/.bin/tsx')}\" \"${path.join(REPOSITORY_ROOT, 'apps/api/src/cli/proof-terminal-integrated.ts')}\"`
+        const integratedCommand = `setsid \"${path.join(
+          REPOSITORY_ROOT,
+          'node_modules/.bin/tsx'
+        )}\" \"${path.join(
+          REPOSITORY_ROOT,
+          'apps/api/src/cli/proof-terminal-integrated.ts'
+        )}\"`
         signal.throwIfAborted()
         await page.keyboard.insertText(integratedCommand)
         await page.keyboard.press('Enter')

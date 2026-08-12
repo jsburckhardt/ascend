@@ -3,6 +3,7 @@ import {
   type ClientRequest,
   type IncomingMessage,
   type ServerResponse,
+  type RequestOptions,
 } from 'node:http'
 import type { Socket } from 'node:net'
 import { StringDecoder } from 'node:string_decoder'
@@ -66,6 +67,7 @@ export interface WorkbenchProxyManagerDependencies {
   readonly shutdownTimeoutMs?: number
   readonly now?: () => number
   readonly recordEvent?: (event: WorkbenchSafeEvent) => void
+  readonly requestHttp?: (options: RequestOptions) => ClientRequest
   readonly recordWebSocketDiagnostic?: (diagnostic: {
     side: 'downstream' | 'upstream'
     event: 'close' | 'error'
@@ -263,6 +265,7 @@ export function createWorkbenchProxyManager(
 ): WorkbenchProxyManager {
   const now = dependencies.now ?? Date.now
   const recordEvent = dependencies.recordEvent ?? (() => undefined)
+  const requestHttp = dependencies.requestHttp ?? nodeHttpRequest
   const recordWebSocketDiagnostic =
     dependencies.recordWebSocketDiagnostic ?? (() => undefined)
   const recordWebSocketRole =
@@ -379,6 +382,7 @@ export function createWorkbenchProxyManager(
       elapsedMs: 0,
     })
     let upstreamRequest: ClientRequest | undefined
+    let operationFailure: WorkbenchPublicFailure | undefined
     try {
       const target = await resolveTarget(route, controller.signal)
       if (shuttingDown) throw new RuntimeFailure('manager-shutdown')
@@ -392,7 +396,7 @@ export function createWorkbenchProxyManager(
           settled = true
           resolve()
         }
-        upstreamRequest = nodeHttpRequest({
+        upstreamRequest = requestHttp({
           protocol: 'http:',
           hostname: '127.0.0.1',
           port: Number(target.port),
@@ -469,6 +473,7 @@ export function createWorkbenchProxyManager(
               error instanceof RedirectRejectedError
                 ? workbenchFailure('redirect-rejected')
                 : workbenchFailure('upstream-invalid-http')
+            operationFailure = failure
             sendHttpFailure(response, failure)
             finish()
             return
@@ -488,8 +493,9 @@ export function createWorkbenchProxyManager(
               response.destroy()
           })
           upstreamResponse.once('error', () => {
+            operationFailure = workbenchFailure('upstream-reset')
             if (!response.headersSent)
-              sendHttpFailure(response, workbenchFailure('upstream-reset'))
+              sendHttpFailure(response, operationFailure)
             else response.destroy()
             finish()
           })
@@ -513,12 +519,10 @@ export function createWorkbenchProxyManager(
         })
         upstreamRequest.once('error', (error) => {
           cleanupRequest()
-          sendHttpFailure(
-            response,
-            workbenchFailure(
-              shuttingDown ? 'manager-shutdown' : classifyHttpError(error)
-            )
+          operationFailure = workbenchFailure(
+            shuttingDown ? 'manager-shutdown' : classifyHttpError(error)
           )
+          sendHttpFailure(response, operationFailure)
           finish()
         })
         upstreamRequest.once('close', cleanupRequest)
@@ -536,10 +540,16 @@ export function createWorkbenchProxyManager(
         request.pipe(upstreamRequest)
       })
       emit({
-        event: 'workbench.proxy.completed',
+        event:
+          operationFailure === undefined
+            ? 'workbench.proxy.completed'
+            : 'workbench.proxy.failed',
         projectId: route.projectId,
         transport: 'http',
         elapsedMs: now() - startedAt,
+        ...(operationFailure === undefined
+          ? {}
+          : { classification: operationFailure.category }),
       })
     } catch (error) {
       const failure = failureFrom(error)

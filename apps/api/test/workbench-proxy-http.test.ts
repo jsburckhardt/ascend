@@ -6,6 +6,7 @@ import {
   type Server,
 } from 'node:http'
 import type { AddressInfo } from 'node:net'
+import { gzipSync } from 'node:zlib'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   createApiServerController,
@@ -164,6 +165,7 @@ describe('stable workbench HTTP transport', () => {
           if (request.url === '/assets/main.txt?x=1') {
             response.writeHead(200, {
               'content-type': 'text/plain',
+              'content-length': String(Buffer.byteLength('nested asset')),
               'cache-control': 'public,max-age=60',
               etag: 'matrix-tag',
             })
@@ -201,9 +203,12 @@ describe('stable workbench HTTP transport', () => {
       'cache-control': 'public,max-age=60',
       etag: 'matrix-tag',
     })
+    expect(nested.headers['content-length']).toBeUndefined()
+    expect(nested.headers['transfer-encoding']).toBe('chunked')
     const head = await perform(port, prefix + '/head', { method: 'HEAD' })
     expect(head.status).toBe(200)
     expect(head.body).toHaveLength(0)
+    expect(head.headers['content-length']).toBe('12')
     const posted = await perform(port, prefix + '/echo', {
       method: 'POST',
       headers: {
@@ -223,6 +228,7 @@ describe('stable workbench HTTP transport', () => {
     expect(ranged.status).toBe(206)
     expect(ranged.headers['content-range']).toBe('bytes 4-9/16')
     expect(ranged.headers['accept-ranges']).toBe('bytes')
+    expect(ranged.headers['content-length']).toBe('6')
     expect(ranged.body.toString()).toBe('456789')
     expect(observed.map((entry) => entry.url)).toEqual([
       '/assets/main.txt?x=1',
@@ -306,6 +312,30 @@ describe('stable workbench HTTP transport', () => {
     expect(createHash('sha256').update(result.body).digest('hex')).toBe(
       createHash('sha256').update(expected).digest('hex')
     )
+  })
+
+  it('preserves Content-Length only for byte-identical encoded responses', async () => {
+    const encodedBody = gzipSync(
+      Buffer.from('encoded textual response with byte-identical framing')
+    )
+    const upstreamPort = await listen(
+      createServer((_request, response) => {
+        response.writeHead(200, {
+          'content-type': 'text/plain; charset=utf-8',
+          'content-encoding': 'gzip',
+          'content-length': String(encodedBody.length),
+        })
+        response.end(encodedBody)
+      })
+    )
+    const { port } = await api(upstreamPort)
+    const result = await perform(
+      port,
+      '/projects/' + project.id + '/workbench/encoded'
+    )
+    expect(result.headers['content-encoding']).toBe('gzip')
+    expect(result.headers['content-length']).toBe(String(encodedBody.length))
+    expect(result.body).toEqual(encodedBody)
   })
 
   it('rewrites redirects, cookies, service-worker scope, and target headers', async () => {

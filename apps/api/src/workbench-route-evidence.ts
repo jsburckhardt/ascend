@@ -85,7 +85,15 @@ export async function mergeWorkbenchRouteEvidence(
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
     }
     const current = await readWorkbenchRouteEvidence()
-    const updatedMatrices = update.matrices ?? []
+    const updatedMatrices = (update.matrices ?? []).filter(
+      (entry) =>
+        !(
+          typeof entry === 'object' &&
+          entry !== null &&
+          'id' in entry &&
+          entry.id === 'V-7-security'
+        )
+    )
     const updatedIds = new Set(
       updatedMatrices.map((entry) =>
         typeof entry === 'object' && entry !== null && 'id' in entry
@@ -93,11 +101,20 @@ export async function mergeWorkbenchRouteEvidence(
           : JSON.stringify(entry)
       )
     )
+    const retainedMatrices = current.matrices.filter(
+      (entry) =>
+        !(
+          typeof entry === 'object' &&
+          entry !== null &&
+          'id' in entry &&
+          entry.id === 'V-7-security'
+        )
+    )
     const matrices =
       update.matrices === undefined
-        ? current.matrices
+        ? retainedMatrices
         : [
-            ...current.matrices.filter(
+            ...retainedMatrices.filter(
               (entry) =>
                 !updatedIds.has(
                   typeof entry === 'object' && entry !== null && 'id' in entry

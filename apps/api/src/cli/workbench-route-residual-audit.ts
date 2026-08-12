@@ -13,6 +13,10 @@ import {
   WORKBENCH_MARKDOWN_WEBVIEW_HOST_GRAMMAR,
 } from '../workbench-route-proof-observation.js'
 import {
+  validateWorkbenchFailureMatrix,
+  validateWorkbenchRedactionProof,
+} from '../workbench-proxy-contract.js'
+import {
   mergeWorkbenchRouteEvidence,
   readWorkbenchRouteEvidence,
   WORKBENCH_ROUTE_EVIDENCE_FILE,
@@ -38,6 +42,9 @@ export interface WorkbenchRouteResidualResult {
   readonly excludedRestrictedPaths: readonly string[]
   readonly matrixIds: readonly string[]
   readonly requiredSectionsComplete: boolean
+  readonly browserEvidenceComplete: boolean
+  readonly failureMatrixComplete: boolean
+  readonly redactionEvidenceComplete: boolean
   readonly observedInventoryCount: number
   readonly pendingInventoryEntries: number
   readonly controlListenerObservations: number
@@ -306,13 +313,22 @@ export async function auditWorkbenchRouteResidual(
       : []
   )
   const requiredPrefixes = ['V-2', 'V-3', 'V-4', 'V-5', 'V-6', 'V-7', 'V-8']
+  const browserEvidenceComplete = correctedBrowserEvidenceComplete(
+    retainedEvidence.browser
+  )
+  const failureMatrixComplete = retainedEvidence.matrices.some((matrix) =>
+    validateWorkbenchFailureMatrix(matrix)
+  )
+  const redactionEvidenceComplete = validateWorkbenchRedactionProof(
+    retainedEvidence.redaction
+  )
   const requiredSectionsComplete =
     requiredPrefixes.every((required) =>
       matrixIds.some((id) => id.startsWith(required))
     ) &&
-    correctedBrowserEvidenceComplete(retainedEvidence.browser) &&
-    typeof retainedEvidence.redaction === 'object' &&
-    retainedEvidence.redaction !== null &&
+    browserEvidenceComplete &&
+    failureMatrixComplete &&
+    redactionEvidenceComplete &&
     Object.keys(retainedEvidence.cleanup).length > 0
   const inventories = inventoryObservations(retainedEvidence.cleanup)
   const pendingInventoryEntries = inventories.reduce(
@@ -352,6 +368,9 @@ export async function auditWorkbenchRouteResidual(
     ],
     matrixIds,
     requiredSectionsComplete,
+    browserEvidenceComplete,
+    failureMatrixComplete,
+    redactionEvidenceComplete,
     observedInventoryCount: inventories.length,
     pendingInventoryEntries,
     controlListenerObservations,

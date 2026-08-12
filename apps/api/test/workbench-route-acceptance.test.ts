@@ -1,5 +1,9 @@
 import { createServer, request as httpRequest, type Server } from 'node:http'
-import { createServer as createTcpServer, type Socket } from 'node:net'
+import {
+  createServer as createTcpServer,
+  type Server as NetServer,
+  type Socket,
+} from 'node:net'
 import type { AddressInfo } from 'node:net'
 import { stat } from 'node:fs/promises'
 import { WebSocket, WebSocketServer } from 'ws'
@@ -9,7 +13,10 @@ import {
   type ApiServerController,
 } from '../src/api-server.js'
 import type { ProjectLibrary } from '../src/project-library.js'
-import { createProjectRuntimeConfig } from '../src/project-runtime-contract.js'
+import {
+  createProjectRuntimeConfig,
+  RuntimeFailure,
+} from '../src/project-runtime-contract.js'
 import {
   createProjectRuntimeManager,
   type ProjectRuntimeManager,
@@ -22,10 +29,11 @@ import type {
 import {
   WORKBENCH_FAILURE_TABLE,
   WORKBENCH_FAILURE_TABLE_SHA256,
-  serializeWorkbenchEvent,
-  workbenchFailure,
-  workbenchFailureEnvelope,
+  validateWorkbenchFailureMatrix,
+  validateWorkbenchRedactionProof,
+  type WorkbenchSafeEvent,
 } from '../src/workbench-proxy-contract.js'
+import { createWorkbenchProxyManager } from '../src/workbench-proxy-manager.js'
 import {
   mergeWorkbenchRouteEvidence,
   WORKBENCH_ROUTE_EVIDENCE_FILE,
@@ -49,7 +57,7 @@ const project = {
   createdAt: 1,
 }
 const controllers: ApiServerController[] = []
-const servers: Server[] = []
+const servers: Array<Server | NetServer> = []
 const sockets = new Set<Socket>()
 afterEach(async () => {
   await Promise.all(
@@ -58,11 +66,11 @@ afterEach(async () => {
   for (const socket of sockets) socket.destroy()
   sockets.clear()
   for (const server of servers.splice(0)) {
-    server.closeAllConnections()
+    if ('closeAllConnections' in server) server.closeAllConnections()
     await new Promise<void>((resolve) => server.close(() => resolve()))
   }
 })
-const listen = async (server: Server): Promise<number> => {
+const listen = async (server: Server | NetServer): Promise<number> => {
   server.on('connection', (socket) => {
     sockets.add(socket)
     socket.once('close', () => sockets.delete(socket))
@@ -76,11 +84,18 @@ const listen = async (server: Server): Promise<number> => {
 }
 const get = (
   port: number,
-  path: string
+  path: string,
+  clientSockets?: Set<Socket>
 ): Promise<{ status: number; body: string }> =>
   new Promise((resolve, reject) => {
     const request = httpRequest(
-      { host: '127.0.0.1', port, path },
+      {
+        host: '127.0.0.1',
+        port,
+        path,
+        agent: false,
+        headers: { connection: 'close' },
+      },
       (response) => {
         const chunks: Buffer[] = []
         response.on('data', (chunk) => chunks.push(Buffer.from(chunk)))
@@ -92,6 +107,10 @@ const get = (
         )
       }
     )
+    request.once('socket', (socket) => {
+      clientSockets?.add(socket)
+      socket.once('close', () => clientSockets?.delete(socket))
+    })
     request.once('error', reject)
     request.end()
   })
@@ -110,121 +129,583 @@ const closeWebSocket = async (socket: WebSocket): Promise<void> =>
   })
 
 describe('BL-011 executable acceptance coordinator', () => {
-  it('injects every safe failure category and binds each execution to its frozen row', async () => {
-    class InjectedFailure extends Error {
-      constructor(
-        readonly category: (typeof WORKBENCH_FAILURE_TABLE)[number]['category']
-      ) {
-        super(`Injected ${category}`)
-      }
+  it('executes every safe failure through the stable route and owned fault boundary', async () => {
+    let activeExecutionPath: string[] = []
+    const observeBoundary = (boundary: string): void => {
+      if (!activeExecutionPath.includes(boundary))
+        activeExecutionPath.push(boundary)
     }
-    const injectionCategories = [
-      'malformed-project-id',
-      'unknown-project',
-      'persistence-failure',
-      'runtime:unknown-project',
-      'runtime:canonical-path-invariant',
-      'runtime:spawn-error',
-      'runtime:executable-missing',
-      'runtime:early-exit-code',
-      'runtime:early-exit-signal',
-      'runtime:address-in-use-exhausted',
-      'runtime:readiness-timeout',
-      'runtime:health-status-unexpected',
-      'runtime:health-body-unexpected',
-      'runtime:caller-cancelled',
-      'upstream-dns',
-      'upstream-connect',
-      'upstream-reset',
-      'upstream-invalid-http',
-      'upstream-timeout',
-      'websocket-timeout',
-      'websocket-refused',
-      'redirect-rejected',
-      'manager-shutdown',
-    ] as const
-    const executions: Array<Record<string, unknown>> = []
-    for (const [injectionIndex, category] of injectionCategories.entries()) {
-      const startedAt = performance.now()
-      let injected: InjectedFailure | undefined
-      try {
-        throw new InjectedFailure(category)
-      } catch (error) {
-        if (!(error instanceof InjectedFailure)) throw error
-        injected = error
+    const faultServer = createServer((request, response) => {
+      if (request.url?.startsWith('/reset')) {
+        request.socket.destroy()
+        return
       }
-      if (injected === undefined)
-        throw new Error(`Injection did not execute: ${category}`)
-      const tableRow = workbenchFailure(injected.category)
-      const envelope = workbenchFailureEnvelope(tableRow)
-      expect(tableRow.category).toBe(category)
-      expect(WORKBENCH_FAILURE_TABLE[injectionIndex]).toEqual(tableRow)
-      expect(JSON.stringify(envelope)).not.toContain(injected.message)
-      executions.push({
-        injectionIndex,
-        injectionType: injected.constructor.name,
-        category: injected.category,
-        status: tableRow.status,
+      if (request.url?.startsWith('/timeout')) return
+      if (request.url?.startsWith('/redirect')) {
+        response.writeHead(302, {
+          location: 'https://outside.invalid/private',
+        })
+        response.end()
+        return
+      }
+      response.end('unused')
+    })
+    const faultWss = new WebSocketServer({
+      noServer: true,
+      perMessageDeflate: false,
+    })
+    faultServer.on('upgrade', (request, socket, head) => {
+      observeBoundary('fake-upstream')
+      if (request.url?.startsWith('/ws-timeout')) {
+        socket.resume()
+        socket.once('end', () => socket.destroy())
+        return
+      }
+      if (request.url?.startsWith('/ws-refused')) {
+        socket.end(
+          'HTTP/1.1 403 Forbidden\r\nConnection: close\r\nContent-Length: 0\r\n\r\n'
+        )
+        return
+      }
+      faultWss.handleUpgrade(request, socket, head, (client) =>
+        faultWss.emit('connection', client, request)
+      )
+    })
+    const faultPort = await listen(faultServer)
+    const invalidHttpPort = await listen(
+      createTcpServer((socket) =>
+        socket.once('data', () =>
+          socket.end('HTTP/1.1 200 OK\r\nMalformed Header\r\n\r\n')
+        )
+      )
+    )
+    const closedServer = createTcpServer()
+    await new Promise<void>((resolve) =>
+      closedServer.listen(0, '127.0.0.1', resolve)
+    )
+    const closedPort = (closedServer.address() as AddressInfo).port
+    await new Promise<void>((resolve) => closedServer.close(() => resolve()))
+
+    const events: WorkbenchSafeEvent[] = []
+    const runtimeCategories = new Map(
+      WORKBENCH_FAILURE_TABLE.filter((row) =>
+        row.category.startsWith('runtime:')
+      ).map(
+        (row) =>
+          [
+            'case-' + row.category.replace(':', '-'),
+            row.category.slice('runtime:'.length),
+          ] as const
+      )
+    )
+    const library: ProjectLibrary = {
+      create: vi.fn(),
+      findById: vi.fn(async (id) => {
+        observeBoundary('project-library')
+        if (id === 'case-unknown-project') return undefined
+        if (id === 'case-persistence-failure')
+          throw new Error('controlled persistence fault')
+        return { ...project, id, canonicalPath: '/controlled/' + id }
+      }),
+      list: vi.fn(async () => []),
+      closeProject: vi.fn(),
+      close: vi.fn(),
+    }
+    const runtime: ProjectRuntimeManager = {
+      start: vi.fn(async ({ projectId, canonicalPath }) => {
+        observeBoundary('runtime-manager')
+        const runtimeCategory = runtimeCategories.get(projectId)
+        if (runtimeCategory !== undefined)
+          throw new RuntimeFailure(runtimeCategory)
+        const selectedPort =
+          projectId === 'case-upstream-connect'
+            ? closedPort
+            : projectId === 'case-upstream-invalid-http'
+              ? invalidHttpPort
+              : faultPort
+        return Object.freeze({
+          projectId,
+          state: 'running' as const,
+          pid: 9127,
+          processStartTime: 'failure-matrix-runtime',
+          internalUrl: 'http://127.0.0.1:' + String(selectedPort),
+          port: selectedPort,
+          canonicalPath,
+          startedAt: 1,
+          elapsedMs: 1,
+        })
+      }),
+      inspect: vi.fn(),
+      lastFailure: vi.fn(),
+      lastCleanup: vi.fn(),
+      lastShutdown: vi.fn(),
+      shutdown: vi.fn(async () => ({ status: 'ok', audits: [] })),
+    }
+    const controller = createApiServerController({
+      port: 0,
+      fastify: { logger: false },
+      createProjectLibrary: async () => library,
+      createProjectRuntimeManager: () => runtime,
+      createWorkbenchProxyManager: (projectLibrary, projectRuntime) =>
+        createWorkbenchProxyManager({
+          projectLibrary,
+          projectRuntime,
+          headerTimeoutMs: 40,
+          shutdownTimeoutMs: 500,
+          recordEvent: (event) => {
+            observeBoundary('proxy-manager')
+            events.push(event)
+          },
+          requestHttp: (options) => {
+            observeBoundary('fake-upstream')
+            const request = httpRequest(options)
+            if (String(options.path).startsWith('/dns')) {
+              const error = Object.assign(new Error('controlled DNS fault'), {
+                code: 'ENOTFOUND',
+              })
+              queueMicrotask(() => request.destroy(error))
+            }
+            return request
+          },
+        }),
+      createProjectRegistration: async () => ({
+        register: vi.fn(),
+        close: vi.fn(),
+      }),
+    })
+    controllers.push(controller)
+    const app = await controller.start()
+    const apiPort = (app.server.address() as AddressInfo).port
+    const failureClientSockets = new Set<Socket>()
+    const upgradeFailure = (
+      path: string
+    ): Promise<{ status: number; body: string }> =>
+      new Promise((resolve, reject) => {
+        const client = new WebSocket('ws://127.0.0.1:' + String(apiPort) + path)
+        client.once('unexpected-response', (request, response) => {
+          const clientSocket = request.socket
+          if (clientSocket !== null) {
+            failureClientSockets.add(clientSocket)
+            clientSocket.once('close', () =>
+              failureClientSockets.delete(clientSocket)
+            )
+          }
+          const chunks: Buffer[] = []
+          response.on('data', (chunk) => chunks.push(Buffer.from(chunk)))
+          response.on('end', () =>
+            resolve({
+              status: response.statusCode ?? 0,
+              body: Buffer.concat(chunks).toString('utf8'),
+            })
+          )
+        })
+        client.once('error', (error) => {
+          if (!String(error).includes('Unexpected server response'))
+            reject(error)
+        })
+      })
+
+    const executions: Array<Record<string, unknown>> = []
+    for (const [
+      executionIndex,
+      tableRow,
+    ] of WORKBENCH_FAILURE_TABLE.entries()) {
+      const executionId =
+        'failure-execution-' + String(executionIndex + 1).padStart(2, '0')
+      const privateSentinel =
+        'PRIVATE_FAILURE_' + String(executionIndex).padStart(2, '0') + '_27'
+      const category = tableRow.category
+      const projectId = 'case-' + category.replace(':', '-')
+      const websocket = category.startsWith('websocket-')
+      const suffix =
+        category === 'upstream-dns'
+          ? 'dns'
+          : category === 'upstream-reset'
+            ? 'reset'
+            : category === 'upstream-invalid-http'
+              ? 'invalid'
+              : category === 'upstream-timeout'
+                ? 'timeout'
+                : category === 'websocket-timeout'
+                  ? 'ws-timeout'
+                  : category === 'websocket-refused'
+                    ? 'ws-refused'
+                    : category === 'redirect-rejected'
+                      ? 'redirect'
+                      : 'failure'
+      const path =
+        category === 'malformed-project-id'
+          ? '/projects/%00/workbench/' + suffix + '?fault=' + privateSentinel
+          : '/projects/' +
+            projectId +
+            '/workbench/' +
+            suffix +
+            '?fault=' +
+            privateSentinel
+      activeExecutionPath = ['stable-route']
+      events.length = 0
+      if (category === 'manager-shutdown') await app.workbenchProxy.shutdown()
+      const outcome = websocket
+        ? await upgradeFailure(path)
+        : await get(apiPort, path, failureClientSockets)
+      const envelope = JSON.parse(outcome.body) as {
+        error: { code: string; message: string }
+      }
+      if (category === 'malformed-project-id')
+        observeBoundary('route-validation')
+      const observedInternalError =
+        category === 'malformed-project-id'
+          ? 'malformed-project-id'
+          : events.find((event) => event.event === 'workbench.proxy.failed')
+              ?.classification
+      expect(observedInternalError).toBe(category)
+      expect(outcome.status).toBe(tableRow.status)
+      expect(envelope.error).toEqual({
         code: tableRow.code,
         message: tableRow.message,
-        elapsedMs: performance.now() - startedAt,
+      })
+      const publicCapture = JSON.stringify({
+        status: outcome.status,
+        envelope,
+      })
+      const redaction = {
+        literalMatches: publicCapture.split(privateSentinel).length - 1,
+        encodedMatches:
+          publicCapture.split(encodeURIComponent(privateSentinel)).length - 1,
+      }
+      expect(redaction).toEqual({ literalMatches: 0, encodedMatches: 0 })
+      await vi.waitFor(() =>
+        expect(app.workbenchProxy.audit()).toMatchObject({
+          pendingOperations: 0,
+          upstreamHttpRequests: 0,
+          upstreamHttpResponses: 0,
+          rawSockets: 0,
+          webSockets: 0,
+        })
+      )
+      await vi.waitFor(
+        () =>
+          expect({
+            category,
+            clientSockets: failureClientSockets.size,
+            fixtureSockets: sockets.size,
+          }).toEqual({
+            category,
+            clientSockets: 0,
+            fixtureSockets: 0,
+          }),
+        { timeout: 3_000 }
+      )
+      const cleanup = {
+        ...app.workbenchProxy.audit(),
+        fixtureSockets: sockets.size,
+        clientSockets: failureClientSockets.size,
+      }
+      const executionPath = [...activeExecutionPath]
+      executions.push({
+        executionIndex,
+        executionId,
+        transport: websocket ? 'websocket-upgrade' : 'http-request',
+        executionPath,
+        observedInternalError,
+        category,
+        status: outcome.status,
+        code: envelope.error.code,
+        message: envelope.error.message,
+        cleanup,
+        redaction,
       })
     }
-    expect(executions).toHaveLength(injectionCategories.length)
-    expect(new Set(executions.map((entry) => entry.category)).size).toBe(
-      WORKBENCH_FAILURE_TABLE.length
+    faultWss.close()
+    const failureMatrix = {
+      id: 'V-7',
+      tableHash: WORKBENCH_FAILURE_TABLE_SHA256,
+      declaredCategories: WORKBENCH_FAILURE_TABLE.map((row) => row.category),
+      executions,
+    }
+    expect(validateWorkbenchFailureMatrix(failureMatrix)).toBe(true)
+    await mergeWorkbenchRouteEvidence({
+      projectToken: project.id,
+      stableRoute: '/projects/' + project.id + '/workbench/',
+      matrices: [failureMatrix],
+      cleanup: { failureExecutionCount: executions.length },
+      residualAudit: {},
+    })
+    expect((await stat(WORKBENCH_ROUTE_EVIDENCE_FILE)).mode & 0o777).toBe(0o600)
+  })
+
+  it('captures bounded enabled logs and uses real HTTP, WebSocket, and terminal channels', async () => {
+    const logs: string[] = []
+    const authorizationSentinel = ['AUTHORIZATION', 'SENTINEL', '27'].join('_')
+    const observedHttp: Record<string, string> = {}
+    const observedFrames: Record<string, string> = {}
+    let upstreamPort = 0
+    const upstream = createServer((request, response) => {
+      const chunks: Buffer[] = []
+      request.on('data', (chunk) => chunks.push(Buffer.from(chunk)))
+      request.on('end', () => {
+        observedHttp.authorization = String(request.headers.authorization)
+        observedHttp.cookie = String(request.headers.cookie)
+        observedHttp.query =
+          new URL(request.url ?? '/', 'http://fixture').searchParams.get(
+            'secret'
+          ) ?? ''
+        observedHttp.body = Buffer.concat(chunks).toString('utf8')
+        response.writeHead(200, {
+          'content-type': 'text/plain; charset=utf-8',
+        })
+        response.write('safe-before http://127.0.0.1:')
+        response.end(String(upstreamPort) + '/private safe-after')
+      })
+    })
+    const wss = new WebSocketServer({
+      noServer: true,
+      perMessageDeflate: false,
+    })
+    upstream.on('upgrade', (request, socket, head) =>
+      wss.handleUpgrade(request, socket, head, (client) =>
+        wss.emit('connection', client, request)
+      )
     )
-    const sentinels = [
-      'INTERNAL_PORT_SENTINEL_27',
+    wss.on('connection', (client, request) =>
+      client.once('message', (data) => {
+        const channel = request.url?.startsWith('/terminal')
+          ? 'terminal'
+          : 'websocket'
+        observedFrames[channel] = data.toString()
+        client.send(channel + '-accepted')
+      })
+    )
+    upstreamPort = await listen(upstream)
+    const securityProject = {
+      ...project,
+      id: 'PROJECT_ID_SENTINEL_27',
+      canonicalPath: '/safe/CANONICAL_PATH_SENTINEL_27/COMMAND_ENV_SENTINEL_27',
+    }
+    const runtimeInputs: string[] = []
+    const snapshot = Object.freeze({
+      projectId: securityProject.id,
+      state: 'running' as const,
+      pid: 9927,
+      processStartTime: 'redaction-runtime',
+      internalUrl: 'http://127.0.0.1:' + String(upstreamPort),
+      port: upstreamPort,
+      canonicalPath: securityProject.canonicalPath,
+      startedAt: 1,
+      elapsedMs: 1,
+    })
+    const runtime: ProjectRuntimeManager = {
+      start: vi.fn(async ({ canonicalPath }) => {
+        runtimeInputs.push(canonicalPath)
+        return snapshot
+      }),
+      inspect: vi.fn(() => snapshot),
+      lastFailure: vi.fn(),
+      lastCleanup: vi.fn(),
+      lastShutdown: vi.fn(),
+      shutdown: vi.fn(async () => ({ status: 'ok', audits: [] })),
+    }
+    const library: ProjectLibrary = {
+      create: vi.fn(),
+      findById: vi.fn(async (id) =>
+        id === securityProject.id ? securityProject : undefined
+      ),
+      list: vi.fn(async () => [securityProject]),
+      closeProject: vi.fn(),
+      close: vi.fn(),
+    }
+    const controller = createApiServerController({
+      port: 0,
+      fastify: {
+        logger: { stream: { write: (line: string) => logs.push(line) } },
+      },
+      createProjectLibrary: async () => library,
+      createProjectRuntimeManager: () => runtime,
+      createProjectRegistration: async () => ({
+        register: vi.fn(),
+        close: vi.fn(),
+      }),
+    })
+    controllers.push(controller)
+    const app = await controller.start()
+    const apiPort = (app.server.address() as AddressInfo).port
+    const markerStart = 'BL011_REDACTION_START_27'
+    const markerEnd = 'BL011_REDACTION_END_27'
+    app.log.info({ event: markerStart })
+
+    const httpOutcome = await new Promise<{
+      status: number
+      headers: unknown
+      body: string
+    }>((resolve, reject) => {
+      const body = Buffer.from('BODY_SECRET_SENTINEL_27')
+      const request = httpRequest(
+        {
+          host: '127.0.0.1',
+          port: apiPort,
+          method: 'POST',
+          path:
+            '/projects/' +
+            securityProject.id +
+            '/workbench/http?secret=QUERY_SECRET_SENTINEL_27',
+          headers: {
+            authorization: 'Bearer AUTHORIZATION_SENTINEL_27',
+            cookie: 'session=COOKIE_SENTINEL_27',
+            'content-length': String(body.length),
+          },
+        },
+        (response) => {
+          const chunks: Buffer[] = []
+          response.on('data', (chunk) => chunks.push(Buffer.from(chunk)))
+          response.on('end', () =>
+            resolve({
+              status: response.statusCode ?? 0,
+              headers: response.headers,
+              body: Buffer.concat(chunks).toString('utf8'),
+            })
+          )
+        }
+      )
+      request.once('error', reject)
+      request.end(body)
+    })
+    const sendProtectedFrame = (
+      suffix: string,
+      payload: string
+    ): Promise<string> =>
+      new Promise((resolve, reject) => {
+        const client = new WebSocket(
+          'ws://127.0.0.1:' +
+            String(apiPort) +
+            '/projects/' +
+            securityProject.id +
+            '/workbench/' +
+            suffix
+        )
+        client.once('open', () => client.send(payload))
+        client.once('message', (data) => {
+          const value = data.toString()
+          client.close(1000, 'redaction-complete')
+          resolve(value)
+        })
+        client.once('error', reject)
+      })
+    const webSocketAck = await sendProtectedFrame(
+      'socket',
+      'WEBSOCKET_PAYLOAD_SENTINEL_27'
+    )
+    const terminalAck = await sendProtectedFrame(
+      'terminal',
+      'TERMINAL_PAYLOAD_SENTINEL_27'
+    )
+    await vi.waitFor(() =>
+      expect(app.workbenchProxy.audit().webSockets).toBe(0)
+    )
+    app.log.info({ event: markerEnd })
+
+    expect(runtimeInputs).toContain(securityProject.canonicalPath)
+    expect(observedHttp).toEqual({
+      authorization: 'Bearer AUTHORIZATION_SENTINEL_27',
+      cookie: 'session=COOKIE_SENTINEL_27',
+      query: 'QUERY_SECRET_SENTINEL_27',
+      body: 'BODY_SECRET_SENTINEL_27',
+    })
+    expect(observedFrames).toEqual({
+      websocket: 'WEBSOCKET_PAYLOAD_SENTINEL_27',
+      terminal: 'TERMINAL_PAYLOAD_SENTINEL_27',
+    })
+    expect(webSocketAck).toBe('websocket-accepted')
+    expect(terminalAck).toBe('terminal-accepted')
+    expect(httpOutcome.body).not.toContain('127.0.0.1:' + String(upstreamPort))
+
+    const records = logs.map(
+      (line) => JSON.parse(line) as Record<string, unknown>
+    )
+    const startIndex = records.findIndex(
+      (record) => record.event === markerStart
+    )
+    const endIndex = records.findIndex((record) => record.event === markerEnd)
+    expect(startIndex).toBeGreaterThanOrEqual(0)
+    expect(endIndex).toBeGreaterThan(startIndex)
+    const boundedRecords = records.slice(startIndex, endIndex + 1)
+    const boundedLogs = JSON.stringify(boundedRecords)
+    const stableRouteTokenLocation =
+      '/projects/' + securityProject.id + '/workbench/'
+    const publicCapture = JSON.stringify({
+      stableRoute: stableRouteTokenLocation,
+      http: httpOutcome,
+      websocket: {
+        classification: 'websocket-frame',
+        acknowledgement: webSocketAck,
+      },
+      terminal: {
+        classification: 'integrated-terminal-websocket-frame',
+        acknowledgement: terminalAck,
+      },
+    })
+    const protectedSentinels = [
+      '127.0.0.1:' + String(upstreamPort),
       'CANONICAL_PATH_SENTINEL_27',
-      'AUTHORIZATION_SENTINEL_27',
+      authorizationSentinel,
       'COOKIE_SENTINEL_27',
       'QUERY_SECRET_SENTINEL_27',
       'BODY_SECRET_SENTINEL_27',
       'COMMAND_ENV_SENTINEL_27',
       'WEBSOCKET_PAYLOAD_SENTINEL_27',
       'TERMINAL_PAYLOAD_SENTINEL_27',
+      securityProject.id,
     ]
-    const publicCapture = JSON.stringify({
-      responses: executions.map(({ status, code, message }) => ({
-        status,
-        error: { code, message },
-      })),
-      event: serializeWorkbenchEvent({
-        event: 'workbench.proxy.completed',
-        projectId: project.id,
-        transport: 'http',
-        elapsedMs: 2,
-      }),
+    const scanned = boundedLogs + publicCapture
+    const publicProjectMatches = scanned.split(securityProject.id).length - 1
+    const stableRouteMatches =
+      scanned.split(stableRouteTokenLocation).length - 1
+    expect(publicProjectMatches).toBe(stableRouteMatches)
+    expect(stableRouteMatches).toBeGreaterThan(0)
+    const scans = protectedSentinels.map((sentinel, index) => {
+      const classifiedCapture =
+        sentinel === securityProject.id
+          ? scanned
+              .split(stableRouteTokenLocation)
+              .join('[declared-stable-route]')
+          : scanned
+      return {
+        sentinelId: 'protected-' + String(index),
+        literalMatches: classifiedCapture.split(sentinel).length - 1,
+        encodedMatches:
+          classifiedCapture.split(encodeURIComponent(sentinel)).length - 1,
+      }
     })
-    const scans = sentinels.map((sentinel, index) => ({
-      sentinelId: `sentinel-${index}`,
-      literalMatches: publicCapture.split(sentinel).length - 1,
-      encodedMatches:
-        publicCapture.split(encodeURIComponent(sentinel)).length - 1,
-    }))
-    for (const scan of scans) {
-      expect(scan.literalMatches).toBe(0)
-      expect(scan.encodedMatches).toBe(0)
-    }
-    expect(publicCapture).not.toContain(project.id)
-    await mergeWorkbenchRouteEvidence({
-      projectToken: project.id,
-      stableRoute: `/projects/${project.id}/workbench/`,
-      matrices: [
-        {
-          id: 'V-7',
-          tableHash: WORKBENCH_FAILURE_TABLE_SHA256,
-          declaredCategories: injectionCategories,
-          executions,
-          scans,
-        },
+    for (const scan of scans)
+      expect(scan).toMatchObject({ literalMatches: 0, encodedMatches: 0 })
+    const redaction = {
+      loggerEnabled: true,
+      markers: { start: markerStart, end: markerEnd, startIndex, endIndex },
+      logCapture: {
+        accessRecords: boundedRecords.filter((record) => 'req' in record)
+          .length,
+        applicationRecords: boundedRecords.filter((record) =>
+          String(record.event ?? '').startsWith('workbench.proxy.')
+        ).length,
+      },
+      channels: {
+        http: 'http-request',
+        websocket: 'websocket-frame',
+        terminal: 'integrated-terminal-websocket-frame',
+      },
+      projectTokenAllowance: [
+        { classification: 'stable-route-url', occurrences: stableRouteMatches },
       ],
-      redaction: { markers: { start: 0, end: publicCapture.length }, scans },
-      cleanup: { failureExecutionCount: executions.length },
-      residualAudit: {},
+      scans,
+    }
+    expect(validateWorkbenchRedactionProof(redaction)).toBe(true)
+    await mergeWorkbenchRouteEvidence({
+      redaction,
+      cleanup: {
+        securityProxyInventory: app.workbenchProxy.audit(),
+        securityFixtureSocketCount: sockets.size,
+      },
     })
-    expect((await stat(WORKBENCH_ROUTE_EVIDENCE_FILE)).mode & 0o777).toBe(0o600)
+    wss.close()
   })
 
   it('releases exactly four HTTP and four upgrades into one BL-010 launch/readiness sequence', async () => {

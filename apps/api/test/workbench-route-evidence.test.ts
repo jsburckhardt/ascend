@@ -7,6 +7,10 @@ import {
   correctedBrowserEvidenceComplete,
 } from '../src/cli/workbench-route-residual-audit.js'
 import {
+  WORKBENCH_FAILURE_TABLE,
+  WORKBENCH_FAILURE_TABLE_SHA256,
+} from '../src/workbench-proxy-contract.js'
+import {
   mergeWorkbenchRouteEvidence,
   readWorkbenchRouteEvidence,
   WORKBENCH_ROUTE_EVIDENCE_FILE,
@@ -62,11 +66,90 @@ const correctedBrowser = {
   ),
 }
 
+const executableFailureMatrix = {
+  id: 'V-7',
+  tableHash: WORKBENCH_FAILURE_TABLE_SHA256,
+  declaredCategories: WORKBENCH_FAILURE_TABLE.map((row) => row.category),
+  executions: WORKBENCH_FAILURE_TABLE.map((row, executionIndex) => ({
+    executionIndex,
+    executionId: 'residual-execution-' + String(executionIndex),
+    transport: row.category.startsWith('websocket-')
+      ? 'websocket-upgrade'
+      : 'http-request',
+    executionPath:
+      row.category === 'malformed-project-id'
+        ? ['stable-route', 'route-validation']
+        : row.category === 'manager-shutdown'
+          ? ['stable-route', 'proxy-manager']
+          : row.category === 'unknown-project' ||
+              row.category === 'persistence-failure'
+            ? ['stable-route', 'proxy-manager', 'project-library']
+            : row.category.startsWith('runtime:')
+              ? [
+                  'stable-route',
+                  'proxy-manager',
+                  'project-library',
+                  'runtime-manager',
+                ]
+              : [
+                  'stable-route',
+                  'proxy-manager',
+                  'project-library',
+                  'runtime-manager',
+                  'fake-upstream',
+                ],
+    observedInternalError: row.category,
+    category: row.category,
+    status: row.status,
+    code: row.code,
+    message: row.message,
+    cleanup: {
+      pendingOperations: 0,
+      upstreamHttpRequests: 0,
+      upstreamHttpResponses: 0,
+      rawSockets: 0,
+      webSockets: 0,
+      fixtureSockets: 0,
+      clientSockets: 0,
+    },
+    redaction: { literalMatches: 0, encodedMatches: 0 },
+  })),
+}
+const boundedRedactionProof = {
+  loggerEnabled: true,
+  markers: {
+    start: 'start-marker',
+    end: 'end-marker',
+    startIndex: 0,
+    endIndex: 2,
+  },
+  logCapture: { accessRecords: 1, applicationRecords: 1 },
+  channels: {
+    http: 'http-request',
+    websocket: 'websocket-frame',
+    terminal: 'integrated-terminal-websocket-frame',
+  },
+  projectTokenAllowance: [
+    { classification: 'stable-route-url', occurrences: 1 },
+  ],
+  scans: Array.from({ length: 10 }, (_, index) => ({
+    sentinelId: 'sentinel-' + String(index),
+    literalMatches: 0,
+    encodedMatches: 0,
+  })),
+}
+
 describe('restricted stable-route evidence and residual audit', () => {
   it('atomically creates, merges, and repairs the sole owner-readable evidence file', async () => {
     await mergeWorkbenchRouteEvidence({
       cleanup: { cleanWorkspaceBootstrap: 'observed' },
     })
+    const retired = await mergeWorkbenchRouteEvidence({
+      matrices: [{ id: 'V-7-security', localOnly: true }],
+    })
+    expect(retired.matrices).not.toContainEqual(
+      expect.objectContaining({ id: 'V-7-security' })
+    )
     const before = await readWorkbenchRouteEvidence()
     await chmod(WORKBENCH_ROUTE_EVIDENCE_FILE, 0o644)
     const updated = await mergeWorkbenchRouteEvidence({
@@ -102,14 +185,14 @@ describe('restricted stable-route evidence and residual audit', () => {
           { pid: 999_999_999, processStartTime: 'absent', port: 65_534 },
         ],
       },
-      redaction: { scans: [] },
+      redaction: boundedRedactionProof,
       matrices: [
         { id: 'V-2' },
         { id: 'V-3' },
         { id: 'V-4' },
         { id: 'V-5' },
         { id: 'V-6' },
-        { id: 'V-7' },
+        executableFailureMatrix,
         { id: 'V-8', unrelatedControlObservedAt: 1 },
       ],
       cleanup: {
@@ -248,8 +331,10 @@ describe('restricted stable-route evidence and residual audit', () => {
     ]) {
       expect(acceptance + browser).not.toContain(forbidden)
     }
-    expect(acceptance).toContain('throw new InjectedFailure(category)')
-    expect(acceptance).toContain('injectionIndex')
+    expect(acceptance).not.toContain('throw new InjectedFailure(category)')
+    expect(acceptance).not.toContain('class InjectedFailure')
+    expect(acceptance).toContain('validateWorkbenchFailureMatrix')
+    expect(acceptance).toContain('observedInternalError')
     expect(browser).not.toContain('navigationAttempts +=')
     expect(browser).not.toContain('webSocketAttempts +=')
     expect(browser).toContain('networkRequests.push')

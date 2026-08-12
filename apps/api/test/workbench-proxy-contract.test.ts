@@ -13,6 +13,8 @@ import {
   serializeWorkbenchEvent,
   tokenizeWorkbenchProjectId,
   validateRestrictedEvidence,
+  validateWorkbenchFailureMatrix,
+  validateWorkbenchRedactionProof,
   workbenchFailure,
   workbenchFailureEnvelope,
 } from '../src/workbench-proxy-contract.js'
@@ -159,6 +161,133 @@ describe('stable workbench proxy contract', () => {
     ).toMatchObject({ elapsedMs: 0, classification: 'manager-shutdown' })
     expect(validateRestrictedEvidence(null)).toBe(false)
     expect(validateRestrictedEvidence([])).toBe(false)
+  })
+
+  it('rejects local-only failure evidence, disabled logging, and wrong payload channels', () => {
+    const executableMatrix = {
+      id: 'V-7',
+      tableHash: WORKBENCH_FAILURE_TABLE_SHA256,
+      declaredCategories: WORKBENCH_FAILURE_TABLE.map((row) => row.category),
+      executions: WORKBENCH_FAILURE_TABLE.map((row, executionIndex) => ({
+        executionIndex,
+        executionId: 'execution-' + String(executionIndex),
+        transport: row.category.startsWith('websocket-')
+          ? 'websocket-upgrade'
+          : 'http-request',
+        executionPath:
+          row.category === 'malformed-project-id'
+            ? ['stable-route', 'route-validation']
+            : row.category === 'manager-shutdown'
+              ? ['stable-route', 'proxy-manager']
+              : row.category === 'unknown-project' ||
+                  row.category === 'persistence-failure'
+                ? ['stable-route', 'proxy-manager', 'project-library']
+                : row.category.startsWith('runtime:')
+                  ? [
+                      'stable-route',
+                      'proxy-manager',
+                      'project-library',
+                      'runtime-manager',
+                    ]
+                  : [
+                      'stable-route',
+                      'proxy-manager',
+                      'project-library',
+                      'runtime-manager',
+                      'fake-upstream',
+                    ],
+        observedInternalError: row.category,
+        category: row.category,
+        status: row.status,
+        code: row.code,
+        message: row.message,
+        cleanup: {
+          pendingOperations: 0,
+          upstreamHttpRequests: 0,
+          upstreamHttpResponses: 0,
+          rawSockets: 0,
+          webSockets: 0,
+          fixtureSockets: 0,
+          clientSockets: 0,
+        },
+        redaction: { literalMatches: 0, encodedMatches: 0 },
+      })),
+    }
+    expect(validateWorkbenchFailureMatrix(executableMatrix)).toBe(true)
+    expect(
+      validateWorkbenchFailureMatrix({
+        ...executableMatrix,
+        tableHash: 'stale-table-hash',
+      })
+    ).toBe(false)
+    expect(
+      validateWorkbenchFailureMatrix({
+        ...executableMatrix,
+        executions: executableMatrix.executions.map((execution, index) => ({
+          ...execution,
+          executionId: index === 1 ? 'execution-0' : execution.executionId,
+        })),
+      })
+    ).toBe(false)
+    expect(
+      validateWorkbenchFailureMatrix({
+        ...executableMatrix,
+        executions: executableMatrix.executions.map((execution, index) => ({
+          ...execution,
+          transport: index === 0 ? 'websocket-upgrade' : execution.transport,
+        })),
+      })
+    ).toBe(false)
+    expect(
+      validateWorkbenchFailureMatrix({
+        ...executableMatrix,
+        executions: executableMatrix.executions.map((execution) => ({
+          ...execution,
+          localOnly: true,
+          injectionType: 'InjectedFailure',
+          executionPath: ['local-throw', 'table-comparison'],
+        })),
+      })
+    ).toBe(false)
+
+    const scans = Array.from({ length: 10 }, (_, index) => ({
+      sentinelId: 'sentinel-' + String(index),
+      literalMatches: 0,
+      encodedMatches: 0,
+    }))
+    const proof = {
+      loggerEnabled: true,
+      markers: {
+        start: 'bounded-start',
+        end: 'bounded-end',
+        startIndex: 0,
+        endIndex: 2,
+      },
+      logCapture: { accessRecords: 1, applicationRecords: 1 },
+      channels: {
+        http: 'http-request',
+        websocket: 'websocket-frame',
+        terminal: 'integrated-terminal-websocket-frame',
+      },
+      projectTokenAllowance: [
+        { classification: 'stable-route-url', occurrences: 1 },
+      ],
+      scans,
+    }
+    expect(validateWorkbenchRedactionProof(proof)).toBe(true)
+    expect(
+      validateWorkbenchRedactionProof({ ...proof, loggerEnabled: false })
+    ).toBe(false)
+    expect(
+      validateWorkbenchRedactionProof({
+        ...proof,
+        channels: {
+          ...proof.channels,
+          websocket: 'http-header',
+          terminal: 'http-header',
+        },
+      })
+    ).toBe(false)
   })
 
   it('keeps runtime launch loopback-only and disables generic proxy routes', () => {

@@ -10,7 +10,7 @@ const read = (filePath: string) =>
 
 describe('stable workbench routing documentation and command contract', () => {
   it('documents every behavior, bound, fault, disclosure, cleanup, and exclusion', async () => {
-    const [runbook, root, api, index, runtime, core] = await Promise.all([
+    const [runbook, root, api, index, runtime, core, adr] = await Promise.all([
       read('docs/stable-workbench-routing.md'),
       read('README.md'),
       read('apps/api/README.md'),
@@ -18,6 +18,9 @@ describe('stable workbench routing documentation and command contract', () => {
       read('docs/project-runtime.md'),
       read(
         'project/architecture/core-components/CORE-COMPONENT-260812-stable-workbench-proxy.md'
+      ),
+      read(
+        'project/architecture/ADR/ADR-260812-in-process-workbench-reverse-proxy.md'
       ),
     ])
     const content = [runbook, root, api, index, runtime, core].join('\n')
@@ -64,8 +67,18 @@ describe('stable workbench routing documentation and command contract', () => {
       'ExtensionHost',
       'six network sockets',
       'V-0',
+      'Unencoded textual responses',
+      'byte-identical binary or encoded responses',
+      'marker-bounded',
+      'real frames',
+      'local throws',
+      'execution ID',
     ])
       expect(content).toContain(topic)
+    for (const framingDocument of [runbook, api, core, adr]) {
+      expect(framingDocument).toContain('Content-Length')
+      expect(framingDocument).toContain('byte-identical binary or encoded')
+    }
     expect(root).toContain('docs/stable-workbench-routing.md')
     expect(api).toContain('direct `ws` 8.x dependency')
     expect(runtime).toContain('Four HTTP requests plus four WebSocket upgrades')

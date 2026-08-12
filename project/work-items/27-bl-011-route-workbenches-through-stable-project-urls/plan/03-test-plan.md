@@ -80,7 +80,7 @@ V-2 barrier timeline, operation types/counts, lookup/start/readiness counts, ide
 Start owned loopback fake HTTP upstream and matrix client fixtures. Declare the 257-KiB binary generation input and expected SHA-256 before opening clients.
 
 ### Steps
-1. `GET` a nested asset with query and compare `200` body, Content-Type, Cache-Control, and ETag.
+1. `GET` a nested asset with query and compare `200` body, Content-Type, Cache-Control, and ETag. Assert its unencoded textual upstream Content-Length is removed and streamed framing is used; separately assert byte-identical binary and encoded responses preserve Content-Length.
 2. `HEAD` an asset and assert headers complete with zero downstream body bytes.
 3. `POST` exactly 257 KiB of deterministic binary input and verify `201`, valid Content-Length, and request/echo/expected digest equality.
 4. Send the declared Range and verify `206`, Content-Range, Accept-Ranges, and exact ranged bytes.
@@ -170,9 +170,9 @@ V-6 exact case manifest and rows with input/hash/order/control/close/bound data,
 Hash the public failure table before execution. Prepare exactly one injection for every required category and unique declared sentinels for internal port, canonical path, authorization, cookie, query, body, command/environment, WebSocket payload, terminal payload, and project token. Mark bounded log start/end positions per case.
 
 ### Steps
-1. Execute each malformed/unknown/persistence/runtime/upstream/timeout/refusal/redirect/shutdown failure once and compare exact status/code/message to its table row.
+1. Execute each of the 23 malformed/unknown/persistence/runtime/upstream/timeout/refusal/redirect/shutdown failures once through a stable-route request or upgrade and the controlled library/runtime/proxy/fake-upstream path. Retain its execution ID, observed internal category, exact status/code/message, cleanup, and redaction; reject local throws or table-only comparisons.
 2. Execute the six ID outcomes and controlled arbitrary-target headers, proving only the selected fixture receives traffic.
-3. Capture access/application logs and downstream headers/body between each marker.
+3. Keep logging enabled and capture nonempty access/application logs and downstream headers/body between each marker. Send authorization, cookie, query, and body values through HTTP; canonical/command-environment values through the controlled runtime; and WebSocket plus terminal values through distinct real frames, never substitute headers.
 4. Scan for literal and percent-encoded forms of every sentinel; enumerate every project-token occurrence.
 5. Audit sockets and table invocation counts after each case.
 

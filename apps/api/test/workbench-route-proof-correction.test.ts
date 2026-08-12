@@ -1,9 +1,4 @@
-import {
-  createServer,
-  request as httpRequest,
-  type IncomingHttpHeaders,
-  type Server,
-} from 'node:http'
+import { createServer, request as httpRequest, type Server } from 'node:http'
 import {
   createServer as createTcpServer,
   type AddressInfo,
@@ -20,14 +15,13 @@ import type { ProjectRuntimeManager } from '../src/project-runtime-manager.js'
 import {
   classifyWorkbenchConnectionRolePayload,
   filterWorkbenchHeaders,
-  tokenizeWorkbenchProjectId,
+  validateWorkbenchRedactionProof,
 } from '../src/workbench-proxy-contract.js'
 import {
   classifyWorkbenchBrowserRequest,
   classifyWorkbenchWebSocketUrl,
   createResourceTracker,
   observedDigest,
-  scanSentinels,
   WORKBENCH_BROWSER_CLASSIFIER_VECTORS,
   WORKBENCH_MARKDOWN_WEBVIEW_HOST_GRAMMAR,
 } from '../src/workbench-route-proof-observation.js'
@@ -153,44 +147,6 @@ const createApi = async (upstreamPort: number, events: unknown[] = []) => {
 
 import * as managerModule from '../src/workbench-proxy-manager.js'
 const requireManager = (): typeof managerModule => managerModule
-
-const perform = (
-  port: number,
-  path: string,
-  options: {
-    method?: string
-    headers?: Record<string, string>
-    body?: Buffer
-  } = {}
-) =>
-  new Promise<{ status: number; headers: IncomingHttpHeaders; body: Buffer }>(
-    (resolve, reject) => {
-      const request = httpRequest(
-        {
-          host: '127.0.0.1',
-          port,
-          path,
-          method: options.method ?? 'GET',
-          headers: options.headers,
-        },
-        (response) => {
-          const chunks: Buffer[] = []
-          response.on('data', (chunk) => chunks.push(Buffer.from(chunk)))
-          response.on('end', () =>
-            resolve({
-              status: response.statusCode ?? 0,
-              headers: response.headers,
-              body: Buffer.concat(chunks),
-            })
-          )
-        }
-      )
-      request.on('socket', (socket) => trackSocket(matrixSockets, socket))
-      request.once('error', reject)
-      if (options.body !== undefined) request.write(options.body)
-      request.end()
-    }
-  )
 
 const waitForEmpty = async (
   app: Awaited<ReturnType<typeof createApi>>['app']
@@ -370,121 +326,45 @@ describe('BL-011 verifier proof corrections', () => {
       pathnameClass: 'stable-runtime-socket',
     })
   })
-  it('sends restricted sentinels through controlled traffic and scans public responses and logs', async () => {
-    const events: unknown[] = []
-    const observedRequests: Array<Record<string, unknown>> = []
-    let upstreamPort = 0
-    const upstream = createServer((request, response) => {
-      const chunks: Buffer[] = []
-      request.on('data', (chunk) => chunks.push(Buffer.from(chunk)))
-      request.on('end', () => {
-        observedRequests.push({
-          url: request.url,
-          authorization: request.headers.authorization,
-          cookie: request.headers.cookie,
-          commandEnvironment: request.headers['x-command-environment'],
-          frame: request.headers['x-frame-sentinel'],
-          terminal: request.headers['x-terminal-sentinel'],
-          body: Buffer.concat(chunks).toString('utf8'),
-        })
-        const authority = `127.0.0.1:${upstreamPort}`
-        response.writeHead(200, {
-          'content-type': 'text/plain; charset=utf-8',
-          'x-upstream-reference': `http://${authority}/private`,
-        })
-        response.write('safe-before-http://127.0.0.1:')
-        response.end(
-          `${upstreamPort}-safe-after-${encodeURIComponent(`http://${authority}`)}`
-        )
-      })
-    })
-    upstreamPort = await listen(upstream)
-    const { app, port } = await createApi(upstreamPort, events)
-    const sentinels = {
-      internalPort: 'INTERNAL_PORT_SENTINEL_27',
-      canonicalPath: 'CANONICAL_PATH_SENTINEL_27',
-      authorization: 'AUTHORIZATION_SENTINEL_27',
-      cookie: 'COOKIE_SENTINEL_27',
-      query: 'QUERY_SECRET_SENTINEL_27',
-      body: 'BODY_SECRET_SENTINEL_27',
-      commandEnvironment: 'COMMAND_ENV_SENTINEL_27',
-      websocketFrame: 'WEBSOCKET_PAYLOAD_SENTINEL_27',
-      terminalFrame: 'TERMINAL_PAYLOAD_SENTINEL_27',
-    }
-    const response = await perform(
-      port,
-      `/projects/${project.id}/workbench/security?secret=${sentinels.query}`,
-      {
-        method: 'POST',
-        headers: {
-          authorization: `Bearer ${sentinels.authorization}`,
-          cookie: `session=${sentinels.cookie}`,
-          'x-internal-port': sentinels.internalPort,
-          'x-command-environment': sentinels.commandEnvironment,
-          'x-frame-sentinel': sentinels.websocketFrame,
-          'x-terminal-sentinel': sentinels.terminalFrame,
-        },
-        body: Buffer.from(sentinels.body),
-      }
-    )
-    expect(observedRequests).toHaveLength(1)
-    expect(observedRequests[0]).toMatchObject({
-      url: `/security?secret=${sentinels.query}`,
-      authorization: `Bearer ${sentinels.authorization}`,
-      cookie: `session=${sentinels.cookie}`,
-      commandEnvironment: sentinels.commandEnvironment,
-      frame: sentinels.websocketFrame,
-      terminal: sentinels.terminalFrame,
-      body: sentinels.body,
-    })
-    const publicCapture = JSON.stringify({
-      headers: response.headers,
-      body: response.body.toString('utf8'),
-      logs: events,
-    })
-    const scans = scanSentinels(publicCapture, sentinels)
-    for (const scan of scans)
-      expect(scan).toMatchObject({ literalMatches: 0, encodedMatches: 0 })
-    expect(publicCapture).not.toContain(`:${upstreamPort}`)
-    expect(publicCapture).not.toContain(
-      encodeURIComponent(`http://127.0.0.1:${upstreamPort}`)
-    )
-    const projectOccurrences = publicCapture.split(project.id).length - 1
-    const stableRoute = `/projects/${project.id}/workbench/`
-    const approvedProjectOccurrences =
-      publicCapture.split(stableRoute).length -
-      1 +
-      (publicCapture.split(encodeURIComponent(stableRoute)).length - 1)
-    expect(projectOccurrences).toBe(approvedProjectOccurrences)
-    expect(JSON.stringify(events)).not.toContain(project.id)
-    expect(events).toContainEqual(
-      expect.objectContaining({
-        projectToken: tokenizeWorkbenchProjectId(project.id),
-      })
-    )
-    await waitForEmpty(app)
-    await mergeWorkbenchRouteEvidence({
-      matrices: [
-        {
-          id: 'V-7-security',
-          controlledInputs: observedRequests,
-          publicCapture: {
-            headers: response.headers,
-            body: response.body.toString('utf8'),
-            events,
-          },
-          scans,
-          proxyInventory: app.workbenchProxy.audit(),
-        },
-      ],
-      redaction: {
-        sentinels,
-        scans,
-        projectLogToken: tokenizeWorkbenchProjectId(project.id),
+  it('rejects disabled logging and header substitutes for frame channels', () => {
+    const scans = Array.from({ length: 10 }, (_, index) => ({
+      sentinelId: 'security-' + String(index),
+      literalMatches: 0,
+      encodedMatches: 0,
+    }))
+    const proof = {
+      loggerEnabled: true,
+      markers: {
+        start: 'security-start',
+        end: 'security-end',
+        startIndex: 0,
+        endIndex: 2,
       },
-      cleanup: { securityProxyInventory: app.workbenchProxy.audit() },
-      residualAudit: {},
-    })
+      logCapture: { accessRecords: 1, applicationRecords: 1 },
+      channels: {
+        http: 'http-request',
+        websocket: 'websocket-frame',
+        terminal: 'integrated-terminal-websocket-frame',
+      },
+      projectTokenAllowance: [
+        { classification: 'stable-route-url', occurrences: 1 },
+      ],
+      scans,
+    }
+    expect(validateWorkbenchRedactionProof(proof)).toBe(true)
+    expect(
+      validateWorkbenchRedactionProof({ ...proof, loggerEnabled: false })
+    ).toBe(false)
+    expect(
+      validateWorkbenchRedactionProof({
+        ...proof,
+        channels: {
+          http: 'http-request',
+          websocket: 'http-header',
+          terminal: 'http-header',
+        },
+      })
+    ).toBe(false)
   })
 
   it('executes explicit request and response cases for every required hop header', async () => {

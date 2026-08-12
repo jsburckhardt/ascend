@@ -16,7 +16,7 @@ Repository-retained BL-003 browser events and the current real BL-011 Chromium o
 
 Adopt one application-owned, in-process workbench reverse-proxy boundary. Fastify will own route matching, project lookup, and safe precommitment errors. The proxy boundary will own raw HTTP streams, upgrade handshakes, and active proxy sockets in memory.
 
-Implement HTTP forwarding with Node core streams and WebSocket client/server bridging with a direct `ws` 8.x API dependency using no-server upgrade handling. Do not adopt a general proxy plugin: the upstream is runtime-dynamic, and the required header, cookie, redirect, commitment, and shutdown policies are product contracts rather than passthrough defaults.
+Implement HTTP forwarding with Node core streams and WebSocket client/server bridging with a direct `ws` 8.x API dependency using no-server upgrade handling. Remove upstream `Content-Length` from every unencoded textual response before streamed authority rewriting, because replacement can change the byte count; preserve it only for byte-identical binary or encoded responses. Do not adopt a general proxy plugin: the upstream is runtime-dynamic, and the required header, cookie, redirect, commitment, and shutdown policies are product contracts rather than passthrough defaults.
 
 Resolve every target from `ProjectLibrary.findById` and the immutable result of `ProjectRuntimeManager.start`. Never accept a client-supplied authority, port, path, or proxy target. Keep code-server loopback-only, disable its generic port-proxy routes for this stable-route scope.
 
@@ -29,6 +29,8 @@ Perform authority and encoded-token comparisons only transiently. Public evidenc
 Disable extension-marketplace network access in the deterministic designated proof by launching code-server with `EXTENSIONS_GALLERY={}`. Code-server maps that non-empty environment value directly to an empty VS Code `extensionsGallery` product configuration, while Explorer, built-in Markdown Preview, and terminal remain the required scenario. Any Open VSX request fails the designated proof.
 
 Interpret the issue count of three WebSocket connection attempts as three fresh workbench connection workflows. The observed VS Code remote protocol opens exactly one Management channel and one ExtensionHost channel in each workflow, for six network WebSocket connections total. Evidence must classify the initial `connectionType` control request, require three of each role, require `reconnection=false`, and fail unknown roles, extra sockets, external socket origins, or internal-port socket URLs.
+
+Validation of this boundary must drive every finite failure through an actual stable-route request or upgrade and its controlled dependency, rather than a local throw or static table comparison. Redaction proof must use enabled, marker-bounded access and application logs and send WebSocket and integrated-terminal sentinels as real, distinct frames.
 
 On application close, reject new proxy work and settle or abort proxy-owned operations before shutting down the runtime manager and persistence owners. The proxy does not own, persist, or terminate runtime processes.
 

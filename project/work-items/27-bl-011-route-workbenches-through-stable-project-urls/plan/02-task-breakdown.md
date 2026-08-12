@@ -87,7 +87,7 @@ Create one application-owned `WorkbenchProxyManager` with injected project looku
 - **Related Core-Components:** CORE-COMPONENT-260812-stable-workbench-proxy; CORE-COMPONENT-260808-structured-runtime-logging; CORE-COMPONENT-260808-runtime-lifecycle-error-handling
 
 ### Description
-Bridge `IncomingMessage` and upstream Node HTTP requests without Fastify parsing or serialization. Preserve suffix/query, methods, bytes, statuses, content metadata, range semantics, streaming, and backpressure; rebuild trusted upstream authority/origin data; apply header, redirect, cookie, service-worker, and leak policy; classify finite upstream faults; and propagate downstream abort only to the matching upstream stream.
+Bridge `IncomingMessage` and upstream Node HTTP requests without Fastify parsing or serialization. Preserve suffix/query, methods, bytes, statuses, content metadata, range semantics, streaming, and backpressure; rebuild trusted upstream authority/origin data; apply header, redirect, cookie, service-worker, and leak policy; classify finite upstream faults; and propagate downstream abort only to the matching upstream stream. Unencoded textual responses remove upstream Content-Length before authority rewriting and stream safe framing; byte-identical binary or encoded responses preserve it.
 
 ### Acceptance Criteria
 - AC-1 and AC-3: Base, nested/query, HEAD, 257-KiB POST, and range traffic is routed to one trusted loopback runtime with exact required bytes and metadata.
@@ -141,7 +141,7 @@ Use direct `ws` no-server handling to connect the trusted loopback upstream befo
 - **Related Core-Components:** CORE-COMPONENT-260812-stable-workbench-proxy; CORE-COMPONENT-260806-agent-executable-acceptance-criteria; CORE-COMPONENT-260808-engineering-harness-delivery-contract; CORE-COMPONENT-260808-development-standards
 
 ### Description
-Build one deterministic executable acceptance coordinator with owned fake HTTP/WebSocket fixtures, matrix clients, observable barriers, predeclared generation inputs/digests/outcomes, bounded log markers, exact invocation counts, and after-case socket audits. Execute the complete HTTP, WebSocket, safe-failure, ID/security, eight-client concurrency, disconnect, and shutdown matrices before any real browser scenario.
+Build one deterministic executable acceptance coordinator with owned fake HTTP/WebSocket fixtures, matrix clients, observable barriers, predeclared generation inputs/digests/outcomes, bounded log markers, exact invocation counts, and after-case socket audits. All 23 failure rows are stable-route request/upgrade executions with IDs and observed internal classifications; enabled access/application logs carry ten protected sentinel classes through their actual HTTP, runtime, WebSocket-frame, and integrated-terminal-frame channels. Execute the complete HTTP, WebSocket, safe-failure, ID/security, eight-client concurrency, disconnect, and shutdown matrices before any real browser scenario.
 
 ### Acceptance Criteria
 - AC-1 through AC-12: Every exact issue case executes once or at its explicitly required count, matches its declared contract, and records concrete observations rather than assertion-only labels.
@@ -154,7 +154,7 @@ Build one deterministic executable acceptance coordinator with owned fake HTTP/W
 - Gate the expensive executable coordinator behind the issue-focused recipe while keeping deterministic contract tests in normal package tests.
 
 ### Expected Evidence
-- V-3 through V-8 matrix sections in one versioned mode-`0600` local evidence file.
+- V-3 through V-8 matrix sections in one versioned mode-`0600` local evidence file. V-7 contains exactly 23 executable failure records and ten marker-bounded redaction scans; local-only failures, disabled logging, and wrong-channel frame substitutes are rejected.
 - Case manifest showing exact case membership/counts, fixture/client socket union, predeclared expectation hash, and all cleanup outcomes.
 
 ## Task T-6: Correct the real Chromium ownership and socket inventory proof

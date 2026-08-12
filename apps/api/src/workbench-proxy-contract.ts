@@ -391,6 +391,147 @@ export function serializeWorkbenchEvent(
   })
 }
 
+const evidenceRecord = (value: unknown): Record<string, unknown> | undefined =>
+  typeof value === 'object' && value !== null && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined
+
+const zeroCleanup = (value: unknown): boolean => {
+  const record = evidenceRecord(value)
+  return (
+    record !== undefined &&
+    record.pendingOperations === 0 &&
+    record.upstreamHttpRequests === 0 &&
+    record.upstreamHttpResponses === 0 &&
+    record.rawSockets === 0 &&
+    record.webSockets === 0 &&
+    record.fixtureSockets === 0 &&
+    record.clientSockets === 0
+  )
+}
+
+export function validateWorkbenchFailureMatrix(value: unknown): boolean {
+  const matrix = evidenceRecord(value)
+  if (matrix === undefined || matrix.id !== 'V-7') return false
+  const declaredCategories = matrix.declaredCategories
+  const executions = matrix.executions
+  if (
+    matrix.tableHash !== WORKBENCH_FAILURE_TABLE_SHA256 ||
+    !Array.isArray(declaredCategories) ||
+    !Array.isArray(executions) ||
+    executions.length !== WORKBENCH_FAILURE_TABLE.length ||
+    JSON.stringify(declaredCategories) !==
+      JSON.stringify(WORKBENCH_FAILURE_TABLE.map((row) => row.category))
+  )
+    return false
+  const executionIds = executions.map(
+    (value) => evidenceRecord(value)?.executionId
+  )
+  if (
+    executionIds.some((id) => typeof id !== 'string' || id.length === 0) ||
+    new Set(executionIds).size !== executions.length
+  )
+    return false
+  return WORKBENCH_FAILURE_TABLE.every((row, index) => {
+    const execution = evidenceRecord(executions[index])
+    const scan = evidenceRecord(execution?.redaction)
+    const path = execution?.executionPath
+    const expectedPath =
+      row.category === 'malformed-project-id'
+        ? ['stable-route', 'route-validation']
+        : row.category === 'manager-shutdown'
+          ? ['stable-route', 'proxy-manager']
+          : row.category === 'unknown-project' ||
+              row.category === 'persistence-failure'
+            ? ['stable-route', 'proxy-manager', 'project-library']
+            : row.category.startsWith('runtime:')
+              ? [
+                  'stable-route',
+                  'proxy-manager',
+                  'project-library',
+                  'runtime-manager',
+                ]
+              : [
+                  'stable-route',
+                  'proxy-manager',
+                  'project-library',
+                  'runtime-manager',
+                  'fake-upstream',
+                ]
+    return (
+      execution !== undefined &&
+      execution.executionIndex === index &&
+      typeof execution.executionId === 'string' &&
+      execution.executionId.length > 0 &&
+      execution.transport ===
+        (row.category.startsWith('websocket-')
+          ? 'websocket-upgrade'
+          : 'http-request') &&
+      Array.isArray(path) &&
+      JSON.stringify(path) === JSON.stringify(expectedPath) &&
+      execution.observedInternalError === row.category &&
+      execution.category === row.category &&
+      execution.status === row.status &&
+      execution.code === row.code &&
+      execution.message === row.message &&
+      execution.localOnly !== true &&
+      execution.injectionType !== 'InjectedFailure' &&
+      zeroCleanup(execution.cleanup) &&
+      scan?.literalMatches === 0 &&
+      scan.encodedMatches === 0
+    )
+  })
+}
+
+export function validateWorkbenchRedactionProof(value: unknown): boolean {
+  const proof = evidenceRecord(value)
+  const markers = evidenceRecord(proof?.markers)
+  const logCapture = evidenceRecord(proof?.logCapture)
+  const channels = evidenceRecord(proof?.channels)
+  const scans = proof?.scans
+  const allowances = proof?.projectTokenAllowance
+  if (!Array.isArray(scans) || !Array.isArray(allowances)) return false
+  const scanIds = scans.map((scan) => evidenceRecord(scan)?.sentinelId)
+  const tokenLocations = allowances.map(evidenceRecord)
+  return (
+    proof !== undefined &&
+    proof.loggerEnabled === true &&
+    typeof markers?.start === 'string' &&
+    markers.start.length > 0 &&
+    typeof markers.end === 'string' &&
+    markers.end.length > 0 &&
+    markers.end !== markers.start &&
+    Number.isSafeInteger(markers.startIndex) &&
+    Number.isSafeInteger(markers.endIndex) &&
+    Number(markers.startIndex) >= 0 &&
+    Number(markers.endIndex) > Number(markers.startIndex) &&
+    typeof logCapture?.accessRecords === 'number' &&
+    logCapture.accessRecords > 0 &&
+    typeof logCapture.applicationRecords === 'number' &&
+    logCapture.applicationRecords > 0 &&
+    channels?.http === 'http-request' &&
+    channels.websocket === 'websocket-frame' &&
+    channels.terminal === 'integrated-terminal-websocket-frame' &&
+    scans.length === 10 &&
+    scanIds.every((id) => typeof id === 'string' && id.length > 0) &&
+    new Set(scanIds).size === scans.length &&
+    scans.every((scan) => {
+      const record = evidenceRecord(scan)
+      return record?.literalMatches === 0 && record.encodedMatches === 0
+    }) &&
+    tokenLocations.length > 0 &&
+    tokenLocations.every(
+      (location) =>
+        location !== undefined &&
+        (location.classification === 'stable-route-url' ||
+          location.classification === 'dedicated-project-token') &&
+        Number.isSafeInteger(location.occurrences) &&
+        Number(location.occurrences) >= 0
+    ) &&
+    tokenLocations.some((location) => Number(location?.occurrences) > 0)
+  )
+}
+
 export function validateRestrictedEvidence(value: unknown): boolean {
   if (typeof value !== 'object' || value === null || Array.isArray(value))
     return false

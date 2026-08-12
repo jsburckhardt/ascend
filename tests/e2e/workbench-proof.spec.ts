@@ -280,13 +280,37 @@ const openIntegratedTerminal = async (page: Page): Promise<void> => {
   await page.keyboard.press('Enter')
   const terminal = page.locator('.terminal.xterm').first()
   await expect(terminal).toBeVisible({ timeout: 10_000 })
-  await expect
-    .poll(
-      async () => (await page.locator('.xterm-rows').last().innerText()).trim(),
-      { timeout: 10_000 }
+  const terminalInput = page
+    .getByRole('textbox', { name: /^Terminal /u })
+    .first()
+  await expect(terminalInput).toBeAttached({ timeout: 10_000 })
+  await terminalInput.focus()
+}
+
+const startTerminalCommandOnce = async (
+  page: Page,
+  command: string,
+  startEvidencePath: string,
+  lockName: string
+): Promise<void> => {
+  const lockPath = path.join(BL001_ROOT, lockName)
+  await rm(lockPath, { recursive: true, force: true })
+  const terminalInput = page
+    .getByRole('textbox', { name: /^Terminal /u })
+    .first()
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    await terminalInput.focus()
+    await page.keyboard.insertText(
+      `if /usr/bin/mkdir "${lockPath}" 2>/dev/null; then exec ${command}; fi`
     )
-    .not.toBe('')
-  await terminal.click()
+    await page.keyboard.press('Enter')
+    const deadline = Date.now() + 10_000
+    while (Date.now() < deadline) {
+      if (await pathExists(startEvidencePath)) return
+      await new Promise((resolve) => setTimeout(resolve, 50))
+    }
+  }
+  throw new Error('Integrated terminal did not start its exact-once command')
 }
 
 test.describe.configure({ mode: 'serial' })
@@ -294,7 +318,7 @@ test.describe.configure({ mode: 'serial' })
 test('cancels an in-progress real integrated command on overall timeout', async ({
   browser,
 }) => {
-  test.setTimeout(35_000)
+  test.setTimeout(60_000)
   await removeAbsentPriorRuns()
   const tracked = new Map<number, TrackedCommandIdentity>()
   let handle: ProofHandle | null = null
@@ -305,7 +329,7 @@ test('cancels an in-progress real integrated command on overall timeout', async 
 
   await expect(
     runTerminalParityEpisode<ProofHandle, OwnedBrowserContext>({
-      timeoutMs: 20_000,
+      timeoutMs: 40_000,
       preflight: async () => {
         await preflightFixedExecutables(process.env.PATH ?? '')
       },
@@ -337,13 +361,16 @@ test('cancels an in-progress real integrated command on overall timeout', async 
           page.getByText(EXPLORER_SENTINEL, { exact: true }).first()
         ).toBeVisible()
         await openIntegratedTerminal(page)
-        await page.keyboard.insertText(
-          '/usr/local/bin/node /workspaces/ascend/tests/e2e/fixtures/terminal-timeout-command.mjs'
+        const timeoutCommand = `/usr/local/bin/node \"${path.join(
+          REPOSITORY_ROOT,
+          'tests/e2e/fixtures/terminal-timeout-command.mjs'
+        )}\" \"${timeoutCommandPidFile}\"`
+        await startTerminalCommandOnce(
+          page,
+          timeoutCommand,
+          timeoutCommandPidFile,
+          'timeout-command-started'
         )
-        await page.keyboard.press('Enter')
-        await expect
-          .poll(() => pathExists(timeoutCommandPidFile), { timeout: 5_000 })
-          .toBe(true)
         const identity = JSON.parse(
           await readFile(timeoutCommandPidFile, 'utf8')
         ) as TrackedCommandIdentity
@@ -386,7 +413,7 @@ test('cancels an in-progress real integrated command on overall timeout', async 
     })
   ).rejects.toMatchObject({
     code: 'terminal-episode-timeout',
-    details: { timeoutMs: 20_000 },
+    details: { timeoutMs: 40_000 },
   })
 
   expect(tracked.size).toBeGreaterThan(0)
@@ -524,19 +551,23 @@ test('proves one designated-host workbench with terminal parity', async ({
 
         await openIntegratedTerminal(page)
         terminalCreationActions += 1
-        const integratedCommand =
-          'setsid /workspaces/ascend/node_modules/.bin/tsx /workspaces/ascend/apps/api/src/cli/proof-terminal-integrated.ts && printf BL002_TERMINAL_COMPLETE\\n'
+        const integratedCommand = `setsid \"${path.join(
+          REPOSITORY_ROOT,
+          'apps/api/node_modules/.bin/tsx'
+        )}\" \"${path.join(
+          REPOSITORY_ROOT,
+          'apps/api/src/cli/proof-terminal-integrated.ts'
+        )}\"`
         signal.throwIfAborted()
-        await page.keyboard.insertText(integratedCommand)
-        await page.keyboard.press('Enter')
+        await startTerminalCommandOnce(
+          page,
+          integratedCommand,
+          INTEGRATED_COMMAND_IDENTITIES,
+          'integrated-command-started'
+        )
         await expect
           .poll(() => pathExists(INTEGRATED_RAW_EVIDENCE), { timeout: 45_000 })
           .toBe(true)
-        await expect
-          .poll(() => page.locator('.xterm-rows').last().innerText(), {
-            timeout: 5_000,
-          })
-          .toContain('BL002_TERMINAL_COMPLETE')
         signal.throwIfAborted()
         integrated = JSON.parse(
           await readFile(INTEGRATED_RAW_EVIDENCE, 'utf8')

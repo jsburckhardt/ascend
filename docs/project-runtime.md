@@ -40,4 +40,9 @@ The designated Ubuntu 24.04.4 host uses code-server 4.131.0, vscode uid 1000, Li
 
 ## Deferred boundaries
 
-This manager intentionally does not add the stable route or proxy, Project Home navigation or Open wiring, multi-project coordination, user Stop or Restart UI, API-restart reconciliation, persisted runtime handles or state, auto-sleep, scheduling, or containers. Full-page workbench presentation remains unchanged. Harness boot remains non-persistent and test-backed.
+The stable route or proxy boundary was deferred to BL-011 and is now delivered. This manager still does not add Project Home navigation or Open wiring, multi-project coordination, user Stop or Restart UI, API-restart reconciliation, persisted runtime handles or state, auto-sleep, scheduling, or containers. Full-page workbench presentation remains unchanged. Harness boot remains non-persistent and test-backed.
+
+
+## Stable-route integration
+
+The BL-011 proxy consumes `ProjectRuntimeManager.start` only after route-safe ID validation and persisted lookup. Four HTTP requests plus four WebSocket upgrades released together still join one manager launch/readiness sequence; later requests and reconnect workflows health-check and reuse the same PID/start identity and port. The proxy owns network streams and sockets, while this manager remains the sole process owner. Application shutdown settles the proxy within 5,000 ms before invoking the runtime shutdown described above. See [stable-workbench-routing.md](stable-workbench-routing.md). The designated browser proof supplies `EXTENSIONS_GALLERY={}` through an explicit proof-only runtime configuration, after worktree ownership and cancellation-race prerequisites pass. Three workflows reuse the same runtime identity while opening exactly three Management and three ExtensionHost stable-prefix sockets; no marketplace, retry, arbitrary external, or internal-port transport is accepted.

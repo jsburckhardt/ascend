@@ -1,8 +1,9 @@
 import { spawn } from 'node:child_process'
 import { readFileSync, writeFileSync } from 'node:fs'
 
-const evidencePath =
-  '/workspaces/ascend/test-results/bl-001/timeout-terminal-command.json'
+const evidencePath = process.argv[2]
+if (!evidencePath?.startsWith('/'))
+  throw new Error('Absolute timeout evidence path is required')
 const child = spawn('/usr/bin/sleep', ['60'], {
   detached: true,
   stdio: 'ignore',

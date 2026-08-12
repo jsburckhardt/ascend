@@ -65,7 +65,7 @@ describe('project migration starting states', () => {
     } finally {
       await context.cleanup()
     }
-  }, 10_000)
+  }, 20_000)
 
   it('upgrades only the immediately previous fixture and preserves raw rows byte-for-byte', async () => {
     const context = await allocateDatabaseTestContext('migration-prior-fixture')

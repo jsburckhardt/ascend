@@ -110,6 +110,16 @@ export const releaseCapacityGuard = async (
   }
 }
 
+const DESIGNATED_REPOSITORY_GIT_DIR = '/workspaces/ascend/.git'
+
+export const repositoryCheckoutIsValid = (
+  repositoryRoot: string,
+  gitTopLevel: string,
+  gitCommonDirectory: string
+): boolean =>
+  path.resolve(repositoryRoot) === path.resolve(gitTopLevel) &&
+  path.resolve(gitCommonDirectory) === DESIGNATED_REPOSITORY_GIT_DIR
+
 export interface PrerequisiteCheck {
   records: PrerequisiteRecord[]
   host: CapacityHostContext | null
@@ -153,13 +163,34 @@ export const checkCapacityPrerequisites = async (
     detail: user.username + ':' + user.uid,
   })
   let repository = 'unavailable'
+  let gitTopLevel = 'unavailable'
+  let gitCommonDirectory = 'unavailable'
   try {
     repository = await realpath(REPOSITORY_ROOT)
+    const result = await runBounded(
+      '/usr/bin/git',
+      ['-C', repository, 'rev-parse', '--show-toplevel', '--git-common-dir'],
+      5_000,
+      signal
+    )
+    const [topLevel = '', commonDirectory = ''] = result.stdout
+      .trim()
+      .split('\n')
+    if (result.code === 0) {
+      gitTopLevel = await realpath(topLevel)
+      gitCommonDirectory = await realpath(
+        path.resolve(repository, commonDirectory)
+      )
+    }
   } catch {
     /* recorded below */
   }
   facts.set('repository-workspaces-ascend', {
-    passed: repository === '/workspaces/ascend',
+    passed: repositoryCheckoutIsValid(
+      repository,
+      gitTopLevel,
+      gitCommonDirectory
+    ),
     detail: repository,
   })
   let codeVersion = 'unavailable'

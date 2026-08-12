@@ -44,10 +44,16 @@ importers:
       fastify-plugin:
         specifier: ^5.0.0
         version: 5.1.0
+      ws:
+        specifier: ^8.21.1
+        version: 8.21.1
     devDependencies:
       '@types/node':
         specifier: ^24.0.8
         version: 24.13.3
+      '@types/ws':
+        specifier: ^8.18.1
+        version: 8.18.1
       '@vitest/coverage-v8':
         specifier: ^4.1.10
         version: 4.1.10(vitest@4.1.10)

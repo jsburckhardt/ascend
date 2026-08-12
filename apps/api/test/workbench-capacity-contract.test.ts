@@ -20,6 +20,7 @@ import {
   acquireCapacityGuard,
   checkCapacityPrerequisites,
   releaseCapacityGuard,
+  repositoryCheckoutIsValid,
 } from '../src/workbench-capacity-prerequisites.js'
 
 const roots: string[] = []
@@ -53,6 +54,37 @@ describe('workbench capacity contract', () => {
         value.includes('00000000-0000-4000-8000-000000000011')
       )
     ).toBe(true)
+  })
+
+  it('accepts primary and linked-worktree repository roots without path pinning', () => {
+    expect(
+      repositoryCheckoutIsValid(
+        '/workspaces/ascend',
+        '/workspaces/ascend',
+        '/workspaces/ascend/.git'
+      )
+    ).toBe(true)
+    expect(
+      repositoryCheckoutIsValid(
+        '/workspaces/ascend/.trees/verify-main',
+        '/workspaces/ascend/.trees/verify-main',
+        '/workspaces/ascend/.git'
+      )
+    ).toBe(true)
+    expect(
+      repositoryCheckoutIsValid(
+        '/workspaces/ascend/.trees/verify-main/apps/api',
+        '/workspaces/ascend/.trees/verify-main',
+        '/workspaces/ascend/.git'
+      )
+    ).toBe(false)
+    expect(
+      repositoryCheckoutIsValid(
+        '/tmp/unrelated',
+        '/tmp/unrelated',
+        '/tmp/unrelated/.git'
+      )
+    ).toBe(false)
   })
 
   it('checks designated prerequisites in fixed order before starts', async () => {

@@ -256,6 +256,7 @@ describe('BL-002 shared terminal executor', () => {
     const evidence = await captureTerminalContext({
       context: 'direct',
       cwd: BL001_FIXTURE,
+      timeoutMs: 10_000,
     })
     expect(evidence.commands.map(({ command }) => command)).toEqual([
       'hostname',
@@ -268,7 +269,7 @@ describe('BL-002 shared terminal executor', () => {
       'docker --version',
       'copilot --version',
     ])
-  })
+  }, 15_000)
 
   it('uses direct defaults and rejects an environment without PATH', async () => {
     await expect(

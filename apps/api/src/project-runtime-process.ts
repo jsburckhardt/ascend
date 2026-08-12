@@ -246,6 +246,7 @@ export function buildRuntimeArgv(
     '--disable-telemetry',
     '--disable-update-check',
     '--disable-workspace-trust',
+    '--disable-proxy',
     canonicalPath,
   ]
 }

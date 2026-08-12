@@ -18,6 +18,10 @@ import {
 } from './project-runtime-manager.js'
 import type { RuntimeLifecycleEvent } from './project-runtime-contract.js'
 import {
+  createWorkbenchProxyManager,
+  type WorkbenchProxyManager,
+} from './workbench-proxy-manager.js'
+import {
   createProjectRegistrationService,
   type ProjectRegistrationService,
 } from './project-registration.js'
@@ -28,6 +32,7 @@ declare module 'fastify' {
     projectRegistration: ProjectRegistrationService
     projectClose: ProjectCloseService
     projectRuntime: ProjectRuntimeManager
+    workbenchProxy: WorkbenchProxyManager
   }
 }
 
@@ -48,6 +53,10 @@ export interface AppOptions
   createProjectLibrary?: () => Promise<ProjectLibrary>
   createProjectRegistration?: () => Promise<ProjectRegistrationService>
   createProjectCloseService?: (library: ProjectLibrary) => ProjectCloseService
+  createWorkbenchProxyManager?: (
+    library: ProjectLibrary,
+    runtime: ProjectRuntimeManager
+  ) => WorkbenchProxyManager
   createProjectRuntimeManager?: (
     library: ProjectLibrary,
     recordEvent: (event: RuntimeLifecycleEvent) => void
@@ -85,6 +94,7 @@ const app: FastifyPluginAsync<AppOptions> = async (
   let registration: ProjectRegistrationService | undefined
   let closeService: ProjectCloseService | undefined
   let runtimeManager: ProjectRuntimeManager | undefined
+  let workbenchProxy: WorkbenchProxyManager | undefined
   try {
     library = await (
       opts.createProjectLibrary ?? createApplicationProjectLibrary
@@ -97,6 +107,15 @@ const app: FastifyPluginAsync<AppOptions> = async (
           recordEvent,
         }))
     )(library, (event) => fastify.log.info(event))
+    workbenchProxy = (
+      opts.createWorkbenchProxyManager ??
+      ((projectLibrary, projectRuntime) =>
+        createWorkbenchProxyManager({
+          projectLibrary,
+          projectRuntime,
+          recordEvent: (event) => fastify.log.info(event),
+        }))
+    )(library, runtimeManager)
     closeService = (
       opts.createProjectCloseService ?? createLibraryProjectCloseService
     )(library)
@@ -104,6 +123,7 @@ const app: FastifyPluginAsync<AppOptions> = async (
       opts.createProjectRegistration ?? createApplicationProjectRegistration
     )()
   } catch {
+    await workbenchProxy?.shutdown()
     await runtimeManager?.shutdown()
     registration?.close()
     library?.close()
@@ -114,7 +134,9 @@ const app: FastifyPluginAsync<AppOptions> = async (
   fastify.decorate('projectRegistration', registration)
   fastify.decorate('projectClose', closeService)
   fastify.decorate('projectRuntime', runtimeManager)
+  fastify.decorate('workbenchProxy', workbenchProxy)
   fastify.addHook('onClose', async () => {
+    await workbenchProxy.shutdown()
     await runtimeManager.shutdown()
     registration.close()
     library.close()

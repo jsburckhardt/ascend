@@ -9,6 +9,7 @@ This file is the single registry of all architectural decisions and core-compone
 | ADR-260808-typescript-monorepo | TypeScript Monorepo and Host Workbench Stack | Accepted | 2026-08-08 |
 | ADR-260808-governed-engineering-harness | Governed Repository-Local Engineering Harness | Accepted | 2026-08-08 |
 | ADR-260810-full-page-browser-workbench-presentation | Select the Full-Page Browser Workbench Presentation | Accepted | 2026-08-10 |
+| ADR-260812-in-process-workbench-reverse-proxy | In-Process Stable Workbench Reverse Proxy | Accepted | 2026-08-12 |
 
 ## Core-Components
 
@@ -26,6 +27,7 @@ This file is the single registry of all architectural decisions and core-compone
 | CORE-COMPONENT-260808-development-standards | TypeScript Development Standards | Adopted | 2026-08-08 |
 | CORE-COMPONENT-260808-engineering-harness-delivery-contract | Engineering Harness Delivery Contract | Adopted | 2026-08-08 |
 | CORE-COMPONENT-260810-sqlite-persistence-lifecycle | SQLite Persistence Lifecycle | Adopted | 2026-08-10 |
+| CORE-COMPONENT-260812-stable-workbench-proxy | Stable Workbench Proxy Boundary | Adopted | 2026-08-12 |
 
 ## Decisions
 
@@ -90,3 +92,28 @@ Short, actionable statements derived from ADRs and core-components. More than on
 | 55 | Enforce bounded loopback binding, health readiness, collision retries, and exact cleanup | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-11 |
 | 56 | Cancel caller waits independently and reserve shared cancellation for manager shutdown | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-11 |
 | 57 | Emit bounded redacted lifecycle diagnostics and timing without raw canonical paths | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-11 |
+| 58 | Use application-owned in-process proxying for stable workbench HTTP and WebSocket traffic | ADR-260812-in-process-workbench-reverse-proxy | 2026-08-12 |
+| 59 | Use Node HTTP streams and direct ws dependency for proxy transport | ADR-260812-in-process-workbench-reverse-proxy | 2026-08-12 |
+| 60 | Resolve proxy upstreams only from persisted projects and BL-010 runtime snapshots | ADR-260812-in-process-workbench-reverse-proxy | 2026-08-12 |
+| 61 | Disable generic code-server port-proxy routes behind stable workbench routing | ADR-260812-in-process-workbench-reverse-proxy | 2026-08-12 |
+| 62 | Shut down proxy operations before runtime processes and persistence owners | ADR-260812-in-process-workbench-reverse-proxy | 2026-08-12 |
+| 63 | Require all Ascend-owned browser workbench traffic under the stable project prefix | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-12 |
+| 64 | Validate workbench project IDs as one bounded route-safe segment | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-12 |
+| 65 | Strip hop-by-hop and client forwarding headers before trusted loopback forwarding | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-12 |
+| 66 | Rewrite same-runtime redirects, cookie paths, and service-worker scope under stable prefix | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-12 |
+| 67 | Remove cookie Domain attributes and reject redirects to other authorities | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-12 |
+| 68 | Enforce five-second proxy timeouts and exact typed precommitment failures | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-12 |
+| 69 | Preserve HTTP streams and WebSocket ordering with explicit backpressure | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-12 |
+| 70 | Convert abnormal WebSocket termination without transmitting reserved close code 1006 | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-12 |
+| 71 | Close proxy-owned streams and sockets before BL-010 runtime shutdown | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-12 |
+| 72 | Exclude internal authorities and protected payloads from browser and logging surfaces | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-12 |
+| 73 | Restrict raw authority evidence to one owner-readable ignored local artifact | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-12 |
+| 74 | Preserve BL-010 as the sole runtime process owner | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-12 |
+| 75 | Classify Ascend transport separately from isolated VS Code Markdown webview resources | ADR-260812-in-process-workbench-reverse-proxy | 2026-08-12 |
+| 76 | Disable extension marketplace access during deterministic designated workbench proof | ADR-260812-in-process-workbench-reverse-proxy | 2026-08-12 |
+| 77 | Inventory three Management and three ExtensionHost sockets across three fresh workflows | ADR-260812-in-process-workbench-reverse-proxy | 2026-08-12 |
+| 78 | Allow only HTTPS vscode-remote+<encoded-authority>.vscode-resource.vscode-cdn.net Markdown resources | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-12 |
+| 79 | Reject malformed webview URLs, Open VSX, and every unclassified external origin | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-12 |
+| 80 | Fail unknown, missing, retrying, external, or internal-port WebSocket observations | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-12 |
+| 81 | Emit only bounded host classes for public browser evidence | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-12 |
+| 82 | Treat vscode-remote+ as opaque VS Code label syntax, never wildcard permission | ADR-260812-in-process-workbench-reverse-proxy | 2026-08-12 |

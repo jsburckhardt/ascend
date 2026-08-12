@@ -10,6 +10,31 @@ import {
 } from '../src/cli/home-workbench-residual-audit.js'
 
 const marker = path.join(HOME_WORKBENCH_RESULT_ROOT, 'terminal-marker.counter')
+const timingEvidence = (steps: readonly string[]) => ({
+  bounds: { overallMs: 220_000 },
+  timing: {
+    durationMs: 1_000,
+    steps: steps.map((name) => ({
+      name,
+      boundMs: 10_000,
+      durationMs: 100,
+      outcome: 'passed',
+    })),
+  },
+})
+const commonSteps = [
+  'setup',
+  'apiReadiness',
+  'webReadiness',
+  'runtimeReadiness',
+  'workbenchReadiness',
+  'terminalOperations',
+  'threeEntries',
+  'deepLink',
+  'evidence',
+  'cleanup',
+] as const
+
 afterEach(() => rm(marker, { force: true }))
 
 describe('Home/workbench residual audit', () => {
@@ -18,6 +43,7 @@ describe('Home/workbench residual audit', () => {
     await writeFile(
       HOME_WORKBENCH_BROWSER_EVIDENCE,
       JSON.stringify({
+        ...timingEvidence([...commonSteps, 'history']),
         fixtureIntegrity: true,
         cleanup: {
           contexts: { afterClose: 0 },
@@ -57,6 +83,7 @@ describe('Home/workbench residual audit', () => {
     await writeFile(
       HOME_WORKBENCH_REAL_PROCESS_EVIDENCE,
       JSON.stringify({
+        ...timingEvidence(commonSteps),
         cleanup: {
           contexts: { after: 0 },
           pages: { after: 0 },

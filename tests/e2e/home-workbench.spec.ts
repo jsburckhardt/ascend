@@ -33,6 +33,13 @@ import {
 import { PRESENTATION_VIEWPORT } from '../../apps/api/src/workbench-presentation-contract.js'
 import { snapshotFixture } from '../../apps/api/test/project-registration-fixture-helper.js'
 import { stopOwnedProcessGroup } from '../../apps/api/test/helpers/project-home-process-group.js'
+import {
+  HOME_WORKBENCH_MARGIN_MS,
+  HOME_WORKBENCH_OVERALL_MS,
+  HOME_WORKBENCH_STEP_BOUNDS_MS,
+  HomeWorkbenchTiming,
+  waitForChildReady,
+} from './home-workbench-timing.js'
 
 const designated = process.env.BL012_DESIGNATED === '1'
 const RESULT_ROOT = path.join(REPOSITORY_ROOT, 'test-results/bl-012')
@@ -42,7 +49,7 @@ const COUNTER_PATH = path.join(RESULT_ROOT, 'terminal-marker.counter')
 const OPERATION_TIMEOUT_MS = 15_000
 const STARTUP_TIMEOUT_MS = 30_000
 const DOCUMENT_TIMEOUT_MS = 30_000
-const OVERALL_TIMEOUT_MS = 120_000
+const OVERALL_TIMEOUT_MS = HOME_WORKBENCH_OVERALL_MS
 const CLEANUP_TIMEOUT_MS = 10_000
 
 const disposablePort = async (): Promise<number> => {
@@ -56,23 +63,6 @@ const disposablePort = async (): Promise<number> => {
     throw new Error('Missing disposable port')
   await new Promise<void>((resolve) => server.close(() => resolve()))
   return address.port
-}
-
-const waitForHttp = async (
-  url: string,
-  child: ChildProcessWithoutNullStreams
-): Promise<void> => {
-  const deadline = Date.now() + STARTUP_TIMEOUT_MS
-  while (Date.now() < deadline) {
-    if (child.exitCode !== null || child.signalCode !== null)
-      throw new Error('Web process exited before readiness')
-    try {
-      const response = await fetch(url, { signal: AbortSignal.timeout(500) })
-      if (response.ok) return
-    } catch {}
-    await new Promise((resolve) => setTimeout(resolve, 50))
-  }
-  throw new Error('Web process readiness timed out')
 }
 
 const previewVisible = async (
@@ -150,6 +140,8 @@ test('runs exact Home and workbench continuity with isolated deep-link refresh',
     'Set BL012_DESIGNATED=1 for the designated Home/workbench proof'
   )
   test.setTimeout(OVERALL_TIMEOUT_MS)
+  const timing = new HomeWorkbenchTiming()
+  const setupStartedAt = Date.now()
   await mkdir(RESULT_ROOT, { recursive: true })
   await Promise.all([
     rm(PID_PATH, { force: true }),
@@ -199,6 +191,8 @@ test('runs exact Home and workbench continuity with isolated deep-link refresh',
   let isolatedCounterBefore = 0
   let isolatedCounterAfter = 0
   let cleanupPassed = false
+  let evidenceWritten = false
+  timing.record('setup', setupStartedAt)
   try {
     controller = createApiServerController({
       port: 0,
@@ -232,38 +226,43 @@ test('runs exact Home and workbench continuity with isolated deep-link refresh',
         close: () => undefined,
       }),
     })
-    const app = await controller.start()
+    const app = await timing.step('apiReadiness', () => controller!.start())
     const apiAddress = app.server.address()
     if (apiAddress === null || typeof apiAddress === 'string')
       throw new Error('Missing API address')
     const webPort = await disposablePort()
     webOrigin = 'http://127.0.0.1:' + webPort
     apiOrigin = 'http://127.0.0.1:' + apiAddress.port
-    web = spawn(
-      'pnpm',
-      [
-        '--filter',
-        '@ascend/web',
-        'exec',
-        'vite',
-        '--host',
-        '127.0.0.1',
-        '--port',
-        String(webPort),
-        '--strictPort',
-      ],
-      {
-        cwd: REPOSITORY_ROOT,
-        detached: true,
-        env: {
-          ...process.env,
-          ASCEND_E2E_API_TARGET: apiOrigin,
-          ASCEND_E2E_DISABLE_HMR: '1',
-        },
-        stdio: 'pipe',
-      }
-    )
-    await waitForHttp(webOrigin + '/', web)
+    await timing.step('webReadiness', async () => {
+      web = spawn(
+        process.execPath,
+        [
+          path.join(REPOSITORY_ROOT, 'tests/e2e/helpers/vite-process.mjs'),
+          path.join(REPOSITORY_ROOT, 'apps/web/node_modules/vite/bin/vite.js'),
+          '127.0.0.1',
+          String(webPort),
+        ],
+        {
+          cwd: path.join(REPOSITORY_ROOT, 'apps/web'),
+          detached: true,
+          env: {
+            ...process.env,
+            ASCEND_E2E_API_TARGET: apiOrigin,
+            ASCEND_E2E_DISABLE_HMR: '1',
+          },
+          stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
+        }
+      )
+      await waitForChildReady(
+        web,
+        HOME_WORKBENCH_STEP_BOUNDS_MS.webReadiness,
+        'Web'
+      )
+      const response = await fetch(webOrigin + '/', {
+        signal: AbortSignal.timeout(1_000),
+      })
+      if (!response.ok) throw new Error('Web readiness response was not OK')
+    })
     const stablePath =
       '/projects/' + encodeURIComponent(project.id) + '/workbench/'
     const stableUrl = webOrigin + stablePath
@@ -364,160 +363,174 @@ test('runs exact Home and workbench continuity with isolated deep-link refresh',
       timeout: DOCUMENT_TIMEOUT_MS,
     })
     ledger.push('Home')
-    await open().click()
-    await expect(page).toHaveURL(stableUrl)
-    await ready()
+    const readinessStartedAt = Date.now()
+    await timing.step('workbenchReadiness', async () => {
+      await open().click()
+      await expect(page).toHaveURL(stableUrl)
+      await ready()
+    })
+    timing.record('runtimeReadiness', readinessStartedAt)
+    identities.push(identity())
     ledger.push('Workbench-1')
-    identities.push(identity())
-    await page.getByText(EXPLORER_SENTINEL, { exact: true }).first().click()
-    await expect(
-      page.getByText(EXPLORER_SENTINEL, { exact: true }).last()
-    ).toBeVisible()
-    await page.getByText(MARKDOWN_FIXTURE, { exact: true }).first().click()
-    await page
-      .getByRole('button', { name: /^Open Preview to the Side/u })
-      .click()
-    await expect
-      .poll(() => previewVisible(page), { timeout: OPERATION_TIMEOUT_MS })
-      .toBe(true)
-    await page.keyboard.press('F1')
-    await expect(page.locator('.quick-input-widget')).toBeVisible({
-      timeout: OPERATION_TIMEOUT_MS,
-    })
-    await page.keyboard.insertText('Terminal: Create New Terminal')
-    await expect(
-      page.getByText('Terminal: Create New Terminal', { exact: true }).first()
-    ).toBeVisible({ timeout: OPERATION_TIMEOUT_MS })
-    await page.keyboard.press('Enter')
-    await page
-      .locator('.terminal.xterm')
-      .first()
-      .waitFor({ state: 'visible', timeout: OPERATION_TIMEOUT_MS })
-    const terminalInput = page
-      .getByRole('textbox', { name: /^Terminal /u })
-      .first()
-    await expect(terminalInput).toBeAttached({ timeout: OPERATION_TIMEOUT_MS })
-    await terminalInput.focus()
-    const quote = String.fromCharCode(39)
-    const markerScript =
-      'echo $$ > ' +
-      JSON.stringify(PID_PATH) +
-      '; i=0; while [ $i -lt 120 ]; do i=$((i+1)); printf "%s\\n" $i > ' +
-      JSON.stringify(COUNTER_PATH) +
-      '; sleep 0.25; done'
-    const command =
-      'printf "%s\\n" "$PWD"; setsid sh -c ' +
-      quote +
-      markerScript +
-      quote +
-      ' >/dev/null 2>&1 &'
-    await page.keyboard.insertText(command)
-    await page.keyboard.press('Enter')
-    await expect(
-      page.getByText(canonicalPath, { exact: true }).last()
-    ).toBeVisible({ timeout: OPERATION_TIMEOUT_MS })
-    counterBeforeHome = await waitForCounter(2)
-    terminalPid = Number((await readFile(PID_PATH, 'utf8')).trim())
-
-    await page.getByRole('link', { name: 'Projects' }).click()
-    await expect(page).toHaveURL(webOrigin + '/')
-    ledger.push('Home')
-    identities.push(identity())
-    counterAfterHome = await waitForCounter(counterBeforeHome + 1)
-    expect(() => process.kill(terminalPid!, 0)).not.toThrow()
-    expect(() => process.kill(identity().pid!, 0)).not.toThrow()
-    await open().click()
-    await ready()
-    ledger.push('Workbench-2')
-    identities.push(identity())
-    await expect(
-      page.getByText(EXPLORER_SENTINEL, { exact: true }).last()
-    ).toBeVisible()
-    await expect(
-      page
-        .getByRole('tab', {
-          name: new RegExp('^' + MARKDOWN_FIXTURE + ', preview', 'u'),
-        })
+    await timing.step('terminalOperations', async () => {
+      await page.getByText(EXPLORER_SENTINEL, { exact: true }).first().click()
+      await expect(
+        page.getByText(EXPLORER_SENTINEL, { exact: true }).last()
+      ).toBeVisible()
+      await page.getByText(MARKDOWN_FIXTURE, { exact: true }).first().click()
+      await page
+        .getByRole('button', { name: /^Open Preview to the Side/u })
+        .click()
+      await expect
+        .poll(() => previewVisible(page), { timeout: OPERATION_TIMEOUT_MS })
+        .toBe(true)
+      await page.keyboard.press('F1')
+      await expect(page.locator('.quick-input-widget')).toBeVisible({
+        timeout: OPERATION_TIMEOUT_MS,
+      })
+      await page.keyboard.insertText('Terminal: Create New Terminal')
+      await expect(
+        page.getByText('Terminal: Create New Terminal', { exact: true }).first()
+      ).toBeVisible({ timeout: OPERATION_TIMEOUT_MS })
+      await page.keyboard.press('Enter')
+      await page
+        .locator('.terminal.xterm')
         .first()
-    ).toBeVisible()
-    await focusExistingTerminal(page)
-    await expect(
-      page.getByText(canonicalPath, { exact: true }).last()
-    ).toBeVisible({ timeout: OPERATION_TIMEOUT_MS })
-    await page.reload({
-      waitUntil: 'domcontentloaded',
-      timeout: DOCUMENT_TIMEOUT_MS,
+        .waitFor({ state: 'visible', timeout: OPERATION_TIMEOUT_MS })
+      const terminalInput = page
+        .getByRole('textbox', { name: /^Terminal /u })
+        .first()
+      await expect(terminalInput).toBeAttached({
+        timeout: OPERATION_TIMEOUT_MS,
+      })
+      await terminalInput.focus()
+      const quote = String.fromCharCode(39)
+      const markerScript =
+        'echo $$ > ' +
+        JSON.stringify(PID_PATH) +
+        '; i=0; while [ $i -lt 120 ]; do i=$((i+1)); printf "%s\\n" $i > ' +
+        JSON.stringify(COUNTER_PATH) +
+        '; sleep 0.25; done'
+      const command =
+        'printf "%s\\n" "$PWD"; setsid sh -c ' +
+        quote +
+        markerScript +
+        quote +
+        ' >/dev/null 2>&1 &'
+      await page.keyboard.insertText(command)
+      await page.keyboard.press('Enter')
+      await expect(
+        page.getByText(canonicalPath, { exact: true }).last()
+      ).toBeVisible({ timeout: OPERATION_TIMEOUT_MS })
+      counterBeforeHome = await waitForCounter(2)
+      terminalPid = Number((await readFile(PID_PATH, 'utf8')).trim())
     })
-    await ready()
-    ledger.push('Refresh')
-    identities.push(identity())
-    await page.goBack({
-      waitUntil: 'domcontentloaded',
-      timeout: DOCUMENT_TIMEOUT_MS,
-    })
-    await expect(page).toHaveURL(webOrigin + '/')
-    ledger.push('Back-Home')
-    await page.goForward({
-      waitUntil: 'domcontentloaded',
-      timeout: DOCUMENT_TIMEOUT_MS,
-    })
-    await ready()
-    ledger.push('Forward-Workbench-2')
-    identities.push(identity())
-    await page.getByRole('link', { name: 'Projects' }).click()
-    await expect(page).toHaveURL(webOrigin + '/')
-    ledger.push('Home')
-    await open().click()
-    await ready()
-    ledger.push('Workbench-3')
-    identities.push(identity())
 
-    isolated = await browser.newContext({
-      viewport: PRESENTATION_VIEWPORT,
-      storageState: { cookies: [], origins: [] },
+    await timing.step('threeEntries', async () => {
+      await page.getByRole('link', { name: 'Projects' }).click()
+      await expect(page).toHaveURL(webOrigin + '/')
+      ledger.push('Home')
+      identities.push(identity())
+      counterAfterHome = await waitForCounter(counterBeforeHome + 1)
+      expect(() => process.kill(terminalPid!, 0)).not.toThrow()
+      expect(() => process.kill(identity().pid!, 0)).not.toThrow()
+      await open().click()
+      await ready()
+      ledger.push('Workbench-2')
+      identities.push(identity())
+      await expect(
+        page.getByText(EXPLORER_SENTINEL, { exact: true }).last()
+      ).toBeVisible()
+      await expect(
+        page
+          .getByRole('tab', {
+            name: new RegExp('^' + MARKDOWN_FIXTURE + ', preview', 'u'),
+          })
+          .first()
+      ).toBeVisible()
+      await focusExistingTerminal(page)
+      await expect(
+        page.getByText(canonicalPath, { exact: true }).last()
+      ).toBeVisible({ timeout: OPERATION_TIMEOUT_MS })
+      const historyStartedAt = Date.now()
+      await page.reload({
+        waitUntil: 'domcontentloaded',
+        timeout: DOCUMENT_TIMEOUT_MS,
+      })
+      await ready()
+      ledger.push('Refresh')
+      identities.push(identity())
+      await page.goBack({
+        waitUntil: 'domcontentloaded',
+        timeout: DOCUMENT_TIMEOUT_MS,
+      })
+      await expect(page).toHaveURL(webOrigin + '/')
+      ledger.push('Back-Home')
+      await page.goForward({
+        waitUntil: 'domcontentloaded',
+        timeout: DOCUMENT_TIMEOUT_MS,
+      })
+      await ready()
+      ledger.push('Forward-Workbench-2')
+      identities.push(identity())
+      timing.record('history', historyStartedAt)
+      await page.getByRole('link', { name: 'Projects' }).click()
+      await expect(page).toHaveURL(webOrigin + '/')
+      ledger.push('Home')
+      await open().click()
+      await ready()
+      ledger.push('Workbench-3')
+      identities.push(identity())
     })
-    observeTraffic(isolated)
-    expect(isolated.serviceWorkers()).toHaveLength(0)
-    expect(await isolated.cookies()).toHaveLength(0)
-    const isolatedPage = await isolated.newPage()
-    const isolatedRolesBefore = socketRoles.length
-    await isolatedPage.goto(stableUrl, {
-      waitUntil: 'domcontentloaded',
-      timeout: DOCUMENT_TIMEOUT_MS,
+
+    await timing.step('deepLink', async () => {
+      isolated = await browser.newContext({
+        viewport: PRESENTATION_VIEWPORT,
+        storageState: { cookies: [], origins: [] },
+      })
+      observeTraffic(isolated)
+      expect(isolated.serviceWorkers()).toHaveLength(0)
+      expect(await isolated.cookies()).toHaveLength(0)
+      const isolatedPage = await isolated.newPage()
+      const isolatedRolesBefore = socketRoles.length
+      await isolatedPage.goto(stableUrl, {
+        waitUntil: 'domcontentloaded',
+        timeout: DOCUMENT_TIMEOUT_MS,
+      })
+      await isolatedPage
+        .locator('.monaco-workbench')
+        .waitFor({ state: 'visible', timeout: DOCUMENT_TIMEOUT_MS })
+      await expect
+        .poll(() => socketRoles.length, { timeout: OPERATION_TIMEOUT_MS })
+        .toBeGreaterThanOrEqual(isolatedRolesBefore + 2)
+      await expect(
+        isolatedPage.getByText(EXPLORER_SENTINEL, { exact: true }).first()
+      ).toBeVisible({ timeout: OPERATION_TIMEOUT_MS })
+      await openIsolatedTerminal(isolatedPage)
+      isolatedCounterBefore = await waitForCounter(counterAfterHome)
+      identities.push(identity())
+      const isolatedRefreshRolesBefore = socketRoles.length
+      await isolatedPage.reload({
+        waitUntil: 'domcontentloaded',
+        timeout: DOCUMENT_TIMEOUT_MS,
+      })
+      await isolatedPage
+        .locator('.monaco-workbench')
+        .waitFor({ state: 'visible', timeout: DOCUMENT_TIMEOUT_MS })
+      await expect
+        .poll(() => socketRoles.length, { timeout: OPERATION_TIMEOUT_MS })
+        .toBeGreaterThanOrEqual(isolatedRefreshRolesBefore + 2)
+      await expect(
+        isolatedPage.getByText(EXPLORER_SENTINEL, { exact: true }).first()
+      ).toBeVisible({ timeout: OPERATION_TIMEOUT_MS })
+      await openIsolatedTerminal(isolatedPage)
+      isolatedCounterAfter = await waitForCounter(isolatedCounterBefore)
+      identities.push(identity())
+      expect(
+        new Set(identities.map((value) => JSON.stringify(value))).size
+      ).toBe(1)
+      expect(counterAfterHome).toBeGreaterThan(counterBeforeHome)
     })
-    await isolatedPage
-      .locator('.monaco-workbench')
-      .waitFor({ state: 'visible', timeout: DOCUMENT_TIMEOUT_MS })
-    await expect
-      .poll(() => socketRoles.length, { timeout: OPERATION_TIMEOUT_MS })
-      .toBeGreaterThanOrEqual(isolatedRolesBefore + 2)
-    await expect(
-      isolatedPage.getByText(EXPLORER_SENTINEL, { exact: true }).first()
-    ).toBeVisible({ timeout: OPERATION_TIMEOUT_MS })
-    await openIsolatedTerminal(isolatedPage)
-    isolatedCounterBefore = await waitForCounter(counterAfterHome)
-    identities.push(identity())
-    const isolatedRefreshRolesBefore = socketRoles.length
-    await isolatedPage.reload({
-      waitUntil: 'domcontentloaded',
-      timeout: DOCUMENT_TIMEOUT_MS,
-    })
-    await isolatedPage
-      .locator('.monaco-workbench')
-      .waitFor({ state: 'visible', timeout: DOCUMENT_TIMEOUT_MS })
-    await expect
-      .poll(() => socketRoles.length, { timeout: OPERATION_TIMEOUT_MS })
-      .toBeGreaterThanOrEqual(isolatedRefreshRolesBefore + 2)
-    await expect(
-      isolatedPage.getByText(EXPLORER_SENTINEL, { exact: true }).first()
-    ).toBeVisible({ timeout: OPERATION_TIMEOUT_MS })
-    await openIsolatedTerminal(isolatedPage)
-    isolatedCounterAfter = await waitForCounter(isolatedCounterBefore)
-    identities.push(identity())
-    expect(new Set(identities.map((value) => JSON.stringify(value))).size).toBe(
-      1
-    )
-    expect(counterAfterHome).toBeGreaterThan(counterBeforeHome)
     expect(ledger).toEqual([
       'Home',
       'Workbench-1',
@@ -531,233 +544,280 @@ test('runs exact Home and workbench continuity with isolated deep-link refresh',
     ])
     expect(await snapshotFixture(canonicalPath)).toEqual(manifestBefore)
 
-    const requestClassCounts: Record<string, number> = {}
-    for (const request of requestTraffic) {
-      const parsed = new URL(request.url)
-      const classification =
-        parsed.origin === webOrigin && !parsed.pathname.startsWith(stablePath)
-          ? 'project-home'
-          : classifyWorkbenchBrowserRequest(
-              request.url,
-              webOrigin,
-              stablePath,
-              request.resourceType
-            ).classification
-      expect(classification).not.toBe('forbidden-external')
-      expect(classification).not.toBe('marketplace')
-      requestClassCounts[classification] =
-        (requestClassCounts[classification] ?? 0) + 1
-    }
-    internalPort = identities[0]?.port ?? undefined
-    expect(internalPort).toBeDefined()
-    const developmentFrontDoorSockets = socketTraffic.filter(
-      (url) => new URL(url).pathname === '/'
-    )
-    for (const url of developmentFrontDoorSockets) {
-      const parsed = new URL(url)
-      expect(parsed.origin).toBe(webOrigin.replace('http:', 'ws:'))
-      expect(url).not.toContain(':' + String(internalPort))
-    }
-    const workbenchSocketUrls = socketTraffic.filter(
-      (url) => new URL(url).pathname !== '/'
-    )
-    const socketObservations = workbenchSocketUrls.map((url) =>
-      classifyWorkbenchWebSocketUrl(
-        url,
-        webOrigin.replace('http:', 'ws:'),
-        stablePath,
-        internalPort!
+    await timing.step('evidence', async () => {
+      const requestClassCounts: Record<string, number> = {}
+      for (const request of requestTraffic) {
+        const parsed = new URL(request.url)
+        const classification =
+          parsed.origin === webOrigin && !parsed.pathname.startsWith(stablePath)
+            ? 'project-home'
+            : classifyWorkbenchBrowserRequest(
+                request.url,
+                webOrigin,
+                stablePath,
+                request.resourceType
+              ).classification
+        expect(classification).not.toBe('forbidden-external')
+        expect(classification).not.toBe('marketplace')
+        requestClassCounts[classification] =
+          (requestClassCounts[classification] ?? 0) + 1
+      }
+      internalPort = identities[0]?.port ?? undefined
+      expect(internalPort).toBeDefined()
+      const developmentFrontDoorSockets = socketTraffic.filter(
+        (url) => new URL(url).pathname === '/'
       )
-    )
-    for (const observation of socketObservations) {
-      expect(observation).toMatchObject({
-        sameOrigin: true,
-        stablePrefix: true,
-        internalPortAbsent: true,
-        pathnameClass: 'stable-runtime-socket',
-      })
-    }
-    expect(socketRoles).toContain('Management')
-    expect(socketRoles).toContain('ExtensionHost')
-    expect(socketRoles).not.toContain('unknown')
-    const roleCounts = Object.fromEntries(
-      ['Management', 'ExtensionHost', 'Tunnel', 'cancelled-before-control'].map(
-        (role) => [role, socketRoles.filter((value) => value === role).length]
+      for (const url of developmentFrontDoorSockets) {
+        const parsed = new URL(url)
+        expect(parsed.origin).toBe(webOrigin.replace('http:', 'ws:'))
+        expect(url).not.toContain(':' + String(internalPort))
+      }
+      const workbenchSocketUrls = socketTraffic.filter(
+        (url) => new URL(url).pathname !== '/'
       )
-    )
-    const runtimeIdentity = {
-      pid: identities[0]!.pid,
-      processStartTime: identities[0]!.processStartTime,
-    }
-    await writeFile(
-      EVIDENCE_PATH,
-      JSON.stringify(
-        {
-          schemaVersion: 1,
-          bounds: {
-            operationMs: OPERATION_TIMEOUT_MS,
-            startupMs: STARTUP_TIMEOUT_MS,
-            documentMs: DOCUMENT_TIMEOUT_MS,
-            recoveryMs: OPERATION_TIMEOUT_MS,
-            overallMs: OVERALL_TIMEOUT_MS,
-            cleanupMs: CLEANUP_TIMEOUT_MS,
-          },
-          ledger,
-          history: { workbenchEntries: 3, refreshes: 1, backs: 1, forwards: 1 },
-          identityReuse: true,
-          runtimeIdentity,
-          capabilities: {
-            explorer: true,
-            markdownPreview: true,
-            canonicalDirectory: true,
-            knownFileRestored: true,
-            projectsControl: true,
-            prohibitedHeaderValues: 0,
-          },
-          terminal: {
-            pid: terminalPid,
-            aliveOnHome: true,
-            counterBeforeHome,
-            counterAfterHome,
-            outputRemoved: false,
-          },
-          isolated: {
-            directNavigations: 1,
-            refreshes: 1,
-            storageEmpty: true,
-            cookies: 0,
-            serviceWorkers: 0,
-            integratedTerminal: true,
-            canonicalDirectoryContract: true,
-            counterBefore: isolatedCounterBefore,
-            counterAfter: isolatedCounterAfter,
-          },
-          traffic: {
-            requestClassCounts,
-            sockets: socketTraffic.length,
-            workbenchSockets: socketObservations.length,
-            developmentFrontDoorSockets: developmentFrontDoorSockets.length,
-            roleCounts,
-            forbidden: 0,
-            marketplace: 0,
-            internalAuthorityLeaks: 0,
-          },
-          fixtureIntegrity: true,
-        },
-        null,
-        2
+      const socketObservations = workbenchSocketUrls.map((url) =>
+        classifyWorkbenchWebSocketUrl(
+          url,
+          webOrigin.replace('http:', 'ws:'),
+          stablePath,
+          internalPort!
+        )
       )
-    )
-  } finally {
-    const markerStopped = await stopMarker(terminalPid)
-    await Promise.all([
-      rm(PID_PATH, { force: true }),
-      rm(COUNTER_PATH, { force: true }),
-    ])
-    const contextsBeforeClose =
-      Number(context !== undefined) + Number(isolated !== undefined)
-    const pagesBeforeClose =
-      (context?.pages().length ?? 0) + (isolated?.pages().length ?? 0)
-    await isolated?.close()
-    await context?.close()
-    await controller?.stop()
-    const proxyAudit = proxy?.audit()
-    const runtimeShutdown = runtime?.lastShutdown()
-    const apiListenerAbsent =
-      apiOrigin === undefined || (await endpointUnavailable(apiOrigin + '/'))
-    const runtimeListenerAbsent =
-      internalPort === undefined ||
-      (await endpointUnavailable('http://127.0.0.1:' + internalPort + '/'))
-    const runtimeIdentityAbsent =
-      identities[0]?.pid == null ||
-      (await readProcessStartTime(identities[0].pid)) !==
-        identities[0].processStartTime
-    const webStop = await stopOwnedProcessGroup(
-      web === undefined ? undefined : { process: web },
-      CLEANUP_TIMEOUT_MS
-    )
-    const webListenerAbsent =
-      webOrigin === undefined || (await endpointUnavailable(webOrigin + '/'))
-    const unrelatedAlive = unrelated.listening
-    await closeServer(unrelated)
-    const manifestAfter = await snapshotFixture(canonicalPath)
-    const fixtureIntegrity =
-      JSON.stringify(manifestAfter) === JSON.stringify(manifestBefore)
-    const proxyResourcesAbsent =
-      proxyAudit !== undefined &&
-      proxyAudit.pendingOperations === 0 &&
-      proxyAudit.upstreamHttpRequests === 0 &&
-      proxyAudit.upstreamHttpResponses === 0 &&
-      proxyAudit.rawSockets === 0 &&
-      proxyAudit.webSockets === 0
-    cleanupPassed =
-      markerStopped &&
-      proxyResourcesAbsent &&
-      runtimeShutdown?.status === 'ok' &&
-      runtimeIdentityAbsent &&
-      runtimeListenerAbsent &&
-      apiListenerAbsent &&
-      webStop.processGroupAbsent &&
-      webListenerAbsent &&
-      unrelatedAlive &&
-      fixtureIntegrity
-    if (terminalPid !== undefined) {
-      const evidence = JSON.parse(
-        await readFile(EVIDENCE_PATH, 'utf8')
-      ) as Record<string, unknown>
+      for (const observation of socketObservations) {
+        expect(observation).toMatchObject({
+          sameOrigin: true,
+          stablePrefix: true,
+          internalPortAbsent: true,
+          pathnameClass: 'stable-runtime-socket',
+        })
+      }
+      expect(socketRoles).toContain('Management')
+      expect(socketRoles).toContain('ExtensionHost')
+      expect(socketRoles).not.toContain('unknown')
+      const roleCounts = Object.fromEntries(
+        [
+          'Management',
+          'ExtensionHost',
+          'Tunnel',
+          'cancelled-before-control',
+        ].map((role) => [
+          role,
+          socketRoles.filter((value) => value === role).length,
+        ])
+      )
+      const runtimeIdentity = {
+        pid: identities[0]!.pid,
+        processStartTime: identities[0]!.processStartTime,
+      }
       await writeFile(
         EVIDENCE_PATH,
         JSON.stringify(
           {
-            ...evidence,
-            cleanup: {
-              contexts: { beforeClose: contextsBeforeClose, afterClose: 0 },
-              pages: { beforeClose: pagesBeforeClose, afterClose: 0 },
-              terminal: {
-                pid: terminalPid,
-                markerStopped,
-                identityAbsent: markerStopped,
-                outputRemoved: true,
-              },
-              proxy: {
-                resourcesAbsent: proxyResourcesAbsent,
-                audit: proxyAudit,
-              },
-              runtime: {
-                identityAbsent: runtimeIdentityAbsent,
-                listenerAbsent: runtimeListenerAbsent,
-                shutdownStatus: runtimeShutdown?.status,
-                auditCount: runtimeShutdown?.audits.length,
-              },
-              api: {
-                processOwner: 'test-process',
-                listenerAbsent: apiListenerAbsent,
-              },
-              web: {
-                processGroupAbsent: webStop.processGroupAbsent,
-                listenerAbsent: webListenerAbsent,
-              },
-              persistence: {
-                mode: 'controlled-in-memory-library',
-                sqliteSidecars: [],
-              },
-              unrelatedListenerSurvived: unrelatedAlive,
-              fixture: {
-                integrity: fixtureIntegrity,
-                beforeDigest: manifestDigest(manifestBefore),
-                afterDigest: manifestDigest(manifestAfter),
-              },
-              markerStopped,
-              outputRemoved: true,
-              webProcessGroupAbsent: webStop.processGroupAbsent,
-              fixtureIntegrity,
+            schemaVersion: 1,
+            bounds: {
+              operationMs: OPERATION_TIMEOUT_MS,
+              startupMs: STARTUP_TIMEOUT_MS,
+              documentMs: DOCUMENT_TIMEOUT_MS,
+              recoveryMs: OPERATION_TIMEOUT_MS,
+              overallMs: OVERALL_TIMEOUT_MS,
+              cleanupMs: CLEANUP_TIMEOUT_MS,
+              marginMs: HOME_WORKBENCH_MARGIN_MS,
+              stepBoundsMs: HOME_WORKBENCH_STEP_BOUNDS_MS,
             },
+            ledger,
+            history: {
+              workbenchEntries: 3,
+              refreshes: 1,
+              backs: 1,
+              forwards: 1,
+            },
+            identityReuse: true,
+            runtimeIdentity,
+            capabilities: {
+              explorer: true,
+              markdownPreview: true,
+              canonicalDirectory: true,
+              knownFileRestored: true,
+              projectsControl: true,
+              prohibitedHeaderValues: 0,
+            },
+            terminal: {
+              pid: terminalPid,
+              aliveOnHome: true,
+              counterBeforeHome,
+              counterAfterHome,
+              outputRemoved: false,
+            },
+            isolated: {
+              directNavigations: 1,
+              refreshes: 1,
+              storageEmpty: true,
+              cookies: 0,
+              serviceWorkers: 0,
+              integratedTerminal: true,
+              canonicalDirectoryContract: true,
+              counterBefore: isolatedCounterBefore,
+              counterAfter: isolatedCounterAfter,
+            },
+            traffic: {
+              requestClassCounts,
+              sockets: socketTraffic.length,
+              workbenchSockets: socketObservations.length,
+              developmentFrontDoorSockets: developmentFrontDoorSockets.length,
+              roleCounts,
+              forbidden: 0,
+              marketplace: 0,
+              internalAuthorityLeaks: 0,
+            },
+            fixtureIntegrity: true,
           },
           null,
           2
         )
       )
+      evidenceWritten = true
+    })
+  } finally {
+    let cleanup: Record<string, unknown> = {
+      passed: false,
+      failureClass: 'cleanup-not-completed',
     }
+    let cleanupFailure: unknown
+    try {
+      await timing.step('cleanup', async () => {
+        const contextsBeforeClose =
+          Number(context !== undefined) + Number(isolated !== undefined)
+        const pagesBeforeClose =
+          (context?.pages().length ?? 0) + (isolated?.pages().length ?? 0)
+        const [markerStopped] = await Promise.all([
+          stopMarker(terminalPid),
+          isolated?.close(),
+          context?.close(),
+        ])
+        await Promise.all([
+          rm(PID_PATH, { force: true }),
+          rm(COUNTER_PATH, { force: true }),
+        ])
+        const [, webStop] = await Promise.all([
+          controller?.stop(),
+          stopOwnedProcessGroup(
+            web === undefined ? undefined : { process: web },
+            CLEANUP_TIMEOUT_MS
+          ),
+        ])
+        const proxyAudit = proxy?.audit()
+        const runtimeShutdown = runtime?.lastShutdown()
+        const [apiListenerAbsent, runtimeListenerAbsent, webListenerAbsent] =
+          await Promise.all([
+            apiOrigin === undefined
+              ? Promise.resolve(true)
+              : endpointUnavailable(apiOrigin + '/'),
+            internalPort === undefined
+              ? Promise.resolve(true)
+              : endpointUnavailable(
+                  'http://127.0.0.1:' + String(internalPort) + '/'
+                ),
+            webOrigin === undefined
+              ? Promise.resolve(true)
+              : endpointUnavailable(webOrigin + '/'),
+          ])
+        const runtimeIdentityAbsent =
+          identities[0]?.pid == null ||
+          (await readProcessStartTime(identities[0].pid)) !==
+            identities[0].processStartTime
+        const unrelatedAlive = unrelated.listening
+        await closeServer(unrelated)
+        const manifestAfter = await snapshotFixture(canonicalPath)
+        const fixtureIntegrity =
+          JSON.stringify(manifestAfter) === JSON.stringify(manifestBefore)
+        const proxyResourcesAbsent =
+          proxyAudit !== undefined &&
+          proxyAudit.pendingOperations === 0 &&
+          proxyAudit.upstreamHttpRequests === 0 &&
+          proxyAudit.upstreamHttpResponses === 0 &&
+          proxyAudit.rawSockets === 0 &&
+          proxyAudit.webSockets === 0
+        cleanupPassed =
+          markerStopped &&
+          proxyResourcesAbsent &&
+          runtimeShutdown?.status === 'ok' &&
+          runtimeIdentityAbsent &&
+          runtimeListenerAbsent &&
+          apiListenerAbsent &&
+          webStop.processGroupAbsent &&
+          webListenerAbsent &&
+          unrelatedAlive &&
+          fixtureIntegrity
+        cleanup = {
+          contexts: { beforeClose: contextsBeforeClose, afterClose: 0 },
+          pages: { beforeClose: pagesBeforeClose, afterClose: 0 },
+          terminal: {
+            pid: terminalPid,
+            markerStopped,
+            identityAbsent: markerStopped,
+            outputRemoved: true,
+          },
+          proxy: { resourcesAbsent: proxyResourcesAbsent, audit: proxyAudit },
+          runtime: {
+            identityAbsent: runtimeIdentityAbsent,
+            listenerAbsent: runtimeListenerAbsent,
+            shutdownStatus: runtimeShutdown?.status,
+            auditCount: runtimeShutdown?.audits.length,
+          },
+          api: {
+            processOwner: 'test-process',
+            listenerAbsent: apiListenerAbsent,
+          },
+          web: {
+            processGroupAbsent: webStop.processGroupAbsent,
+            listenerAbsent: webListenerAbsent,
+          },
+          persistence: {
+            mode: 'controlled-in-memory-library',
+            sqliteSidecars: [],
+          },
+          unrelatedListenerSurvived: unrelatedAlive,
+          fixture: {
+            integrity: fixtureIntegrity,
+            beforeDigest: manifestDigest(manifestBefore),
+            afterDigest: manifestDigest(manifestAfter),
+          },
+          markerStopped,
+          outputRemoved: true,
+          webProcessGroupAbsent: webStop.processGroupAbsent,
+          fixtureIntegrity,
+          passed: cleanupPassed,
+        }
+      })
+    } catch (error) {
+      cleanupFailure = error
+      cleanup = { ...cleanup, failureClass: 'cleanup-failed' }
+    }
+    const evidence = evidenceWritten
+      ? (JSON.parse(await readFile(EVIDENCE_PATH, 'utf8')) as Record<
+          string,
+          unknown
+        >)
+      : {
+          schemaVersion: 1,
+          outcome: 'failed-before-scenario-evidence',
+          bounds: {
+            overallMs: OVERALL_TIMEOUT_MS,
+            cleanupMs: CLEANUP_TIMEOUT_MS,
+            marginMs: HOME_WORKBENCH_MARGIN_MS,
+            stepBoundsMs: HOME_WORKBENCH_STEP_BOUNDS_MS,
+          },
+          ledger,
+        }
+    await writeFile(
+      EVIDENCE_PATH,
+      JSON.stringify(
+        { ...evidence, timing: timing.summary(), cleanup },
+        null,
+        2
+      )
+    )
+    if (cleanupFailure !== undefined) throw cleanupFailure
     expect(cleanupPassed).toBe(true)
   }
 })

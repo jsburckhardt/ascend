@@ -259,3 +259,8 @@ Documentation is complete and current; focused/full/harness validation exits zer
 
 ### Expected Evidence
 Documentation matrix, obsolete-search result, command exit/duration records, before/after hashes, AC-1 through AC-29 evidence index, residual audit, dependency/control/schema/diff scope report.
+
+
+## Implement correction validation — AC-24 and AC-28
+
+V-5, V-6, V-9, and V-10 use one shared 220,000 ms no-retry overall bound, equal to the sum of the declared setup (5,000), API (15,000), web (10,000), runtime (30,000), workbench (30,000), terminal (15,000), three-entry (25,000), history (25,000), deep-link (35,000), evidence (5,000), and cleanup (10,000) bounds plus a 15,000 ms margin. Each execution retains step start, end, duration, applied bound, and outcome. A step or overall excess fails, cleanup still runs against exact identities, and the residual audit rejects incomplete timing or cleanup evidence. V-10 requires three consecutive standalone just verify-home-workbench executions with Playwright retries fixed at zero before the canonical just verify and harness boot runs.

@@ -20,6 +20,41 @@ export const HOME_WORKBENCH_FAILURE_EVIDENCE = path.join(
   'browser-failures.json'
 )
 
+interface BrowserTimingEvidence {
+  readonly bounds?: { readonly overallMs?: number }
+  readonly timing?: {
+    readonly durationMs?: number
+    readonly steps?: readonly {
+      readonly name?: string
+      readonly boundMs?: number
+      readonly durationMs?: number
+      readonly outcome?: string
+    }[]
+  }
+}
+
+const timingPassed = (
+  evidence: BrowserTimingEvidence,
+  requiredSteps: readonly string[]
+): boolean => {
+  const overallMs = evidence.bounds?.overallMs
+  const durationMs = evidence.timing?.durationMs
+  const steps = evidence.timing?.steps ?? []
+  return (
+    Number.isSafeInteger(overallMs) &&
+    Number.isSafeInteger(durationMs) &&
+    durationMs! <= overallMs! &&
+    requiredSteps.every((name) => steps.some((step) => step.name === name)) &&
+    steps.every(
+      (step) =>
+        Number.isSafeInteger(step.boundMs) &&
+        Number.isSafeInteger(step.durationMs) &&
+        step.durationMs! <= step.boundMs! &&
+        step.outcome === 'passed'
+    )
+  )
+}
+
 const absent = async (target: string): Promise<boolean> =>
   access(target).then(
     () => false,
@@ -55,6 +90,8 @@ export const auditHomeWorkbenchResiduals = async (): Promise<
       unrelatedListenerSurvived?: boolean
     }
     fixtureIntegrity?: boolean
+    bounds?: BrowserTimingEvidence['bounds']
+    timing?: BrowserTimingEvidence['timing']
   }
   const failures = JSON.parse(
     await readFile(HOME_WORKBENCH_FAILURE_EVIDENCE, 'utf8')
@@ -73,6 +110,8 @@ export const auditHomeWorkbenchResiduals = async (): Promise<
   const realProcess = JSON.parse(
     await readFile(HOME_WORKBENCH_REAL_PROCESS_EVIDENCE, 'utf8')
   ) as {
+    bounds?: BrowserTimingEvidence['bounds']
+    timing?: BrowserTimingEvidence['timing']
     cleanup?: {
       contexts?: { after?: number }
       pages?: { after?: number }
@@ -91,10 +130,37 @@ export const auditHomeWorkbenchResiduals = async (): Promise<
   const markerOutputAbsent = await absent(
     path.join(HOME_WORKBENCH_RESULT_ROOT, 'terminal-marker.counter')
   )
+  const continuityTimingPassed = timingPassed(evidence, [
+    'setup',
+    'apiReadiness',
+    'webReadiness',
+    'runtimeReadiness',
+    'workbenchReadiness',
+    'terminalOperations',
+    'threeEntries',
+    'history',
+    'deepLink',
+    'evidence',
+    'cleanup',
+  ])
+  const realProcessTimingPassed = timingPassed(realProcess, [
+    'setup',
+    'apiReadiness',
+    'webReadiness',
+    'runtimeReadiness',
+    'workbenchReadiness',
+    'terminalOperations',
+    'threeEntries',
+    'deepLink',
+    'evidence',
+    'cleanup',
+  ])
   const cleanup = evidence.cleanup ?? {}
   const failureCleanup = failures.cleanup ?? {}
   const realCleanup = realProcess.cleanup
   const passed =
+    continuityTimingPassed &&
+    realProcessTimingPassed &&
     markerPidAbsent &&
     markerOutputAbsent &&
     cleanup.contexts?.afterClose === 0 &&
@@ -137,6 +203,10 @@ export const auditHomeWorkbenchResiduals = async (): Promise<
     passed,
     markerPidAbsent,
     markerOutputAbsent,
+    timing: {
+      continuity: continuityTimingPassed,
+      realProcess: realProcessTimingPassed,
+    },
     cleanup,
     failureCleanup,
     realProcessCleanup: realCleanup,

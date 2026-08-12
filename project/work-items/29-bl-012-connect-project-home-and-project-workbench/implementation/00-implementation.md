@@ -77,3 +77,29 @@ Corrective focused results: just verify-focused passed 566 tests with 2 skips; j
 - just verify: PASS — formatting, lint, typecheck, unit coverage, build, all E2E, and BL-010/011/012 gates.
 - harness boot: PASS — ready, canonical checks proof, 310885 ms duration, 610000 ms finite timeout.
 - Final acceptance remains owned by Verify.
+
+
+## AC-24 / AC-28 nondeterminism correction
+
+- Root cause: Playwright's former 120,000 ms test timeout included the scenario's serial process shutdown in the test body. When the deadline was exhausted, Playwright interrupted the finally block; the failed execution left its exact API and code-server identities alive, which contended with later runs even though a later successful evidence file reported only its own clean resources.
+- The correction reserves cleanup inside a derived 220,000 ms no-retry overall bound: setup 5,000; API 15,000; web 10,000; runtime 30,000; workbench 30,000; terminal 15,000; three entries 25,000; history 25,000; deep link 35,000; evidence 5,000; cleanup 10,000; margin 15,000 ms.
+- Vite now emits an owned IPC readiness event after its exact listener is reachable, API and web ports are reserved distinctly, the compiled API is built once and launched directly, runtime/workbench readiness shares one browser acquisition, and listener attribution uses one discovery snapshot plus strict confirmation of the stable owner. API/web stops and listener checks run concurrently rather than consuming serial cleanup windows.
+- Every retained step has start, end, duration, applied bound, and passed/failed/timed-out outcome. Timeout and assertion paths write safe partial diagnostics after exact cleanup; the residual audit rejects missing or over-bound steps. Playwright remains workers=1 and retries=0; no automatic scenario retry was added.
+- Three consecutive standalone just verify-home-workbench runs passed without retry. Their real-process/continuity durations were 55,706/50,198 ms, 58,495/50,919 ms, and 57,819/48,053 ms. The maximum scenario duration was 58,495 ms and the maximum retained step was 21,888 ms, both below 220,000 ms overall; whole-gate wall reports were 1.9, 1.9, and 1.8 minutes. Terminal readiness now waits atomically for counter, canonical-directory digest, user, and host visibility.
+- **AC-24 evidence:** tests/e2e/home-workbench-timing.ts, its contract test, both browser evidence files, and the residual timing validator prove finite declared bounds, exact slow-step diagnostics, failure on excess, and cleanup retention.
+- **AC-28 evidence:** all three standalone gates and their independent residual audits passed. Full just verify and harness boot results are recorded after final validation below; final acceptance remains owned by Verify.
+
+## Correction documentation evidence
+
+- README.md and docs/stable-workbench-routing.md now document the 220,000 ms derivation, no-retry behavior, deterministic readiness, timeout evidence, and exact cleanup procedure.
+- Task and test plan correction sections map T-6/T-8 and V-5/V-6/V-9/V-10 to AC-24 and AC-28.
+- No API contract, product configuration, schema, data, migration, deployment topology, ADR, or core-component contract changed; this correction is confined to test orchestration, evidence validation, and operational validation documentation.
+
+
+## Final AC-24 / AC-28 correction validation
+
+- just verify-focused tests/contracts/home-workbench-timing.test.ts apps/api/test/home-workbench-residual-audit.test.ts: PASS, 3 tests.
+- just verify-home-workbench: PASS three consecutive times on the final observer/cleanup implementation, 44 Vitest tests, 3 Chromium scenarios, retries=0, and residual audit each time.
+- just verify: PASS after the final response-observer race correction; formatting, lint, typecheck, unit/coverage, build, E2E, BL-010, BL-011, BL-012, and residual gates exited zero.
+- harness boot: PASS, readiness ready, canonical harness checks proof, 306,843 ms duration inside the finite 610,000 ms checks timeout, with no persistent development server.
+- Final acceptance remains owned by Verify.

@@ -102,3 +102,10 @@ Exact DELETE wire examples are:
     400 {"error":{"category":"invalid_project_id"}}
     404 {"error":{"category":"project_not_found"}}
     500 {"error":{"category":"project_close_failed"}}
+
+
+## Stable workbench proxy API (BL-011)
+
+`/projects/{projectId}/workbench/` and every descendant are API-owned raw HTTP and WebSocket routes. The ID is one route-safe 1-to-128-character segment. The handler looks up the persisted project, delegates start/reuse to `ProjectRuntimeManager`, and forwards only to its immutable loopback snapshot. It preserves suffixes, queries, bytes, ranges, streams, WebSocket frames, and backpressure. Client authority, forwarding, and proxy-target headers cannot select the upstream.
+
+The public failure envelope is `{"error":{"code":"<code>","message":"<message>"}}`. The complete status/code/message table, redirect and cookie rules, five-second bounds, redaction policy, shutdown order, and operational commands are in [`docs/stable-workbench-routing.md`](../../docs/stable-workbench-routing.md). The direct `ws` 8.x dependency owns no-server upgrade bridging. Application close removes the upgrade listener and settles the proxy before runtime and persistence owners. No schema, migration, or configuration option is added.

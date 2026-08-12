@@ -39,6 +39,7 @@ export interface ApiServerControllerOptions {
   readonly createProjectRegistration?: () => Promise<ProjectRegistrationService>
   readonly createProjectCloseService?: AppOptions['createProjectCloseService']
   readonly createProjectRuntimeManager?: AppOptions['createProjectRuntimeManager']
+  readonly createWorkbenchProxyManager?: AppOptions['createWorkbenchProxyManager']
   readonly stopTelemetry?: () => Promise<void>
   readonly recordStartupFailure?: (event: StartupFailureEvent) => void
 }
@@ -77,6 +78,12 @@ export function createApiServerController(
           ...(options.createProjectCloseService === undefined
             ? {}
             : { createProjectCloseService: options.createProjectCloseService }),
+          ...(options.createWorkbenchProxyManager === undefined
+            ? {}
+            : {
+                createWorkbenchProxyManager:
+                  options.createWorkbenchProxyManager,
+              }),
           ...(options.createProjectRuntimeManager === undefined
             ? {}
             : {

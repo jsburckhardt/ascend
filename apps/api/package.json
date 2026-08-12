@@ -27,10 +27,12 @@
     "@opentelemetry/sdk-node": "^0.221.0",
     "drizzle-orm": "^0.45.2",
     "fastify": "^5.0.0",
-    "fastify-plugin": "^5.0.0"
+    "fastify-plugin": "^5.0.0",
+    "ws": "^8.21.1"
   },
   "devDependencies": {
     "@types/node": "^24.0.8",
+    "@types/ws": "^8.18.1",
     "@vitest/coverage-v8": "^4.1.10",
     "drizzle-kit": "^0.31.10",
     "fastify-tsconfig": "^3.0.0",

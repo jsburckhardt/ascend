@@ -41,7 +41,7 @@ The repository exposes `just proof-start` and `just proof-stop` for one bounded 
 
 ## In-memory project runtime
 
-Issue #25 adds one internal manager that starts and reuses a persisted project's code-server without adding a route or Project Home action. Runtime identity, port, state, and process ownership remain memory-only; SQLite stays four-field metadata. Launch is non-root, direct argv, exact-canonical-path, and loopback-only. Readiness uses the bounded /healthz/ JSON contract, exactly concurrent calls share one start, and caller cancellation affects only its waiter. Application shutdown inventories every running or in-flight PID/start identity, group, port, and listener, returns graceful or escalated exact-absence audits, and leaves unrelated controls alive before persistence closes. See [project-runtime.md](project-runtime.md) for configuration, typed failures, redacted events, commands, the retained authoritative timing field, and deferred boundaries.
+Issue #25 adds one internal manager that starts and reuses a persisted project's code-server and is now consumed by the stable workbench proxy route without adding a Project Home action. Runtime identity, port, state, and process ownership remain memory-only; SQLite stays four-field metadata. Launch is non-root, direct argv, exact-canonical-path, and loopback-only. Readiness uses the bounded /healthz/ JSON contract, exactly concurrent calls share one start, and caller cancellation affects only its waiter. Application shutdown inventories every running or in-flight PID/start identity, group, port, and listener, returns graceful or escalated exact-absence audits, and leaves unrelated controls alive before persistence closes. See [project-runtime.md](project-runtime.md) for configuration, typed failures, redacted events, commands, the retained authoritative timing field, and deferred boundaries.
 
 ## Source Documents
 
@@ -166,3 +166,8 @@ Exact DELETE wire examples are:
     400 {"error":{"category":"invalid_project_id"}}
     404 {"error":{"category":"project_not_found"}}
     500 {"error":{"category":"project_close_failed"}}
+
+
+## Stable workbench routing
+
+The API-owned `/projects/{projectId}/workbench/` prefix now carries full-page HTTP and WebSocket traffic to one reused BL-010 loopback runtime. See [stable-workbench-routing.md](stable-workbench-routing.md) for the transport rewrites, exact failure table, security/evidence disclosure, five-second bounds, injected validation faults, cleanup result, and out-of-scope boundaries. Use `just verify-workbench-route`; `just verify` includes it. No data or configuration migration is required.

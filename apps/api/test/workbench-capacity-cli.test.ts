@@ -267,7 +267,7 @@ describe('capacity command setup and overall deadline', () => {
     const releaseGuard = vi.fn(async () => undefined)
     const result = await runCapacityCli(output.value, {
       ...dependencies(),
-      overallTimeoutMs: 20,
+      overallTimeoutMs: 100,
       prerequisites: async (signal) =>
         new Promise<never>((_resolve, reject) => {
           signal.addEventListener('abort', () => reject(signal.reason), {

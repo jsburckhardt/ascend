@@ -128,6 +128,15 @@ verify-session-switching:
 proof-session-switching-residual-audit:
     pnpm --filter @ascend/api exec tsx src/cli/session-switching-residual-audit.ts
 
+measure-mvp-performance:
+    pnpm --filter @ascend/api exec tsx src/cli/measure-mvp-performance.ts
+
+verify-mvp-performance:
+    pnpm --filter @ascend/api exec tsx src/cli/verify-mvp-performance.ts
+
+proof-mvp-performance-residual-audit:
+    pnpm --filter @ascend/api exec tsx src/cli/mvp-performance-residual-audit.ts
+
 verify:
     pnpm format:check
     pnpm lint
@@ -144,3 +153,5 @@ verify:
     just verify-home-workbench false
     just verify-project-runtime-isolation
     just verify-session-switching
+    just verify-mvp-performance
+    just proof-mvp-performance-residual-audit

@@ -1,0 +1,1177 @@
+{
+  "schemaVersion": 1,
+  "runId": "79479981-4b00-4596-a950-57dd9d2f53dd",
+  "planHash": "ed85cb7c5a010e573518cdd34f9c2ae22b1cb9eb76aa594e661ae6e9d9294679",
+  "attempts": [
+    {
+      "schemaVersion": 1,
+      "runId": "79479981-4b00-4596-a950-57dd9d2f53dd",
+      "planHash": "ed85cb7c5a010e573518cdd34f9c2ae22b1cb9eb76aa594e661ae6e9d9294679",
+      "attemptId": "cold-1-A",
+      "kind": "cold",
+      "ordinal": 1,
+      "project": "A",
+      "retry": 0,
+      "startedAt": "2026-08-13T12:52:16.256Z",
+      "host": {
+        "hostname": "03f809395a5d",
+        "uid": 1000,
+        "cgroup": "v2"
+      },
+      "versions": {
+        "node": "v22.23.2",
+        "chromium": "151.0.7922.34",
+        "codeServer": "4.131.0"
+      },
+      "browser": {
+        "context": "fresh",
+        "cache": "cleared",
+        "originStorage": "cleared",
+        "prewarmedRuntime": false
+      },
+      "precheck": {
+        "passed": true,
+        "load": [4.97, 4.2, 4.45],
+        "availableMemoryKiB": 12496504
+      },
+      "runtime": {
+        "projectToken": "project-e58bc3a045ecbcb2",
+        "identityDigest": "c844616e982d8922b628fa35fa5b5374f350d01fb5e348fc0488e35b29e83b53",
+        "pidDigest": "fdc5a47168c22121b4dcb12fc85d2a38a2282c41e40ae87c0f385362c781c8a9",
+        "startDigest": "3e9cf1631d0eb2b1bcefe2d31be20a8ca0b99004ddccfe3cbcfa76472d2fbb92",
+        "portToken": "485269931088c3318082631c"
+      },
+      "stableUrl": "/projects/bl014-a/workbench/",
+      "clock": "process.hrtime.bigint",
+      "eventsNs": {
+        "activation": "155389609353022",
+        "runtime-start-requested": "155399269970915",
+        "runtime-health-ready": "155399279786292",
+        "stable-document-ready": "155395906213292",
+        "explorer-sentinel-ready": "155396133753837",
+        "terminal-prompt-ready": "155399609601561",
+        "workbench-usable": "155399609601561"
+      },
+      "phasesNs": {
+        "activation-to-runtime-start-requested": "9660617893",
+        "runtime-start-requested-to-runtime-health-ready": "9815377",
+        "runtime-health-ready-to-stable-document-ready": "-3373573000",
+        "stable-document-ready-to-explorer-sentinel-ready": "227540545",
+        "explorer-sentinel-ready-to-terminal-prompt-ready": "3475847724",
+        "terminal-prompt-ready-to-workbench-usable": "0",
+        "total": "10000248539"
+      },
+      "observedTotalNs": "10000248539",
+      "statisticalTotalNs": "10000248539",
+      "status": "success",
+      "failureClass": null,
+      "targetMs": 15000,
+      "targetMet": true,
+      "artifacts": {
+        "screenshot": "captured",
+        "trace": "captured",
+        "network": "captured",
+        "manifestId": "38799aae2aef5634c2c4ea1b66c59372fc1ef79dfce4d1f59404dd919c215896"
+      },
+      "boundary": {
+        "kind": "absence",
+        "passed": true,
+        "measuredResiduals": 0,
+        "expectedIdentityCount": 0
+      },
+      "homeReturned": false
+    },
+    {
+      "schemaVersion": 1,
+      "runId": "79479981-4b00-4596-a950-57dd9d2f53dd",
+      "planHash": "ed85cb7c5a010e573518cdd34f9c2ae22b1cb9eb76aa594e661ae6e9d9294679",
+      "attemptId": "cold-2-B",
+      "kind": "cold",
+      "ordinal": 2,
+      "project": "B",
+      "retry": 0,
+      "startedAt": "2026-08-13T12:52:31.097Z",
+      "host": {
+        "hostname": "03f809395a5d",
+        "uid": 1000,
+        "cgroup": "v2"
+      },
+      "versions": {
+        "node": "v22.23.2",
+        "chromium": "151.0.7922.34",
+        "codeServer": "4.131.0"
+      },
+      "browser": {
+        "context": "fresh",
+        "cache": "cleared",
+        "originStorage": "cleared",
+        "prewarmedRuntime": false
+      },
+      "precheck": {
+        "passed": true,
+        "load": [5.18, 4.27, 4.47],
+        "availableMemoryKiB": 12457592
+      },
+      "runtime": {
+        "projectToken": "project-0e1ab8bae4d31227",
+        "identityDigest": "17ce9fbdd1d05d0da1e764558c86a1eeb3126eb6c821696c0036adc6c55bf28a",
+        "pidDigest": "4eaa398abfa9f3213de09bb589629e9a88c606183497c8544f36d1f986a33819",
+        "startDigest": "86bcf9b9b40a5e493a76310b8637d903f5b9def5e5e5de6d2fb50485dc8cd3a5",
+        "portToken": "a1f3bebf3b954e8179081b68"
+      },
+      "stableUrl": "/projects/bl014-b/workbench/",
+      "clock": "process.hrtime.bigint",
+      "eventsNs": {
+        "activation": "155402647162596",
+        "runtime-start-requested": "155412731104146",
+        "runtime-health-ready": "155412785493383",
+        "stable-document-ready": "155408576149599",
+        "explorer-sentinel-ready": "155408817287535",
+        "terminal-prompt-ready": "155414146026313",
+        "workbench-usable": "155414146026313"
+      },
+      "phasesNs": {
+        "activation-to-runtime-start-requested": "10083941550",
+        "runtime-start-requested-to-runtime-health-ready": "54389237",
+        "runtime-health-ready-to-stable-document-ready": "-4209343784",
+        "stable-document-ready-to-explorer-sentinel-ready": "241137936",
+        "explorer-sentinel-ready-to-terminal-prompt-ready": "5328738778",
+        "terminal-prompt-ready-to-workbench-usable": "0",
+        "total": "11498863717"
+      },
+      "observedTotalNs": "11498863717",
+      "statisticalTotalNs": "11498863717",
+      "status": "success",
+      "failureClass": null,
+      "targetMs": 15000,
+      "targetMet": true,
+      "artifacts": {
+        "screenshot": "captured",
+        "trace": "captured",
+        "network": "captured",
+        "manifestId": "bdfd3ec00286cfdd6991c3ccb8f45716e98c0ead4209ba93d1257e36dd9d22e1"
+      },
+      "boundary": {
+        "kind": "absence",
+        "passed": true,
+        "measuredResiduals": 0,
+        "expectedIdentityCount": 0
+      },
+      "homeReturned": false
+    },
+    {
+      "schemaVersion": 1,
+      "runId": "79479981-4b00-4596-a950-57dd9d2f53dd",
+      "planHash": "ed85cb7c5a010e573518cdd34f9c2ae22b1cb9eb76aa594e661ae6e9d9294679",
+      "attemptId": "cold-3-C",
+      "kind": "cold",
+      "ordinal": 3,
+      "project": "C",
+      "retry": 0,
+      "startedAt": "2026-08-13T12:52:46.442Z",
+      "host": {
+        "hostname": "03f809395a5d",
+        "uid": 1000,
+        "cgroup": "v2"
+      },
+      "versions": {
+        "node": "v22.23.2",
+        "chromium": "151.0.7922.34",
+        "codeServer": "4.131.0"
+      },
+      "browser": {
+        "context": "fresh",
+        "cache": "cleared",
+        "originStorage": "cleared",
+        "prewarmedRuntime": false
+      },
+      "precheck": {
+        "passed": true,
+        "load": [4.63, 4.19, 4.44],
+        "availableMemoryKiB": 12186320
+      },
+      "runtime": {
+        "projectToken": "project-83c7164485f4dd78",
+        "identityDigest": "378dadfbd99cc0b19f664aa61c7a2e3902344bcd6f50ff1e109f8fc07833cf04",
+        "pidDigest": "292ced0f84a4a7786bbb57740ec683a20b4bcf4b9524d4ca42cde75d95c02892",
+        "startDigest": "7af96c61d45d4a30cc38dc7a4a755411f8b49e0528a84b89d3917369bd6cfaf4",
+        "portToken": "0d0f9cbd3f46c20d058f5a8a"
+      },
+      "stableUrl": "/projects/bl014-c/workbench/",
+      "clock": "process.hrtime.bigint",
+      "eventsNs": {
+        "activation": "155417839863444",
+        "runtime-start-requested": "155429042272132",
+        "runtime-health-ready": "155429047311158",
+        "stable-document-ready": "155424412547939",
+        "explorer-sentinel-ready": "155424670095164",
+        "terminal-prompt-ready": "155429542431186",
+        "workbench-usable": "155429542431186"
+      },
+      "phasesNs": {
+        "activation-to-runtime-start-requested": "11202408688",
+        "runtime-start-requested-to-runtime-health-ready": "5039026",
+        "runtime-health-ready-to-stable-document-ready": "-4634763219",
+        "stable-document-ready-to-explorer-sentinel-ready": "257547225",
+        "explorer-sentinel-ready-to-terminal-prompt-ready": "4872336022",
+        "terminal-prompt-ready-to-workbench-usable": "0",
+        "total": "11702567742"
+      },
+      "observedTotalNs": "11702567742",
+      "statisticalTotalNs": "11702567742",
+      "status": "success",
+      "failureClass": null,
+      "targetMs": 15000,
+      "targetMet": true,
+      "artifacts": {
+        "screenshot": "captured",
+        "trace": "captured",
+        "network": "captured",
+        "manifestId": "706df31340553f43514a15877b647e71629f0b07b0857ac2312408caa9b4b5fe"
+      },
+      "boundary": {
+        "kind": "absence",
+        "passed": true,
+        "measuredResiduals": 0,
+        "expectedIdentityCount": 0
+      },
+      "homeReturned": false
+    },
+    {
+      "schemaVersion": 1,
+      "runId": "79479981-4b00-4596-a950-57dd9d2f53dd",
+      "planHash": "ed85cb7c5a010e573518cdd34f9c2ae22b1cb9eb76aa594e661ae6e9d9294679",
+      "attemptId": "cold-4-A",
+      "kind": "cold",
+      "ordinal": 4,
+      "project": "A",
+      "retry": 0,
+      "startedAt": "2026-08-13T12:52:59.614Z",
+      "host": {
+        "hostname": "03f809395a5d",
+        "uid": 1000,
+        "cgroup": "v2"
+      },
+      "versions": {
+        "node": "v22.23.2",
+        "chromium": "151.0.7922.34",
+        "codeServer": "4.131.0"
+      },
+      "browser": {
+        "context": "fresh",
+        "cache": "cleared",
+        "originStorage": "cleared",
+        "prewarmedRuntime": false
+      },
+      "precheck": {
+        "passed": true,
+        "load": [5.39, 4.38, 4.5],
+        "availableMemoryKiB": 12278700
+      },
+      "runtime": {
+        "projectToken": "project-e58bc3a045ecbcb2",
+        "identityDigest": "383bdd354c6fa349882e8786a132f07a6b3972103d08dccc5c20c99d200feab1",
+        "pidDigest": "21379d2eae7e42a1a4a3ee778e7933d7104484fc534348f47dca5b6d2ff84cd0",
+        "startDigest": "104bd0a0d43606f1ef03df31201c672059cd3087dc4797c085fe3ced7745d28f",
+        "portToken": "8e8b7e1a197707557e1b1be1"
+      },
+      "stableUrl": "/projects/bl014-a/workbench/",
+      "clock": "process.hrtime.bigint",
+      "eventsNs": {
+        "runtime-health-ready": "155442424627739",
+        "activation": "155432948764151",
+        "runtime-start-requested": "155442418335955",
+        "stable-document-ready": "155438614163244",
+        "explorer-sentinel-ready": "155438974794555",
+        "terminal-prompt-ready": "155442910384428",
+        "workbench-usable": "155442910384428"
+      },
+      "phasesNs": {
+        "activation-to-runtime-start-requested": "9469571804",
+        "runtime-start-requested-to-runtime-health-ready": "6291784",
+        "runtime-health-ready-to-stable-document-ready": "-3810464495",
+        "stable-document-ready-to-explorer-sentinel-ready": "360631311",
+        "explorer-sentinel-ready-to-terminal-prompt-ready": "3935589873",
+        "terminal-prompt-ready-to-workbench-usable": "0",
+        "total": "9961620277"
+      },
+      "observedTotalNs": "9961620277",
+      "statisticalTotalNs": "9961620277",
+      "status": "success",
+      "failureClass": null,
+      "targetMs": 15000,
+      "targetMet": true,
+      "artifacts": {
+        "screenshot": "captured",
+        "trace": "captured",
+        "network": "captured",
+        "manifestId": "a053df5a02f6ddb64607adb9edcd1aa8e8256d663557af31a28d33b276913dff"
+      },
+      "boundary": {
+        "kind": "absence",
+        "passed": true,
+        "measuredResiduals": 0,
+        "expectedIdentityCount": 0
+      },
+      "homeReturned": false
+    },
+    {
+      "schemaVersion": 1,
+      "runId": "79479981-4b00-4596-a950-57dd9d2f53dd",
+      "planHash": "ed85cb7c5a010e573518cdd34f9c2ae22b1cb9eb76aa594e661ae6e9d9294679",
+      "attemptId": "cold-5-B",
+      "kind": "cold",
+      "ordinal": 5,
+      "project": "B",
+      "retry": 0,
+      "startedAt": "2026-08-13T12:53:12.984Z",
+      "host": {
+        "hostname": "03f809395a5d",
+        "uid": 1000,
+        "cgroup": "v2"
+      },
+      "versions": {
+        "node": "v22.23.2",
+        "chromium": "151.0.7922.34",
+        "codeServer": "4.131.0"
+      },
+      "browser": {
+        "context": "fresh",
+        "cache": "cleared",
+        "originStorage": "cleared",
+        "prewarmedRuntime": false
+      },
+      "precheck": {
+        "passed": true,
+        "load": [4.71, 4.28, 4.46],
+        "availableMemoryKiB": 12190524
+      },
+      "runtime": {
+        "projectToken": "project-0e1ab8bae4d31227",
+        "identityDigest": "aee0dbc2d3bff80d3040e0b2d9074b518d009c6ee036db326f9eadc844eaf37b",
+        "pidDigest": "15613089eef91241b2a7e1ffd2bc87afa4ab85d0870d96845e57f7986923d4fb",
+        "startDigest": "cf6ce290add53e1e1056df1c2f7e551bd384ba28acc89a3556b8120cab6e65b0",
+        "portToken": "388a63a0ed9a292378a1fe3e"
+      },
+      "stableUrl": "/projects/bl014-b/workbench/",
+      "clock": "process.hrtime.bigint",
+      "eventsNs": {
+        "activation": "155446107741578",
+        "runtime-start-requested": "155455947843032",
+        "runtime-health-ready": "155455974967784",
+        "stable-document-ready": "155452148368658",
+        "explorer-sentinel-ready": "155452431322469",
+        "terminal-prompt-ready": "155456330385237",
+        "workbench-usable": "155456330385237"
+      },
+      "phasesNs": {
+        "activation-to-runtime-start-requested": "9840101454",
+        "runtime-start-requested-to-runtime-health-ready": "27124752",
+        "runtime-health-ready-to-stable-document-ready": "-3826599126",
+        "stable-document-ready-to-explorer-sentinel-ready": "282953811",
+        "explorer-sentinel-ready-to-terminal-prompt-ready": "3899062768",
+        "terminal-prompt-ready-to-workbench-usable": "0",
+        "total": "10222643659"
+      },
+      "observedTotalNs": "10222643659",
+      "statisticalTotalNs": "10222643659",
+      "status": "success",
+      "failureClass": null,
+      "targetMs": 15000,
+      "targetMet": true,
+      "artifacts": {
+        "screenshot": "captured",
+        "trace": "captured",
+        "network": "captured",
+        "manifestId": "c2f0e5fae44d8a3842fa7a7ce1773981816965543198f7d4d4368090669beae8"
+      },
+      "boundary": {
+        "kind": "absence",
+        "passed": true,
+        "measuredResiduals": 0,
+        "expectedIdentityCount": 0
+      },
+      "homeReturned": false
+    },
+    {
+      "schemaVersion": 1,
+      "runId": "79479981-4b00-4596-a950-57dd9d2f53dd",
+      "planHash": "ed85cb7c5a010e573518cdd34f9c2ae22b1cb9eb76aa594e661ae6e9d9294679",
+      "attemptId": "warm-1-A",
+      "kind": "warm",
+      "ordinal": 6,
+      "project": "A",
+      "retry": 0,
+      "startedAt": "2026-08-13T12:53:26.218Z",
+      "host": {
+        "hostname": "03f809395a5d",
+        "uid": 1000,
+        "cgroup": "v2"
+      },
+      "versions": {
+        "node": "v22.23.2",
+        "chromium": "151.0.7922.34",
+        "codeServer": "4.131.0"
+      },
+      "browser": {
+        "context": "retained",
+        "cache": "retained",
+        "originStorage": "retained",
+        "prewarmedRuntime": false
+      },
+      "precheck": {
+        "passed": true,
+        "load": [4.78, 4.31, 4.47],
+        "availableMemoryKiB": 12183668
+      },
+      "runtime": {
+        "projectToken": "project-e58bc3a045ecbcb2",
+        "identityDigest": "610edc4da491b7f0a7a4abf52f63326dd7548849112d0b8dc6e24a6d621f22ae",
+        "pidDigest": "dbbce991911438f45f5562139ed5cb306736c4d26dcdb79c72ca544ad4d5f80c",
+        "startDigest": "2bad0915bbe71b30932f2d015762d6d39908a4f04f90aef7fcc39cf3710fa2b3",
+        "portToken": "e82c3d8eb0cc3910fca0b271"
+      },
+      "stableUrl": "/projects/bl014-a/workbench/",
+      "clock": "process.hrtime.bigint",
+      "eventsNs": {
+        "activation": "155460544626592",
+        "runtime-start-requested": "155469074781086",
+        "runtime-health-ready": "155469090983540",
+        "stable-document-ready": "155465477585256",
+        "explorer-sentinel-ready": "155465791208031",
+        "terminal-prompt-ready": "155469518071534",
+        "workbench-usable": "155469518071534"
+      },
+      "phasesNs": {
+        "activation-to-runtime-start-requested": "8530154494",
+        "runtime-start-requested-to-runtime-health-ready": "16202454",
+        "runtime-health-ready-to-stable-document-ready": "-3613398284",
+        "stable-document-ready-to-explorer-sentinel-ready": "313622775",
+        "explorer-sentinel-ready-to-terminal-prompt-ready": "3726863503",
+        "terminal-prompt-ready-to-workbench-usable": "0",
+        "total": "8973444942"
+      },
+      "observedTotalNs": "8973444942",
+      "statisticalTotalNs": "8973444942",
+      "status": "success",
+      "failureClass": null,
+      "targetMs": 2000,
+      "targetMet": false,
+      "artifacts": {
+        "screenshot": "captured",
+        "trace": "captured",
+        "network": "captured",
+        "manifestId": "a33a373df61bf8dcf19620d9c2d76ac3814ca933b24f8270ae8c11b81fed187b"
+      },
+      "boundary": {
+        "kind": "reuse",
+        "passed": true,
+        "measuredResiduals": 0,
+        "expectedIdentityCount": 1
+      },
+      "homeReturned": true
+    },
+    {
+      "schemaVersion": 1,
+      "runId": "79479981-4b00-4596-a950-57dd9d2f53dd",
+      "planHash": "ed85cb7c5a010e573518cdd34f9c2ae22b1cb9eb76aa594e661ae6e9d9294679",
+      "attemptId": "warm-2-B",
+      "kind": "warm",
+      "ordinal": 7,
+      "project": "B",
+      "retry": 0,
+      "startedAt": "2026-08-13T12:53:39.543Z",
+      "host": {
+        "hostname": "03f809395a5d",
+        "uid": 1000,
+        "cgroup": "v2"
+      },
+      "versions": {
+        "node": "v22.23.2",
+        "chromium": "151.0.7922.34",
+        "codeServer": "4.131.0"
+      },
+      "browser": {
+        "context": "retained",
+        "cache": "retained",
+        "originStorage": "retained",
+        "prewarmedRuntime": false
+      },
+      "precheck": {
+        "passed": true,
+        "load": [4.28, 4.22, 4.44],
+        "availableMemoryKiB": 11948312
+      },
+      "runtime": {
+        "projectToken": "project-0e1ab8bae4d31227",
+        "identityDigest": "bfa438e91a4c56507e2d350f3656f527402f1cae59278e8c7146dfb206b1994f",
+        "pidDigest": "c400fcc4ba5e194136bff05b74c37620cb956eb6197f3fad503baa8abc2afc3a",
+        "startDigest": "89768a40588ad803d88a9edb921c9387f0b2e81d5dc22bfafcaf3af0838d9d91",
+        "portToken": "afdb0b73dc0643c98d12a438"
+      },
+      "stableUrl": "/projects/bl014-b/workbench/",
+      "clock": "process.hrtime.bigint",
+      "eventsNs": {
+        "activation": "155471867934049",
+        "runtime-start-requested": "155481369893614",
+        "runtime-health-ready": "155481379798302",
+        "stable-document-ready": "155477006536613",
+        "explorer-sentinel-ready": "155477225349507",
+        "terminal-prompt-ready": "155482057260439",
+        "workbench-usable": "155482057260439"
+      },
+      "phasesNs": {
+        "activation-to-runtime-start-requested": "9501959565",
+        "runtime-start-requested-to-runtime-health-ready": "9904688",
+        "runtime-health-ready-to-stable-document-ready": "-4373261689",
+        "stable-document-ready-to-explorer-sentinel-ready": "218812894",
+        "explorer-sentinel-ready-to-terminal-prompt-ready": "4831910932",
+        "terminal-prompt-ready-to-workbench-usable": "0",
+        "total": "10189326390"
+      },
+      "observedTotalNs": "10189326390",
+      "statisticalTotalNs": "10189326390",
+      "status": "success",
+      "failureClass": null,
+      "targetMs": 2000,
+      "targetMet": false,
+      "artifacts": {
+        "screenshot": "captured",
+        "trace": "captured",
+        "network": "captured",
+        "manifestId": "d189409272e98146d89b00517c78f2b1f5e293e724b695c5a412efa97771a88c"
+      },
+      "boundary": {
+        "kind": "reuse",
+        "passed": true,
+        "measuredResiduals": 0,
+        "expectedIdentityCount": 1
+      },
+      "homeReturned": true
+    },
+    {
+      "schemaVersion": 1,
+      "runId": "79479981-4b00-4596-a950-57dd9d2f53dd",
+      "planHash": "ed85cb7c5a010e573518cdd34f9c2ae22b1cb9eb76aa594e661ae6e9d9294679",
+      "attemptId": "warm-3-C",
+      "kind": "warm",
+      "ordinal": 8,
+      "project": "C",
+      "retry": 0,
+      "startedAt": "2026-08-13T12:53:53.430Z",
+      "host": {
+        "hostname": "03f809395a5d",
+        "uid": 1000,
+        "cgroup": "v2"
+      },
+      "versions": {
+        "node": "v22.23.2",
+        "chromium": "151.0.7922.34",
+        "codeServer": "4.131.0"
+      },
+      "browser": {
+        "context": "retained",
+        "cache": "retained",
+        "originStorage": "retained",
+        "prewarmedRuntime": false
+      },
+      "precheck": {
+        "passed": true,
+        "load": [4.74, 4.33, 4.47],
+        "availableMemoryKiB": 11778768
+      },
+      "runtime": {
+        "projectToken": "project-83c7164485f4dd78",
+        "identityDigest": "879263e399366997fe809b044a5fcbac7b58c949935262f9f29445d946add906",
+        "pidDigest": "0681873392986750725787d66dd3c12df38ce45405eb7e1a7bb81ee6a896cec8",
+        "startDigest": "a6debe0241ab521ed841fa5b43b81af40107e689071c0a1c35ee57e471bf3996",
+        "portToken": "5224a1625f647b475f49262d"
+      },
+      "stableUrl": "/projects/bl014-c/workbench/",
+      "clock": "process.hrtime.bigint",
+      "eventsNs": {
+        "activation": "155486414206379",
+        "runtime-start-requested": "155494701226809",
+        "runtime-health-ready": "155494706572453",
+        "stable-document-ready": "155490788246124",
+        "explorer-sentinel-ready": "155491080295363",
+        "terminal-prompt-ready": "155495155230057",
+        "workbench-usable": "155495155230057"
+      },
+      "phasesNs": {
+        "activation-to-runtime-start-requested": "8287020430",
+        "runtime-start-requested-to-runtime-health-ready": "5345644",
+        "runtime-health-ready-to-stable-document-ready": "-3918326329",
+        "stable-document-ready-to-explorer-sentinel-ready": "292049239",
+        "explorer-sentinel-ready-to-terminal-prompt-ready": "4074934694",
+        "terminal-prompt-ready-to-workbench-usable": "0",
+        "total": "8741023678"
+      },
+      "observedTotalNs": "8741023678",
+      "statisticalTotalNs": "8741023678",
+      "status": "success",
+      "failureClass": null,
+      "targetMs": 2000,
+      "targetMet": false,
+      "artifacts": {
+        "screenshot": "captured",
+        "trace": "captured",
+        "network": "captured",
+        "manifestId": "7009d90bf37a3ecd5968acc5fc97880e417abf658768c9dedb5ece534c5e2aef"
+      },
+      "boundary": {
+        "kind": "reuse",
+        "passed": true,
+        "measuredResiduals": 0,
+        "expectedIdentityCount": 1
+      },
+      "homeReturned": true
+    },
+    {
+      "schemaVersion": 1,
+      "runId": "79479981-4b00-4596-a950-57dd9d2f53dd",
+      "planHash": "ed85cb7c5a010e573518cdd34f9c2ae22b1cb9eb76aa594e661ae6e9d9294679",
+      "attemptId": "warm-4-A",
+      "kind": "warm",
+      "ordinal": 9,
+      "project": "A",
+      "retry": 0,
+      "startedAt": "2026-08-13T12:54:08.621Z",
+      "host": {
+        "hostname": "03f809395a5d",
+        "uid": 1000,
+        "cgroup": "v2"
+      },
+      "versions": {
+        "node": "v22.23.2",
+        "chromium": "151.0.7922.34",
+        "codeServer": "4.131.0"
+      },
+      "browser": {
+        "context": "retained",
+        "cache": "retained",
+        "originStorage": "retained",
+        "prewarmedRuntime": false
+      },
+      "precheck": {
+        "passed": true,
+        "load": [4.65, 4.33, 4.47],
+        "availableMemoryKiB": 11510232
+      },
+      "runtime": {
+        "projectToken": "project-e58bc3a045ecbcb2",
+        "identityDigest": "610edc4da491b7f0a7a4abf52f63326dd7548849112d0b8dc6e24a6d621f22ae",
+        "pidDigest": "dbbce991911438f45f5562139ed5cb306736c4d26dcdb79c72ca544ad4d5f80c",
+        "startDigest": "2bad0915bbe71b30932f2d015762d6d39908a4f04f90aef7fcc39cf3710fa2b3",
+        "portToken": "e82c3d8eb0cc3910fca0b271"
+      },
+      "stableUrl": "/projects/bl014-a/workbench/",
+      "clock": "process.hrtime.bigint",
+      "eventsNs": {
+        "activation": "155501044175838",
+        "runtime-start-requested": "155504504825518",
+        "runtime-health-ready": "155504522207689",
+        "stable-document-ready": "155504784835857",
+        "explorer-sentinel-ready": "155505415887413",
+        "terminal-prompt-ready": "155509150493441",
+        "workbench-usable": "155509150493441"
+      },
+      "phasesNs": {
+        "activation-to-runtime-start-requested": "3460649680",
+        "runtime-start-requested-to-runtime-health-ready": "17382171",
+        "runtime-health-ready-to-stable-document-ready": "262628168",
+        "stable-document-ready-to-explorer-sentinel-ready": "631051556",
+        "explorer-sentinel-ready-to-terminal-prompt-ready": "3734606028",
+        "terminal-prompt-ready-to-workbench-usable": "0",
+        "total": "8106317603"
+      },
+      "observedTotalNs": "8106317603",
+      "statisticalTotalNs": "8106317603",
+      "status": "success",
+      "failureClass": null,
+      "targetMs": 2000,
+      "targetMet": false,
+      "artifacts": {
+        "screenshot": "captured",
+        "trace": "captured",
+        "network": "captured",
+        "manifestId": "fe97346d241f26d038f63cb56a193499a8fcd142c0c40cf1f5c650b079b1c9ff"
+      },
+      "boundary": {
+        "kind": "reuse",
+        "passed": true,
+        "measuredResiduals": 0,
+        "expectedIdentityCount": 1
+      },
+      "homeReturned": true
+    },
+    {
+      "schemaVersion": 1,
+      "runId": "79479981-4b00-4596-a950-57dd9d2f53dd",
+      "planHash": "ed85cb7c5a010e573518cdd34f9c2ae22b1cb9eb76aa594e661ae6e9d9294679",
+      "attemptId": "warm-5-B",
+      "kind": "warm",
+      "ordinal": 10,
+      "project": "B",
+      "retry": 0,
+      "startedAt": "2026-08-13T12:54:24.164Z",
+      "host": {
+        "hostname": "03f809395a5d",
+        "uid": 1000,
+        "cgroup": "v2"
+      },
+      "versions": {
+        "node": "v22.23.2",
+        "chromium": "151.0.7922.34",
+        "codeServer": "4.131.0"
+      },
+      "browser": {
+        "context": "retained",
+        "cache": "retained",
+        "originStorage": "retained",
+        "prewarmedRuntime": false
+      },
+      "precheck": {
+        "passed": true,
+        "load": [5.25, 4.47, 4.51],
+        "availableMemoryKiB": 11477092
+      },
+      "runtime": {
+        "projectToken": "project-0e1ab8bae4d31227",
+        "identityDigest": "bfa438e91a4c56507e2d350f3656f527402f1cae59278e8c7146dfb206b1994f",
+        "pidDigest": "c400fcc4ba5e194136bff05b74c37620cb956eb6197f3fad503baa8abc2afc3a",
+        "startDigest": "89768a40588ad803d88a9edb921c9387f0b2e81d5dc22bfafcaf3af0838d9d91",
+        "portToken": "afdb0b73dc0643c98d12a438"
+      },
+      "stableUrl": "/projects/bl014-b/workbench/",
+      "clock": "process.hrtime.bigint",
+      "eventsNs": {
+        "activation": "155516387065167",
+        "runtime-start-requested": "155522604233588",
+        "runtime-health-ready": "155522616190861",
+        "stable-document-ready": "155520329572406",
+        "explorer-sentinel-ready": "155521057837402",
+        "terminal-prompt-ready": "155524332347349",
+        "workbench-usable": "155524332347349"
+      },
+      "phasesNs": {
+        "activation-to-runtime-start-requested": "6217168421",
+        "runtime-start-requested-to-runtime-health-ready": "11957273",
+        "runtime-health-ready-to-stable-document-ready": "-2286618455",
+        "stable-document-ready-to-explorer-sentinel-ready": "728264996",
+        "explorer-sentinel-ready-to-terminal-prompt-ready": "3274509947",
+        "terminal-prompt-ready-to-workbench-usable": "0",
+        "total": "7945282182"
+      },
+      "observedTotalNs": "7945282182",
+      "statisticalTotalNs": "7945282182",
+      "status": "success",
+      "failureClass": null,
+      "targetMs": 2000,
+      "targetMet": false,
+      "artifacts": {
+        "screenshot": "captured",
+        "trace": "captured",
+        "network": "captured",
+        "manifestId": "ba31a9fab0b551f1b03d0b0b35076176b5875350614821979e4b0897e8df3306"
+      },
+      "boundary": {
+        "kind": "reuse",
+        "passed": true,
+        "measuredResiduals": 0,
+        "expectedIdentityCount": 1
+      },
+      "homeReturned": true
+    },
+    {
+      "schemaVersion": 1,
+      "runId": "79479981-4b00-4596-a950-57dd9d2f53dd",
+      "planHash": "ed85cb7c5a010e573518cdd34f9c2ae22b1cb9eb76aa594e661ae6e9d9294679",
+      "attemptId": "warm-6-C",
+      "kind": "warm",
+      "ordinal": 11,
+      "project": "C",
+      "retry": 0,
+      "startedAt": "2026-08-13T12:54:42.636Z",
+      "host": {
+        "hostname": "03f809395a5d",
+        "uid": 1000,
+        "cgroup": "v2"
+      },
+      "versions": {
+        "node": "v22.23.2",
+        "chromium": "151.0.7922.34",
+        "codeServer": "4.131.0"
+      },
+      "browser": {
+        "context": "retained",
+        "cache": "retained",
+        "originStorage": "retained",
+        "prewarmedRuntime": false
+      },
+      "precheck": {
+        "passed": true,
+        "load": [5, 4.45, 4.5],
+        "availableMemoryKiB": 11242516
+      },
+      "runtime": {
+        "projectToken": "project-83c7164485f4dd78",
+        "identityDigest": "879263e399366997fe809b044a5fcbac7b58c949935262f9f29445d946add906",
+        "pidDigest": "0681873392986750725787d66dd3c12df38ce45405eb7e1a7bb81ee6a896cec8",
+        "startDigest": "a6debe0241ab521ed841fa5b43b81af40107e689071c0a1c35ee57e471bf3996",
+        "portToken": "5224a1625f647b475f49262d"
+      },
+      "stableUrl": "/projects/bl014-c/workbench/",
+      "clock": "process.hrtime.bigint",
+      "eventsNs": {
+        "activation": "155533264993502",
+        "runtime-start-requested": "155537586889355",
+        "runtime-health-ready": "155537593409409",
+        "stable-document-ready": "155537834583980",
+        "explorer-sentinel-ready": "155538374195971",
+        "terminal-prompt-ready": "155542086649163",
+        "workbench-usable": "155542086649163"
+      },
+      "phasesNs": {
+        "activation-to-runtime-start-requested": "4321895853",
+        "runtime-start-requested-to-runtime-health-ready": "6520054",
+        "runtime-health-ready-to-stable-document-ready": "241174571",
+        "stable-document-ready-to-explorer-sentinel-ready": "539611991",
+        "explorer-sentinel-ready-to-terminal-prompt-ready": "3712453192",
+        "terminal-prompt-ready-to-workbench-usable": "0",
+        "total": "8821655661"
+      },
+      "observedTotalNs": "8821655661",
+      "statisticalTotalNs": "8821655661",
+      "status": "success",
+      "failureClass": null,
+      "targetMs": 2000,
+      "targetMet": false,
+      "artifacts": {
+        "screenshot": "captured",
+        "trace": "captured",
+        "network": "captured",
+        "manifestId": "f531402bd564a2829eee5d5474043b09be423f28bde07294670a87c556bffeed"
+      },
+      "boundary": {
+        "kind": "reuse",
+        "passed": true,
+        "measuredResiduals": 0,
+        "expectedIdentityCount": 1
+      },
+      "homeReturned": true
+    },
+    {
+      "schemaVersion": 1,
+      "runId": "79479981-4b00-4596-a950-57dd9d2f53dd",
+      "planHash": "ed85cb7c5a010e573518cdd34f9c2ae22b1cb9eb76aa594e661ae6e9d9294679",
+      "attemptId": "warm-7-A",
+      "kind": "warm",
+      "ordinal": 12,
+      "project": "A",
+      "retry": 0,
+      "startedAt": "2026-08-13T12:55:01.394Z",
+      "host": {
+        "hostname": "03f809395a5d",
+        "uid": 1000,
+        "cgroup": "v2"
+      },
+      "versions": {
+        "node": "v22.23.2",
+        "chromium": "151.0.7922.34",
+        "codeServer": "4.131.0"
+      },
+      "browser": {
+        "context": "retained",
+        "cache": "retained",
+        "originStorage": "retained",
+        "prewarmedRuntime": false
+      },
+      "precheck": {
+        "passed": true,
+        "load": [4.69, 4.42, 4.49],
+        "availableMemoryKiB": 11083508
+      },
+      "runtime": {
+        "projectToken": "project-e58bc3a045ecbcb2",
+        "identityDigest": "610edc4da491b7f0a7a4abf52f63326dd7548849112d0b8dc6e24a6d621f22ae",
+        "pidDigest": "dbbce991911438f45f5562139ed5cb306736c4d26dcdb79c72ca544ad4d5f80c",
+        "startDigest": "2bad0915bbe71b30932f2d015762d6d39908a4f04f90aef7fcc39cf3710fa2b3",
+        "portToken": "e82c3d8eb0cc3910fca0b271"
+      },
+      "stableUrl": "/projects/bl014-a/workbench/",
+      "clock": "process.hrtime.bigint",
+      "eventsNs": {
+        "activation": "155551845797363",
+        "runtime-start-requested": "155555801852225",
+        "runtime-health-ready": "155555812141812",
+        "stable-document-ready": "155556133035003",
+        "explorer-sentinel-ready": "155556651421363",
+        "terminal-prompt-ready": "155560474641268",
+        "workbench-usable": "155560474641268"
+      },
+      "phasesNs": {
+        "activation-to-runtime-start-requested": "3956054862",
+        "runtime-start-requested-to-runtime-health-ready": "10289587",
+        "runtime-health-ready-to-stable-document-ready": "320893191",
+        "stable-document-ready-to-explorer-sentinel-ready": "518386360",
+        "explorer-sentinel-ready-to-terminal-prompt-ready": "3823219905",
+        "terminal-prompt-ready-to-workbench-usable": "0",
+        "total": "8628843905"
+      },
+      "observedTotalNs": "8628843905",
+      "statisticalTotalNs": null,
+      "status": "failed",
+      "failureClass": "artifact-capture-failed",
+      "targetMs": 2000,
+      "targetMet": false,
+      "artifacts": {
+        "screenshot": "captured",
+        "trace": "failed",
+        "network": "captured",
+        "manifestId": "2330cbed45f3b43dca34383fa17afe25a0598db66c694968cc42dadd470de15a"
+      },
+      "boundary": {
+        "kind": "reuse",
+        "passed": true,
+        "measuredResiduals": 0,
+        "expectedIdentityCount": 1
+      },
+      "homeReturned": true
+    },
+    {
+      "schemaVersion": 1,
+      "runId": "79479981-4b00-4596-a950-57dd9d2f53dd",
+      "planHash": "ed85cb7c5a010e573518cdd34f9c2ae22b1cb9eb76aa594e661ae6e9d9294679",
+      "attemptId": "warm-8-B",
+      "kind": "warm",
+      "ordinal": 13,
+      "project": "B",
+      "retry": 0,
+      "startedAt": "2026-08-13T12:55:14.918Z",
+      "host": {
+        "hostname": "03f809395a5d",
+        "uid": 1000,
+        "cgroup": "v2"
+      },
+      "versions": {
+        "node": "v22.23.2",
+        "chromium": "151.0.7922.34",
+        "codeServer": "4.131.0"
+      },
+      "browser": {
+        "context": "retained",
+        "cache": "retained",
+        "originStorage": "retained",
+        "prewarmedRuntime": false
+      },
+      "precheck": {
+        "passed": true,
+        "load": [4.32, 4.35, 4.47],
+        "availableMemoryKiB": 10944124
+      },
+      "runtime": {
+        "projectToken": "project-0e1ab8bae4d31227",
+        "identityDigest": "bfa438e91a4c56507e2d350f3656f527402f1cae59278e8c7146dfb206b1994f",
+        "pidDigest": "c400fcc4ba5e194136bff05b74c37620cb956eb6197f3fad503baa8abc2afc3a",
+        "startDigest": "89768a40588ad803d88a9edb921c9387f0b2e81d5dc22bfafcaf3af0838d9d91",
+        "portToken": "afdb0b73dc0643c98d12a438"
+      },
+      "stableUrl": "/projects/bl014-b/workbench/",
+      "clock": "process.hrtime.bigint",
+      "eventsNs": {
+        "activation": "155566266229613",
+        "runtime-start-requested": "155570066599191",
+        "runtime-health-ready": "155570093043019",
+        "stable-document-ready": "155570339082589",
+        "explorer-sentinel-ready": "155571558788253",
+        "terminal-prompt-ready": "155574321413006",
+        "workbench-usable": "155574321413006"
+      },
+      "phasesNs": {
+        "activation-to-runtime-start-requested": "3800369578",
+        "runtime-start-requested-to-runtime-health-ready": "26443828",
+        "runtime-health-ready-to-stable-document-ready": "246039570",
+        "stable-document-ready-to-explorer-sentinel-ready": "1219705664",
+        "explorer-sentinel-ready-to-terminal-prompt-ready": "2762624753",
+        "terminal-prompt-ready-to-workbench-usable": "0",
+        "total": "8055183393"
+      },
+      "observedTotalNs": "8055183393",
+      "statisticalTotalNs": null,
+      "status": "failed",
+      "failureClass": "artifact-capture-failed",
+      "targetMs": 2000,
+      "targetMet": false,
+      "artifacts": {
+        "screenshot": "captured",
+        "trace": "failed",
+        "network": "captured",
+        "manifestId": "acb0de7a7022da3cd5aec9163ec3dbda08496acde3dbba7e545c02ae86d648c9"
+      },
+      "boundary": {
+        "kind": "reuse",
+        "passed": true,
+        "measuredResiduals": 0,
+        "expectedIdentityCount": 1
+      },
+      "homeReturned": true
+    },
+    {
+      "schemaVersion": 1,
+      "runId": "79479981-4b00-4596-a950-57dd9d2f53dd",
+      "planHash": "ed85cb7c5a010e573518cdd34f9c2ae22b1cb9eb76aa594e661ae6e9d9294679",
+      "attemptId": "warm-9-C",
+      "kind": "warm",
+      "ordinal": 14,
+      "project": "C",
+      "retry": 0,
+      "startedAt": "2026-08-13T12:55:28.751Z",
+      "host": {
+        "hostname": "03f809395a5d",
+        "uid": 1000,
+        "cgroup": "v2"
+      },
+      "versions": {
+        "node": "v22.23.2",
+        "chromium": "151.0.7922.34",
+        "codeServer": "4.131.0"
+      },
+      "browser": {
+        "context": "retained",
+        "cache": "retained",
+        "originStorage": "retained",
+        "prewarmedRuntime": false
+      },
+      "precheck": {
+        "passed": true,
+        "load": [4.84, 4.47, 4.5],
+        "availableMemoryKiB": 11161504
+      },
+      "runtime": {
+        "projectToken": "project-83c7164485f4dd78",
+        "identityDigest": "879263e399366997fe809b044a5fcbac7b58c949935262f9f29445d946add906",
+        "pidDigest": "0681873392986750725787d66dd3c12df38ce45405eb7e1a7bb81ee6a896cec8",
+        "startDigest": "a6debe0241ab521ed841fa5b43b81af40107e689071c0a1c35ee57e471bf3996",
+        "portToken": "5224a1625f647b475f49262d"
+      },
+      "stableUrl": "/projects/bl014-c/workbench/",
+      "clock": "process.hrtime.bigint",
+      "eventsNs": {
+        "activation": "155580048709897",
+        "runtime-start-requested": "155583671127359",
+        "runtime-health-ready": "155583676410157",
+        "stable-document-ready": "155583945054346",
+        "explorer-sentinel-ready": "155584480632304",
+        "terminal-prompt-ready": "155587787800047",
+        "workbench-usable": "155587787800047"
+      },
+      "phasesNs": {
+        "activation-to-runtime-start-requested": "3622417462",
+        "runtime-start-requested-to-runtime-health-ready": "5282798",
+        "runtime-health-ready-to-stable-document-ready": "268644189",
+        "stable-document-ready-to-explorer-sentinel-ready": "535577958",
+        "explorer-sentinel-ready-to-terminal-prompt-ready": "3307167743",
+        "terminal-prompt-ready-to-workbench-usable": "0",
+        "total": "7739090150"
+      },
+      "observedTotalNs": "7739090150",
+      "statisticalTotalNs": null,
+      "status": "failed",
+      "failureClass": "artifact-capture-failed",
+      "targetMs": 2000,
+      "targetMet": false,
+      "artifacts": {
+        "screenshot": "captured",
+        "trace": "failed",
+        "network": "captured",
+        "manifestId": "f52afa1617182e76fb84d308202bb50f787445f6d5fec4c47895595c30c7f765"
+      },
+      "boundary": {
+        "kind": "reuse",
+        "passed": true,
+        "measuredResiduals": 0,
+        "expectedIdentityCount": 1
+      },
+      "homeReturned": true
+    },
+    {
+      "schemaVersion": 1,
+      "runId": "79479981-4b00-4596-a950-57dd9d2f53dd",
+      "planHash": "ed85cb7c5a010e573518cdd34f9c2ae22b1cb9eb76aa594e661ae6e9d9294679",
+      "attemptId": "warm-10-A",
+      "kind": "warm",
+      "ordinal": 15,
+      "project": "A",
+      "retry": 0,
+      "startedAt": "2026-08-13T12:55:42.568Z",
+      "host": {
+        "hostname": "03f809395a5d",
+        "uid": 1000,
+        "cgroup": "v2"
+      },
+      "versions": {
+        "node": "v22.23.2",
+        "chromium": "151.0.7922.34",
+        "codeServer": "4.131.0"
+      },
+      "browser": {
+        "context": "retained",
+        "cache": "retained",
+        "originStorage": "retained",
+        "prewarmedRuntime": false
+      },
+      "precheck": {
+        "passed": true,
+        "load": [4.48, 4.4, 4.48],
+        "availableMemoryKiB": 10992368
+      },
+      "runtime": {
+        "projectToken": "project-e58bc3a045ecbcb2",
+        "identityDigest": "610edc4da491b7f0a7a4abf52f63326dd7548849112d0b8dc6e24a6d621f22ae",
+        "pidDigest": "dbbce991911438f45f5562139ed5cb306736c4d26dcdb79c72ca544ad4d5f80c",
+        "startDigest": "2bad0915bbe71b30932f2d015762d6d39908a4f04f90aef7fcc39cf3710fa2b3",
+        "portToken": "e82c3d8eb0cc3910fca0b271"
+      },
+      "stableUrl": "/projects/bl014-a/workbench/",
+      "clock": "process.hrtime.bigint",
+      "eventsNs": {
+        "activation": "155593679772177",
+        "runtime-start-requested": "155597038770139",
+        "runtime-health-ready": "155597050972764",
+        "stable-document-ready": "155597276530159",
+        "explorer-sentinel-ready": "155598065789899",
+        "terminal-prompt-ready": "155601516065621",
+        "workbench-usable": "155601516065621"
+      },
+      "phasesNs": {
+        "activation-to-runtime-start-requested": "3358997962",
+        "runtime-start-requested-to-runtime-health-ready": "12202625",
+        "runtime-health-ready-to-stable-document-ready": "225557395",
+        "stable-document-ready-to-explorer-sentinel-ready": "789259740",
+        "explorer-sentinel-ready-to-terminal-prompt-ready": "3450275722",
+        "terminal-prompt-ready-to-workbench-usable": "0",
+        "total": "7836293444"
+      },
+      "observedTotalNs": "7836293444",
+      "statisticalTotalNs": null,
+      "status": "failed",
+      "failureClass": "artifact-capture-failed",
+      "targetMs": 2000,
+      "targetMet": false,
+      "artifacts": {
+        "screenshot": "captured",
+        "trace": "failed",
+        "network": "captured",
+        "manifestId": "4a598d4e5a4d58bcdf1e62782ce801aa3e54569dc73e2c41cbd75d0b8d8900c6"
+      },
+      "boundary": {
+        "kind": "reuse",
+        "passed": true,
+        "measuredResiduals": 0,
+        "expectedIdentityCount": 1
+      },
+      "homeReturned": true
+    }
+  ]
+}

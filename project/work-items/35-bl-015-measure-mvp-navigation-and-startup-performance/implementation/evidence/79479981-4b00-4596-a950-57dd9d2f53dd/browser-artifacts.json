@@ -1,0 +1,3466 @@
+{
+  "schemaVersion": 1,
+  "runId": "79479981-4b00-4596-a950-57dd9d2f53dd",
+  "artifacts": [
+    {
+      "attemptId": "cold-1-A",
+      "manifestId": "38799aae2aef5634c2c4ea1b66c59372fc1ef79dfce4d1f59404dd919c215896",
+      "screenshot": {
+        "status": "captured",
+        "digest": "7c773394891e26bb3a99dc717d3dd20e135254799177f34e9b17e39cd161e1b0"
+      },
+      "trace": {
+        "status": "captured",
+        "digest": "9a1fdc6db12dd4c94c8b5fdd2cb48e234d003fa54668138d443e4b059b209066"
+      },
+      "network": {
+        "status": "captured",
+        "entries": [
+          {
+            "method": "GET",
+            "kind": "document",
+            "pathDigest": "4bbd1b13c469db4bff68f3d7cfe88e71ed8701cfe81f337e6f83defdb35d9f45"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "4bbd1b13c469db4bff68f3d7cfe88e71ed8701cfe81f337e6f83defdb35d9f45"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "4bbd1b13c469db4bff68f3d7cfe88e71ed8701cfe81f337e6f83defdb35d9f45"
+          },
+          {
+            "method": "GET",
+            "kind": "stylesheet",
+            "pathDigest": "bce46da1708b9e83a5f63539940a1e1306e3cd921aa8ca47cefc5b2d7ac3d900"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "74947b8f9831fa0b263185eee8afbdd73acaccff8f1399df609f1df1f7de88a6"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "f5e5bdbe9886a1ade160cf23c8c2758e913e111acfa1e918921c8bf2695e18f8"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "a3aae0a54b6bf94190dab342c6a3f1f7ed6f2ac34a5ffa568e60d40a358f18a3"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "9b9abf5e36cbfb33204b2d01485db56273b49755d13ff836c6631d2930d66b3f"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "20d70ce7a0bc5f72254ec041ec2f6acff9721533a6c57225297bea33146c1a44"
+          },
+          {
+            "method": "GET",
+            "kind": "image",
+            "pathDigest": "f1c6e58b797675556f2bd3e584f0bccfc82c6db15f5be29ba5cb2ab3db3444d6"
+          },
+          {
+            "method": "GET",
+            "kind": "document",
+            "pathDigest": "6fd3140a6b2f26e31c6229688b0f356d88e93114035b236ff94b8aea18aaac65"
+          },
+          {
+            "method": "GET",
+            "kind": "font",
+            "pathDigest": "6972270ec904fb7d24c64c209715fd1c82be80a78c0ff7ceb92ef273a6142eb7"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "b9a6fd7d8bdcab8ae3b032cdf2a0cc04f762e48dd95535d1d03eb2ae448fcd41"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "dd1a62d4dbaa4f9714505a3692b63a0e85bbbfff739e631326d2c859ec99c28e"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "49c05fc7409a440c4b0cb7e1a8397d4945f4e1596f5475bde455ab3bca7956af"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "d355dae9a1af4d2c85bc2e679d7ab58a9f4ffd1aa11f380b6fdcb6603997ebc9"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "52053243da0958fe8242333542189e53c48a33f63f6dc9161ec5c932cbcde541"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "52053243da0958fe8242333542189e53c48a33f63f6dc9161ec5c932cbcde541"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "52053243da0958fe8242333542189e53c48a33f63f6dc9161ec5c932cbcde541"
+          },
+          {
+            "method": "GET",
+            "kind": "font",
+            "pathDigest": "52053243da0958fe8242333542189e53c48a33f63f6dc9161ec5c932cbcde541"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "52053243da0958fe8242333542189e53c48a33f63f6dc9161ec5c932cbcde541"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "52053243da0958fe8242333542189e53c48a33f63f6dc9161ec5c932cbcde541"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "b36620c962f732a8b519caef6f0cc04f5b953604369545ceaad62abf0de2572e"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "7e1d121bcef318b79ab3d13908bb22b56a5b8fc6e09ace280ca45981aab28012"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "a7c2cbe50c10b6bb7bd362cb00357808fbea57304626948c01bf75356b0a7b97"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "5ad2e7779ec048b89058dc6d5149d7be28da5e721b6878981c113550c9ba40f8"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "93be43dc938494d46c9e0086294a45c6fdda8bc1667b573fe5c0116fedf080f2"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "2dec0f26478b96fad34530a8903f5167a7b1fbcf4fb1c9e78bd5c313c1ca1486"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "93f78dd16e2a798d8995922d00f507a39a67f14b4eb01c4caa98e742fb53f3ff"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "6b4dede2de486de9069aa8f2d43dd8079abddb743a2df332cb3931ccd6d2232d"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "52053243da0958fe8242333542189e53c48a33f63f6dc9161ec5c932cbcde541"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "14c73391eb8c8ebbd5cff76bf2cef31d5d8c2a2dd0a3a86f10979eb90b5f5857"
+          },
+          {
+            "method": "GET",
+            "kind": "image",
+            "pathDigest": "dd0381924e7298f572baae5cfcb41887c0233911c1b6c7cf2f34c1ffb580af53"
+          },
+          {
+            "method": "GET",
+            "kind": "image",
+            "pathDigest": "b5b2b63b7889df9b97873b9c8151102d4ae756d18734e4a8f0d287ec0f68b136"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "d2560a88809c72438474622e8f9caa5ecaed50868e6ba7bb5933948941ebd18d"
+          }
+        ]
+      }
+    },
+    {
+      "attemptId": "cold-2-B",
+      "manifestId": "bdfd3ec00286cfdd6991c3ccb8f45716e98c0ead4209ba93d1257e36dd9d22e1",
+      "screenshot": {
+        "status": "captured",
+        "digest": "e8ce04788955ade5b54ba8d9b817e7942a6d03f19ec78b795e2fbe26b747b750"
+      },
+      "trace": {
+        "status": "captured",
+        "digest": "4606fb0c6c84738744f51a9afc4d9b8e7e81c31ed52f152ee55380454fd15448"
+      },
+      "network": {
+        "status": "captured",
+        "entries": [
+          {
+            "method": "GET",
+            "kind": "document",
+            "pathDigest": "2ea53a5299b137361a04e85dac5894f30e5ef057644fb4acc95774320738b015"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "2ea53a5299b137361a04e85dac5894f30e5ef057644fb4acc95774320738b015"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "2ea53a5299b137361a04e85dac5894f30e5ef057644fb4acc95774320738b015"
+          },
+          {
+            "method": "GET",
+            "kind": "stylesheet",
+            "pathDigest": "ff3c05edca8567deabaf6268fecc270088d963d3635f5d7d4cd5f16bd7e1e620"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "30185b0a013cea2fa232eea8ea6390c74b901e17d16f170f6ade56cefe53dd57"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "d9e38dadfb3a8d7c98ca8ddd5af981bc6725392e75f0ae341a3b04be15972fce"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "2d1734980475781065e74c3baef6607571dc1d9380a1c7434d529db1ccb9ffd9"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "63cd3aa6dcec57827caa590083f8c77cc4b9ceaebd046c3106801decd53fe85f"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "18c34ea68865764070aec151012bd60b687239fc859914442a614d4aacab451e"
+          },
+          {
+            "method": "GET",
+            "kind": "image",
+            "pathDigest": "37b2639e72e8d831a2816204efb14236ea4c3df4f522fcd10f2b444c5869ba8d"
+          },
+          {
+            "method": "GET",
+            "kind": "document",
+            "pathDigest": "5e40188d0663f49ff3f128eb7f2a094d5e7a1c6a494e52ae7f4d954db1e011a4"
+          },
+          {
+            "method": "GET",
+            "kind": "font",
+            "pathDigest": "4994f5db1bdd756466da3f6fa73d1d0cbadbda1afaf5b531fc89bc6434db0b92"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "7c29b9885257f1bc063d42210d81fa6d5b23070ce7cc351e15e7c9eb627e7a44"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "e5c1dcf5a7d278b0ea0cc4ca3c7d6baa15163fb081040544cb140ef0a71af445"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "1302b82cc3f71b7eeae85d18862c061ff6f5ec6080205cea113487ccad14318f"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "1a7301827aee41178466009f22dc8d029c4bccb8e66f32decbfe236e7a57b02f"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "b8bcd72614b6d77ded45bc975e27965671a9314fb030fd8d14c2c1b7668200d9"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "b8bcd72614b6d77ded45bc975e27965671a9314fb030fd8d14c2c1b7668200d9"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "b8bcd72614b6d77ded45bc975e27965671a9314fb030fd8d14c2c1b7668200d9"
+          },
+          {
+            "method": "GET",
+            "kind": "font",
+            "pathDigest": "b8bcd72614b6d77ded45bc975e27965671a9314fb030fd8d14c2c1b7668200d9"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "b8bcd72614b6d77ded45bc975e27965671a9314fb030fd8d14c2c1b7668200d9"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "b8bcd72614b6d77ded45bc975e27965671a9314fb030fd8d14c2c1b7668200d9"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "3c5ff277882ca05cd4e1001a22b0a8e0f0e99ca76b71ec8125e789fe091ad12b"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "5c7ae2cf60d129f7ac16dd56b51d05680a149d74d0310b87ac5b74f571f78fff"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "16bdd5597fb5100ab5306781b8f22809af9e9c414146ec10392e02bcbe3dea50"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "b8bcd72614b6d77ded45bc975e27965671a9314fb030fd8d14c2c1b7668200d9"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "0affe7509d1e3b8782ea439b0697cdd53d8e748107876aaa38e7dae3fdb4e954"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "fbf7dab3e2f5d1b0e9018c7e75ce3f276dca4815f98fb42eba6d775d4b11a214"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "34771f2d73b9a58f99e9f87bbb33a6a07ad6db3ae0ee97093c70e439345f4b90"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "e942f37a6afe49349a58535af791233b41c67f9e8ff6637f75e223793ef6e0a2"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "1ab95e989b138835f4a323aec11530e0ce56c22bb79af17d400fa22d23116f8c"
+          },
+          {
+            "method": "GET",
+            "kind": "image",
+            "pathDigest": "3278dab5c5cc82c9c1c063bc1d04b914df2daa2094a0df43098b9a412980688c"
+          },
+          {
+            "method": "GET",
+            "kind": "image",
+            "pathDigest": "630d8ef88a3429adcea90a369a226af966a01488bf4e21a3249999601611a955"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "31a03a2f2bf05ad09196afbfa4f914c742e739b39114d1b5b775b63b777a2782"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "903112350ec35dd5106b1ffbf01294ed3e675519d38ce180dd0a87004a82905e"
+          }
+        ]
+      }
+    },
+    {
+      "attemptId": "cold-3-C",
+      "manifestId": "706df31340553f43514a15877b647e71629f0b07b0857ac2312408caa9b4b5fe",
+      "screenshot": {
+        "status": "captured",
+        "digest": "e8e5afef0cd443712c9ddc285ffd4bd423a05b696421afd03a53f43e828f9f26"
+      },
+      "trace": {
+        "status": "captured",
+        "digest": "c50c8ae086e4d886d339ece044557437c2afed4a4c615f5dc471e8d758abc0b6"
+      },
+      "network": {
+        "status": "captured",
+        "entries": [
+          {
+            "method": "GET",
+            "kind": "document",
+            "pathDigest": "2afb16ea5f4d3937fee6ef537256fc124be4d5f961668ddd5cbae9e80b14b097"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "2afb16ea5f4d3937fee6ef537256fc124be4d5f961668ddd5cbae9e80b14b097"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "2afb16ea5f4d3937fee6ef537256fc124be4d5f961668ddd5cbae9e80b14b097"
+          },
+          {
+            "method": "GET",
+            "kind": "stylesheet",
+            "pathDigest": "ff45aa58feb88a89176e27804f8ed0f2b04846de91018a7c6bcf3197476f49f8"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "de61e6a781267f9f4102ca511c54d94e94692bd7ef874bdd098b8a9d3291b03a"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "ce248690322f5d194820070a3bb324a5e291cb2c3353df0042fe1942db6ac49a"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "f9b5881372a977f722d9c90ca8a258e1f9a161125ce7ddf41cc03e5dedb3b489"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "608ec0614d19ef0241c60b28f3d2155520e6f3eae289b2f5ff72643ca23c0a33"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "2ae0dc76aaa57e9ddc3f6abfe52cc93156d65bfca4987d32ea35458989670939"
+          },
+          {
+            "method": "GET",
+            "kind": "image",
+            "pathDigest": "b42f5ed4a9c0a77f5497e6e1e2cfc429c6a6aa667b2863bd4744b49b1c163160"
+          },
+          {
+            "method": "GET",
+            "kind": "document",
+            "pathDigest": "ea8d1f57396f031cfdf748f2c7c0f349f262a5960f847ec41fecc07fde417f1a"
+          },
+          {
+            "method": "GET",
+            "kind": "font",
+            "pathDigest": "ff3456858a5231e718b87cc521dcd818a9aa050f9f362c6f0cc1393844f09bf1"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "b61e08e7a247be5e258f54066cc18464dca7ed25f847614f907bc7914b844960"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "e7ddab3e7e8a5bfc70555cba4b5a53fb3af3b6ecb18d4893daef62e1153cb5fd"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "46fcbb7c1d738377bdfd830bdc44eff86520d94a06ffd97b5681ad21548fb80b"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "a12d3d92487b488511d4cdd2ff91a28446a78426332aa33e2c91135c4d2165c4"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "d9b790f99499d9c31fdf52256e5cce051157f56a41790404d5f3bb6d0a5d6f71"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "d9b790f99499d9c31fdf52256e5cce051157f56a41790404d5f3bb6d0a5d6f71"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "d9b790f99499d9c31fdf52256e5cce051157f56a41790404d5f3bb6d0a5d6f71"
+          },
+          {
+            "method": "GET",
+            "kind": "font",
+            "pathDigest": "d9b790f99499d9c31fdf52256e5cce051157f56a41790404d5f3bb6d0a5d6f71"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "d9b790f99499d9c31fdf52256e5cce051157f56a41790404d5f3bb6d0a5d6f71"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "d9b790f99499d9c31fdf52256e5cce051157f56a41790404d5f3bb6d0a5d6f71"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "dba389843e58be5b8d5a633e5d68a8f1ff0b47d9edfd4c370142bcf2e4ffe6b1"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "6c09c0afe4fecac3cd356a68824aa762fbadc14bd547e690652cd97c958aedb4"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "6f66e9d8ebb961fe292305cb3bacf47eb9c61c5cf9ac24c70dfdc0713bdd5373"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "d9b790f99499d9c31fdf52256e5cce051157f56a41790404d5f3bb6d0a5d6f71"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "b2a0a88c405dbe87b12608bc63866e19a8f8b7eae677aadea4de41f2a7349f0a"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "2a03a688029c60ac6cde685c29052fce522655956118f4edf7a448ec95cae43c"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "5b0a6679a8f87b37b83e150128022ae0964b09ea730a9dcb54347997866b8df2"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "c6ff5f48024d7f7173f4138845ee38504e1b6fd753339b7960e0d0dd5b3b378f"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "be00549cea143f4128fae7c526bcaaf3a25de4d67a18de964b2e4cecaf8995c4"
+          },
+          {
+            "method": "GET",
+            "kind": "image",
+            "pathDigest": "29db48da9d81f059881779027e175b437661a1f545f1bee6bfc16db78486c7fe"
+          },
+          {
+            "method": "GET",
+            "kind": "image",
+            "pathDigest": "e5601c4753175b2d6052418dc2f8de006229433d334495f3a1ec07a68e9da937"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "2a9dbcac92dc83318ca7a5cd870526d72d946993aecf2da5e8c7c4367ada8092"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "7c9e2e7e5d9f60d1f88aef4a566d78a381e4552986a1c9c756baaadce8e15ff4"
+          }
+        ]
+      }
+    },
+    {
+      "attemptId": "cold-4-A",
+      "manifestId": "a053df5a02f6ddb64607adb9edcd1aa8e8256d663557af31a28d33b276913dff",
+      "screenshot": {
+        "status": "captured",
+        "digest": "7c773394891e26bb3a99dc717d3dd20e135254799177f34e9b17e39cd161e1b0"
+      },
+      "trace": {
+        "status": "captured",
+        "digest": "2d077586915fc37903eaff289dbdda1c0a797c605f2ed6b9fe6ee390e58415a0"
+      },
+      "network": {
+        "status": "captured",
+        "entries": [
+          {
+            "method": "GET",
+            "kind": "document",
+            "pathDigest": "4bbd1b13c469db4bff68f3d7cfe88e71ed8701cfe81f337e6f83defdb35d9f45"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "4bbd1b13c469db4bff68f3d7cfe88e71ed8701cfe81f337e6f83defdb35d9f45"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "4bbd1b13c469db4bff68f3d7cfe88e71ed8701cfe81f337e6f83defdb35d9f45"
+          },
+          {
+            "method": "GET",
+            "kind": "stylesheet",
+            "pathDigest": "bce46da1708b9e83a5f63539940a1e1306e3cd921aa8ca47cefc5b2d7ac3d900"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "74947b8f9831fa0b263185eee8afbdd73acaccff8f1399df609f1df1f7de88a6"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "f5e5bdbe9886a1ade160cf23c8c2758e913e111acfa1e918921c8bf2695e18f8"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "a3aae0a54b6bf94190dab342c6a3f1f7ed6f2ac34a5ffa568e60d40a358f18a3"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "9b9abf5e36cbfb33204b2d01485db56273b49755d13ff836c6631d2930d66b3f"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "20d70ce7a0bc5f72254ec041ec2f6acff9721533a6c57225297bea33146c1a44"
+          },
+          {
+            "method": "GET",
+            "kind": "image",
+            "pathDigest": "f1c6e58b797675556f2bd3e584f0bccfc82c6db15f5be29ba5cb2ab3db3444d6"
+          },
+          {
+            "method": "GET",
+            "kind": "document",
+            "pathDigest": "6fd3140a6b2f26e31c6229688b0f356d88e93114035b236ff94b8aea18aaac65"
+          },
+          {
+            "method": "GET",
+            "kind": "font",
+            "pathDigest": "6972270ec904fb7d24c64c209715fd1c82be80a78c0ff7ceb92ef273a6142eb7"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "71995c699473f902d82ce927dd469c446b3c92b65e3ac1e87b1e9fa3e09a460a"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "4086177cbb44065df6f4bf7b6ce2954a53d9f289fec02c5bdd0a020341d4cadc"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "49c05fc7409a440c4b0cb7e1a8397d4945f4e1596f5475bde455ab3bca7956af"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "d355dae9a1af4d2c85bc2e679d7ab58a9f4ffd1aa11f380b6fdcb6603997ebc9"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "52053243da0958fe8242333542189e53c48a33f63f6dc9161ec5c932cbcde541"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "52053243da0958fe8242333542189e53c48a33f63f6dc9161ec5c932cbcde541"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "52053243da0958fe8242333542189e53c48a33f63f6dc9161ec5c932cbcde541"
+          },
+          {
+            "method": "GET",
+            "kind": "font",
+            "pathDigest": "52053243da0958fe8242333542189e53c48a33f63f6dc9161ec5c932cbcde541"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "52053243da0958fe8242333542189e53c48a33f63f6dc9161ec5c932cbcde541"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "52053243da0958fe8242333542189e53c48a33f63f6dc9161ec5c932cbcde541"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "2dec0f26478b96fad34530a8903f5167a7b1fbcf4fb1c9e78bd5c313c1ca1486"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "93f78dd16e2a798d8995922d00f507a39a67f14b4eb01c4caa98e742fb53f3ff"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "6b4dede2de486de9069aa8f2d43dd8079abddb743a2df332cb3931ccd6d2232d"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "52053243da0958fe8242333542189e53c48a33f63f6dc9161ec5c932cbcde541"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "b36620c962f732a8b519caef6f0cc04f5b953604369545ceaad62abf0de2572e"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "7e1d121bcef318b79ab3d13908bb22b56a5b8fc6e09ace280ca45981aab28012"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "a7c2cbe50c10b6bb7bd362cb00357808fbea57304626948c01bf75356b0a7b97"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "5ad2e7779ec048b89058dc6d5149d7be28da5e721b6878981c113550c9ba40f8"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "93be43dc938494d46c9e0086294a45c6fdda8bc1667b573fe5c0116fedf080f2"
+          },
+          {
+            "method": "GET",
+            "kind": "image",
+            "pathDigest": "dd0381924e7298f572baae5cfcb41887c0233911c1b6c7cf2f34c1ffb580af53"
+          },
+          {
+            "method": "GET",
+            "kind": "image",
+            "pathDigest": "b5b2b63b7889df9b97873b9c8151102d4ae756d18734e4a8f0d287ec0f68b136"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "14c73391eb8c8ebbd5cff76bf2cef31d5d8c2a2dd0a3a86f10979eb90b5f5857"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "29b54d5b3663ab67cfea9db32d3d536c5e68b0f936799b51dfb150d2f422ab2f"
+          }
+        ]
+      }
+    },
+    {
+      "attemptId": "cold-5-B",
+      "manifestId": "c2f0e5fae44d8a3842fa7a7ce1773981816965543198f7d4d4368090669beae8",
+      "screenshot": {
+        "status": "captured",
+        "digest": "e8ce04788955ade5b54ba8d9b817e7942a6d03f19ec78b795e2fbe26b747b750"
+      },
+      "trace": {
+        "status": "captured",
+        "digest": "b54bbb4b349e65d1426c5a5af6a325846351392b55a1bcfd6abb604d87d88748"
+      },
+      "network": {
+        "status": "captured",
+        "entries": [
+          {
+            "method": "GET",
+            "kind": "document",
+            "pathDigest": "2ea53a5299b137361a04e85dac5894f30e5ef057644fb4acc95774320738b015"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "2ea53a5299b137361a04e85dac5894f30e5ef057644fb4acc95774320738b015"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "2ea53a5299b137361a04e85dac5894f30e5ef057644fb4acc95774320738b015"
+          },
+          {
+            "method": "GET",
+            "kind": "stylesheet",
+            "pathDigest": "ff3c05edca8567deabaf6268fecc270088d963d3635f5d7d4cd5f16bd7e1e620"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "30185b0a013cea2fa232eea8ea6390c74b901e17d16f170f6ade56cefe53dd57"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "d9e38dadfb3a8d7c98ca8ddd5af981bc6725392e75f0ae341a3b04be15972fce"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "2d1734980475781065e74c3baef6607571dc1d9380a1c7434d529db1ccb9ffd9"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "63cd3aa6dcec57827caa590083f8c77cc4b9ceaebd046c3106801decd53fe85f"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "18c34ea68865764070aec151012bd60b687239fc859914442a614d4aacab451e"
+          },
+          {
+            "method": "GET",
+            "kind": "image",
+            "pathDigest": "37b2639e72e8d831a2816204efb14236ea4c3df4f522fcd10f2b444c5869ba8d"
+          },
+          {
+            "method": "GET",
+            "kind": "document",
+            "pathDigest": "5e40188d0663f49ff3f128eb7f2a094d5e7a1c6a494e52ae7f4d954db1e011a4"
+          },
+          {
+            "method": "GET",
+            "kind": "font",
+            "pathDigest": "4994f5db1bdd756466da3f6fa73d1d0cbadbda1afaf5b531fc89bc6434db0b92"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "0f2ee5df874bee943b783afb2df4ed63ac36a6f748b3d6762cab208e0e4a05ab"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "3dd50b424c68ab463ce87ae574054b7c890ee199ef93129838efe89b938c0882"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "1302b82cc3f71b7eeae85d18862c061ff6f5ec6080205cea113487ccad14318f"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "1a7301827aee41178466009f22dc8d029c4bccb8e66f32decbfe236e7a57b02f"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "b8bcd72614b6d77ded45bc975e27965671a9314fb030fd8d14c2c1b7668200d9"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "b8bcd72614b6d77ded45bc975e27965671a9314fb030fd8d14c2c1b7668200d9"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "b8bcd72614b6d77ded45bc975e27965671a9314fb030fd8d14c2c1b7668200d9"
+          },
+          {
+            "method": "GET",
+            "kind": "font",
+            "pathDigest": "b8bcd72614b6d77ded45bc975e27965671a9314fb030fd8d14c2c1b7668200d9"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "b8bcd72614b6d77ded45bc975e27965671a9314fb030fd8d14c2c1b7668200d9"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "b8bcd72614b6d77ded45bc975e27965671a9314fb030fd8d14c2c1b7668200d9"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "3c5ff277882ca05cd4e1001a22b0a8e0f0e99ca76b71ec8125e789fe091ad12b"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "5c7ae2cf60d129f7ac16dd56b51d05680a149d74d0310b87ac5b74f571f78fff"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "16bdd5597fb5100ab5306781b8f22809af9e9c414146ec10392e02bcbe3dea50"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "b8bcd72614b6d77ded45bc975e27965671a9314fb030fd8d14c2c1b7668200d9"
+          },
+          {
+            "method": "GET",
+            "kind": "image",
+            "pathDigest": "3278dab5c5cc82c9c1c063bc1d04b914df2daa2094a0df43098b9a412980688c"
+          },
+          {
+            "method": "GET",
+            "kind": "image",
+            "pathDigest": "630d8ef88a3429adcea90a369a226af966a01488bf4e21a3249999601611a955"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "0affe7509d1e3b8782ea439b0697cdd53d8e748107876aaa38e7dae3fdb4e954"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "fbf7dab3e2f5d1b0e9018c7e75ce3f276dca4815f98fb42eba6d775d4b11a214"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "34771f2d73b9a58f99e9f87bbb33a6a07ad6db3ae0ee97093c70e439345f4b90"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "e942f37a6afe49349a58535af791233b41c67f9e8ff6637f75e223793ef6e0a2"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "1ab95e989b138835f4a323aec11530e0ce56c22bb79af17d400fa22d23116f8c"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "31a03a2f2bf05ad09196afbfa4f914c742e739b39114d1b5b775b63b777a2782"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "69a04f2bf8e80578c7215153752a102f36fe3872a1e93d736a50a44dc31159c7"
+          }
+        ]
+      }
+    },
+    {
+      "attemptId": "warm-1-A",
+      "manifestId": "a33a373df61bf8dcf19620d9c2d76ac3814ca933b24f8270ae8c11b81fed187b",
+      "screenshot": {
+        "status": "captured",
+        "digest": "7c773394891e26bb3a99dc717d3dd20e135254799177f34e9b17e39cd161e1b0"
+      },
+      "trace": {
+        "status": "captured",
+        "digest": "54482b897bedaaddb9bdaa7f899050898c80f04931ae19e0df6fe2e7030bceb9"
+      },
+      "network": {
+        "status": "captured",
+        "entries": [
+          {
+            "method": "GET",
+            "kind": "document",
+            "pathDigest": "4bbd1b13c469db4bff68f3d7cfe88e71ed8701cfe81f337e6f83defdb35d9f45"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "4bbd1b13c469db4bff68f3d7cfe88e71ed8701cfe81f337e6f83defdb35d9f45"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "4bbd1b13c469db4bff68f3d7cfe88e71ed8701cfe81f337e6f83defdb35d9f45"
+          },
+          {
+            "method": "GET",
+            "kind": "stylesheet",
+            "pathDigest": "bce46da1708b9e83a5f63539940a1e1306e3cd921aa8ca47cefc5b2d7ac3d900"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "74947b8f9831fa0b263185eee8afbdd73acaccff8f1399df609f1df1f7de88a6"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "f5e5bdbe9886a1ade160cf23c8c2758e913e111acfa1e918921c8bf2695e18f8"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "a3aae0a54b6bf94190dab342c6a3f1f7ed6f2ac34a5ffa568e60d40a358f18a3"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "9b9abf5e36cbfb33204b2d01485db56273b49755d13ff836c6631d2930d66b3f"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "20d70ce7a0bc5f72254ec041ec2f6acff9721533a6c57225297bea33146c1a44"
+          },
+          {
+            "method": "GET",
+            "kind": "image",
+            "pathDigest": "f1c6e58b797675556f2bd3e584f0bccfc82c6db15f5be29ba5cb2ab3db3444d6"
+          },
+          {
+            "method": "GET",
+            "kind": "document",
+            "pathDigest": "6fd3140a6b2f26e31c6229688b0f356d88e93114035b236ff94b8aea18aaac65"
+          },
+          {
+            "method": "GET",
+            "kind": "font",
+            "pathDigest": "6972270ec904fb7d24c64c209715fd1c82be80a78c0ff7ceb92ef273a6142eb7"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "b9646f838b37bc332595b99db2f549ffc1b883fe5e080a925fbe0dfd3642f5a9"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "2ba9913c5d992c3e69ea235fa8ba656acb39f8635f1e3886960115ab1609253e"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "49c05fc7409a440c4b0cb7e1a8397d4945f4e1596f5475bde455ab3bca7956af"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "d355dae9a1af4d2c85bc2e679d7ab58a9f4ffd1aa11f380b6fdcb6603997ebc9"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "52053243da0958fe8242333542189e53c48a33f63f6dc9161ec5c932cbcde541"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "52053243da0958fe8242333542189e53c48a33f63f6dc9161ec5c932cbcde541"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "52053243da0958fe8242333542189e53c48a33f63f6dc9161ec5c932cbcde541"
+          },
+          {
+            "method": "GET",
+            "kind": "font",
+            "pathDigest": "52053243da0958fe8242333542189e53c48a33f63f6dc9161ec5c932cbcde541"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "52053243da0958fe8242333542189e53c48a33f63f6dc9161ec5c932cbcde541"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "52053243da0958fe8242333542189e53c48a33f63f6dc9161ec5c932cbcde541"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "2dec0f26478b96fad34530a8903f5167a7b1fbcf4fb1c9e78bd5c313c1ca1486"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "93f78dd16e2a798d8995922d00f507a39a67f14b4eb01c4caa98e742fb53f3ff"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "6b4dede2de486de9069aa8f2d43dd8079abddb743a2df332cb3931ccd6d2232d"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "52053243da0958fe8242333542189e53c48a33f63f6dc9161ec5c932cbcde541"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "b36620c962f732a8b519caef6f0cc04f5b953604369545ceaad62abf0de2572e"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "7e1d121bcef318b79ab3d13908bb22b56a5b8fc6e09ace280ca45981aab28012"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "a7c2cbe50c10b6bb7bd362cb00357808fbea57304626948c01bf75356b0a7b97"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "5ad2e7779ec048b89058dc6d5149d7be28da5e721b6878981c113550c9ba40f8"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "93be43dc938494d46c9e0086294a45c6fdda8bc1667b573fe5c0116fedf080f2"
+          },
+          {
+            "method": "GET",
+            "kind": "image",
+            "pathDigest": "dd0381924e7298f572baae5cfcb41887c0233911c1b6c7cf2f34c1ffb580af53"
+          },
+          {
+            "method": "GET",
+            "kind": "image",
+            "pathDigest": "b5b2b63b7889df9b97873b9c8151102d4ae756d18734e4a8f0d287ec0f68b136"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "14c73391eb8c8ebbd5cff76bf2cef31d5d8c2a2dd0a3a86f10979eb90b5f5857"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "edde52a55775c5f0dd48f7ac6f0a0052f2a74ebc7b4c87bdf6899afa2f14475c"
+          },
+          {
+            "method": "GET",
+            "kind": "document",
+            "pathDigest": "df7e940f72aa93cbcb6d70cc35124b0767c7a0e353043c7c24b660ea9be7b952"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "656a55e3788bc6c960517f6ff859bdf1c0c8b0278999528e7de0d065f0b91a89"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "67c1ccfd23eff89c3581efab688130dce5d84ad8fc5c53ff9c641fec7e473be2"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "7e2df3dea56792413b5ad1af4554d72510e48ebf27e746bcded277eab56a85fc"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "fd4d46f6469db63fcb53867cd78a1884ce81321565ff60f39a0676d83f740597"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "84639b0da759036302c66a786ff98f36d8fc0066375ac8b91c3b371a429513ac"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "55aee9a258e0d5e10bc09a5f74f2aa1340379cb9c77fc1e98a24dc2b689f9e96"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "b84085841482fc6ed9591c700df95581d500f84b904b896251e2b26ee0460ddc"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "1eec5ad92bd50b38d8b1419335108034917846371a16d03206d4dac4e15fd64f"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "1257bcae7fe9d69638add06f3b8269fab80793ce0adce0ec8645b85542a37500"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "df707024efb39d3b6426e21387cc11b9376bd195077e6fe544a6b7b24c65aa73"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "70e6302bddb35512a15629d05ce2ace560e682b266bb5606b58399c8f53c81cd"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "6c1b8a6e5339b58cd0beee5ff838da9f1f65c4a3e14750b46aa5a8865148f841"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "091b30f87398f894de190eadec1da56232d67e96f4e63d133668241ff56a8e2b"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "7cef2472dca8e7ef3df1f51c50a0b765c37f939f4357556b71e6db2356c35c59"
+          }
+        ]
+      }
+    },
+    {
+      "attemptId": "warm-2-B",
+      "manifestId": "d189409272e98146d89b00517c78f2b1f5e293e724b695c5a412efa97771a88c",
+      "screenshot": {
+        "status": "captured",
+        "digest": "ebb881a4f02e958f4ff5b4fe8b69cdfa96cca5c8cc381c8ae920005fa5451fe7"
+      },
+      "trace": {
+        "status": "captured",
+        "digest": "f434a8781e0951d3464abd6ca3733eeb227f0e4cf011e7882c8d5456f766d449"
+      },
+      "network": {
+        "status": "captured",
+        "entries": [
+          {
+            "method": "GET",
+            "kind": "document",
+            "pathDigest": "2ea53a5299b137361a04e85dac5894f30e5ef057644fb4acc95774320738b015"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "2ea53a5299b137361a04e85dac5894f30e5ef057644fb4acc95774320738b015"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "2ea53a5299b137361a04e85dac5894f30e5ef057644fb4acc95774320738b015"
+          },
+          {
+            "method": "GET",
+            "kind": "stylesheet",
+            "pathDigest": "ff3c05edca8567deabaf6268fecc270088d963d3635f5d7d4cd5f16bd7e1e620"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "30185b0a013cea2fa232eea8ea6390c74b901e17d16f170f6ade56cefe53dd57"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "d9e38dadfb3a8d7c98ca8ddd5af981bc6725392e75f0ae341a3b04be15972fce"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "2d1734980475781065e74c3baef6607571dc1d9380a1c7434d529db1ccb9ffd9"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "63cd3aa6dcec57827caa590083f8c77cc4b9ceaebd046c3106801decd53fe85f"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "18c34ea68865764070aec151012bd60b687239fc859914442a614d4aacab451e"
+          },
+          {
+            "method": "GET",
+            "kind": "image",
+            "pathDigest": "37b2639e72e8d831a2816204efb14236ea4c3df4f522fcd10f2b444c5869ba8d"
+          },
+          {
+            "method": "GET",
+            "kind": "document",
+            "pathDigest": "5e40188d0663f49ff3f128eb7f2a094d5e7a1c6a494e52ae7f4d954db1e011a4"
+          },
+          {
+            "method": "GET",
+            "kind": "font",
+            "pathDigest": "4994f5db1bdd756466da3f6fa73d1d0cbadbda1afaf5b531fc89bc6434db0b92"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "ee1f39d5738c944ff24f6c7dbbe0f442a3ac3fb6dbd1d7bb83a5a36b60940cf6"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "65bdadcd77656df4f061afe35d804a4a8472b70eb3d82e1f9320ee74a65aa620"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "1302b82cc3f71b7eeae85d18862c061ff6f5ec6080205cea113487ccad14318f"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "1a7301827aee41178466009f22dc8d029c4bccb8e66f32decbfe236e7a57b02f"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "b8bcd72614b6d77ded45bc975e27965671a9314fb030fd8d14c2c1b7668200d9"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "b8bcd72614b6d77ded45bc975e27965671a9314fb030fd8d14c2c1b7668200d9"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "b8bcd72614b6d77ded45bc975e27965671a9314fb030fd8d14c2c1b7668200d9"
+          },
+          {
+            "method": "GET",
+            "kind": "font",
+            "pathDigest": "b8bcd72614b6d77ded45bc975e27965671a9314fb030fd8d14c2c1b7668200d9"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "b8bcd72614b6d77ded45bc975e27965671a9314fb030fd8d14c2c1b7668200d9"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "b8bcd72614b6d77ded45bc975e27965671a9314fb030fd8d14c2c1b7668200d9"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "3c5ff277882ca05cd4e1001a22b0a8e0f0e99ca76b71ec8125e789fe091ad12b"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "5c7ae2cf60d129f7ac16dd56b51d05680a149d74d0310b87ac5b74f571f78fff"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "16bdd5597fb5100ab5306781b8f22809af9e9c414146ec10392e02bcbe3dea50"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "b8bcd72614b6d77ded45bc975e27965671a9314fb030fd8d14c2c1b7668200d9"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "0affe7509d1e3b8782ea439b0697cdd53d8e748107876aaa38e7dae3fdb4e954"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "fbf7dab3e2f5d1b0e9018c7e75ce3f276dca4815f98fb42eba6d775d4b11a214"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "34771f2d73b9a58f99e9f87bbb33a6a07ad6db3ae0ee97093c70e439345f4b90"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "e942f37a6afe49349a58535af791233b41c67f9e8ff6637f75e223793ef6e0a2"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "1ab95e989b138835f4a323aec11530e0ce56c22bb79af17d400fa22d23116f8c"
+          },
+          {
+            "method": "GET",
+            "kind": "image",
+            "pathDigest": "3278dab5c5cc82c9c1c063bc1d04b914df2daa2094a0df43098b9a412980688c"
+          },
+          {
+            "method": "GET",
+            "kind": "image",
+            "pathDigest": "630d8ef88a3429adcea90a369a226af966a01488bf4e21a3249999601611a955"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "de246749b1af5357b269967762c13319b49e09f21dd138f704924720fd2f2051"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "31a03a2f2bf05ad09196afbfa4f914c742e739b39114d1b5b775b63b777a2782"
+          },
+          {
+            "method": "GET",
+            "kind": "document",
+            "pathDigest": "df7e940f72aa93cbcb6d70cc35124b0767c7a0e353043c7c24b660ea9be7b952"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "656a55e3788bc6c960517f6ff859bdf1c0c8b0278999528e7de0d065f0b91a89"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "67c1ccfd23eff89c3581efab688130dce5d84ad8fc5c53ff9c641fec7e473be2"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "7e2df3dea56792413b5ad1af4554d72510e48ebf27e746bcded277eab56a85fc"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "fd4d46f6469db63fcb53867cd78a1884ce81321565ff60f39a0676d83f740597"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "84639b0da759036302c66a786ff98f36d8fc0066375ac8b91c3b371a429513ac"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "55aee9a258e0d5e10bc09a5f74f2aa1340379cb9c77fc1e98a24dc2b689f9e96"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "1eec5ad92bd50b38d8b1419335108034917846371a16d03206d4dac4e15fd64f"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "1257bcae7fe9d69638add06f3b8269fab80793ce0adce0ec8645b85542a37500"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "091b30f87398f894de190eadec1da56232d67e96f4e63d133668241ff56a8e2b"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "b84085841482fc6ed9591c700df95581d500f84b904b896251e2b26ee0460ddc"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "df707024efb39d3b6426e21387cc11b9376bd195077e6fe544a6b7b24c65aa73"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "70e6302bddb35512a15629d05ce2ace560e682b266bb5606b58399c8f53c81cd"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "6c1b8a6e5339b58cd0beee5ff838da9f1f65c4a3e14750b46aa5a8865148f841"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "7cef2472dca8e7ef3df1f51c50a0b765c37f939f4357556b71e6db2356c35c59"
+          }
+        ]
+      }
+    },
+    {
+      "attemptId": "warm-3-C",
+      "manifestId": "7009d90bf37a3ecd5968acc5fc97880e417abf658768c9dedb5ece534c5e2aef",
+      "screenshot": {
+        "status": "captured",
+        "digest": "67bf7126bb3212ea373914b58488487ad8be679161424dc7b2b227a795454b96"
+      },
+      "trace": {
+        "status": "captured",
+        "digest": "70d3d2cc7183814de292509ac0cb043d8098aa1530776479024e61a8cb5bbf3b"
+      },
+      "network": {
+        "status": "captured",
+        "entries": [
+          {
+            "method": "GET",
+            "kind": "document",
+            "pathDigest": "2afb16ea5f4d3937fee6ef537256fc124be4d5f961668ddd5cbae9e80b14b097"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "2afb16ea5f4d3937fee6ef537256fc124be4d5f961668ddd5cbae9e80b14b097"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "2afb16ea5f4d3937fee6ef537256fc124be4d5f961668ddd5cbae9e80b14b097"
+          },
+          {
+            "method": "GET",
+            "kind": "stylesheet",
+            "pathDigest": "ff45aa58feb88a89176e27804f8ed0f2b04846de91018a7c6bcf3197476f49f8"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "de61e6a781267f9f4102ca511c54d94e94692bd7ef874bdd098b8a9d3291b03a"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "ce248690322f5d194820070a3bb324a5e291cb2c3353df0042fe1942db6ac49a"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "f9b5881372a977f722d9c90ca8a258e1f9a161125ce7ddf41cc03e5dedb3b489"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "608ec0614d19ef0241c60b28f3d2155520e6f3eae289b2f5ff72643ca23c0a33"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "2ae0dc76aaa57e9ddc3f6abfe52cc93156d65bfca4987d32ea35458989670939"
+          },
+          {
+            "method": "GET",
+            "kind": "image",
+            "pathDigest": "b42f5ed4a9c0a77f5497e6e1e2cfc429c6a6aa667b2863bd4744b49b1c163160"
+          },
+          {
+            "method": "GET",
+            "kind": "document",
+            "pathDigest": "ea8d1f57396f031cfdf748f2c7c0f349f262a5960f847ec41fecc07fde417f1a"
+          },
+          {
+            "method": "GET",
+            "kind": "font",
+            "pathDigest": "ff3456858a5231e718b87cc521dcd818a9aa050f9f362c6f0cc1393844f09bf1"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "d64de9a7ab444f1978bf33bf2860ceeaaebe5250c968c1acd35eeb87a121d6ba"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "7b594316c353b076d862719fa7c715d1914ff92102b2d4c59965dcc3d9e3785c"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "46fcbb7c1d738377bdfd830bdc44eff86520d94a06ffd97b5681ad21548fb80b"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "a12d3d92487b488511d4cdd2ff91a28446a78426332aa33e2c91135c4d2165c4"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "d9b790f99499d9c31fdf52256e5cce051157f56a41790404d5f3bb6d0a5d6f71"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "d9b790f99499d9c31fdf52256e5cce051157f56a41790404d5f3bb6d0a5d6f71"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "d9b790f99499d9c31fdf52256e5cce051157f56a41790404d5f3bb6d0a5d6f71"
+          },
+          {
+            "method": "GET",
+            "kind": "font",
+            "pathDigest": "d9b790f99499d9c31fdf52256e5cce051157f56a41790404d5f3bb6d0a5d6f71"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "d9b790f99499d9c31fdf52256e5cce051157f56a41790404d5f3bb6d0a5d6f71"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "d9b790f99499d9c31fdf52256e5cce051157f56a41790404d5f3bb6d0a5d6f71"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "dba389843e58be5b8d5a633e5d68a8f1ff0b47d9edfd4c370142bcf2e4ffe6b1"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "6c09c0afe4fecac3cd356a68824aa762fbadc14bd547e690652cd97c958aedb4"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "6f66e9d8ebb961fe292305cb3bacf47eb9c61c5cf9ac24c70dfdc0713bdd5373"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "d9b790f99499d9c31fdf52256e5cce051157f56a41790404d5f3bb6d0a5d6f71"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "b2a0a88c405dbe87b12608bc63866e19a8f8b7eae677aadea4de41f2a7349f0a"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "2a03a688029c60ac6cde685c29052fce522655956118f4edf7a448ec95cae43c"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "5b0a6679a8f87b37b83e150128022ae0964b09ea730a9dcb54347997866b8df2"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "c6ff5f48024d7f7173f4138845ee38504e1b6fd753339b7960e0d0dd5b3b378f"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "be00549cea143f4128fae7c526bcaaf3a25de4d67a18de964b2e4cecaf8995c4"
+          },
+          {
+            "method": "GET",
+            "kind": "image",
+            "pathDigest": "29db48da9d81f059881779027e175b437661a1f545f1bee6bfc16db78486c7fe"
+          },
+          {
+            "method": "GET",
+            "kind": "image",
+            "pathDigest": "e5601c4753175b2d6052418dc2f8de006229433d334495f3a1ec07a68e9da937"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "42e804e27c1098b785b3a88eb08199c07037166dcc55096778dd01848394da93"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "7c9e2e7e5d9f60d1f88aef4a566d78a381e4552986a1c9c756baaadce8e15ff4"
+          },
+          {
+            "method": "GET",
+            "kind": "document",
+            "pathDigest": "df7e940f72aa93cbcb6d70cc35124b0767c7a0e353043c7c24b660ea9be7b952"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "656a55e3788bc6c960517f6ff859bdf1c0c8b0278999528e7de0d065f0b91a89"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "67c1ccfd23eff89c3581efab688130dce5d84ad8fc5c53ff9c641fec7e473be2"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "7e2df3dea56792413b5ad1af4554d72510e48ebf27e746bcded277eab56a85fc"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "fd4d46f6469db63fcb53867cd78a1884ce81321565ff60f39a0676d83f740597"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "84639b0da759036302c66a786ff98f36d8fc0066375ac8b91c3b371a429513ac"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "55aee9a258e0d5e10bc09a5f74f2aa1340379cb9c77fc1e98a24dc2b689f9e96"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "1eec5ad92bd50b38d8b1419335108034917846371a16d03206d4dac4e15fd64f"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "1257bcae7fe9d69638add06f3b8269fab80793ce0adce0ec8645b85542a37500"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "091b30f87398f894de190eadec1da56232d67e96f4e63d133668241ff56a8e2b"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "b84085841482fc6ed9591c700df95581d500f84b904b896251e2b26ee0460ddc"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "df707024efb39d3b6426e21387cc11b9376bd195077e6fe544a6b7b24c65aa73"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "70e6302bddb35512a15629d05ce2ace560e682b266bb5606b58399c8f53c81cd"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "6c1b8a6e5339b58cd0beee5ff838da9f1f65c4a3e14750b46aa5a8865148f841"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "7cef2472dca8e7ef3df1f51c50a0b765c37f939f4357556b71e6db2356c35c59"
+          }
+        ]
+      }
+    },
+    {
+      "attemptId": "warm-4-A",
+      "manifestId": "fe97346d241f26d038f63cb56a193499a8fcd142c0c40cf1f5c650b079b1c9ff",
+      "screenshot": {
+        "status": "captured",
+        "digest": "a0c2d7aa228735ec6cc82548add33ccce137eed97fa4170043abb1c849956660"
+      },
+      "trace": {
+        "status": "captured",
+        "digest": "c5d8ddc95230401cc8b4329d20cde54c2cf3b52a53ef688b7c5f6ac1af257b5a"
+      },
+      "network": {
+        "status": "captured",
+        "entries": [
+          {
+            "method": "GET",
+            "kind": "document",
+            "pathDigest": "4bbd1b13c469db4bff68f3d7cfe88e71ed8701cfe81f337e6f83defdb35d9f45"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "4bbd1b13c469db4bff68f3d7cfe88e71ed8701cfe81f337e6f83defdb35d9f45"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "4bbd1b13c469db4bff68f3d7cfe88e71ed8701cfe81f337e6f83defdb35d9f45"
+          },
+          {
+            "method": "GET",
+            "kind": "stylesheet",
+            "pathDigest": "bce46da1708b9e83a5f63539940a1e1306e3cd921aa8ca47cefc5b2d7ac3d900"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "74947b8f9831fa0b263185eee8afbdd73acaccff8f1399df609f1df1f7de88a6"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "f5e5bdbe9886a1ade160cf23c8c2758e913e111acfa1e918921c8bf2695e18f8"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "a3aae0a54b6bf94190dab342c6a3f1f7ed6f2ac34a5ffa568e60d40a358f18a3"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "9b9abf5e36cbfb33204b2d01485db56273b49755d13ff836c6631d2930d66b3f"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "20d70ce7a0bc5f72254ec041ec2f6acff9721533a6c57225297bea33146c1a44"
+          },
+          {
+            "method": "GET",
+            "kind": "image",
+            "pathDigest": "b5b2b63b7889df9b97873b9c8151102d4ae756d18734e4a8f0d287ec0f68b136"
+          },
+          {
+            "method": "GET",
+            "kind": "document",
+            "pathDigest": "6fd3140a6b2f26e31c6229688b0f356d88e93114035b236ff94b8aea18aaac65"
+          },
+          {
+            "method": "GET",
+            "kind": "font",
+            "pathDigest": "6972270ec904fb7d24c64c209715fd1c82be80a78c0ff7ceb92ef273a6142eb7"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "8513fc34a3de2e0b56d88d1b2118b8f9a4caabda4bf2a7db621504406786e8b7"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "bccdacd801d16db04f26288d6f89aa2d1482ca106f2e598f39244fb8818cde06"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "49c05fc7409a440c4b0cb7e1a8397d4945f4e1596f5475bde455ab3bca7956af"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "d355dae9a1af4d2c85bc2e679d7ab58a9f4ffd1aa11f380b6fdcb6603997ebc9"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "52053243da0958fe8242333542189e53c48a33f63f6dc9161ec5c932cbcde541"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "52053243da0958fe8242333542189e53c48a33f63f6dc9161ec5c932cbcde541"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "52053243da0958fe8242333542189e53c48a33f63f6dc9161ec5c932cbcde541"
+          },
+          {
+            "method": "GET",
+            "kind": "image",
+            "pathDigest": "dd0381924e7298f572baae5cfcb41887c0233911c1b6c7cf2f34c1ffb580af53"
+          },
+          {
+            "method": "GET",
+            "kind": "font",
+            "pathDigest": "52053243da0958fe8242333542189e53c48a33f63f6dc9161ec5c932cbcde541"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "52053243da0958fe8242333542189e53c48a33f63f6dc9161ec5c932cbcde541"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "52053243da0958fe8242333542189e53c48a33f63f6dc9161ec5c932cbcde541"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "b36620c962f732a8b519caef6f0cc04f5b953604369545ceaad62abf0de2572e"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "7e1d121bcef318b79ab3d13908bb22b56a5b8fc6e09ace280ca45981aab28012"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "a7c2cbe50c10b6bb7bd362cb00357808fbea57304626948c01bf75356b0a7b97"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "5ad2e7779ec048b89058dc6d5149d7be28da5e721b6878981c113550c9ba40f8"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "93be43dc938494d46c9e0086294a45c6fdda8bc1667b573fe5c0116fedf080f2"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "14c73391eb8c8ebbd5cff76bf2cef31d5d8c2a2dd0a3a86f10979eb90b5f5857"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "03c9ff9bddc6d93214cd239cbdc00b8a99dd6520f1caf5c537fc50664b6f6c63"
+          },
+          {
+            "method": "GET",
+            "kind": "document",
+            "pathDigest": "df7e940f72aa93cbcb6d70cc35124b0767c7a0e353043c7c24b660ea9be7b952"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "656a55e3788bc6c960517f6ff859bdf1c0c8b0278999528e7de0d065f0b91a89"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "67c1ccfd23eff89c3581efab688130dce5d84ad8fc5c53ff9c641fec7e473be2"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "7e2df3dea56792413b5ad1af4554d72510e48ebf27e746bcded277eab56a85fc"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "fd4d46f6469db63fcb53867cd78a1884ce81321565ff60f39a0676d83f740597"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "84639b0da759036302c66a786ff98f36d8fc0066375ac8b91c3b371a429513ac"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "55aee9a258e0d5e10bc09a5f74f2aa1340379cb9c77fc1e98a24dc2b689f9e96"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "b84085841482fc6ed9591c700df95581d500f84b904b896251e2b26ee0460ddc"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "1eec5ad92bd50b38d8b1419335108034917846371a16d03206d4dac4e15fd64f"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "1257bcae7fe9d69638add06f3b8269fab80793ce0adce0ec8645b85542a37500"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "091b30f87398f894de190eadec1da56232d67e96f4e63d133668241ff56a8e2b"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "df707024efb39d3b6426e21387cc11b9376bd195077e6fe544a6b7b24c65aa73"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "70e6302bddb35512a15629d05ce2ace560e682b266bb5606b58399c8f53c81cd"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "6c1b8a6e5339b58cd0beee5ff838da9f1f65c4a3e14750b46aa5a8865148f841"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "7cef2472dca8e7ef3df1f51c50a0b765c37f939f4357556b71e6db2356c35c59"
+          }
+        ]
+      }
+    },
+    {
+      "attemptId": "warm-5-B",
+      "manifestId": "ba31a9fab0b551f1b03d0b0b35076176b5875350614821979e4b0897e8df3306",
+      "screenshot": {
+        "status": "captured",
+        "digest": "cf68a1462f909201529e206824868673973c7b1ac86e7f9b99a3d33a52ba3061"
+      },
+      "trace": {
+        "status": "captured",
+        "digest": "22a7b8ae9e737d7cacd58c9e364d1305a4ede7fb7a81ff664be4ac5763a454f1"
+      },
+      "network": {
+        "status": "captured",
+        "entries": [
+          {
+            "method": "GET",
+            "kind": "document",
+            "pathDigest": "2ea53a5299b137361a04e85dac5894f30e5ef057644fb4acc95774320738b015"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "2ea53a5299b137361a04e85dac5894f30e5ef057644fb4acc95774320738b015"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "2ea53a5299b137361a04e85dac5894f30e5ef057644fb4acc95774320738b015"
+          },
+          {
+            "method": "GET",
+            "kind": "stylesheet",
+            "pathDigest": "ff3c05edca8567deabaf6268fecc270088d963d3635f5d7d4cd5f16bd7e1e620"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "30185b0a013cea2fa232eea8ea6390c74b901e17d16f170f6ade56cefe53dd57"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "d9e38dadfb3a8d7c98ca8ddd5af981bc6725392e75f0ae341a3b04be15972fce"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "2d1734980475781065e74c3baef6607571dc1d9380a1c7434d529db1ccb9ffd9"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "63cd3aa6dcec57827caa590083f8c77cc4b9ceaebd046c3106801decd53fe85f"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "18c34ea68865764070aec151012bd60b687239fc859914442a614d4aacab451e"
+          },
+          {
+            "method": "GET",
+            "kind": "image",
+            "pathDigest": "37b2639e72e8d831a2816204efb14236ea4c3df4f522fcd10f2b444c5869ba8d"
+          },
+          {
+            "method": "GET",
+            "kind": "document",
+            "pathDigest": "5e40188d0663f49ff3f128eb7f2a094d5e7a1c6a494e52ae7f4d954db1e011a4"
+          },
+          {
+            "method": "GET",
+            "kind": "font",
+            "pathDigest": "4994f5db1bdd756466da3f6fa73d1d0cbadbda1afaf5b531fc89bc6434db0b92"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "47310ffca71015ce8e826b11993f1940e76285f2b2724ef6dcb6a3c266a1686b"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "c8b4424a4a3addc5e662360ffe471d05649ad1cf46989b1e5f49951f732124cc"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "1302b82cc3f71b7eeae85d18862c061ff6f5ec6080205cea113487ccad14318f"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "1a7301827aee41178466009f22dc8d029c4bccb8e66f32decbfe236e7a57b02f"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "b8bcd72614b6d77ded45bc975e27965671a9314fb030fd8d14c2c1b7668200d9"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "b8bcd72614b6d77ded45bc975e27965671a9314fb030fd8d14c2c1b7668200d9"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "b8bcd72614b6d77ded45bc975e27965671a9314fb030fd8d14c2c1b7668200d9"
+          },
+          {
+            "method": "GET",
+            "kind": "font",
+            "pathDigest": "b8bcd72614b6d77ded45bc975e27965671a9314fb030fd8d14c2c1b7668200d9"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "b8bcd72614b6d77ded45bc975e27965671a9314fb030fd8d14c2c1b7668200d9"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "b8bcd72614b6d77ded45bc975e27965671a9314fb030fd8d14c2c1b7668200d9"
+          },
+          {
+            "method": "GET",
+            "kind": "image",
+            "pathDigest": "3278dab5c5cc82c9c1c063bc1d04b914df2daa2094a0df43098b9a412980688c"
+          },
+          {
+            "method": "GET",
+            "kind": "image",
+            "pathDigest": "630d8ef88a3429adcea90a369a226af966a01488bf4e21a3249999601611a955"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "0affe7509d1e3b8782ea439b0697cdd53d8e748107876aaa38e7dae3fdb4e954"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "fbf7dab3e2f5d1b0e9018c7e75ce3f276dca4815f98fb42eba6d775d4b11a214"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "34771f2d73b9a58f99e9f87bbb33a6a07ad6db3ae0ee97093c70e439345f4b90"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "e942f37a6afe49349a58535af791233b41c67f9e8ff6637f75e223793ef6e0a2"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "1ab95e989b138835f4a323aec11530e0ce56c22bb79af17d400fa22d23116f8c"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "31a03a2f2bf05ad09196afbfa4f914c742e739b39114d1b5b775b63b777a2782"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "897cf54adf4e353c16456ec09602916d680583276d517b92c9733bdbac946e1f"
+          },
+          {
+            "method": "GET",
+            "kind": "document",
+            "pathDigest": "df7e940f72aa93cbcb6d70cc35124b0767c7a0e353043c7c24b660ea9be7b952"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "656a55e3788bc6c960517f6ff859bdf1c0c8b0278999528e7de0d065f0b91a89"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "67c1ccfd23eff89c3581efab688130dce5d84ad8fc5c53ff9c641fec7e473be2"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "7e2df3dea56792413b5ad1af4554d72510e48ebf27e746bcded277eab56a85fc"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "fd4d46f6469db63fcb53867cd78a1884ce81321565ff60f39a0676d83f740597"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "84639b0da759036302c66a786ff98f36d8fc0066375ac8b91c3b371a429513ac"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "55aee9a258e0d5e10bc09a5f74f2aa1340379cb9c77fc1e98a24dc2b689f9e96"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "1eec5ad92bd50b38d8b1419335108034917846371a16d03206d4dac4e15fd64f"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "1257bcae7fe9d69638add06f3b8269fab80793ce0adce0ec8645b85542a37500"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "091b30f87398f894de190eadec1da56232d67e96f4e63d133668241ff56a8e2b"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "b84085841482fc6ed9591c700df95581d500f84b904b896251e2b26ee0460ddc"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "df707024efb39d3b6426e21387cc11b9376bd195077e6fe544a6b7b24c65aa73"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "70e6302bddb35512a15629d05ce2ace560e682b266bb5606b58399c8f53c81cd"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "6c1b8a6e5339b58cd0beee5ff838da9f1f65c4a3e14750b46aa5a8865148f841"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "7cef2472dca8e7ef3df1f51c50a0b765c37f939f4357556b71e6db2356c35c59"
+          }
+        ]
+      }
+    },
+    {
+      "attemptId": "warm-6-C",
+      "manifestId": "f531402bd564a2829eee5d5474043b09be423f28bde07294670a87c556bffeed",
+      "screenshot": {
+        "status": "captured",
+        "digest": "67bf7126bb3212ea373914b58488487ad8be679161424dc7b2b227a795454b96"
+      },
+      "trace": {
+        "status": "captured",
+        "digest": "8e9b23c28a4f1a090bd50c0220b43334a259f39d70ab5e0a07c035b2794e9f8f"
+      },
+      "network": {
+        "status": "captured",
+        "entries": [
+          {
+            "method": "GET",
+            "kind": "document",
+            "pathDigest": "2afb16ea5f4d3937fee6ef537256fc124be4d5f961668ddd5cbae9e80b14b097"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "2afb16ea5f4d3937fee6ef537256fc124be4d5f961668ddd5cbae9e80b14b097"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "2afb16ea5f4d3937fee6ef537256fc124be4d5f961668ddd5cbae9e80b14b097"
+          },
+          {
+            "method": "GET",
+            "kind": "stylesheet",
+            "pathDigest": "ff45aa58feb88a89176e27804f8ed0f2b04846de91018a7c6bcf3197476f49f8"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "de61e6a781267f9f4102ca511c54d94e94692bd7ef874bdd098b8a9d3291b03a"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "ce248690322f5d194820070a3bb324a5e291cb2c3353df0042fe1942db6ac49a"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "f9b5881372a977f722d9c90ca8a258e1f9a161125ce7ddf41cc03e5dedb3b489"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "608ec0614d19ef0241c60b28f3d2155520e6f3eae289b2f5ff72643ca23c0a33"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "2ae0dc76aaa57e9ddc3f6abfe52cc93156d65bfca4987d32ea35458989670939"
+          },
+          {
+            "method": "GET",
+            "kind": "image",
+            "pathDigest": "e5601c4753175b2d6052418dc2f8de006229433d334495f3a1ec07a68e9da937"
+          },
+          {
+            "method": "GET",
+            "kind": "document",
+            "pathDigest": "ea8d1f57396f031cfdf748f2c7c0f349f262a5960f847ec41fecc07fde417f1a"
+          },
+          {
+            "method": "GET",
+            "kind": "font",
+            "pathDigest": "ff3456858a5231e718b87cc521dcd818a9aa050f9f362c6f0cc1393844f09bf1"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "82671164742d409d2ce65401edcc35f41ae25b1bd9707713d38057393b36c786"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "71560265cb485d5c7fe9d862221a98adb6c0346f58a758527179f070410405da"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "46fcbb7c1d738377bdfd830bdc44eff86520d94a06ffd97b5681ad21548fb80b"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "a12d3d92487b488511d4cdd2ff91a28446a78426332aa33e2c91135c4d2165c4"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "d9b790f99499d9c31fdf52256e5cce051157f56a41790404d5f3bb6d0a5d6f71"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "d9b790f99499d9c31fdf52256e5cce051157f56a41790404d5f3bb6d0a5d6f71"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "d9b790f99499d9c31fdf52256e5cce051157f56a41790404d5f3bb6d0a5d6f71"
+          },
+          {
+            "method": "GET",
+            "kind": "image",
+            "pathDigest": "29db48da9d81f059881779027e175b437661a1f545f1bee6bfc16db78486c7fe"
+          },
+          {
+            "method": "GET",
+            "kind": "font",
+            "pathDigest": "d9b790f99499d9c31fdf52256e5cce051157f56a41790404d5f3bb6d0a5d6f71"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "d9b790f99499d9c31fdf52256e5cce051157f56a41790404d5f3bb6d0a5d6f71"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "d9b790f99499d9c31fdf52256e5cce051157f56a41790404d5f3bb6d0a5d6f71"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "b2a0a88c405dbe87b12608bc63866e19a8f8b7eae677aadea4de41f2a7349f0a"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "2a03a688029c60ac6cde685c29052fce522655956118f4edf7a448ec95cae43c"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "5b0a6679a8f87b37b83e150128022ae0964b09ea730a9dcb54347997866b8df2"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "c6ff5f48024d7f7173f4138845ee38504e1b6fd753339b7960e0d0dd5b3b378f"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "be00549cea143f4128fae7c526bcaaf3a25de4d67a18de964b2e4cecaf8995c4"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "3d2ad6ba6ccb24b15715d159a43e01b044fbf4272374dad5c39b5f2b22c7212e"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "7c9e2e7e5d9f60d1f88aef4a566d78a381e4552986a1c9c756baaadce8e15ff4"
+          },
+          {
+            "method": "GET",
+            "kind": "document",
+            "pathDigest": "df7e940f72aa93cbcb6d70cc35124b0767c7a0e353043c7c24b660ea9be7b952"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "656a55e3788bc6c960517f6ff859bdf1c0c8b0278999528e7de0d065f0b91a89"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "67c1ccfd23eff89c3581efab688130dce5d84ad8fc5c53ff9c641fec7e473be2"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "7e2df3dea56792413b5ad1af4554d72510e48ebf27e746bcded277eab56a85fc"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "fd4d46f6469db63fcb53867cd78a1884ce81321565ff60f39a0676d83f740597"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "84639b0da759036302c66a786ff98f36d8fc0066375ac8b91c3b371a429513ac"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "55aee9a258e0d5e10bc09a5f74f2aa1340379cb9c77fc1e98a24dc2b689f9e96"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "b84085841482fc6ed9591c700df95581d500f84b904b896251e2b26ee0460ddc"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "1eec5ad92bd50b38d8b1419335108034917846371a16d03206d4dac4e15fd64f"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "1257bcae7fe9d69638add06f3b8269fab80793ce0adce0ec8645b85542a37500"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "091b30f87398f894de190eadec1da56232d67e96f4e63d133668241ff56a8e2b"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "df707024efb39d3b6426e21387cc11b9376bd195077e6fe544a6b7b24c65aa73"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "70e6302bddb35512a15629d05ce2ace560e682b266bb5606b58399c8f53c81cd"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "6c1b8a6e5339b58cd0beee5ff838da9f1f65c4a3e14750b46aa5a8865148f841"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "7cef2472dca8e7ef3df1f51c50a0b765c37f939f4357556b71e6db2356c35c59"
+          }
+        ]
+      }
+    },
+    {
+      "attemptId": "warm-7-A",
+      "manifestId": "2330cbed45f3b43dca34383fa17afe25a0598db66c694968cc42dadd470de15a",
+      "screenshot": {
+        "status": "captured",
+        "digest": "a0c2d7aa228735ec6cc82548add33ccce137eed97fa4170043abb1c849956660"
+      },
+      "trace": {
+        "status": "failed",
+        "digest": null
+      },
+      "network": {
+        "status": "captured",
+        "entries": [
+          {
+            "method": "GET",
+            "kind": "document",
+            "pathDigest": "4bbd1b13c469db4bff68f3d7cfe88e71ed8701cfe81f337e6f83defdb35d9f45"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "4bbd1b13c469db4bff68f3d7cfe88e71ed8701cfe81f337e6f83defdb35d9f45"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "4bbd1b13c469db4bff68f3d7cfe88e71ed8701cfe81f337e6f83defdb35d9f45"
+          },
+          {
+            "method": "GET",
+            "kind": "stylesheet",
+            "pathDigest": "bce46da1708b9e83a5f63539940a1e1306e3cd921aa8ca47cefc5b2d7ac3d900"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "74947b8f9831fa0b263185eee8afbdd73acaccff8f1399df609f1df1f7de88a6"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "f5e5bdbe9886a1ade160cf23c8c2758e913e111acfa1e918921c8bf2695e18f8"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "a3aae0a54b6bf94190dab342c6a3f1f7ed6f2ac34a5ffa568e60d40a358f18a3"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "9b9abf5e36cbfb33204b2d01485db56273b49755d13ff836c6631d2930d66b3f"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "20d70ce7a0bc5f72254ec041ec2f6acff9721533a6c57225297bea33146c1a44"
+          },
+          {
+            "method": "GET",
+            "kind": "image",
+            "pathDigest": "b5b2b63b7889df9b97873b9c8151102d4ae756d18734e4a8f0d287ec0f68b136"
+          },
+          {
+            "method": "GET",
+            "kind": "document",
+            "pathDigest": "6fd3140a6b2f26e31c6229688b0f356d88e93114035b236ff94b8aea18aaac65"
+          },
+          {
+            "method": "GET",
+            "kind": "font",
+            "pathDigest": "6972270ec904fb7d24c64c209715fd1c82be80a78c0ff7ceb92ef273a6142eb7"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "30c95442e2d3f92dc495c6afbc9134525e6a3244054a906cbff0c1a5fc413e30"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "fbf15c511a3c7a98c3be8cee2810f18b69c126764fcb85542d177e384a5bf7e5"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "49c05fc7409a440c4b0cb7e1a8397d4945f4e1596f5475bde455ab3bca7956af"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "d355dae9a1af4d2c85bc2e679d7ab58a9f4ffd1aa11f380b6fdcb6603997ebc9"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "52053243da0958fe8242333542189e53c48a33f63f6dc9161ec5c932cbcde541"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "52053243da0958fe8242333542189e53c48a33f63f6dc9161ec5c932cbcde541"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "52053243da0958fe8242333542189e53c48a33f63f6dc9161ec5c932cbcde541"
+          },
+          {
+            "method": "GET",
+            "kind": "image",
+            "pathDigest": "dd0381924e7298f572baae5cfcb41887c0233911c1b6c7cf2f34c1ffb580af53"
+          },
+          {
+            "method": "GET",
+            "kind": "font",
+            "pathDigest": "52053243da0958fe8242333542189e53c48a33f63f6dc9161ec5c932cbcde541"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "52053243da0958fe8242333542189e53c48a33f63f6dc9161ec5c932cbcde541"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "52053243da0958fe8242333542189e53c48a33f63f6dc9161ec5c932cbcde541"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "b36620c962f732a8b519caef6f0cc04f5b953604369545ceaad62abf0de2572e"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "7e1d121bcef318b79ab3d13908bb22b56a5b8fc6e09ace280ca45981aab28012"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "a7c2cbe50c10b6bb7bd362cb00357808fbea57304626948c01bf75356b0a7b97"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "5ad2e7779ec048b89058dc6d5149d7be28da5e721b6878981c113550c9ba40f8"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "93be43dc938494d46c9e0086294a45c6fdda8bc1667b573fe5c0116fedf080f2"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "0628b2e5bb20ebb9c397820126e210c290c5ab5e7a9fb395b8eccf1d853ae96b"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "14c73391eb8c8ebbd5cff76bf2cef31d5d8c2a2dd0a3a86f10979eb90b5f5857"
+          },
+          {
+            "method": "GET",
+            "kind": "document",
+            "pathDigest": "df7e940f72aa93cbcb6d70cc35124b0767c7a0e353043c7c24b660ea9be7b952"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "656a55e3788bc6c960517f6ff859bdf1c0c8b0278999528e7de0d065f0b91a89"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "67c1ccfd23eff89c3581efab688130dce5d84ad8fc5c53ff9c641fec7e473be2"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "7e2df3dea56792413b5ad1af4554d72510e48ebf27e746bcded277eab56a85fc"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "fd4d46f6469db63fcb53867cd78a1884ce81321565ff60f39a0676d83f740597"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "84639b0da759036302c66a786ff98f36d8fc0066375ac8b91c3b371a429513ac"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "55aee9a258e0d5e10bc09a5f74f2aa1340379cb9c77fc1e98a24dc2b689f9e96"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "b84085841482fc6ed9591c700df95581d500f84b904b896251e2b26ee0460ddc"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "1eec5ad92bd50b38d8b1419335108034917846371a16d03206d4dac4e15fd64f"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "1257bcae7fe9d69638add06f3b8269fab80793ce0adce0ec8645b85542a37500"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "091b30f87398f894de190eadec1da56232d67e96f4e63d133668241ff56a8e2b"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "df707024efb39d3b6426e21387cc11b9376bd195077e6fe544a6b7b24c65aa73"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "70e6302bddb35512a15629d05ce2ace560e682b266bb5606b58399c8f53c81cd"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "6c1b8a6e5339b58cd0beee5ff838da9f1f65c4a3e14750b46aa5a8865148f841"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "7cef2472dca8e7ef3df1f51c50a0b765c37f939f4357556b71e6db2356c35c59"
+          }
+        ]
+      }
+    },
+    {
+      "attemptId": "warm-8-B",
+      "manifestId": "acb0de7a7022da3cd5aec9163ec3dbda08496acde3dbba7e545c02ae86d648c9",
+      "screenshot": {
+        "status": "captured",
+        "digest": "cf68a1462f909201529e206824868673973c7b1ac86e7f9b99a3d33a52ba3061"
+      },
+      "trace": {
+        "status": "failed",
+        "digest": null
+      },
+      "network": {
+        "status": "captured",
+        "entries": [
+          {
+            "method": "GET",
+            "kind": "document",
+            "pathDigest": "2ea53a5299b137361a04e85dac5894f30e5ef057644fb4acc95774320738b015"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "2ea53a5299b137361a04e85dac5894f30e5ef057644fb4acc95774320738b015"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "2ea53a5299b137361a04e85dac5894f30e5ef057644fb4acc95774320738b015"
+          },
+          {
+            "method": "GET",
+            "kind": "stylesheet",
+            "pathDigest": "ff3c05edca8567deabaf6268fecc270088d963d3635f5d7d4cd5f16bd7e1e620"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "30185b0a013cea2fa232eea8ea6390c74b901e17d16f170f6ade56cefe53dd57"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "d9e38dadfb3a8d7c98ca8ddd5af981bc6725392e75f0ae341a3b04be15972fce"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "2d1734980475781065e74c3baef6607571dc1d9380a1c7434d529db1ccb9ffd9"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "63cd3aa6dcec57827caa590083f8c77cc4b9ceaebd046c3106801decd53fe85f"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "18c34ea68865764070aec151012bd60b687239fc859914442a614d4aacab451e"
+          },
+          {
+            "method": "GET",
+            "kind": "image",
+            "pathDigest": "630d8ef88a3429adcea90a369a226af966a01488bf4e21a3249999601611a955"
+          },
+          {
+            "method": "GET",
+            "kind": "document",
+            "pathDigest": "5e40188d0663f49ff3f128eb7f2a094d5e7a1c6a494e52ae7f4d954db1e011a4"
+          },
+          {
+            "method": "GET",
+            "kind": "font",
+            "pathDigest": "4994f5db1bdd756466da3f6fa73d1d0cbadbda1afaf5b531fc89bc6434db0b92"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "e830192b4a070b7969754511fde5afaafc7c742e1193106be6d257a1b9e5c653"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "0083b5a8e1230e8f6f12f7adf6eeff78fbdc0bba1b9ba994093db708f90d2cbe"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "1302b82cc3f71b7eeae85d18862c061ff6f5ec6080205cea113487ccad14318f"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "1a7301827aee41178466009f22dc8d029c4bccb8e66f32decbfe236e7a57b02f"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "b8bcd72614b6d77ded45bc975e27965671a9314fb030fd8d14c2c1b7668200d9"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "b8bcd72614b6d77ded45bc975e27965671a9314fb030fd8d14c2c1b7668200d9"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "b8bcd72614b6d77ded45bc975e27965671a9314fb030fd8d14c2c1b7668200d9"
+          },
+          {
+            "method": "GET",
+            "kind": "image",
+            "pathDigest": "3278dab5c5cc82c9c1c063bc1d04b914df2daa2094a0df43098b9a412980688c"
+          },
+          {
+            "method": "GET",
+            "kind": "font",
+            "pathDigest": "b8bcd72614b6d77ded45bc975e27965671a9314fb030fd8d14c2c1b7668200d9"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "b8bcd72614b6d77ded45bc975e27965671a9314fb030fd8d14c2c1b7668200d9"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "b8bcd72614b6d77ded45bc975e27965671a9314fb030fd8d14c2c1b7668200d9"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "0affe7509d1e3b8782ea439b0697cdd53d8e748107876aaa38e7dae3fdb4e954"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "fbf7dab3e2f5d1b0e9018c7e75ce3f276dca4815f98fb42eba6d775d4b11a214"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "34771f2d73b9a58f99e9f87bbb33a6a07ad6db3ae0ee97093c70e439345f4b90"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "e942f37a6afe49349a58535af791233b41c67f9e8ff6637f75e223793ef6e0a2"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "1ab95e989b138835f4a323aec11530e0ce56c22bb79af17d400fa22d23116f8c"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "f2d9e174291ca0894040b006954ba9025a84fd999355b422da01baea55fc38ad"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "31a03a2f2bf05ad09196afbfa4f914c742e739b39114d1b5b775b63b777a2782"
+          },
+          {
+            "method": "GET",
+            "kind": "document",
+            "pathDigest": "df7e940f72aa93cbcb6d70cc35124b0767c7a0e353043c7c24b660ea9be7b952"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "656a55e3788bc6c960517f6ff859bdf1c0c8b0278999528e7de0d065f0b91a89"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "67c1ccfd23eff89c3581efab688130dce5d84ad8fc5c53ff9c641fec7e473be2"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "7e2df3dea56792413b5ad1af4554d72510e48ebf27e746bcded277eab56a85fc"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "fd4d46f6469db63fcb53867cd78a1884ce81321565ff60f39a0676d83f740597"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "84639b0da759036302c66a786ff98f36d8fc0066375ac8b91c3b371a429513ac"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "55aee9a258e0d5e10bc09a5f74f2aa1340379cb9c77fc1e98a24dc2b689f9e96"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "b84085841482fc6ed9591c700df95581d500f84b904b896251e2b26ee0460ddc"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "1eec5ad92bd50b38d8b1419335108034917846371a16d03206d4dac4e15fd64f"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "1257bcae7fe9d69638add06f3b8269fab80793ce0adce0ec8645b85542a37500"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "df707024efb39d3b6426e21387cc11b9376bd195077e6fe544a6b7b24c65aa73"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "70e6302bddb35512a15629d05ce2ace560e682b266bb5606b58399c8f53c81cd"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "6c1b8a6e5339b58cd0beee5ff838da9f1f65c4a3e14750b46aa5a8865148f841"
+          }
+        ]
+      }
+    },
+    {
+      "attemptId": "warm-9-C",
+      "manifestId": "f52afa1617182e76fb84d308202bb50f787445f6d5fec4c47895595c30c7f765",
+      "screenshot": {
+        "status": "captured",
+        "digest": "67bf7126bb3212ea373914b58488487ad8be679161424dc7b2b227a795454b96"
+      },
+      "trace": {
+        "status": "failed",
+        "digest": null
+      },
+      "network": {
+        "status": "captured",
+        "entries": [
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "091b30f87398f894de190eadec1da56232d67e96f4e63d133668241ff56a8e2b"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "7cef2472dca8e7ef3df1f51c50a0b765c37f939f4357556b71e6db2356c35c59"
+          },
+          {
+            "method": "GET",
+            "kind": "document",
+            "pathDigest": "2afb16ea5f4d3937fee6ef537256fc124be4d5f961668ddd5cbae9e80b14b097"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "2afb16ea5f4d3937fee6ef537256fc124be4d5f961668ddd5cbae9e80b14b097"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "2afb16ea5f4d3937fee6ef537256fc124be4d5f961668ddd5cbae9e80b14b097"
+          },
+          {
+            "method": "GET",
+            "kind": "stylesheet",
+            "pathDigest": "ff45aa58feb88a89176e27804f8ed0f2b04846de91018a7c6bcf3197476f49f8"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "de61e6a781267f9f4102ca511c54d94e94692bd7ef874bdd098b8a9d3291b03a"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "ce248690322f5d194820070a3bb324a5e291cb2c3353df0042fe1942db6ac49a"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "f9b5881372a977f722d9c90ca8a258e1f9a161125ce7ddf41cc03e5dedb3b489"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "608ec0614d19ef0241c60b28f3d2155520e6f3eae289b2f5ff72643ca23c0a33"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "2ae0dc76aaa57e9ddc3f6abfe52cc93156d65bfca4987d32ea35458989670939"
+          },
+          {
+            "method": "GET",
+            "kind": "image",
+            "pathDigest": "e5601c4753175b2d6052418dc2f8de006229433d334495f3a1ec07a68e9da937"
+          },
+          {
+            "method": "GET",
+            "kind": "document",
+            "pathDigest": "ea8d1f57396f031cfdf748f2c7c0f349f262a5960f847ec41fecc07fde417f1a"
+          },
+          {
+            "method": "GET",
+            "kind": "font",
+            "pathDigest": "ff3456858a5231e718b87cc521dcd818a9aa050f9f362c6f0cc1393844f09bf1"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "0be320368c3611df7483ad0bb9d9ae5fb816beb965ab310021d6f081a0ca5ec8"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "099fab2a68884acca86cd3aea7d6f7ab35279eb7ab0386be20463c55ec2d4777"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "46fcbb7c1d738377bdfd830bdc44eff86520d94a06ffd97b5681ad21548fb80b"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "a12d3d92487b488511d4cdd2ff91a28446a78426332aa33e2c91135c4d2165c4"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "d9b790f99499d9c31fdf52256e5cce051157f56a41790404d5f3bb6d0a5d6f71"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "d9b790f99499d9c31fdf52256e5cce051157f56a41790404d5f3bb6d0a5d6f71"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "d9b790f99499d9c31fdf52256e5cce051157f56a41790404d5f3bb6d0a5d6f71"
+          },
+          {
+            "method": "GET",
+            "kind": "image",
+            "pathDigest": "29db48da9d81f059881779027e175b437661a1f545f1bee6bfc16db78486c7fe"
+          },
+          {
+            "method": "GET",
+            "kind": "font",
+            "pathDigest": "d9b790f99499d9c31fdf52256e5cce051157f56a41790404d5f3bb6d0a5d6f71"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "d9b790f99499d9c31fdf52256e5cce051157f56a41790404d5f3bb6d0a5d6f71"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "d9b790f99499d9c31fdf52256e5cce051157f56a41790404d5f3bb6d0a5d6f71"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "b2a0a88c405dbe87b12608bc63866e19a8f8b7eae677aadea4de41f2a7349f0a"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "2a03a688029c60ac6cde685c29052fce522655956118f4edf7a448ec95cae43c"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "5b0a6679a8f87b37b83e150128022ae0964b09ea730a9dcb54347997866b8df2"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "c6ff5f48024d7f7173f4138845ee38504e1b6fd753339b7960e0d0dd5b3b378f"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "be00549cea143f4128fae7c526bcaaf3a25de4d67a18de964b2e4cecaf8995c4"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "e72c0b7a801264b50e8d554ef94a345209528ba901032e633586f1baca7b4f8f"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "7c9e2e7e5d9f60d1f88aef4a566d78a381e4552986a1c9c756baaadce8e15ff4"
+          },
+          {
+            "method": "GET",
+            "kind": "document",
+            "pathDigest": "df7e940f72aa93cbcb6d70cc35124b0767c7a0e353043c7c24b660ea9be7b952"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "656a55e3788bc6c960517f6ff859bdf1c0c8b0278999528e7de0d065f0b91a89"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "67c1ccfd23eff89c3581efab688130dce5d84ad8fc5c53ff9c641fec7e473be2"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "7e2df3dea56792413b5ad1af4554d72510e48ebf27e746bcded277eab56a85fc"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "fd4d46f6469db63fcb53867cd78a1884ce81321565ff60f39a0676d83f740597"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "84639b0da759036302c66a786ff98f36d8fc0066375ac8b91c3b371a429513ac"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "55aee9a258e0d5e10bc09a5f74f2aa1340379cb9c77fc1e98a24dc2b689f9e96"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "b84085841482fc6ed9591c700df95581d500f84b904b896251e2b26ee0460ddc"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "1eec5ad92bd50b38d8b1419335108034917846371a16d03206d4dac4e15fd64f"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "1257bcae7fe9d69638add06f3b8269fab80793ce0adce0ec8645b85542a37500"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "091b30f87398f894de190eadec1da56232d67e96f4e63d133668241ff56a8e2b"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "df707024efb39d3b6426e21387cc11b9376bd195077e6fe544a6b7b24c65aa73"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "70e6302bddb35512a15629d05ce2ace560e682b266bb5606b58399c8f53c81cd"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "6c1b8a6e5339b58cd0beee5ff838da9f1f65c4a3e14750b46aa5a8865148f841"
+          }
+        ]
+      }
+    },
+    {
+      "attemptId": "warm-10-A",
+      "manifestId": "4a598d4e5a4d58bcdf1e62782ce801aa3e54569dc73e2c41cbd75d0b8d8900c6",
+      "screenshot": {
+        "status": "captured",
+        "digest": "a0c2d7aa228735ec6cc82548add33ccce137eed97fa4170043abb1c849956660"
+      },
+      "trace": {
+        "status": "failed",
+        "digest": null
+      },
+      "network": {
+        "status": "captured",
+        "entries": [
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "7cef2472dca8e7ef3df1f51c50a0b765c37f939f4357556b71e6db2356c35c59"
+          },
+          {
+            "method": "GET",
+            "kind": "document",
+            "pathDigest": "4bbd1b13c469db4bff68f3d7cfe88e71ed8701cfe81f337e6f83defdb35d9f45"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "4bbd1b13c469db4bff68f3d7cfe88e71ed8701cfe81f337e6f83defdb35d9f45"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "4bbd1b13c469db4bff68f3d7cfe88e71ed8701cfe81f337e6f83defdb35d9f45"
+          },
+          {
+            "method": "GET",
+            "kind": "stylesheet",
+            "pathDigest": "bce46da1708b9e83a5f63539940a1e1306e3cd921aa8ca47cefc5b2d7ac3d900"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "74947b8f9831fa0b263185eee8afbdd73acaccff8f1399df609f1df1f7de88a6"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "f5e5bdbe9886a1ade160cf23c8c2758e913e111acfa1e918921c8bf2695e18f8"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "a3aae0a54b6bf94190dab342c6a3f1f7ed6f2ac34a5ffa568e60d40a358f18a3"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "9b9abf5e36cbfb33204b2d01485db56273b49755d13ff836c6631d2930d66b3f"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "20d70ce7a0bc5f72254ec041ec2f6acff9721533a6c57225297bea33146c1a44"
+          },
+          {
+            "method": "GET",
+            "kind": "image",
+            "pathDigest": "b5b2b63b7889df9b97873b9c8151102d4ae756d18734e4a8f0d287ec0f68b136"
+          },
+          {
+            "method": "GET",
+            "kind": "document",
+            "pathDigest": "6fd3140a6b2f26e31c6229688b0f356d88e93114035b236ff94b8aea18aaac65"
+          },
+          {
+            "method": "GET",
+            "kind": "font",
+            "pathDigest": "6972270ec904fb7d24c64c209715fd1c82be80a78c0ff7ceb92ef273a6142eb7"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "22f755025c28ef68fd7fdfe82440b0cc898a9f5db6f0743f52d080bd61ee0424"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "1de86ed5a7113abefe63a83065e1f131efb4ef7f2342bbbd8a87be9eac533df3"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "49c05fc7409a440c4b0cb7e1a8397d4945f4e1596f5475bde455ab3bca7956af"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "d355dae9a1af4d2c85bc2e679d7ab58a9f4ffd1aa11f380b6fdcb6603997ebc9"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "52053243da0958fe8242333542189e53c48a33f63f6dc9161ec5c932cbcde541"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "52053243da0958fe8242333542189e53c48a33f63f6dc9161ec5c932cbcde541"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "52053243da0958fe8242333542189e53c48a33f63f6dc9161ec5c932cbcde541"
+          },
+          {
+            "method": "GET",
+            "kind": "image",
+            "pathDigest": "dd0381924e7298f572baae5cfcb41887c0233911c1b6c7cf2f34c1ffb580af53"
+          },
+          {
+            "method": "GET",
+            "kind": "font",
+            "pathDigest": "52053243da0958fe8242333542189e53c48a33f63f6dc9161ec5c932cbcde541"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "52053243da0958fe8242333542189e53c48a33f63f6dc9161ec5c932cbcde541"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "52053243da0958fe8242333542189e53c48a33f63f6dc9161ec5c932cbcde541"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "b36620c962f732a8b519caef6f0cc04f5b953604369545ceaad62abf0de2572e"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "7e1d121bcef318b79ab3d13908bb22b56a5b8fc6e09ace280ca45981aab28012"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "a7c2cbe50c10b6bb7bd362cb00357808fbea57304626948c01bf75356b0a7b97"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "5ad2e7779ec048b89058dc6d5149d7be28da5e721b6878981c113550c9ba40f8"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "93be43dc938494d46c9e0086294a45c6fdda8bc1667b573fe5c0116fedf080f2"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "c45f97327d33d92d9a15cff4b5952bc7b5c53a0d643100ca8bdb4181f651d66c"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "14c73391eb8c8ebbd5cff76bf2cef31d5d8c2a2dd0a3a86f10979eb90b5f5857"
+          },
+          {
+            "method": "GET",
+            "kind": "document",
+            "pathDigest": "df7e940f72aa93cbcb6d70cc35124b0767c7a0e353043c7c24b660ea9be7b952"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "656a55e3788bc6c960517f6ff859bdf1c0c8b0278999528e7de0d065f0b91a89"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "67c1ccfd23eff89c3581efab688130dce5d84ad8fc5c53ff9c641fec7e473be2"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "7e2df3dea56792413b5ad1af4554d72510e48ebf27e746bcded277eab56a85fc"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "fd4d46f6469db63fcb53867cd78a1884ce81321565ff60f39a0676d83f740597"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "84639b0da759036302c66a786ff98f36d8fc0066375ac8b91c3b371a429513ac"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "55aee9a258e0d5e10bc09a5f74f2aa1340379cb9c77fc1e98a24dc2b689f9e96"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "b84085841482fc6ed9591c700df95581d500f84b904b896251e2b26ee0460ddc"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "1eec5ad92bd50b38d8b1419335108034917846371a16d03206d4dac4e15fd64f"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "1257bcae7fe9d69638add06f3b8269fab80793ce0adce0ec8645b85542a37500"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "091b30f87398f894de190eadec1da56232d67e96f4e63d133668241ff56a8e2b"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "df707024efb39d3b6426e21387cc11b9376bd195077e6fe544a6b7b24c65aa73"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "70e6302bddb35512a15629d05ce2ace560e682b266bb5606b58399c8f53c81cd"
+          },
+          {
+            "method": "GET",
+            "kind": "script",
+            "pathDigest": "6c1b8a6e5339b58cd0beee5ff838da9f1f65c4a3e14750b46aa5a8865148f841"
+          },
+          {
+            "method": "GET",
+            "kind": "fetch",
+            "pathDigest": "7cef2472dca8e7ef3df1f51c50a0b765c37f939f4357556b71e6db2356c35c59"
+          }
+        ]
+      }
+    }
+  ]
+}

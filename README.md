@@ -42,6 +42,9 @@ just proof-project-runtime-isolation-residual-audit
 just verify-session-switching-phase0
 just verify-session-switching
 just proof-session-switching-residual-audit
+just measure-mvp-performance
+just verify-mvp-performance
+just proof-mvp-performance-residual-audit
 just verify
 ```
 
@@ -58,6 +61,10 @@ On the designated Ubuntu devcontainer, `just proof-start` starts one isolated co
 ## Project Runtime Manager
 
 The API now owns one internal in-memory manager that can start or health-check and reuse a persisted project's code-server. It validates the stable ID and exact canonical path, uses direct non-root loopback launch, coalesces concurrent calls, reports typed bounded failures, and returns graceful or escalated shutdown audits for every exact owned PID/start identity, process group, port, and listener before SQLite closes. Browser workbench traffic reaches this manager through the stable `/projects/{projectId}/workbench/` proxy route, and Project Home Open now navigates to that route by stable ID. Runtime identity and state remain unpersisted. The retained designated episode is the single source for the observed startup timing versus the 15-second target, PID/port reuse, recursive BL-001 manifest, exact shutdown audit, unrelated-control survival, and zero residuals. See [the project runtime runbook](docs/project-runtime.md).
+
+## MVP performance measurement
+
+Issue #35 adds one serial no-retry designated measurement command for cold5, warm10, three exact BL-014 continuity runs, and fresh integrated 3/5/10 capacity cohorts. The immutable controller uses one monotonic clock through the Explorer-plus-terminal usable consequence, retains failures and artifacts, applies unchanged 15,000 ms cold and 2,000 ms warm targets, and defaults misses to blocker. Run just measure-mvp-performance only for the designated episode; ordinary just verify runs the finite validator and residual audit without repeating measurement. See docs/mvp-performance.md for prerequisites, formulas, privacy, cleanup, evidence, BL-004 comparability, and observed results.
 
 ## Repository Layout
 

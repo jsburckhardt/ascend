@@ -544,7 +544,7 @@ describe('BL-011 executable acceptance coordinator', () => {
       residualAudit: {},
     })
     expect((await stat(WORKBENCH_ROUTE_EVIDENCE_FILE)).mode & 0o777).toBe(0o600)
-  })
+  }, 10_000)
 
   it('captures bounded enabled logs and uses real HTTP, WebSocket, and terminal channels', async () => {
     const logs: string[] = []

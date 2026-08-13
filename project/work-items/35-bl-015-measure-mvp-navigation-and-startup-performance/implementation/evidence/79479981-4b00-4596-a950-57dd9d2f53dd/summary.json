@@ -1,0 +1,117 @@
+{
+  "schemaVersion": 1,
+  "runId": "79479981-4b00-4596-a950-57dd9d2f53dd",
+  "planHash": "ed85cb7c5a010e573518cdd34f9c2ae22b1cb9eb76aa594e661ae6e9d9294679",
+  "measurementHash": "e1046427df028a35916ada79cf38dbae5d85c7e734a974d5f8db5a00920758df",
+  "completedAt": "2026-08-13T13:01:48.296Z",
+  "cold": {
+    "orderedAttemptIds": [
+      "cold-1-A",
+      "cold-2-B",
+      "cold-3-C",
+      "cold-4-A",
+      "cold-5-B"
+    ],
+    "sortedSourceAttemptIds": [
+      "cold-4-A",
+      "cold-1-A",
+      "cold-5-B",
+      "cold-2-B",
+      "cold-3-C"
+    ],
+    "sourceDurationsNs": [
+      "9961620277",
+      "10000248539",
+      "10222643659",
+      "11498863717",
+      "11702567742"
+    ],
+    "medianNs": "10222643659",
+    "p95Ns": "11702567742",
+    "maximumNs": "11702567742",
+    "failures": 0,
+    "preStartFailures": 0,
+    "identityChanges": 0,
+    "targetMisses": 0
+  },
+  "warm": {
+    "orderedAttemptIds": [
+      "warm-1-A",
+      "warm-2-B",
+      "warm-3-C",
+      "warm-4-A",
+      "warm-5-B",
+      "warm-6-C",
+      "warm-7-A",
+      "warm-8-B",
+      "warm-9-C",
+      "warm-10-A"
+    ],
+    "sortedSourceAttemptIds": [
+      "warm-5-B",
+      "warm-4-A",
+      "warm-3-C",
+      "warm-6-C",
+      "warm-1-A",
+      "warm-2-B"
+    ],
+    "sourceDurationsNs": [
+      "7945282182",
+      "8106317603",
+      "8741023678",
+      "8821655661",
+      "8973444942",
+      "10189326390"
+    ],
+    "medianNs": "8781339669",
+    "p95Ns": "10189326390",
+    "maximumNs": "10189326390",
+    "failures": 4,
+    "preStartFailures": 0,
+    "identityChanges": 0,
+    "targetMisses": 10
+  },
+  "continuity": {
+    "successes": 3,
+    "total": 3,
+    "metric2": 1,
+    "disposition": "met"
+  },
+  "capacity": [
+    {
+      "cohort": 3,
+      "ready": 3,
+      "workloadsPassed": 3,
+      "requiredSamplesComplete": true,
+      "responsivenessPassed": true,
+      "cleanupPassed": true,
+      "gate": "met"
+    },
+    {
+      "cohort": 5,
+      "ready": 5,
+      "workloadsPassed": 5,
+      "requiredSamplesComplete": true,
+      "responsivenessPassed": true,
+      "cleanupPassed": true,
+      "gate": "finding"
+    },
+    {
+      "cohort": 10,
+      "ready": 10,
+      "workloadsPassed": 10,
+      "requiredSamplesComplete": true,
+      "responsivenessPassed": true,
+      "cleanupPassed": true,
+      "gate": "finding"
+    }
+  ],
+  "metrics": {
+    "nfr002Metric4": "met",
+    "nfr001Metric3": "blocker",
+    "continuityMetric2": "met",
+    "nfr003Capacity3": "met"
+  },
+  "overallDisposition": "blocker",
+  "approval": null
+}

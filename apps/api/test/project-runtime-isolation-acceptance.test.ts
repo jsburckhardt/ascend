@@ -11,7 +11,10 @@ import {
   createApiServerController,
   type ApiServerController,
 } from '../src/api-server.js'
-import type { ProjectLibrary } from '../src/project-library.js'
+import {
+  createProjectLibrary,
+  type ProjectLibrary,
+} from '../src/project-library.js'
 import {
   BL013_EVENT_EXPECTATIONS,
   BL013_MISMATCH_CLASSES,
@@ -20,6 +23,7 @@ import {
   validateProjectRuntimeIsolationEvidence,
 } from '../src/project-runtime-isolation-evidence.js'
 import { validateRuntimeManagerSource } from '../src/project-runtime-isolation-contract.js'
+import { validateProjectRuntimeIsolationBrowserEvidence } from '../src/project-runtime-isolation-audit.js'
 import {
   RuntimeFailure,
   createProjectRuntimeConfig,
@@ -39,7 +43,10 @@ import {
   type RuntimeProcessDependencies,
   type RuntimeTerminationOutcome,
 } from '../src/project-runtime-process.js'
-import { createWorkbenchProxyManager } from '../src/workbench-proxy-manager.js'
+import {
+  createWorkbenchProxyManager,
+  type WorkbenchProxyManagerDependencies,
+} from '../src/workbench-proxy-manager.js'
 
 interface Deferred<T> {
   readonly promise: Promise<T>
@@ -73,6 +80,15 @@ interface ControlledFrameReceipt {
   readonly binary: boolean
 }
 
+const frameBuffer = (data: RawData): Buffer =>
+  Buffer.isBuffer(data) ? data : Buffer.concat(data as Buffer[])
+
+const frameExecutionId = (data: RawData, binary: boolean): string => {
+  const text = frameBuffer(data).toString('utf8')
+  return binary
+    ? text.slice(0, text.indexOf(':binary:'))
+    : String((JSON.parse(text) as { executionId: string }).executionId)
+}
 interface ControlledRuntime {
   readonly ready: ReadyRuntime
   readonly contacts: string[]
@@ -116,13 +132,8 @@ async function controlledRuntime(
   })
   webSockets.on('connection', (socket) => {
     socket.on('message', (data: RawData, binary: boolean) => {
-      const payload = Buffer.isBuffer(data)
-        ? data
-        : Buffer.concat(data as Buffer[])
-      const text = payload.toString('utf8')
-      const executionId = binary
-        ? text.slice(0, text.indexOf(':binary:'))
-        : String((JSON.parse(text) as { executionId: string }).executionId)
+      const payload = frameBuffer(data)
+      const executionId = frameExecutionId(data, binary)
       frameReceipts.push({
         receiptId:
           'frame-receipt-' + label + '-' + String(frameReceipts.length + 1),
@@ -308,7 +319,12 @@ async function apiFor(
   projects: readonly any[],
   runtime: ProjectRuntimeManager,
   proxyEvents: Record<string, unknown>[],
-  logRecords: string[]
+  logRecords: string[],
+  proxyOverrides: Pick<
+    WorkbenchProxyManagerDependencies,
+    'selectWebSocketFrameDestination'
+  > = {},
+  ownedLibrary: ProjectLibrary = projectLibrary(projects)
 ) {
   const stream = new Writable({
     write(chunk, _encoding, callback) {
@@ -319,13 +335,14 @@ async function apiFor(
   const controller = createApiServerController({
     port: 0,
     fastify: { logger: { level: 'info', stream } as any },
-    createProjectLibrary: async () => projectLibrary(projects),
+    createProjectLibrary: async () => ownedLibrary,
     createProjectRuntimeManager: () => runtime,
     createWorkbenchProxyManager: (library, ownedRuntime) =>
       createWorkbenchProxyManager({
         projectLibrary: library,
         projectRuntime: ownedRuntime,
         recordEvent: (event) => proxyEvents.push(event),
+        ...proxyOverrides,
       }),
     createProjectRegistration: async () => ({
       register: vi.fn(),
@@ -393,6 +410,21 @@ const closeWebSocketBoundary = (socket: WebSocket) =>
     socket.close(1000)
   })
 
+const sendFrameAndObserveRejection = (
+  socket: WebSocket,
+  payload: string | Buffer,
+  binary: boolean
+) =>
+  new Promise<{ closeCode: number; sendCallbackError: boolean }>((resolve) => {
+    let sendCallbackError = false
+    socket.once('close', (closeCode) =>
+      resolve({ closeCode, sendCallbackError })
+    )
+    socket.send(payload, { binary }, (error) => {
+      sendCallbackError = error !== undefined
+    })
+  })
+
 async function buildArtifact() {
   const startedAt = Date.now()
   const fixtureRoot = await mkdtemp(
@@ -423,6 +455,24 @@ async function buildArtifact() {
       }
     })
   )
+  const closedCanonicalPath = path.join(fixtureRoot, 'closed')
+  await mkdir(closedCanonicalPath)
+  await writeFile(
+    path.join(closedCanonicalPath, 'terminal-sentinel.txt'),
+    'BL013_CLOSED_SENTINEL'
+  )
+  const closedProject = {
+    id: 'bl013-closed',
+    name: 'Fixture Closed',
+    canonicalPath: closedCanonicalPath,
+    createdAt: 4,
+  }
+  const isolationDatabasePath = path.join(fixtureRoot, 'matrix.sqlite')
+  const persistedLibrary = await createProjectLibrary(isolationDatabasePath)
+  for (const project of [...projects, closedProject]) {
+    const result = await persistedLibrary.create(project)
+    expect(result.disposition).toBe('created')
+  }
   const config = createProjectRuntimeConfig({
     expectedUser: os.userInfo().username,
     environment: {
@@ -438,8 +488,7 @@ async function buildArtifact() {
   const launches: Record<string, unknown>[] = []
   const coreEvents: RuntimeSafeLifecycleEvent[] = []
   const manager = createProjectRuntimeManager({
-    findProjectById: async (id) =>
-      projects.find((project) => project.id === id),
+    findProjectById: persistedLibrary.findById,
     config,
     processDependencies,
     launch: async ({ canonicalPath, config: launchConfig }) => {
@@ -513,6 +562,20 @@ async function buildArtifact() {
   const logRecords: string[] = []
   let injection:
     { mismatchClass: string; source: string; target: string } | undefined
+  const frameDestinations = new Map<string, WebSocket>()
+  let frameInjection:
+    | {
+        sourceToken: string
+        targetToken: string
+        executionIds: Set<string>
+        attempts: Array<{
+          executionId: string
+          sourceToken: string
+          attemptedDestinationToken: string
+          binary: boolean
+        }>
+      }
+    | undefined
   const wrappedRuntime: ProjectRuntimeManager = {
     ...manager,
     async start(input) {
@@ -534,7 +597,41 @@ async function buildArtifact() {
       return manager.ownsSnapshot(snapshot)
     },
   }
-  const api = await apiFor(projects, wrappedRuntime, proxyEvents, logRecords)
+  const api = await apiFor(
+    projects,
+    wrappedRuntime,
+    proxyEvents,
+    logRecords,
+    {
+      selectWebSocketFrameDestination: (input) => {
+        frameDestinations.set(input.projectToken, input.rightfulDestination)
+        if (input.direction !== 'to-upstream' || frameInjection === undefined)
+          return input.rightfulDestination
+        let executionId: string
+        try {
+          executionId = frameExecutionId(input.data, input.binary)
+        } catch {
+          return input.rightfulDestination
+        }
+        if (
+          input.projectToken !== frameInjection.sourceToken ||
+          !frameInjection.executionIds.has(executionId)
+        )
+          return input.rightfulDestination
+        const attempted = frameDestinations.get(frameInjection.targetToken)
+        if (attempted === undefined)
+          throw new Error('Target frame destination missing')
+        frameInjection.attempts.push({
+          executionId,
+          sourceToken: input.projectToken,
+          attemptedDestinationToken: frameInjection.targetToken,
+          binary: input.binary,
+        })
+        return attempted
+      },
+    },
+    persistedLibrary
+  )
   const beforeInvalid = projects.map((project) =>
     safeSnapshot(manager.inspect(project.id)!)
   )
@@ -546,11 +643,46 @@ async function buildArtifact() {
       ).length,
     ])
   )
-  const invalidResults = await Promise.all([
-    httpCase(api.port, '/projects/%2F/workbench/'),
-    httpCase(api.port, '/projects/unknown/workbench/invalid'),
-    httpCase(api.port, '/projects/closed-project/workbench/invalid'),
-  ])
+  const closedPersistedBefore =
+    (await persistedLibrary.findById(closedProject.id)) !== undefined
+  const closeResponse = await fetch(
+    'http://127.0.0.1:' +
+      String(api.port) +
+      '/api/projects/' +
+      closedProject.id,
+    { method: 'DELETE' }
+  )
+  const closeBody = (await closeResponse.json()) as Record<string, unknown>
+  const closedPersistedAfter =
+    (await persistedLibrary.findById(closedProject.id)) !== undefined
+  const managerAuditBeforeInvalid = manager.audit!()
+  const launchesBeforeClosedStart = launches.length
+  const runtimeEventsBeforeClosedStart = coreEvents.length
+  const closedStart = await manager
+    .start({
+      projectId: closedProject.id,
+      canonicalPath: closedProject.canonicalPath,
+    })
+    .catch((error: unknown) => error)
+  const invalidResults = [
+    {
+      kind: 'malformed',
+      ...(await httpCase(api.port, '/projects/%2F/workbench/')),
+    },
+    {
+      kind: 'unknown',
+      ...(await httpCase(api.port, '/projects/unknown/workbench/invalid')),
+    },
+    {
+      kind: 'closed',
+      ...(await httpCase(
+        api.port,
+        '/projects/' + closedProject.id + '/workbench/invalid'
+      )),
+    },
+  ]
+  const managerAuditAfterInvalid = manager.audit!()
+  const proxyAuditAfterInvalid = api.app.workbenchProxy.audit()
   const terminalAfterInvalid = await Promise.all(
     projects.map((project) =>
       terminalProbe(manager.inspect(project.id)!, project.sentinel)
@@ -582,9 +714,11 @@ async function buildArtifact() {
 
       if (mismatchClass === 'frame-destination') {
         injection = undefined
-        const sourceBoundaryId = 'source-boundary-' + executionId
+        const sourceBoundaryIds = [
+          'source-text-boundary-' + executionId,
+          'source-binary-boundary-' + executionId,
+        ]
         const targetBoundaryId = 'target-boundary-' + executionId
-        const sourceSocket = await openWebSocketBoundary(api.port, route)
         const targetSocket = await openWebSocketBoundary(
           api.port,
           '/projects/bl013-' + target + '/workbench/matrix-control'
@@ -617,24 +751,36 @@ async function buildArtifact() {
           targetControlPayload,
           false
         )
-        const textEcho = await exchangeFrame(sourceSocket, textPayload, false)
-        const binaryEcho = await exchangeFrame(
-          sourceSocket,
+        frameInjection = {
+          sourceToken: deriveProjectOwnerToken('bl013-' + source),
+          targetToken: deriveProjectOwnerToken('bl013-' + target),
+          executionIds: new Set([textExecutionId, binaryExecutionId]),
+          attempts: [],
+        }
+        const sourceTextSocket = await openWebSocketBoundary(api.port, route)
+        const textRejection = await sendFrameAndObserveRejection(
+          sourceTextSocket,
+          textPayload,
+          false
+        )
+        const sourceBinarySocket = await openWebSocketBoundary(api.port, route)
+        const binaryRejection = await sendFrameAndObserveRejection(
+          sourceBinarySocket,
           binaryPayload,
           true
         )
         await vi.waitFor(() => {
+          expect(frameInjection?.attempts).toHaveLength(2)
           expect(sourceRuntime.frameReceipts.length - sourceReceiptStart).toBe(
-            2
+            0
           )
           expect(targetRuntime.frameReceipts.length - targetReceiptStart).toBe(
             1
           )
         })
-        await Promise.all([
-          closeWebSocketBoundary(sourceSocket),
-          closeWebSocketBoundary(targetSocket),
-        ])
+        const frameAttempts = [...frameInjection.attempts]
+        frameInjection = undefined
+        await closeWebSocketBoundary(targetSocket)
         await vi.waitFor(() =>
           expect(api.app.workbenchProxy.audit()).toMatchObject({
             pendingOperations: 0,
@@ -650,9 +796,6 @@ async function buildArtifact() {
         const mismatchedTargetReceipts = targetReceipts.filter((receipt) =>
           frameExecutionIds.includes(receipt.executionId)
         )
-        const rightfulSourceReceipts = sourceReceipts.filter((receipt) =>
-          frameExecutionIds.includes(receipt.executionId)
-        )
         const targetControlReceipts = targetReceipts.filter(
           (receipt) => receipt.executionId === targetControlExecutionId
         )
@@ -664,21 +807,29 @@ async function buildArtifact() {
           mismatchClass,
           orderedPair,
           executionId,
-          boundaryId: sourceBoundaryId,
-          sourceBoundaryId,
+          boundaryId: sourceBoundaryIds[0],
+          sourceBoundaryIds,
           targetBoundaryId,
+          attemptedDestinationBoundaryId: targetBoundaryId,
+          attemptedDestinationRouteDigest: safeSnapshot(
+            manager.inspect(targetProject.id)!
+          ).routeDigest,
           transport: 'websocket',
           executed: true,
           sourceBoundaryEstablished: true,
           targetBoundaryEstablished: true,
           projectToken: deriveProjectOwnerToken('bl013-' + source),
           requestedDestinationToken: deriveProjectOwnerToken('bl013-' + target),
-          expectedOutcome: 'route-bound-source-only',
-          observedOutcome: 'route-bound-source-only',
+          expectedOutcome: 'destination-mismatch-rejected',
+          observedOutcome: 'destination-mismatch-rejected',
           frameExecutionIds,
-          sourceReceiptIds: rightfulSourceReceipts.map(
-            (receipt) => receipt.receiptId
-          ),
+          sendAttempts: frameAttempts,
+          sendAttemptCount: frameAttempts.length,
+          sourceReceiptIds: sourceReceipts
+            .filter((receipt) =>
+              frameExecutionIds.includes(receipt.executionId)
+            )
+            .map((receipt) => receipt.receiptId),
           mismatchedTargetReceiptIds: mismatchedTargetReceipts.map(
             (receipt) => receipt.receiptId
           ),
@@ -688,20 +839,24 @@ async function buildArtifact() {
           ),
           textFrame: {
             payloadDigest: digest(Buffer.from(textPayload)),
-            echoedDigest: textEcho.payloadDigest,
-            binary: textEcho.binary,
+            binary: false,
+            sourceCloseCode: textRejection.closeCode,
+            sendCallbackError: textRejection.sendCallbackError,
           },
           binaryFrame: {
             payloadDigest: digest(binaryPayload),
-            echoedDigest: binaryEcho.payloadDigest,
-            binary: binaryEcho.binary,
+            binary: true,
+            sourceCloseCode: binaryRejection.closeCode,
+            sendCallbackError: binaryRejection.sendCallbackError,
           },
           targetControlFrame: {
             payloadDigest: digest(Buffer.from(targetControlPayload)),
             echoedDigest: targetControlEcho.payloadDigest,
             binary: targetControlEcho.binary,
           },
-          sourceReceiptCount: rightfulSourceReceipts.length,
+          sourceReceiptCount: sourceReceipts.filter((receipt) =>
+            frameExecutionIds.includes(receipt.executionId)
+          ).length,
           mismatchedTargetReceiptCount: mismatchedTargetReceipts.length,
           targetControlReceiptCount: targetControlReceipts.length,
           upstreamContactCount: mismatchedTargetReceipts.length,
@@ -814,7 +969,27 @@ async function buildArtifact() {
     executionId: 'scenario-invalid-identifiers',
     boundaryObserved: true,
     passed:
-      invalidResults.every((result) => [400, 404].includes(result.status)) &&
+      JSON.stringify(
+        invalidResults.map(({ kind, status }) => [kind, status])
+      ) ===
+        JSON.stringify([
+          ['malformed', 400],
+          ['unknown', 404],
+          ['closed', 404],
+        ]) &&
+      closedPersistedBefore &&
+      closeResponse.status === 200 &&
+      closeBody.disposition === 'closed' &&
+      closedPersistedAfter === false &&
+      closedStart instanceof RuntimeFailure &&
+      closedStart.category === 'unknown-project' &&
+      launches.length === launchesBeforeClosedStart &&
+      coreEvents.length === runtimeEventsBeforeClosedStart &&
+      JSON.stringify(managerAuditBeforeInvalid) ===
+        JSON.stringify(managerAuditAfterInvalid) &&
+      proxyAuditAfterInvalid.pendingOperations === 0 &&
+      proxyAuditAfterInvalid.rawSockets === 0 &&
+      proxyAuditAfterInvalid.webSockets === 0 &&
       JSON.stringify(beforeInvalid) === JSON.stringify(afterInvalid) &&
       terminalAfterInvalid.every((probe) => probe.passed) &&
       projects.every(
@@ -829,8 +1004,39 @@ async function buildArtifact() {
     elapsedMs: 1,
     observations: [
       {
-        attempts: ['malformed', 'unknown', 'closed'],
-        statuses: invalidResults.map(({ status }) => status),
+        attempts: invalidResults.map(({ kind, status }) => ({ kind, status })),
+        closedPersistence: {
+          registeredBeforeClose: closedPersistedBefore,
+          closeBoundary: 'DELETE /api/projects/:id',
+          closeStatus: closeResponse.status,
+          closeDisposition: closeBody.disposition,
+          persistedAfterClose: closedPersistedAfter,
+          directStartFailure:
+            closedStart instanceof RuntimeFailure
+              ? closedStart.category
+              : 'unexpected-success',
+          routeStatus: invalidResults[2].status,
+        },
+        unknownAttempt: {
+          persistedBefore: false,
+          routeStatus: invalidResults[1].status,
+        },
+        malformedAttempt: {
+          parserRejected: true,
+          routeStatus: invalidResults[0].status,
+        },
+        noMutation: {
+          launchCountBefore: launchesBeforeClosedStart,
+          launchCountAfter: launches.length,
+          runtimeEventCountBefore: runtimeEventsBeforeClosedStart,
+          runtimeEventCountAfter: coreEvents.length,
+          managerAuditBeforeDigest: digest(managerAuditBeforeInvalid),
+          managerAuditAfterDigest: digest(managerAuditAfterInvalid),
+          proxyPendingAfter: proxyAuditAfterInvalid.pendingOperations,
+          proxySocketsAfter:
+            proxyAuditAfterInvalid.rawSockets +
+            proxyAuditAfterInvalid.webSockets,
+        },
         snapshotDigestBefore: digest(beforeInvalid),
         snapshotDigestAfter: digest(afterInvalid),
         listenersUnchanged: terminalAfterInvalid.every((probe) => probe.passed),
@@ -1253,6 +1459,9 @@ async function buildArtifact() {
           () => {
             void runtime.ready.process
               .terminate(1, 1, runtime.ready.port)
+              .then(
+                () => new Promise<void>((resolve) => setTimeout(resolve, 25))
+              )
               .then(() => cGate.resolve(runtime.ready))
           },
           { once: true }
@@ -1310,6 +1519,12 @@ async function buildArtifact() {
       { timeout: 1_000 }
     )
     const postShutdownAudit = local.audit!()
+    await new Promise((resolve) => setTimeout(resolve, 40))
+    const postReturnAudit = local.audit!()
+    const postReturnMutationCount =
+      JSON.stringify(postShutdownAudit) === JSON.stringify(postReturnAudit)
+        ? 0
+        : 1
     const controlAlive = await unrelated.ready.process.isAlive()
     const controlListener = await terminalProbe(
       {
@@ -1338,6 +1553,8 @@ async function buildArtifact() {
       cOutcome,
       preShutdownAudit,
       postShutdownAudit,
+      postReturnAudit,
+      postReturnMutationCount,
       controlAlive,
       controlListenerAlive: controlListener.passed,
       unrelated,
@@ -1359,7 +1576,8 @@ async function buildArtifact() {
       shutdown.postShutdownAudit.entryCount === 0 &&
       shutdown.postShutdownAudit.ownershipRecords === 0 &&
       shutdown.postShutdownAudit.completionTasks === 0 &&
-      shutdown.postShutdownAudit.backgroundTasks === 0,
+      shutdown.postShutdownAudit.backgroundTasks === 0 &&
+      shutdown.postReturnMutationCount === 0,
     invocationCount: 3,
     elapsedMs: 1,
     observations: [
@@ -1389,6 +1607,19 @@ async function buildArtifact() {
           boundedWaitMs: 1_000,
           before: shutdown.preShutdownAudit,
           after: shutdown.postShutdownAudit,
+          settlement: {
+            strategy: 'tracked-promise-settlement',
+            directClearUsed: false,
+            completionSettlementDelta:
+              shutdown.postShutdownAudit.completionTaskSettlements -
+              shutdown.preShutdownAudit.completionTaskSettlements,
+            backgroundSettlementDelta:
+              shutdown.postShutdownAudit.backgroundTaskSettlements -
+              shutdown.preShutdownAudit.backgroundTaskSettlements,
+            postReturnWaitMs: 40,
+            postReturnMutationCount: shutdown.postReturnMutationCount,
+            postReturnAudit: shutdown.postReturnAudit,
+          },
         },
       },
     ],
@@ -1433,7 +1664,8 @@ async function buildArtifact() {
       shutdownRace.postShutdownAudit.entryCount === 0 &&
       shutdownRace.postShutdownAudit.ownershipRecords === 0 &&
       shutdownRace.postShutdownAudit.completionTasks === 0 &&
-      shutdownRace.postShutdownAudit.backgroundTasks === 0,
+      shutdownRace.postShutdownAudit.backgroundTasks === 0 &&
+      shutdownRace.postReturnMutationCount === 0,
     invocationCount: 4,
     elapsedMs: 1,
     observations: [
@@ -1455,6 +1687,19 @@ async function buildArtifact() {
           boundedWaitMs: 1_000,
           before: shutdownRace.preShutdownAudit,
           after: shutdownRace.postShutdownAudit,
+          settlement: {
+            strategy: 'tracked-promise-settlement',
+            directClearUsed: false,
+            completionSettlementDelta:
+              shutdownRace.postShutdownAudit.completionTaskSettlements -
+              shutdownRace.preShutdownAudit.completionTaskSettlements,
+            backgroundSettlementDelta:
+              shutdownRace.postShutdownAudit.backgroundTaskSettlements -
+              shutdownRace.preShutdownAudit.backgroundTaskSettlements,
+            postReturnWaitMs: 40,
+            postReturnMutationCount: shutdownRace.postReturnMutationCount,
+            postReturnAudit: shutdownRace.postReturnAudit,
+          },
         },
       },
     ],
@@ -1531,7 +1776,7 @@ async function buildArtifact() {
       b: deriveProjectOwnerToken('bl013-b'),
       c: deriveProjectOwnerToken('bl013-c'),
       unknown: deriveProjectOwnerToken('unknown'),
-      closed: deriveProjectOwnerToken('closed-project'),
+      closed: deriveProjectOwnerToken(closedProject.id),
     },
     eventExpectations: BL013_EVENT_EXPECTATIONS,
     scenarios,
@@ -1589,6 +1834,19 @@ describe.sequential('BL-013 executable fake matrix', () => {
     expect(validateProjectRuntimeIsolationEvidence(artifact)).toBe(true)
   }, 120_000)
 
+  it('rejects browser evidence with identical project Git statuses', () => {
+    const browser = {
+      distinctGitStatuses: true,
+      projects: ['a', 'b', 'c'].map((label) => ({
+        git: true,
+        gitStatusExact: true,
+        gitStatusDigest: label.repeat(64),
+      })),
+    }
+    expect(validateProjectRuntimeIsolationBrowserEvidence(browser)).toBe(true)
+    browser.projects[2].gitStatusDigest = browser.projects[0].gitStatusDigest
+    expect(validateProjectRuntimeIsolationBrowserEvidence(browser)).toBe(false)
+  })
   it('rejects incomplete, copied, unscanned, assertion-only, and residual artifacts', async () => {
     const artifact = await artifactPromise
     const mutate = (change: (copy: any) => void) => {
@@ -1693,6 +1951,28 @@ describe.sequential('BL-013 executable fake matrix', () => {
     ).toBe(false)
     expect(
       mutate((copy) => {
+        const frame = copy.crossTargetRows.find(
+          (row: any) => row.mismatchClass === 'frame-destination'
+        )
+        frame.expectedOutcome = 'route-bound-source-only'
+        frame.observedOutcome = 'route-bound-source-only'
+        frame.sourceReceiptCount = 2
+        frame.sourceReceiptIds = ['rightful-text', 'rightful-binary']
+      })
+    ).toBe(false)
+    expect(
+      mutate((copy) => {
+        const invalid = copy.scenarios.find(
+          (scenario: any) => scenario.scenario === 'invalid-identifiers'
+        )
+        invalid.observations[0].closedPersistence = {
+          ...invalid.observations[0].unknownAttempt,
+          routeStatus: 404,
+        }
+      })
+    ).toBe(false)
+    expect(
+      mutate((copy) => {
         const race = copy.scenarios.find(
           (scenario: any) => scenario.scenario === 'shutdown-race'
         )
@@ -1713,6 +1993,22 @@ describe.sequential('BL-013 executable fake matrix', () => {
           (scenario: any) => scenario.scenario === 'shutdown-race'
         )
         race.observations[0].managerAudit.inspector = 'assigned-zero'
+      })
+    ).toBe(false)
+    expect(
+      mutate((copy) => {
+        const race = copy.scenarios.find(
+          (scenario: any) => scenario.scenario === 'shutdown-race'
+        )
+        race.observations[0].managerAudit.settlement = {
+          strategy: 'cleared-without-settlement',
+          directClearUsed: true,
+          completionSettlementDelta: 0,
+          backgroundSettlementDelta: 0,
+          postReturnWaitMs: 40,
+          postReturnMutationCount: 0,
+          postReturnAudit: race.observations[0].managerAudit.after,
+        }
       })
     ).toBe(false)
     expect(

@@ -298,6 +298,8 @@ const measuredManagerAudit = (
   const measurement = record(value)
   const before = record(measurement?.before)
   const after = record(measurement?.after)
+  const settlement = record(measurement?.settlement)
+  const postReturnAudit = record(settlement?.postReturnAudit)
   const countKeys = [
     'entryCount',
     'startingEntries',
@@ -320,7 +322,24 @@ const measuredManagerAudit = (
     Number(before?.entryCount) > 0 &&
     Number(before?.ownershipRecords) > 0 &&
     Number(before?.completionTasks) + Number(before?.backgroundTasks) > 0 &&
-    countKeys.every((key) => after?.[key] === 0)
+    countKeys.every((key) => after?.[key] === 0) &&
+    settlement?.strategy === 'tracked-promise-settlement' &&
+    settlement.directClearUsed === false &&
+    Number.isSafeInteger(settlement.completionSettlementDelta) &&
+    Number(settlement.completionSettlementDelta) >=
+      Number(before?.completionTasks) &&
+    Number.isSafeInteger(settlement.backgroundSettlementDelta) &&
+    Number(settlement.backgroundSettlementDelta) >=
+      Number(before?.backgroundTasks) &&
+    Number.isSafeInteger(settlement.postReturnWaitMs) &&
+    Number(settlement.postReturnWaitMs) > 0 &&
+    Number(settlement.postReturnWaitMs) <= timeoutMs &&
+    settlement.postReturnMutationCount === 0 &&
+    countKeys.every((key) => postReturnAudit?.[key] === 0) &&
+    postReturnAudit?.completionTaskSettlements ===
+      after?.completionTaskSettlements &&
+    postReturnAudit?.backgroundTaskSettlements ===
+      after?.backgroundTaskSettlements
   )
 }
 
@@ -436,6 +455,14 @@ export function validateProjectRuntimeIsolationEvidence(
     const observations = scenarioByName.get(name)?.observations
     return Array.isArray(observations) ? record(observations[0]) : undefined
   }
+  const invalidIdentifiers = observation('invalid-identifiers')
+  const invalidAttempts = Array.isArray(invalidIdentifiers?.attempts)
+    ? invalidIdentifiers.attempts.map(record)
+    : []
+  const closedPersistence = record(invalidIdentifiers?.closedPersistence)
+  const unknownAttempt = record(invalidIdentifiers?.unknownAttempt)
+  const malformedAttempt = record(invalidIdentifiers?.malformedAttempt)
+  const invalidNoMutation = record(invalidIdentifiers?.noMutation)
   const globalShutdown = observation('global-shutdown')
   const shutdownRace = observation('shutdown-race')
   if (
@@ -445,6 +472,31 @@ export function validateProjectRuntimeIsolationEvidence(
     observation('one-caller-cancel')?.cancelledCallers !== 1 ||
     observation('one-caller-cancel')?.runningCallers !== 7 ||
     observation('all-callers-cancel')?.cancelledCallers !== 8 ||
+    JSON.stringify(invalidAttempts) !==
+      JSON.stringify([
+        { kind: 'malformed', status: 400 },
+        { kind: 'unknown', status: 404 },
+        { kind: 'closed', status: 404 },
+      ]) ||
+    closedPersistence?.registeredBeforeClose !== true ||
+    closedPersistence.closeBoundary !== 'DELETE /api/projects/:id' ||
+    closedPersistence.closeStatus !== 200 ||
+    closedPersistence.closeDisposition !== 'closed' ||
+    closedPersistence.persistedAfterClose !== false ||
+    closedPersistence.directStartFailure !== 'unknown-project' ||
+    closedPersistence.routeStatus !== 404 ||
+    unknownAttempt?.persistedBefore !== false ||
+    unknownAttempt.routeStatus !== 404 ||
+    malformedAttempt?.parserRejected !== true ||
+    malformedAttempt.routeStatus !== 400 ||
+    invalidNoMutation?.launchCountBefore !==
+      invalidNoMutation?.launchCountAfter ||
+    invalidNoMutation?.runtimeEventCountBefore !==
+      invalidNoMutation?.runtimeEventCountAfter ||
+    invalidNoMutation?.managerAuditBeforeDigest !==
+      invalidNoMutation?.managerAuditAfterDigest ||
+    invalidNoMutation?.proxyPendingAfter !== 0 ||
+    invalidNoMutation?.proxySocketsAfter !== 0 ||
     observation('explicit-replacement')?.replacementCount !== 1 ||
     globalShutdown?.projectAuditCount !== 3 ||
     globalShutdown.unrelatedProcessAndListenerSurvived !== true ||
@@ -504,6 +556,12 @@ export function validateProjectRuntimeIsolationEvidence(
       const frameExecutionIds = Array.isArray(row.frameExecutionIds)
         ? row.frameExecutionIds
         : []
+      const sourceBoundaryIds = Array.isArray(row.sourceBoundaryIds)
+        ? row.sourceBoundaryIds
+        : []
+      const sendAttempts = Array.isArray(row.sendAttempts)
+        ? row.sendAttempts.map(record)
+        : []
       const sourceReceiptIds = Array.isArray(row.sourceReceiptIds)
         ? row.sourceReceiptIds
         : []
@@ -519,13 +577,19 @@ export function validateProjectRuntimeIsolationEvidence(
       const binaryFrame = record(row.binaryFrame)
       const targetControlFrame = record(row.targetControlFrame)
       if (
-        row.boundaryId !== row.sourceBoundaryId ||
-        typeof row.sourceBoundaryId !== 'string' ||
+        sourceBoundaryIds.length !== 2 ||
+        row.boundaryId !== sourceBoundaryIds[0] ||
+        sourceBoundaryIds.some(
+          (id) => typeof id !== 'string' || id.length < 8
+        ) ||
+        new Set(sourceBoundaryIds).size !== 2 ||
         typeof row.targetBoundaryId !== 'string' ||
-        row.sourceBoundaryId === row.targetBoundaryId ||
+        sourceBoundaryIds.includes(row.targetBoundaryId) ||
+        row.attemptedDestinationBoundaryId !== row.targetBoundaryId ||
+        !safeDigest(row.attemptedDestinationRouteDigest) ||
         row.sourceBoundaryEstablished !== true ||
         row.targetBoundaryEstablished !== true ||
-        row.expectedOutcome !== 'route-bound-source-only' ||
+        row.expectedOutcome !== 'destination-mismatch-rejected' ||
         row.observedOutcome !== row.expectedOutcome ||
         frameExecutionIds.length !== 2 ||
         frameExecutionIds.some(
@@ -533,26 +597,36 @@ export function validateProjectRuntimeIsolationEvidence(
             typeof id !== 'string' || !id.startsWith(row.executionId + '-')
         ) ||
         new Set(frameExecutionIds).size !== 2 ||
-        sourceReceiptIds.length !== 2 ||
-        sourceReceiptIds.some(
-          (id) => typeof id !== 'string' || id.length < 8
+        row.sendAttemptCount !== 2 ||
+        sendAttempts.length !== 2 ||
+        sendAttempts.some(
+          (attempt, index) =>
+            attempt?.executionId !== frameExecutionIds[index] ||
+            attempt?.sourceToken !== row.projectToken ||
+            attempt?.attemptedDestinationToken !==
+              row.requestedDestinationToken ||
+            attempt?.binary !== (index === 1)
         ) ||
-        new Set(sourceReceiptIds).size !== 2 ||
+        sourceReceiptIds.length !== 0 ||
         mismatchedTargetReceiptIds.length !== 0 ||
         typeof row.targetControlExecutionId !== 'string' ||
         frameExecutionIds.includes(row.targetControlExecutionId) ||
         targetControlReceiptIds.length !== 1 ||
         typeof targetControlReceiptIds[0] !== 'string' ||
-        row.sourceReceiptCount !== 2 ||
+        row.sourceReceiptCount !== 0 ||
         row.mismatchedTargetReceiptCount !== 0 ||
         row.targetControlReceiptCount !== 1 ||
         row.upstreamContactCount !== 0 ||
         !safeDigest(textFrame?.payloadDigest) ||
-        textFrame.echoedDigest !== textFrame.payloadDigest ||
+        textFrame.echoedDigest !== undefined ||
         textFrame.binary !== false ||
+        textFrame.sourceCloseCode !== 1006 ||
+        textFrame.sendCallbackError !== true ||
         !safeDigest(binaryFrame?.payloadDigest) ||
-        binaryFrame.echoedDigest !== binaryFrame.payloadDigest ||
+        binaryFrame.echoedDigest !== undefined ||
         binaryFrame.binary !== true ||
+        binaryFrame.sourceCloseCode !== 1006 ||
+        binaryFrame.sendCallbackError !== true ||
         !safeDigest(targetControlFrame?.payloadDigest) ||
         targetControlFrame.echoedDigest !== targetControlFrame.payloadDigest ||
         targetControlFrame.binary !== false
@@ -560,10 +634,9 @@ export function validateProjectRuntimeIsolationEvidence(
         return undefined
       rowIds.push(
         row.executionId,
-        row.sourceBoundaryId,
+        ...sourceBoundaryIds,
         row.targetBoundaryId,
         ...frameExecutionIds,
-        ...sourceReceiptIds,
         row.targetControlExecutionId,
         ...targetControlReceiptIds
       )

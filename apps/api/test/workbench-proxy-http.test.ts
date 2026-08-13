@@ -689,7 +689,7 @@ describe('stable workbench HTTP transport', () => {
         createWorkbenchProxyManager({
           projectLibrary,
           projectRuntime,
-          headerTimeoutMs: 25,
+          headerTimeoutMs: 200,
           requestHttp: (options) => {
             const request = httpRequest(options)
             if (Number(options.port) === immediateFailurePort) {

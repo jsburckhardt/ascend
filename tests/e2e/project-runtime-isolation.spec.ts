@@ -52,6 +52,7 @@ const resultRoot = path.join(
 const evidencePath = path.join(resultRoot, 'three-project-chromium.json')
 const operationMs = 20_000
 const overallMs = 120_000
+let terminalProofOrdinal = 0
 
 const disposablePort = async (): Promise<number> => {
   const server = createServer()
@@ -77,43 +78,55 @@ const ready = async (page: Page, fileName: string): Promise<void> => {
 
 const terminalProof = async (
   page: Page,
-  expected: { canonicalPath: string; branch: string; marker: string }
+  expected: {
+    canonicalPath: string
+    branch: string
+    marker: string
+    gitStatus: string
+  },
+  createTerminal = true
 ): Promise<boolean> => {
-  await page.keyboard.press('F1')
-  await expect(page.locator('.quick-input-widget')).toBeVisible({
-    timeout: operationMs,
-  })
-  await page.keyboard.insertText('Terminal: Create New Terminal')
-  await expect(
-    page.locator('.quick-input-list .monaco-list-row').first()
-  ).toBeVisible({ timeout: operationMs })
-  await page.keyboard.press('Enter')
+  if (createTerminal) {
+    await page.keyboard.press('F1')
+    await expect(page.locator('.quick-input-widget')).toBeVisible({
+      timeout: operationMs,
+    })
+    await page.keyboard.insertText('Terminal: Create New Terminal')
+    await expect(
+      page.locator('.quick-input-list .monaco-list-row').first()
+    ).toBeVisible({ timeout: operationMs })
+    await page.keyboard.press('Enter')
+  }
   const terminal = page.locator('.terminal.xterm:visible').last()
   await terminal.waitFor({ state: 'visible', timeout: operationMs })
   const input = page.locator('textarea.xterm-helper-textarea:visible').last()
   await input.focus()
+  const executionMarker = 'DONE_' + String(++terminalProofOrdinal)
   const command =
     'printf BL013_%s= PWD; pwd -P; printf BL013_%s= ROOT; git rev-parse --show-toplevel; ' +
-    'printf BL013_%s= BRANCH; git branch --show-current; test -n ' +
-    String.fromCharCode(34) +
-    String.fromCharCode(36) +
-    '(git status --porcelain)' +
-    String.fromCharCode(34) +
-    ' && printf BL013_%s\n STATUS_OK; printf BL013_%s= MARKER; git config ascend.fixture; ' +
-    'printf BL013_%s\n DONE'
+    'printf BL013_%s= BRANCH; git branch --show-current; printf BL013_%s= STATUS; git status --porcelain | base64 -w0; printf BL013_%s= STATUS_END; printf BL013_%s= MARKER; git config ascend.fixture; ' +
+    'printf BL013_%s= ' +
+    executionMarker
   await page.keyboard.insertText(command)
   await page.keyboard.press('Enter')
   await expect
-    .poll(async () => (await terminal.innerText()).includes('BL013_DONE'), {
-      timeout: operationMs,
-    })
+    .poll(
+      async () =>
+        (await terminal.innerText()).includes('BL013_' + executionMarker),
+      {
+        timeout: operationMs,
+      }
+    )
     .toBe(true)
   const normalized = (await terminal.innerText()).replace(/\s/gu, '')
+  const expectedStatusBase64 = Buffer.from(expected.gitStatus + '\n').toString(
+    'base64'
+  )
   const required = [
     'BL013_PWD=' + expected.canonicalPath,
     'BL013_ROOT=' + expected.canonicalPath,
     'BL013_BRANCH=' + expected.branch,
-    'BL013_STATUS_OK',
+    'BL013_STATUS=' + expectedStatusBase64 + 'BL013_STATUS_END=',
     'BL013_MARKER=' + expected.marker,
   ]
   const matches = required.map((marker) => normalized.includes(marker))
@@ -196,8 +209,10 @@ test('keeps three Git workbenches isolated and explicitly replaces only B', asyn
       await executeFile('git', ['commit', '-m', 'fixture'], {
         cwd: canonicalPath,
       })
+      const dirtyFileName = label + '-dirty.txt'
+      const gitStatus = '?? ' + dirtyFileName
       await writeFile(
-        path.join(canonicalPath, 'dirty.txt'),
+        path.join(canonicalPath, dirtyFileName),
         'dirty-' + label + '\n'
       )
       return {
@@ -210,10 +225,15 @@ test('keeps three Git workbenches isolated and explicitly replaces only B', asyn
         marker,
         fileName,
         editorSentinel: 'EDITOR_' + label.toUpperCase() + '_SENTINEL',
+        gitStatus,
       }
     })
   )
   const before = await Promise.all(projects.map(fixtureState))
+  expect(before.map(({ status }) => status.trimEnd())).toEqual(
+    projects.map(({ gitStatus }) => gitStatus)
+  )
+  expect(new Set(before.map(({ status }) => status)).size).toBe(3)
   const databasePath = path.join(fixtureRoot, 'ascend.sqlite')
   const library = await createProjectLibrary(databasePath)
   for (const project of projects) await library.create(project)
@@ -417,13 +437,12 @@ test('keeps three Git workbenches isolated and explicitly replaces only B', asyn
     expect(digestIdentity(runtime.inspect(projects[2].id)!)).toBe(
       digestIdentity(initial.c)
     )
-    const peerTerminalAfterCrash = await Promise.all(
-      [0, 2].map(async (index) => {
-        const passed = await terminalProof(pages[index], projects[index])
-        terminalExecutions.push('after-b-crash-' + projects[index].label)
-        return passed
-      })
-    )
+    const peerTerminalAfterCrash: boolean[] = []
+    for (const index of [0, 2]) {
+      const passed = await terminalProof(pages[index], projects[index], false)
+      terminalExecutions.push('after-b-crash-' + projects[index].label)
+      peerTerminalAfterCrash.push(passed)
+    }
     expect(peerTerminalAfterCrash).toEqual([true, true])
     const replacement = await runtime.start({
       projectId: b.id,
@@ -549,11 +568,19 @@ test('keeps three Git workbenches isolated and explicitly replaces only B', asyn
         editor: true,
         terminal: true,
         git: true,
+        gitStatusExact:
+          before[projects.indexOf(project)].status.trimEnd() ===
+          project.gitStatus,
+        gitStatusDigest: createHash('sha256')
+          .update(before[projects.indexOf(project)].status)
+          .digest('hex'),
         socketCount: socketCounts.get(project.id) ?? 0,
         initialSocketRoles: initialSocketRoles[project.label],
         finalSocketRoles: finalSocketRoles[project.label],
       })),
       pairwiseDistinct: true,
+      distinctGitStatuses:
+        new Set(before.map(({ status }) => status)).size === 3,
       bFailure: {
         outcome: 'typed-failed',
         oldIdentityDigest: digestIdentity(initial.b),

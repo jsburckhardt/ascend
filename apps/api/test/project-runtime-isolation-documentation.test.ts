@@ -40,8 +40,10 @@ describe('BL-013 application documentation contract', () => {
       'Management and one ExtensionHost',
       'initial/replacement',
       'exact 70-record event catalog',
-      'six real source/target frame-delivery rows',
-      'measured shutdown-race manager audit',
+      'six rejected cross-project frame-destination attempts',
+      'tracked task-settlement',
+      'persisted-close',
+      'distinct untracked filenames',
       'missing, wrong, extra, misattributed',
     ])
       expect(complete).toContain(phrase)
@@ -52,7 +54,7 @@ describe('BL-013 application documentation contract', () => {
     expect(runtime).toContain('all ten resource classes at zero')
     expect(api).toContain('adds no schema, migration')
     expect(harness).toContain(
-      'no-retry three-Git-fixture Chromium A/B/C replacement episode'
+      'no-retry three-Git-fixture Chromium A/B/C exact-status replacement episode'
     )
   })
 })

@@ -55,6 +55,8 @@ export interface ProjectRuntimeManagerAudit {
   readonly ownershipRecords: number
   readonly completionTasks: number
   readonly backgroundTasks: number
+  readonly completionTaskSettlements: number
+  readonly backgroundTaskSettlements: number
 }
 
 export interface ProjectRuntimeManager {
@@ -147,6 +149,8 @@ export function createProjectRuntimeManager(
   const ownership = new Map<string, ManagedOwnership>()
   const completionTasks = new Set<Promise<RuntimeSnapshot>>()
   const backgroundTasks = new Set<Promise<void>>()
+  let completionTaskSettlements = 0
+  let backgroundTaskSettlements = 0
   let shutdownPromise: Promise<RuntimeShutdownResult> | undefined
   let shutdownResult: RuntimeShutdownResult | undefined
   let shuttingDown = false
@@ -450,8 +454,14 @@ export function createProjectRuntimeManager(
         })
         backgroundTasks.add(exitTask)
         void exitTask.then(
-          () => backgroundTasks.delete(exitTask),
-          () => backgroundTasks.delete(exitTask)
+          () => {
+            backgroundTasks.delete(exitTask)
+            backgroundTaskSettlements += 1
+          },
+          () => {
+            backgroundTasks.delete(exitTask)
+            backgroundTaskSettlements += 1
+          }
         )
         return snapshot
       } catch (error) {
@@ -482,8 +492,14 @@ export function createProjectRuntimeManager(
     })
     completionTasks.add(operation)
     void operation.then(
-      () => completionTasks.delete(operation),
-      () => completionTasks.delete(operation)
+      () => {
+        completionTasks.delete(operation)
+        completionTaskSettlements += 1
+      },
+      () => {
+        completionTasks.delete(operation)
+        completionTaskSettlements += 1
+      }
     )
     starting = {
       state: 'starting',
@@ -557,11 +573,17 @@ export function createProjectRuntimeManager(
           })
         )
       }
-      entries.clear()
-      ownership.clear()
-      cleanupOutcomes.clear()
-      completionTasks.clear()
-      backgroundTasks.clear()
+      // Completion operations can register ownership, and process-exit handlers can
+      // mutate entries. Await both tracked sets until their own settlement
+      // handlers remove every task; zero is observed rather than assigned.
+      while (completionTasks.size > 0 || backgroundTasks.size > 0) {
+        await Promise.allSettled([...completionTasks, ...backgroundTasks])
+        await Promise.resolve()
+      }
+      for (const entry of entriesAtShutdown)
+        if (entries.get(entry.projectId) === entry || shuttingDown)
+          entries.delete(entry.projectId)
+      for (const key of ownership.keys()) ownership.delete(key)
       shutdownResult = Object.freeze({
         status: audited.every(
           (audit) =>
@@ -617,6 +639,8 @@ export function createProjectRuntimeManager(
         ownershipRecords: ownership.size,
         completionTasks: completionTasks.size,
         backgroundTasks: backgroundTasks.size,
+        completionTaskSettlements,
+        backgroundTaskSettlements,
       })
     },
     lastFailure(projectId) {

@@ -885,15 +885,18 @@ describe('BL-011 executable acceptance coordinator', () => {
       pid: 8270,
       processStartTime: 'start-8270',
       exit: exit.promise,
-      terminate: vi.fn(async (_graceful, _force, port) => ({
-        pid: 8270,
-        processStartTime: 'start-8270',
-        port,
-        outcome: 'graceful' as const,
-        processAbsent: true,
-        processGroupAbsent: true,
-        listenerAbsent: true,
-      })),
+      terminate: vi.fn(async (_graceful, _force, port) => {
+        exit.resolve({ code: 0, signal: null, addressInUse: false })
+        return {
+          pid: 8270,
+          processStartTime: 'start-8270',
+          port,
+          outcome: 'graceful' as const,
+          processAbsent: true,
+          processGroupAbsent: true,
+          listenerAbsent: true,
+        }
+      }),
       audit: vi.fn(async (port) => ({
         pid: 8270,
         processStartTime: 'start-8270',

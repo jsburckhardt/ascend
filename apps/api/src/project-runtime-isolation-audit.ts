@@ -39,6 +39,27 @@ const record = (value: unknown): Record<string, unknown> | undefined =>
     ? (value as Record<string, unknown>)
     : undefined
 
+export function validateProjectRuntimeIsolationBrowserEvidence(
+  value: unknown
+): boolean {
+  const artifact = record(value)
+  const projects = Array.isArray(artifact?.projects)
+    ? artifact.projects.map(record)
+    : []
+  const statusDigests = projects.map((project) => project?.gitStatusDigest)
+  return (
+    artifact?.distinctGitStatuses === true &&
+    projects.length === 3 &&
+    projects.every(
+      (project) =>
+        project?.git === true &&
+        project.gitStatusExact === true &&
+        typeof project.gitStatusDigest === 'string' &&
+        /^[a-f0-9]{64}$/u.test(project.gitStatusDigest)
+    ) &&
+    new Set(statusDigests).size === 3
+  )
+}
 const absent = async (target: string): Promise<boolean> =>
   lstat(target).then(
     () => false,
@@ -280,6 +301,7 @@ export async function auditProjectRuntimeIsolation(
   const assignedZeroFailures = browserCleanup.assignedZeroFailures
   const status =
     validateProjectRuntimeIsolationEvidence(fake) &&
+    validateProjectRuntimeIsolationBrowserEvidence(browser) &&
     publicProtectedMatches === 0 &&
     protectedScansExecuted === fakeScans.length + 1 &&
     restrictedArtifactCount === 1 &&

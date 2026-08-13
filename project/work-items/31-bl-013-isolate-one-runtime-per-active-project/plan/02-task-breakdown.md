@@ -78,7 +78,7 @@ Add explicit waiter accounting to each starting entry. A single cancelled B wait
 
 ### Expected Evidence
 - V-6 failure/replacement matrix with old/new B identities, unchanged A/C digests, typed outcomes, launch counts, and terminal checks.
-- V-7 cancellation/shutdown matrix with waiter counts, cleanup audits, race outcomes, finite timing, zero owned residuals, and surviving unrelated identity. The completed correction independently measures entry, ownership, completion-task, and background-task maps after a 1,000 ms bounded wait and rejects assigned-zero provenance.
+- V-7 cancellation/shutdown matrix with waiter counts, cleanup audits, race outcomes, finite timing, zero owned residuals, and surviving unrelated identity. The completed correction awaits tracked completion/background promises without direct task-set clearing, then independently measures immediate and delayed post-return zero maps and rejects assigned-zero or cleared-without-settlement provenance.
 
 ## Task T-4: Fail closed across proxy targets, resources, frames, and events
 
@@ -104,7 +104,7 @@ Strengthen target resolution so the returned snapshot ID, canonical path, stable
 - Run precommit/postcommit failure, disconnect, shutdown, backpressure, and BL-011 failure-table regressions.
 
 ### Expected Evidence
-- V-3 cross-target matrix with unique execution IDs, route/token/transport class, selected target classification, delivery counts, public failure, and zero per-project/global resources. The six completed frame rows retain real source/target WebSocket boundary IDs, uniquely hashed text/binary frame execution and receipt IDs, rightful echoes/control delivery, and zero mismatched-target receipt.
+- V-3 cross-target matrix with unique execution IDs, route/token/transport class, selected target classification, delivery counts, public failure, and zero per-project/global resources. The six completed frame rows retain live source/target WebSocket boundary IDs, uniquely hashed text/binary destination-selection attempts, exact source rejection, both endpoint receipt counters at zero, and independent target-control delivery.
 - V-5 matching runtime/proxy event tokens and zero protected-value scans.
 
 ## Task T-5: Extend persistence and public-surface canaries

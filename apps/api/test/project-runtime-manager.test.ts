@@ -35,15 +35,18 @@ function runtime(pid: number) {
     pid,
     processStartTime: String(pid * 10),
     exit: exited.promise,
-    terminate: vi.fn(async (_graceful, _force, port) => ({
-      pid,
-      processStartTime: String(pid * 10),
-      port,
-      outcome: 'graceful' as const,
-      processAbsent: true,
-      processGroupAbsent: true,
-      listenerAbsent: true,
-    })),
+    terminate: vi.fn(async (_graceful, _force, port) => {
+      exited.resolve({ code: 0, signal: null, addressInUse: false })
+      return {
+        pid,
+        processStartTime: String(pid * 10),
+        port,
+        outcome: 'graceful' as const,
+        processAbsent: true,
+        processGroupAbsent: true,
+        listenerAbsent: true,
+      }
+    }),
     audit: vi.fn(async (port) => ({
       pid,
       processStartTime: String(pid * 10),
@@ -521,6 +524,52 @@ describe('project runtime manager', () => {
     await manager.shutdown()
   })
 
+  it('awaits delayed completion and exit tasks without clearing tracked sets', async () => {
+    const delayed = runtime(350)
+    const launchStarted = deferred<void>()
+    const release = deferred<ReadyRuntime>()
+    const manager = createProjectRuntimeManager({
+      findProjectById: vi.fn(async () => project),
+      config,
+      processDependencies,
+      launch: vi.fn(async ({ onOwned }) => {
+        launchStarted.resolve()
+        const ready = await release.promise
+        onOwned?.(ready)
+        return ready
+      }),
+    })
+    const start = manager
+      .start({ projectId: project.id, canonicalPath: project.canonicalPath })
+      .catch((error: unknown) => error)
+    await launchStarted.promise
+    const before = manager.audit!()
+    expect(before.completionTasks).toBe(1)
+    const shutdown = manager.shutdown()
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(manager.audit!().completionTasks).toBe(1)
+    release.resolve(delayed.ready)
+    await expect(shutdown).resolves.toMatchObject({ status: 'ok' })
+    await expect(start).resolves.toMatchObject({ category: 'manager-shutdown' })
+    const returned = manager.audit!()
+    expect(returned).toMatchObject({
+      entryCount: 0,
+      ownershipRecords: 0,
+      completionTasks: 0,
+      backgroundTasks: 0,
+    })
+    expect(returned.completionTaskSettlements).toBeGreaterThan(
+      before.completionTaskSettlements
+    )
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(manager.audit!()).toEqual(returned)
+    const source = await readFile(
+      new URL('../src/project-runtime-manager.ts', import.meta.url),
+      'utf8'
+    )
+    expect(source).not.toContain('completionTasks.clear()')
+    expect(source).not.toContain('backgroundTasks.clear()')
+  })
   it('cancels all eight B waiters and cleans only the orphaned B start', async () => {
     const projects = ['a', 'b', 'c'].map((id) => ({
       ...project,

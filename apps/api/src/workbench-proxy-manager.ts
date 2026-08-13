@@ -82,6 +82,13 @@ export interface WorkbenchProxyManagerDependencies {
     connectionOrdinal: number
     role: WorkbenchConnectionRole | 'cancelled-before-control' | 'unknown'
   }) => void
+  readonly selectWebSocketFrameDestination?: (input: {
+    readonly projectToken: string
+    readonly direction: 'to-upstream' | 'to-downstream'
+    readonly rightfulDestination: WebSocket
+    readonly data: RawData
+    readonly binary: boolean
+  }) => WebSocket
 }
 
 class UpstreamTimeoutError extends Error {}
@@ -281,6 +288,9 @@ export function createWorkbenchProxyManager(
     dependencies.recordWebSocketDiagnostic ?? (() => undefined)
   const recordWebSocketRole =
     dependencies.recordWebSocketRole ?? (() => undefined)
+  const selectWebSocketFrameDestination =
+    dependencies.selectWebSocketFrameDestination ??
+    (({ rightfulDestination }) => rightfulDestination)
   let webSocketConnectionOrdinal = 0
   const headerTimeoutMs =
     dependencies.headerTimeoutMs ?? WORKBENCH_HEADER_TIMEOUT_MS
@@ -670,12 +680,38 @@ export function createWorkbenchProxyManager(
     left.on('message', (data, binary) => {
       observeRole(data)
       leftQueue = leftQueue
-        .then(() => forwardMessage(right, data, binary, projectToken))
+        .then(() =>
+          forwardMessage(
+            selectWebSocketFrameDestination({
+              projectToken,
+              direction: 'to-upstream',
+              rightfulDestination: right,
+              data,
+              binary,
+            }),
+            data,
+            binary,
+            projectToken
+          )
+        )
         .catch(() => right.terminate())
     })
     right.on('message', (data, binary) => {
       rightQueue = rightQueue
-        .then(() => forwardMessage(left, data, binary, projectToken))
+        .then(() =>
+          forwardMessage(
+            selectWebSocketFrameDestination({
+              projectToken,
+              direction: 'to-downstream',
+              rightfulDestination: left,
+              data,
+              binary,
+            }),
+            data,
+            binary,
+            projectToken
+          )
+        )
         .catch(() => left.terminate())
     })
     left.on('ping', (data) => {

@@ -77,17 +77,21 @@ const identitiesFrom = (evidence: WorkbenchRouteEvidence): Identity[] => {
 }
 
 const walkFiles = async (root: string): Promise<string[]> => {
-  const files: string[] = []
   try {
-    for (const entry of await readdir(root, { withFileTypes: true })) {
-      const entryPath = path.join(root, entry.name)
-      if (entry.isDirectory()) files.push(...(await walkFiles(entryPath)))
-      else if (entry.isFile() || entry.isSymbolicLink()) files.push(entryPath)
-    }
+    const entries = await readdir(root, { withFileTypes: true })
+    return (
+      await Promise.all(
+        entries.map(async (entry) => {
+          const entryPath = path.join(root, entry.name)
+          if (entry.isDirectory()) return walkFiles(entryPath)
+          return entry.isFile() || entry.isSymbolicLink() ? [entryPath] : []
+        })
+      )
+    ).flat()
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
+    return []
   }
-  return files
 }
 
 const publicArtifactFiles = async (): Promise<string[]> => {

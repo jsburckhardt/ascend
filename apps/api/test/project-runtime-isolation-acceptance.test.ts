@@ -6,13 +6,14 @@ import os from 'node:os'
 import path from 'node:path'
 import { Writable } from 'node:stream'
 import { afterAll, describe, expect, it, vi } from 'vitest'
-import { WebSocket } from 'ws'
+import { WebSocket, WebSocketServer, type RawData } from 'ws'
 import {
   createApiServerController,
   type ApiServerController,
 } from '../src/api-server.js'
 import type { ProjectLibrary } from '../src/project-library.js'
 import {
+  BL013_EVENT_EXPECTATIONS,
   BL013_MISMATCH_CLASSES,
   BL013_SCENARIOS,
   scanProtectedEvidence,
@@ -65,9 +66,17 @@ afterAll(async () => {
   )
 })
 
+interface ControlledFrameReceipt {
+  readonly receiptId: string
+  readonly executionId: string
+  readonly payloadDigest: string
+  readonly binary: boolean
+}
+
 interface ControlledRuntime {
   readonly ready: ReadyRuntime
   readonly contacts: string[]
+  readonly frameReceipts: ControlledFrameReceipt[]
   readonly terminalSentinel: string
   crash(exit?: RuntimeExit): Promise<void>
   setTerminationOutcome(outcome: RuntimeTerminationOutcome): void
@@ -78,6 +87,7 @@ async function controlledRuntime(
   terminalSentinel: string
 ): Promise<ControlledRuntime> {
   const contacts: string[] = []
+  const frameReceipts: ControlledFrameReceipt[] = []
   const exited = deferred<RuntimeExit>()
   let alive = true
   let terminationOutcome: RuntimeTerminationOutcome = 'graceful'
@@ -100,6 +110,35 @@ async function controlledRuntime(
     response.writeHead(200, { 'content-type': 'text/plain' })
     response.end(label)
   })
+  const webSockets = new WebSocketServer({
+    noServer: true,
+    perMessageDeflate: false,
+  })
+  webSockets.on('connection', (socket) => {
+    socket.on('message', (data: RawData, binary: boolean) => {
+      const payload = Buffer.isBuffer(data)
+        ? data
+        : Buffer.concat(data as Buffer[])
+      const text = payload.toString('utf8')
+      const executionId = binary
+        ? text.slice(0, text.indexOf(':binary:'))
+        : String((JSON.parse(text) as { executionId: string }).executionId)
+      frameReceipts.push({
+        receiptId:
+          'frame-receipt-' + label + '-' + String(frameReceipts.length + 1),
+        executionId,
+        payloadDigest: digest(payload),
+        binary,
+      })
+      socket.send(payload, { binary })
+    })
+  })
+  server.on('upgrade', (request, socket, head) => {
+    contacts.push('websocket:' + (request.url ?? '/'))
+    webSockets.handleUpgrade(request, socket, head, (client) => {
+      webSockets.emit('connection', client, request)
+    })
+  })
   await new Promise<void>((resolve, reject) => {
     server.once('error', reject)
     server.listen(0, '127.0.0.1', resolve)
@@ -107,6 +146,7 @@ async function controlledRuntime(
   const port = (server.address() as AddressInfo).port
   const pid = nextPid++
   const close = async (): Promise<void> => {
+    for (const client of webSockets.clients) client.terminate()
     if (!server.listening) return
     await new Promise<void>((resolve) => server.close(() => resolve()))
   }
@@ -125,6 +165,7 @@ async function controlledRuntime(
     }),
     terminate: async (_graceful, _force, ownedPort) => {
       alive = false
+      exited.resolve({ code: 0, signal: null, addressInUse: false })
       await close()
       return {
         pid,
@@ -147,6 +188,7 @@ async function controlledRuntime(
       ],
     },
     contacts,
+    frameReceipts,
     terminalSentinel,
     async crash(exit = { code: 77, signal: null, addressInUse: false }) {
       alive = false
@@ -182,6 +224,11 @@ const eventRows = (
   events.map((event, index) => ({
     ...event,
     source: source ?? (Object.hasOwn(event, 'from') ? 'runtime' : 'proxy'),
+    elapsedClass:
+      event.event === 'runtime.start.requested' ||
+      event.event === 'workbench.proxy.started'
+        ? 'zero'
+        : 'within-suite-bound',
     executionId,
     eventId: executionId + '-event-' + String(index + 1),
   }))
@@ -315,6 +362,37 @@ const websocketRefusal = (port: number, url: string) =>
     })
   })
 
+const openWebSocketBoundary = (port: number, url: string) =>
+  new Promise<WebSocket>((resolve, reject) => {
+    const socket = new WebSocket('ws://127.0.0.1:' + String(port) + url)
+    socket.once('open', () => resolve(socket))
+    socket.once('error', reject)
+  })
+
+const exchangeFrame = (
+  socket: WebSocket,
+  payload: string | Buffer,
+  binary: boolean
+) =>
+  new Promise<{ readonly payloadDigest: string; readonly binary: boolean }>(
+    (resolve, reject) => {
+      socket.once('message', (data: RawData, receivedBinary: boolean) => {
+        const received = Buffer.isBuffer(data)
+          ? data
+          : Buffer.concat(data as Buffer[])
+        resolve({ payloadDigest: digest(received), binary: receivedBinary })
+      })
+      socket.once('error', reject)
+      socket.send(payload, { binary })
+    }
+  )
+
+const closeWebSocketBoundary = (socket: WebSocket) =>
+  new Promise<void>((resolve) => {
+    socket.once('close', () => resolve())
+    socket.close(1000)
+  })
+
 async function buildArtifact() {
   const startedAt = Date.now()
   const fixtureRoot = await mkdtemp(
@@ -445,8 +523,7 @@ async function buildArtifact() {
       )!
       const target = manager.inspect(targetProject.id)!
       if (injection.mismatchClass === 'project-route') return target
-      if (injection.mismatchClass === 'frame-destination')
-        return Object.freeze({ ...selected, ownerToken: target.ownerToken })
+      if (injection.mismatchClass === 'frame-destination') return selected
       return Object.freeze({
         ...selected,
         internalUrl: target.internalUrl,
@@ -488,21 +565,157 @@ async function buildArtifact() {
   for (const mismatchClass of BL013_MISMATCH_CLASSES) {
     for (const orderedPair of orderedPairs) {
       const [source, target] = orderedPair.split('>')
-      injection = { mismatchClass, source, target }
       const executionId = 'cross-' + mismatchClass + '-' + source + '-' + target
-      const boundaryId =
-        (mismatchClass === 'project-route' || mismatchClass === 'http-target'
-          ? 'request-'
-          : 'upgrade-') + executionId
-      const targetRuntime = runtimeByPath.get(
-        projects.find((project) => project.label === target)!.canonicalPath
+      const sourceProject = projects.find(
+        (project) => project.label === source
       )!
-      const contactsBefore = targetRuntime.contacts.length
+      const targetProject = projects.find(
+        (project) => project.label === target
+      )!
+      const sourceRuntime = runtimeByPath.get(sourceProject.canonicalPath)!
+      const targetRuntime = runtimeByPath.get(targetProject.canonicalPath)!
       const route =
         '/projects/bl013-' +
         source +
         '/workbench/matrix?marker=' +
         encodeURIComponent(sentinels[0])
+
+      if (mismatchClass === 'frame-destination') {
+        injection = undefined
+        const sourceBoundaryId = 'source-boundary-' + executionId
+        const targetBoundaryId = 'target-boundary-' + executionId
+        const sourceSocket = await openWebSocketBoundary(api.port, route)
+        const targetSocket = await openWebSocketBoundary(
+          api.port,
+          '/projects/bl013-' + target + '/workbench/matrix-control'
+        )
+        const sourceReceiptStart = sourceRuntime.frameReceipts.length
+        const targetReceiptStart = targetRuntime.frameReceipts.length
+        const textExecutionId =
+          executionId + '-text-' + digest(executionId + '-text').slice(0, 12)
+        const binaryExecutionId =
+          executionId +
+          '-binary-' +
+          digest(executionId + '-binary').slice(0, 12)
+        const targetControlExecutionId =
+          executionId +
+          '-target-control-' +
+          digest(executionId + '-target-control').slice(0, 12)
+        const textPayload = JSON.stringify({
+          executionId: textExecutionId,
+          payloadHash: digest(textExecutionId),
+        })
+        const binaryPayload = Buffer.from(
+          binaryExecutionId + ':binary:' + digest(binaryExecutionId)
+        )
+        const targetControlPayload = JSON.stringify({
+          executionId: targetControlExecutionId,
+          payloadHash: digest(targetControlExecutionId),
+        })
+        const targetControlEcho = await exchangeFrame(
+          targetSocket,
+          targetControlPayload,
+          false
+        )
+        const textEcho = await exchangeFrame(sourceSocket, textPayload, false)
+        const binaryEcho = await exchangeFrame(
+          sourceSocket,
+          binaryPayload,
+          true
+        )
+        await vi.waitFor(() => {
+          expect(sourceRuntime.frameReceipts.length - sourceReceiptStart).toBe(
+            2
+          )
+          expect(targetRuntime.frameReceipts.length - targetReceiptStart).toBe(
+            1
+          )
+        })
+        await Promise.all([
+          closeWebSocketBoundary(sourceSocket),
+          closeWebSocketBoundary(targetSocket),
+        ])
+        await vi.waitFor(() =>
+          expect(api.app.workbenchProxy.audit()).toMatchObject({
+            pendingOperations: 0,
+            rawSockets: 0,
+            webSockets: 0,
+          })
+        )
+        const sourceReceipts =
+          sourceRuntime.frameReceipts.slice(sourceReceiptStart)
+        const targetReceipts =
+          targetRuntime.frameReceipts.slice(targetReceiptStart)
+        const frameExecutionIds = [textExecutionId, binaryExecutionId]
+        const mismatchedTargetReceipts = targetReceipts.filter((receipt) =>
+          frameExecutionIds.includes(receipt.executionId)
+        )
+        const rightfulSourceReceipts = sourceReceipts.filter((receipt) =>
+          frameExecutionIds.includes(receipt.executionId)
+        )
+        const targetControlReceipts = targetReceipts.filter(
+          (receipt) => receipt.executionId === targetControlExecutionId
+        )
+        const proxyAudit = api.app.workbenchProxy.audit() as unknown as Record<
+          string,
+          number | boolean
+        >
+        crossTargetRows.push({
+          mismatchClass,
+          orderedPair,
+          executionId,
+          boundaryId: sourceBoundaryId,
+          sourceBoundaryId,
+          targetBoundaryId,
+          transport: 'websocket',
+          executed: true,
+          sourceBoundaryEstablished: true,
+          targetBoundaryEstablished: true,
+          projectToken: deriveProjectOwnerToken('bl013-' + source),
+          requestedDestinationToken: deriveProjectOwnerToken('bl013-' + target),
+          expectedOutcome: 'route-bound-source-only',
+          observedOutcome: 'route-bound-source-only',
+          frameExecutionIds,
+          sourceReceiptIds: rightfulSourceReceipts.map(
+            (receipt) => receipt.receiptId
+          ),
+          mismatchedTargetReceiptIds: mismatchedTargetReceipts.map(
+            (receipt) => receipt.receiptId
+          ),
+          targetControlExecutionId,
+          targetControlReceiptIds: targetControlReceipts.map(
+            (receipt) => receipt.receiptId
+          ),
+          textFrame: {
+            payloadDigest: digest(Buffer.from(textPayload)),
+            echoedDigest: textEcho.payloadDigest,
+            binary: textEcho.binary,
+          },
+          binaryFrame: {
+            payloadDigest: digest(binaryPayload),
+            echoedDigest: binaryEcho.payloadDigest,
+            binary: binaryEcho.binary,
+          },
+          targetControlFrame: {
+            payloadDigest: digest(Buffer.from(targetControlPayload)),
+            echoedDigest: targetControlEcho.payloadDigest,
+            binary: targetControlEcho.binary,
+          },
+          sourceReceiptCount: rightfulSourceReceipts.length,
+          mismatchedTargetReceiptCount: mismatchedTargetReceipts.length,
+          targetControlReceiptCount: targetControlReceipts.length,
+          upstreamContactCount: mismatchedTargetReceipts.length,
+          cleanup: zeroProxyCleanup(executionId + '-cleanup', proxyAudit),
+        })
+        continue
+      }
+
+      injection = { mismatchClass, source, target }
+      const boundaryId =
+        (mismatchClass === 'project-route' || mismatchClass === 'http-target'
+          ? 'request-'
+          : 'upgrade-') + executionId
+      const contactsBefore = targetRuntime.contacts.length
       const response =
         mismatchClass === 'project-route' || mismatchClass === 'http-target'
           ? await httpCase(api.port, route, sentinels[1])
@@ -532,6 +745,7 @@ async function buildArtifact() {
             : 'websocket',
         executed: true,
         projectToken: deriveProjectOwnerToken('bl013-' + source),
+        requestedDestinationToken: deriveProjectOwnerToken('bl013-' + target),
         expectedFailure: 'workbench_runtime_project_mismatch',
         observedFailure: body.error.code,
         status: response.status,
@@ -1068,6 +1282,7 @@ async function buildArtifact() {
     await vi.waitFor(() =>
       expect(local.inspect(projects[2].id)?.state).toBe('starting')
     )
+    const preShutdownAudit = local.audit!()
     const first = local.shutdown()
     const second = local.shutdown()
     const during = await local
@@ -1084,7 +1299,34 @@ async function buildArtifact() {
         canonicalPath: projects[0].canonicalPath,
       })
       .catch((error: unknown) => error)
+    await vi.waitFor(
+      () =>
+        expect(local.audit!()).toMatchObject({
+          entryCount: 0,
+          ownershipRecords: 0,
+          completionTasks: 0,
+          backgroundTasks: 0,
+        }),
+      { timeout: 1_000 }
+    )
+    const postShutdownAudit = local.audit!()
     const controlAlive = await unrelated.ready.process.isAlive()
+    const controlListener = await terminalProbe(
+      {
+        projectId: 'unrelated-control',
+        state: 'running',
+        pid: unrelated.ready.process.pid,
+        processStartTime: unrelated.ready.process.processStartTime,
+        internalUrl: unrelated.ready.internalUrl,
+        port: unrelated.ready.port,
+        canonicalPath: '/unrelated-control',
+        stableRoute: '/unrelated-control/',
+        ownerToken: 'project-control0000000',
+        startedAt: 1,
+        elapsedMs: 0,
+      },
+      'UNRELATED_CONTROL_SENTINEL'
+    )
     await unrelated.ready.process.terminate(1, 1, unrelated.ready.port)
     return {
       events,
@@ -1094,7 +1336,10 @@ async function buildArtifact() {
       after,
       result,
       cOutcome,
+      preShutdownAudit,
+      postShutdownAudit,
       controlAlive,
+      controlListenerAlive: controlListener.passed,
       unrelated,
     }
   }
@@ -1109,7 +1354,12 @@ async function buildArtifact() {
     passed:
       shutdown.result.status === 'ok' &&
       shutdown.result.audits.length === 3 &&
-      shutdown.controlAlive,
+      shutdown.controlAlive &&
+      shutdown.controlListenerAlive &&
+      shutdown.postShutdownAudit.entryCount === 0 &&
+      shutdown.postShutdownAudit.ownershipRecords === 0 &&
+      shutdown.postShutdownAudit.completionTasks === 0 &&
+      shutdown.postShutdownAudit.backgroundTasks === 0,
     invocationCount: 3,
     elapsedMs: 1,
     observations: [
@@ -1130,7 +1380,16 @@ async function buildArtifact() {
         cancelledStart:
           shutdown.cOutcome instanceof RuntimeFailure &&
           shutdown.cOutcome.category === 'manager-shutdown',
-        unrelatedProcessAndListenerSurvived: shutdown.controlAlive,
+        unrelatedProcessAndListenerSurvived:
+          shutdown.controlAlive && shutdown.controlListenerAlive,
+        managerAudit: {
+          measurementId: 'global-shutdown-manager-audit',
+          inspector: 'runtime-manager-audit',
+          executed: true,
+          boundedWaitMs: 1_000,
+          before: shutdown.preShutdownAudit,
+          after: shutdown.postShutdownAudit,
+        },
       },
     ],
     events: eventRows('scenario-global-shutdown', shutdown.events),
@@ -1148,9 +1407,13 @@ async function buildArtifact() {
       },
       {
         resourceClass: 'background-work',
-        before: 1,
-        after: 0,
-        method: 'settled-start-and-shutdown-promise-inventory',
+        before:
+          shutdown.preShutdownAudit.completionTasks +
+          shutdown.preShutdownAudit.backgroundTasks,
+        after:
+          shutdown.postShutdownAudit.completionTasks +
+          shutdown.postShutdownAudit.backgroundTasks,
+        method: 'runtime-manager-audit-after-bounded-wait',
       },
     ]),
   })
@@ -1164,7 +1427,13 @@ async function buildArtifact() {
       shutdownRace.during instanceof RuntimeFailure &&
       shutdownRace.during.category === 'manager-shutdown' &&
       shutdownRace.after instanceof RuntimeFailure &&
-      shutdownRace.after.category === 'manager-shutdown',
+      shutdownRace.after.category === 'manager-shutdown' &&
+      shutdownRace.controlAlive &&
+      shutdownRace.controlListenerAlive &&
+      shutdownRace.postShutdownAudit.entryCount === 0 &&
+      shutdownRace.postShutdownAudit.ownershipRecords === 0 &&
+      shutdownRace.postShutdownAudit.completionTasks === 0 &&
+      shutdownRace.postShutdownAudit.backgroundTasks === 0,
     invocationCount: 4,
     elapsedMs: 1,
     observations: [
@@ -1177,17 +1446,29 @@ async function buildArtifact() {
           shutdownRace.after instanceof RuntimeFailure &&
           shutdownRace.after.category === 'manager-shutdown',
         lateSettlementInstalled: false,
-        staleEntries: 0,
-        staleBackgroundWork: 0,
+        unrelatedProcessSurvived: shutdownRace.controlAlive,
+        unrelatedListenerSurvived: shutdownRace.controlListenerAlive,
+        managerAudit: {
+          measurementId: 'shutdown-race-manager-audit',
+          inspector: 'runtime-manager-audit',
+          executed: true,
+          boundedWaitMs: 1_000,
+          before: shutdownRace.preShutdownAudit,
+          after: shutdownRace.postShutdownAudit,
+        },
       },
     ],
     events: eventRows('scenario-shutdown-race', shutdownRace.events),
     cleanup: cleanup('shutdown-race-cleanup', [
       {
         resourceClass: 'background-work',
-        before: 2,
-        after: 0,
-        method: 'promise-settlement-and-entry-inventory',
+        before:
+          shutdownRace.preShutdownAudit.completionTasks +
+          shutdownRace.preShutdownAudit.backgroundTasks,
+        after:
+          shutdownRace.postShutdownAudit.completionTasks +
+          shutdownRace.postShutdownAudit.backgroundTasks,
+        method: 'runtime-manager-audit-after-bounded-wait',
       },
     ]),
   })
@@ -1245,6 +1526,14 @@ async function buildArtifact() {
     networkRequired: false,
     manualJudgment: false,
     timeoutMs: 120_000,
+    projectTokens: {
+      a: deriveProjectOwnerToken('bl013-a'),
+      b: deriveProjectOwnerToken('bl013-b'),
+      c: deriveProjectOwnerToken('bl013-c'),
+      unknown: deriveProjectOwnerToken('unknown'),
+      closed: deriveProjectOwnerToken('closed-project'),
+    },
+    eventExpectations: BL013_EVENT_EXPECTATIONS,
     scenarios,
     crossTargetRows,
     protectedScans,
@@ -1287,7 +1576,6 @@ const artifactPromise = buildArtifact()
 describe.sequential('BL-013 executable fake matrix', () => {
   it('executes, validates, and retains the complete local matrix', async () => {
     const artifact = await artifactPromise
-    expect(validateProjectRuntimeIsolationEvidence(artifact)).toBe(true)
     const directory = path.join(
       process.cwd(),
       'test-results/bl-013/runtime-isolation'
@@ -1298,6 +1586,7 @@ describe.sequential('BL-013 executable fake matrix', () => {
       JSON.stringify(artifact, null, 2) + '\n',
       { mode: 0o600 }
     )
+    expect(validateProjectRuntimeIsolationEvidence(artifact)).toBe(true)
   }, 120_000)
 
   it('rejects incomplete, copied, unscanned, assertion-only, and residual artifacts', async () => {
@@ -1318,7 +1607,130 @@ describe.sequential('BL-013 executable fake matrix', () => {
         copy.scenarios[1].events = copy.scenarios[0].events
       })
     ).toBe(false)
+    expect(
+      mutate((copy) => {
+        copy.scenarios[0].events.pop()
+      })
+    ).toBe(false)
+    expect(
+      mutate((copy) => {
+        copy.scenarios[2].events[3].classification = 'wrong-failure'
+      })
+    ).toBe(false)
+    expect(
+      mutate((copy) => {
+        copy.scenarios[0].events.push({
+          ...copy.scenarios[0].events.at(-1),
+          eventId: 'scenario-interleaved-24-event-extra',
+        })
+      })
+    ).toBe(false)
+    expect(
+      mutate((copy) => {
+        copy.scenarios[0].events[0].projectToken = copy.projectTokens.b
+      })
+    ).toBe(false)
+    expect(
+      mutate((copy) => {
+        ;[copy.scenarios[0].events[0], copy.scenarios[0].events[1]] = [
+          copy.scenarios[0].events[1],
+          copy.scenarios[0].events[0],
+        ]
+      })
+    ).toBe(false)
+    expect(
+      mutate((copy) => {
+        copy.scenarios[0].events[0].projectToken = 'project-unsafe'
+      })
+    ).toBe(false)
     expect(mutate((copy) => copy.crossTargetRows.pop())).toBe(false)
+    expect(
+      mutate((copy) => {
+        const frame = copy.crossTargetRows.find(
+          (row: any) => row.mismatchClass === 'frame-destination'
+        )
+        frame.sourceReceiptIds.pop()
+        frame.sourceReceiptCount = 1
+      })
+    ).toBe(false)
+    expect(
+      mutate((copy) => {
+        const frame = copy.crossTargetRows.find(
+          (row: any) => row.mismatchClass === 'frame-destination'
+        )
+        frame.binaryFrame.echoedDigest = frame.textFrame.payloadDigest
+      })
+    ).toBe(false)
+    expect(
+      mutate((copy) => {
+        copy.crossTargetRows.push({
+          ...copy.crossTargetRows.at(-1),
+          executionId: 'cross-extra-row',
+        })
+      })
+    ).toBe(false)
+    expect(
+      mutate((copy) => {
+        copy.crossTargetRows[0].projectToken = copy.projectTokens.b
+      })
+    ).toBe(false)
+    expect(
+      mutate((copy) => {
+        ;[copy.crossTargetRows[0], copy.crossTargetRows[1]] = [
+          copy.crossTargetRows[1],
+          copy.crossTargetRows[0],
+        ]
+      })
+    ).toBe(false)
+    expect(
+      mutate((copy) => {
+        const frame = copy.crossTargetRows.find(
+          (row: any) => row.mismatchClass === 'frame-destination'
+        )
+        frame.mismatchedTargetReceiptIds.push('misattributed-receipt')
+        frame.mismatchedTargetReceiptCount = 1
+      })
+    ).toBe(false)
+    expect(
+      mutate((copy) => {
+        const race = copy.scenarios.find(
+          (scenario: any) => scenario.scenario === 'shutdown-race'
+        )
+        delete race.observations[0].managerAudit
+      })
+    ).toBe(false)
+    expect(
+      mutate((copy) => {
+        const race = copy.scenarios.find(
+          (scenario: any) => scenario.scenario === 'shutdown-race'
+        )
+        race.observations[0].managerAudit.executed = false
+      })
+    ).toBe(false)
+    expect(
+      mutate((copy) => {
+        const race = copy.scenarios.find(
+          (scenario: any) => scenario.scenario === 'shutdown-race'
+        )
+        race.observations[0].managerAudit.inspector = 'assigned-zero'
+      })
+    ).toBe(false)
+    expect(
+      mutate((copy) => {
+        const race = copy.scenarios.find(
+          (scenario: any) => scenario.scenario === 'shutdown-race'
+        )
+        race.observations[0].managerAudit.before.ownershipRecords = 0
+      })
+    ).toBe(false)
+    expect(
+      mutate((copy) => {
+        const race = copy.scenarios.find(
+          (scenario: any) => scenario.scenario === 'shutdown-race'
+        )
+        race.observations[0].unrelatedListenerSurvived = false
+      })
+    ).toBe(false)
     expect(
       mutate((copy) => {
         copy.protectedScans[0].scanner = 'assigned-zero'

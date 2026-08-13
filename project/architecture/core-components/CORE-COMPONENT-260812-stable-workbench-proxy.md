@@ -72,7 +72,7 @@ This component applies to the Fastify workbench route, the top-level browser nav
 ### Expectations
 - Each stopped project receives one independent BL-010 start/readiness sequence even when HTTP and WebSocket clients arrive together; interleaved traffic for different stable IDs remains bound to distinct snapshots, routes, owner tokens, loopback ports, and frame destinations, while later same-project requests reuse one healthy identity.
 - Client disconnect affects only the matching proxy operation and never stops or invalidates the shared runtime.
-- Every matrix case has a declared finite timeout, generation input, expected digest or exact outcome, and post-case zero-socket audit.
+- Every matrix case has a declared finite timeout, generation input, expected digest or exact outcome, and post-case zero-socket audit. Frame-destination isolation rows MUST establish real source and mismatched-target WebSocket controls, send uniquely correlated text and binary frames only after upgrade, retain execution/receipt IDs, and prove rightful source delivery plus zero receipt of those IDs by the mismatched target; snapshot-prevalidation rejection is a separate target-mismatch row.
 - Full-page desktop Chromium continues to own the authoritative presentation. Every Ascend-owned request and WebSocket remains same-origin under the stable prefix; only the exact grammar-validated isolated Markdown webview HTTPS resource exception is classified separately without retaining its raw host or authority token.
 
 ## Rationale

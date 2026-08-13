@@ -78,7 +78,7 @@ Add explicit waiter accounting to each starting entry. A single cancelled B wait
 
 ### Expected Evidence
 - V-6 failure/replacement matrix with old/new B identities, unchanged A/C digests, typed outcomes, launch counts, and terminal checks.
-- V-7 cancellation/shutdown matrix with waiter counts, cleanup audits, race outcomes, finite timing, zero owned residuals, and surviving unrelated identity.
+- V-7 cancellation/shutdown matrix with waiter counts, cleanup audits, race outcomes, finite timing, zero owned residuals, and surviving unrelated identity. The completed correction independently measures entry, ownership, completion-task, and background-task maps after a 1,000 ms bounded wait and rejects assigned-zero provenance.
 
 ## Task T-4: Fail closed across proxy targets, resources, frames, and events
 
@@ -104,7 +104,7 @@ Strengthen target resolution so the returned snapshot ID, canonical path, stable
 - Run precommit/postcommit failure, disconnect, shutdown, backpressure, and BL-011 failure-table regressions.
 
 ### Expected Evidence
-- V-3 cross-target matrix with unique execution IDs, route/token/transport class, selected target classification, delivery counts, public failure, and zero per-project/global resources.
+- V-3 cross-target matrix with unique execution IDs, route/token/transport class, selected target classification, delivery counts, public failure, and zero per-project/global resources. The six completed frame rows retain real source/target WebSocket boundary IDs, uniquely hashed text/binary frame execution and receipt IDs, rightful echoes/control delivery, and zero mismatched-target receipt.
 - V-5 matching runtime/proxy event tokens and zero protected-value scans.
 
 ## Task T-5: Extend persistence and public-surface canaries
@@ -154,7 +154,7 @@ Create one versioned execution-backed BL-013 fake evidence artifact. Include the
 - Union residual test deduplicates exact owned identities only and requires every process/group/listener/socket absent.
 
 ### Expected Evidence
-- V-8 `test-results/bl-013/runtime-isolation/fake-matrix.json` with schema version, bounds, execution records, AC map, event expectations, public scans, and zero-residual union.
+- V-8 `test-results/bl-013/runtime-isolation/fake-matrix.json` with schema version, bounds, execution records, AC map, event expectations, public scans, and zero-residual union. The completed validator enforces the exact 70-record scenario catalog and rejects missing, wrong, extra, misattributed, reordered, incomplete AC-12, and unmeasured AC-18 mutations.
 - Contract-guard report with accepted production source and rejected negative fixtures.
 
 ## Task T-7: Run the real three-project Chromium isolation episode
@@ -233,4 +233,4 @@ Add root `verify-project-runtime-isolation` and residual-audit recipes, compose 
 - Scan dependencies, routes, and UI for forbidden public stop/restart or BL-014/BL-015 additions.
 
 ### Expected Evidence
-- V-11 command/exit/duration record, documentation matrix, clean-tree before/after hashes, prior-gate outcomes, full `just verify` result, and scope/dependency scan.
+- V-11 command/exit/duration record, documentation matrix, clean-tree before/after hashes, prior-gate outcomes, full `just verify` result, and scope/dependency scan. Documentation now distinguishes 18 pre-forward target failures from six executed frame-delivery rows and records exact event and shutdown-audit counts.

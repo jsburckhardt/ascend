@@ -607,8 +607,12 @@ describe('stable workbench HTTP transport', () => {
     })
   })
 
-  it('maps lookup, runtime, invariant, connect, and header-timeout faults exactly', async () => {
-    const stalledPort = await listen(createServer())
+  it('maps immediate connect failure and deadline timeout distinctly under repeated contention', async () => {
+    const faultTransitions: string[] = []
+    const stalledPort = await listen(
+      createServer(() => faultTransitions.push('timeout:accepted'))
+    )
+    const immediateFailurePort = await listen(createServer())
     const resetPort = await listen(
       createServer((request) => request.socket.destroy())
     )
@@ -647,9 +651,11 @@ describe('stable workbench HTTP transport', () => {
         const port =
           projectId === 'header-timeout'
             ? stalledPort
-            : projectId === 'reset'
-              ? resetPort
-              : 1
+            : projectId === 'connect'
+              ? immediateFailurePort
+              : projectId === 'reset'
+                ? resetPort
+                : 1
         return {
           projectId,
           state: 'running' as const,
@@ -684,6 +690,21 @@ describe('stable workbench HTTP transport', () => {
           projectLibrary,
           projectRuntime,
           headerTimeoutMs: 25,
+          requestHttp: (options) => {
+            const request = httpRequest(options)
+            if (Number(options.port) === immediateFailurePort) {
+              faultTransitions.push('connect:scheduled')
+              queueMicrotask(() => {
+                faultTransitions.push('connect:failed')
+                request.destroy(
+                  Object.assign(new Error('controlled immediate failure'), {
+                    code: 'ECONNREFUSED',
+                  })
+                )
+              })
+            }
+            return request
+          },
         }),
       createProjectRegistration: async () => ({
         register: vi.fn(),
@@ -716,6 +737,30 @@ describe('stable workbench HTTP transport', () => {
       })
       expect(response.body.toString()).not.toContain('private')
     }
+    for (let repetition = 0; repetition < 8; repetition += 1) {
+      for (const [id, status, code] of [
+        ['connect', 502, 'workbench_upstream_connect_failed'],
+        ['header-timeout', 504, 'workbench_upstream_timeout'],
+      ] as const) {
+        const response = await perform(
+          port,
+          '/projects/' + id + '/workbench/repeated-' + String(repetition)
+        )
+        expect(response.status).toBe(status)
+        expect(JSON.parse(response.body.toString())).toMatchObject({
+          error: { code },
+        })
+      }
+    }
+    expect(
+      faultTransitions.filter((event) => event === 'connect:scheduled')
+    ).toHaveLength(9)
+    expect(
+      faultTransitions.filter((event) => event === 'connect:failed')
+    ).toHaveLength(9)
+    expect(
+      faultTransitions.filter((event) => event === 'timeout:accepted')
+    ).toHaveLength(9)
   })
 
   it('refuses partial or misaligned trusted front-door headers before runtime start', async () => {

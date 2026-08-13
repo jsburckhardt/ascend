@@ -135,6 +135,194 @@ const allowedEvents = new Set([
   'workbench.proxy.failed',
 ])
 const allowedStates = new Set(['stopped', 'starting', 'running', 'failed'])
+const safeProjectToken = (token: unknown): token is string =>
+  typeof token === 'string' && /^project-[a-f0-9]{16}$/u.test(token)
+
+type ProjectRole = 'a' | 'b' | 'c' | 'unknown' | 'closed'
+type ExpectedEvent = Readonly<{
+  source: 'runtime' | 'proxy'
+  event: string
+  project: ProjectRole
+  from?: string
+  to?: string
+  classification?: string
+  transport?: 'http' | 'websocket'
+  elapsedClass: 'zero' | 'within-suite-bound'
+}>
+
+const runtimeStart = (project: ProjectRole, from = 'stopped'): ExpectedEvent =>
+  Object.freeze({
+    source: 'runtime',
+    event: 'runtime.start.requested',
+    project,
+    from,
+    to: 'starting',
+    elapsedClass: 'zero',
+  })
+const runtimeRunning = (project: ProjectRole): ExpectedEvent =>
+  Object.freeze({
+    source: 'runtime',
+    event: 'runtime.start.succeeded',
+    project,
+    from: 'starting',
+    to: 'running',
+    elapsedClass: 'within-suite-bound',
+  })
+const runtimeFailure = (
+  project: ProjectRole,
+  event: 'runtime.start.failed' | 'runtime.health.changed' | 'runtime.exited',
+  from: 'starting' | 'running',
+  classification: string
+): ExpectedEvent =>
+  Object.freeze({
+    source: 'runtime',
+    event,
+    project,
+    from,
+    to: 'failed',
+    classification,
+    elapsedClass: 'within-suite-bound',
+  })
+const proxyEvent = (
+  project: ProjectRole,
+  event: 'workbench.proxy.started' | 'workbench.proxy.failed',
+  classification?: string
+): ExpectedEvent =>
+  Object.freeze({
+    source: 'proxy',
+    event,
+    project,
+    transport: 'http',
+    ...(classification === undefined ? {} : { classification }),
+    elapsedClass:
+      event === 'workbench.proxy.started' ? 'zero' : 'within-suite-bound',
+  })
+
+const threeStarts = Object.freeze([
+  runtimeStart('a'),
+  runtimeStart('b'),
+  runtimeStart('c'),
+])
+const threeRunning = Object.freeze([
+  runtimeRunning('a'),
+  runtimeRunning('b'),
+  runtimeRunning('c'),
+])
+const cancellationStarts = Object.freeze([
+  runtimeStart('a'),
+  runtimeStart('c'),
+  runtimeStart('b'),
+])
+const shutdownEvents = Object.freeze([
+  runtimeStart('a'),
+  runtimeStart('b'),
+  runtimeRunning('a'),
+  runtimeRunning('b'),
+  runtimeStart('c'),
+  runtimeFailure('c', 'runtime.start.failed', 'starting', 'manager-shutdown'),
+])
+
+export const BL013_EVENT_EXPECTATIONS: Readonly<
+  Record<(typeof BL013_SCENARIOS)[number], readonly ExpectedEvent[]>
+> = Object.freeze({
+  'interleaved-24': Object.freeze([...threeStarts, ...threeRunning]),
+  'invalid-identifiers': Object.freeze([
+    proxyEvent('unknown', 'workbench.proxy.started'),
+    proxyEvent('unknown', 'workbench.proxy.failed', 'unknown-project'),
+    proxyEvent('closed', 'workbench.proxy.started'),
+    proxyEvent('closed', 'workbench.proxy.failed', 'unknown-project'),
+  ]),
+  'early-exit': Object.freeze([
+    ...threeStarts,
+    runtimeFailure('b', 'runtime.start.failed', 'starting', 'early-exit-code'),
+    runtimeRunning('a'),
+    runtimeRunning('c'),
+  ]),
+  crash: Object.freeze([
+    ...threeStarts,
+    ...threeRunning,
+    runtimeFailure('b', 'runtime.exited', 'running', 'early-exit-code'),
+  ]),
+  'readiness-failure': Object.freeze([
+    ...threeStarts,
+    runtimeFailure(
+      'b',
+      'runtime.start.failed',
+      'starting',
+      'readiness-timeout'
+    ),
+    runtimeRunning('a'),
+    runtimeRunning('c'),
+  ]),
+  'health-failure': Object.freeze([
+    ...threeStarts,
+    ...threeRunning,
+    runtimeFailure(
+      'b',
+      'runtime.health.changed',
+      'running',
+      'health-status-unexpected'
+    ),
+  ]),
+  'proxy-failure': Object.freeze([
+    ...threeStarts,
+    ...threeRunning,
+    proxyEvent('b', 'workbench.proxy.started'),
+    proxyEvent('b', 'workbench.proxy.failed', 'upstream-reset'),
+  ]),
+  'all-callers-cancel': Object.freeze([
+    ...cancellationStarts,
+    runtimeRunning('a'),
+    runtimeRunning('c'),
+    runtimeFailure('b', 'runtime.start.failed', 'starting', 'caller-cancelled'),
+  ]),
+  'one-caller-cancel': Object.freeze([
+    ...cancellationStarts,
+    runtimeRunning('a'),
+    runtimeRunning('c'),
+    runtimeRunning('b'),
+  ]),
+  'explicit-replacement': Object.freeze([
+    runtimeStart('b', 'failed'),
+    runtimeRunning('b'),
+  ]),
+  'global-shutdown': shutdownEvents,
+  'shutdown-race': shutdownEvents,
+})
+
+const measuredManagerAudit = (
+  value: unknown,
+  measurementId: string,
+  timeoutMs: number
+): boolean => {
+  const measurement = record(value)
+  const before = record(measurement?.before)
+  const after = record(measurement?.after)
+  const countKeys = [
+    'entryCount',
+    'startingEntries',
+    'ownershipRecords',
+    'completionTasks',
+    'backgroundTasks',
+  ] as const
+  return (
+    measurement?.measurementId === measurementId &&
+    measurement.inspector === 'runtime-manager-audit' &&
+    measurement.executed === true &&
+    Number.isSafeInteger(measurement.boundedWaitMs) &&
+    Number(measurement.boundedWaitMs) > 0 &&
+    Number(measurement.boundedWaitMs) <= timeoutMs &&
+    before?.shuttingDown === false &&
+    after?.shuttingDown === true &&
+    countKeys.every(
+      (key) => Number.isSafeInteger(before?.[key]) && Number(before?.[key]) >= 0
+    ) &&
+    Number(before?.entryCount) > 0 &&
+    Number(before?.ownershipRecords) > 0 &&
+    Number(before?.completionTasks) + Number(before?.backgroundTasks) > 0 &&
+    countKeys.every((key) => after?.[key] === 0)
+  )
+}
 
 export function validateProjectRuntimeIsolationEvidence(
   value: unknown
@@ -162,6 +350,26 @@ export function validateProjectRuntimeIsolationEvidence(
     new Set(ids).size !== ids.length
   )
     return false
+  const projectTokens = record(artifact.projectTokens)
+  const projectRoles: readonly ProjectRole[] = [
+    'a',
+    'b',
+    'c',
+    'unknown',
+    'closed',
+  ]
+  if (
+    projectTokens === undefined ||
+    JSON.stringify(Object.keys(projectTokens)) !==
+      JSON.stringify(projectRoles) ||
+    projectRoles.some((role) => !safeProjectToken(projectTokens[role])) ||
+    new Set(projectRoles.map((role) => projectTokens[role])).size !==
+      projectRoles.length ||
+    JSON.stringify(artifact.eventExpectations) !==
+      JSON.stringify(BL013_EVENT_EXPECTATIONS)
+  )
+    return false
+
   const eventIds: string[] = []
   for (const scenario of scenarios) {
     if (
@@ -174,27 +382,47 @@ export function validateProjectRuntimeIsolationEvidence(
       !Array.isArray(scenario.observations) ||
       scenario.observations.length === 0 ||
       !Array.isArray(scenario.events) ||
-      scenario.events.length === 0 ||
       !measuredCleanup(scenario.cleanup)
     )
       return false
-    for (const value of scenario.events) {
+    const expected =
+      BL013_EVENT_EXPECTATIONS[
+        scenario.scenario as (typeof BL013_SCENARIOS)[number]
+      ]
+    if (expected === undefined || scenario.events.length !== expected.length)
+      return false
+    for (const [index, value] of scenario.events.entries()) {
       const event = record(value)
-      if (event === undefined) return false
+      const expectation = expected[index]
+      if (event === undefined || expectation === undefined) return false
+      const elapsedValid =
+        expectation.elapsedClass === 'zero'
+          ? event.elapsedMs === 0
+          : Number.isSafeInteger(event.elapsedMs) &&
+            Number(event.elapsedMs) >= 0 &&
+            Number(event.elapsedMs) <= Number(artifact.timeoutMs)
       if (
         event.executionId !== scenario.executionId ||
-        typeof event.eventId !== 'string' ||
-        event.eventId.length < 8 ||
-        typeof event.projectToken !== 'string' ||
-        !event.projectToken.startsWith('project-') ||
+        event.eventId !==
+          String(scenario.executionId) + '-event-' + String(index + 1) ||
+        event.projectToken !== projectTokens[expectation.project] ||
+        !safeProjectToken(event.projectToken) ||
+        event.source !== expectation.source ||
+        event.event !== expectation.event ||
         !allowedEvents.has(String(event.event)) ||
-        !Number.isSafeInteger(event.elapsedMs) ||
-        Number(event.elapsedMs) < 0 ||
-        (event.source === 'runtime' &&
-          (!allowedStates.has(String(event.from)) ||
-            !allowedStates.has(String(event.to)))) ||
-        (event.source === 'proxy' &&
-          !['http', 'websocket'].includes(String(event.transport)))
+        event.classification !== expectation.classification ||
+        event.elapsedClass !== expectation.elapsedClass ||
+        !elapsedValid ||
+        (expectation.source === 'runtime' &&
+          (event.from !== expectation.from ||
+            event.to !== expectation.to ||
+            !allowedStates.has(String(event.from)) ||
+            !allowedStates.has(String(event.to)) ||
+            event.transport !== undefined)) ||
+        (expectation.source === 'proxy' &&
+          (event.transport !== expectation.transport ||
+            event.from !== undefined ||
+            event.to !== undefined))
       )
         return false
       eventIds.push(String(event.eventId))
@@ -208,6 +436,8 @@ export function validateProjectRuntimeIsolationEvidence(
     const observations = scenarioByName.get(name)?.observations
     return Array.isArray(observations) ? record(observations[0]) : undefined
   }
+  const globalShutdown = observation('global-shutdown')
+  const shutdownRace = observation('shutdown-race')
   if (
     scenarioByName.get('interleaved-24')?.invocationCount !== 24 ||
     observation('interleaved-24')?.launchCount !== 3 ||
@@ -216,9 +446,24 @@ export function validateProjectRuntimeIsolationEvidence(
     observation('one-caller-cancel')?.runningCallers !== 7 ||
     observation('all-callers-cancel')?.cancelledCallers !== 8 ||
     observation('explicit-replacement')?.replacementCount !== 1 ||
-    observation('global-shutdown')?.projectAuditCount !== 3 ||
-    observation('shutdown-race')?.duringRejected !== true ||
-    observation('shutdown-race')?.afterRejected !== true
+    globalShutdown?.projectAuditCount !== 3 ||
+    globalShutdown.unrelatedProcessAndListenerSurvived !== true ||
+    !measuredManagerAudit(
+      globalShutdown.managerAudit,
+      'global-shutdown-manager-audit',
+      Number(artifact.timeoutMs)
+    ) ||
+    shutdownRace?.memoizedShutdown !== true ||
+    shutdownRace.duringRejected !== true ||
+    shutdownRace.afterRejected !== true ||
+    shutdownRace.lateSettlementInstalled !== false ||
+    shutdownRace.unrelatedProcessSurvived !== true ||
+    shutdownRace.unrelatedListenerSurvived !== true ||
+    !measuredManagerAudit(
+      shutdownRace.managerAudit,
+      'shutdown-race-manager-audit',
+      Number(artifact.timeoutMs)
+    )
   )
     return false
   const orderedPairs = ['a>b', 'a>c', 'b>a', 'b>c', 'c>a', 'c>b']
@@ -226,6 +471,8 @@ export function validateProjectRuntimeIsolationEvidence(
     orderedPairs.map((pair) => mismatchClass + ':' + pair)
   )
   const rowIds: string[] = []
+  const safeDigest = (value: unknown): value is string =>
+    typeof value === 'string' && /^[a-f0-9]{64}$/u.test(value)
   const actualRows = artifact.crossTargetRows.map((value) => {
     const row = record(value)
     const transport =
@@ -233,18 +480,103 @@ export function validateProjectRuntimeIsolationEvidence(
       row?.mismatchClass === 'http-target'
         ? 'http'
         : 'websocket'
+    const [sourceRole, targetRole] = String(row?.orderedPair).split('>')
+    if (
+      !['a', 'b', 'c'].includes(sourceRole) ||
+      !['a', 'b', 'c'].includes(targetRole) ||
+      row?.projectToken !== projectTokens[sourceRole] ||
+      row?.requestedDestinationToken !== projectTokens[targetRole]
+    )
+      return undefined
     if (
       row?.executed !== true ||
       row.transport !== transport ||
       typeof row.executionId !== 'string' ||
       typeof row.boundaryId !== 'string' ||
-      row.expectedFailure !== 'workbench_runtime_project_mismatch' ||
-      row.observedFailure !== row.expectedFailure ||
-      row.upstreamContactCount !== 0 ||
+      !safeProjectToken(row.projectToken) ||
+      !safeProjectToken(row.requestedDestinationToken) ||
+      row.projectToken === row.requestedDestinationToken ||
       !measuredCleanup(row.cleanup)
     )
       return undefined
-    rowIds.push(String(row.executionId), String(row.boundaryId))
+
+    if (row.mismatchClass === 'frame-destination') {
+      const frameExecutionIds = Array.isArray(row.frameExecutionIds)
+        ? row.frameExecutionIds
+        : []
+      const sourceReceiptIds = Array.isArray(row.sourceReceiptIds)
+        ? row.sourceReceiptIds
+        : []
+      const mismatchedTargetReceiptIds = Array.isArray(
+        row.mismatchedTargetReceiptIds
+      )
+        ? row.mismatchedTargetReceiptIds
+        : []
+      const targetControlReceiptIds = Array.isArray(row.targetControlReceiptIds)
+        ? row.targetControlReceiptIds
+        : []
+      const textFrame = record(row.textFrame)
+      const binaryFrame = record(row.binaryFrame)
+      const targetControlFrame = record(row.targetControlFrame)
+      if (
+        row.boundaryId !== row.sourceBoundaryId ||
+        typeof row.sourceBoundaryId !== 'string' ||
+        typeof row.targetBoundaryId !== 'string' ||
+        row.sourceBoundaryId === row.targetBoundaryId ||
+        row.sourceBoundaryEstablished !== true ||
+        row.targetBoundaryEstablished !== true ||
+        row.expectedOutcome !== 'route-bound-source-only' ||
+        row.observedOutcome !== row.expectedOutcome ||
+        frameExecutionIds.length !== 2 ||
+        frameExecutionIds.some(
+          (id) =>
+            typeof id !== 'string' || !id.startsWith(row.executionId + '-')
+        ) ||
+        new Set(frameExecutionIds).size !== 2 ||
+        sourceReceiptIds.length !== 2 ||
+        sourceReceiptIds.some(
+          (id) => typeof id !== 'string' || id.length < 8
+        ) ||
+        new Set(sourceReceiptIds).size !== 2 ||
+        mismatchedTargetReceiptIds.length !== 0 ||
+        typeof row.targetControlExecutionId !== 'string' ||
+        frameExecutionIds.includes(row.targetControlExecutionId) ||
+        targetControlReceiptIds.length !== 1 ||
+        typeof targetControlReceiptIds[0] !== 'string' ||
+        row.sourceReceiptCount !== 2 ||
+        row.mismatchedTargetReceiptCount !== 0 ||
+        row.targetControlReceiptCount !== 1 ||
+        row.upstreamContactCount !== 0 ||
+        !safeDigest(textFrame?.payloadDigest) ||
+        textFrame.echoedDigest !== textFrame.payloadDigest ||
+        textFrame.binary !== false ||
+        !safeDigest(binaryFrame?.payloadDigest) ||
+        binaryFrame.echoedDigest !== binaryFrame.payloadDigest ||
+        binaryFrame.binary !== true ||
+        !safeDigest(targetControlFrame?.payloadDigest) ||
+        targetControlFrame.echoedDigest !== targetControlFrame.payloadDigest ||
+        targetControlFrame.binary !== false
+      )
+        return undefined
+      rowIds.push(
+        row.executionId,
+        row.sourceBoundaryId,
+        row.targetBoundaryId,
+        ...frameExecutionIds,
+        ...sourceReceiptIds,
+        row.targetControlExecutionId,
+        ...targetControlReceiptIds
+      )
+    } else {
+      if (
+        row.expectedFailure !== 'workbench_runtime_project_mismatch' ||
+        row.observedFailure !== row.expectedFailure ||
+        row.status !== 502 ||
+        row.upstreamContactCount !== 0
+      )
+        return undefined
+      rowIds.push(row.executionId, row.boundaryId)
+    }
     return String(row.mismatchClass) + ':' + String(row.orderedPair)
   })
   if (

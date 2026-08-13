@@ -48,12 +48,22 @@ export interface ProjectRuntimeEntryInspection {
   readonly waiterCount: number
 }
 
+export interface ProjectRuntimeManagerAudit {
+  readonly shuttingDown: boolean
+  readonly entryCount: number
+  readonly startingEntries: number
+  readonly ownershipRecords: number
+  readonly completionTasks: number
+  readonly backgroundTasks: number
+}
+
 export interface ProjectRuntimeManager {
   register(projectId: string, canonicalPath: string): void
   start(input: ProjectRuntimeStartInput): Promise<RuntimeSnapshot>
   inspect(projectId: string): RuntimeSnapshot | undefined
   ownsSnapshot(snapshot: RuntimeSnapshot): boolean
   inspectEntries(): readonly ProjectRuntimeEntryInspection[]
+  audit?(): ProjectRuntimeManagerAudit
   lastFailure(projectId: string): RuntimeFailure | undefined
   lastCleanup(projectId: string): RuntimeTerminationAudit | undefined
   lastShutdown(): RuntimeShutdownResult | undefined
@@ -135,6 +145,8 @@ export function createProjectRuntimeManager(
   const entries = new Map<string, ProjectRuntimeEntry>()
   const cleanupOutcomes = new Map<string, RuntimeTerminationAudit>()
   const ownership = new Map<string, ManagedOwnership>()
+  const completionTasks = new Set<Promise<RuntimeSnapshot>>()
+  const backgroundTasks = new Set<Promise<void>>()
   let shutdownPromise: Promise<RuntimeShutdownResult> | undefined
   let shutdownResult: RuntimeShutdownResult | undefined
   let shuttingDown = false
@@ -278,14 +290,6 @@ export function createProjectRuntimeManager(
             : 'health-body-unexpected',
           verdict.status === null ? {} : { healthStatus: verdict.status }
         )
-        recordCleanup(
-          input.projectId,
-          await current.ready.process.terminate(
-            config.gracefulShutdownMs,
-            config.forceShutdownMs,
-            current.ready.port
-          )
-        )
         failEntry(
           input.projectId,
           input.canonicalPath,
@@ -293,6 +297,14 @@ export function createProjectRuntimeManager(
           current.snapshot,
           failure,
           current.snapshot.startedAt
+        )
+        recordCleanup(
+          input.projectId,
+          await current.ready.process.terminate(
+            config.gracefulShutdownMs,
+            config.forceShutdownMs,
+            current.ready.port
+          )
         )
         emit({
           event: 'runtime.health.changed',
@@ -406,7 +418,7 @@ export function createProjectRuntimeManager(
           to: 'running',
           elapsedMs: snapshot.elapsedMs,
         })
-        void ready.process.exit.then(async (exit) => {
+        const exitTask = ready.process.exit.then(async (exit) => {
           if (shuttingDown || entries.get(input.projectId) !== entry) return
           const failure = new RuntimeFailure(
             exit.signal === null ? 'early-exit-code' : 'early-exit-signal',
@@ -436,6 +448,11 @@ export function createProjectRuntimeManager(
             classification: failure.category,
           })
         })
+        backgroundTasks.add(exitTask)
+        void exitTask.then(
+          () => backgroundTasks.delete(exitTask),
+          () => backgroundTasks.delete(exitTask)
+        )
         return snapshot
       } catch (error) {
         const failure =
@@ -463,6 +480,11 @@ export function createProjectRuntimeManager(
         throw failure
       }
     })
+    completionTasks.add(operation)
+    void operation.then(
+      () => completionTasks.delete(operation),
+      () => completionTasks.delete(operation)
+    )
     starting = {
       state: 'starting',
       projectId: input.projectId,
@@ -538,6 +560,8 @@ export function createProjectRuntimeManager(
       entries.clear()
       ownership.clear()
       cleanupOutcomes.clear()
+      completionTasks.clear()
+      backgroundTasks.clear()
       shutdownResult = Object.freeze({
         status: audited.every(
           (audit) =>
@@ -582,6 +606,18 @@ export function createProjectRuntimeManager(
           })
         )
       )
+    },
+    audit() {
+      return Object.freeze({
+        shuttingDown,
+        entryCount: entries.size,
+        startingEntries: [...entries.values()].filter(
+          (entry) => entry.state === 'starting'
+        ).length,
+        ownershipRecords: ownership.size,
+        completionTasks: completionTasks.size,
+        backgroundTasks: backgroundTasks.size,
+      })
     },
     lastFailure(projectId) {
       const entry = entries.get(projectId)

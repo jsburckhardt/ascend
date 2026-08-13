@@ -39,6 +39,10 @@ describe('BL-013 application documentation contract', () => {
       'assigned zeros',
       'Management and one ExtensionHost',
       'initial/replacement',
+      'exact 70-record event catalog',
+      'six real source/target frame-delivery rows',
+      'measured shutdown-race manager audit',
+      'missing, wrong, extra, misattributed',
     ])
       expect(complete).toContain(phrase)
     expect(readme).toContain(

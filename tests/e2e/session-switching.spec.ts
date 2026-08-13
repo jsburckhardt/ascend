@@ -97,6 +97,7 @@ interface WorkflowRecord {
   reconnection: boolean
   executionId: string
   transitionExecutionId: string
+  transitionId: string
   management: number
   extensionHost: number
   unknown: number
@@ -358,6 +359,10 @@ test('preserves A/B/C sessions with execution-joined measured evidence', async (
   const executionStartedNs = nowNs()
   const events: Array<Record<string, unknown>> = []
   const observations: Array<Record<string, unknown>> = []
+  const focusObservations: Array<Record<string, unknown>> = []
+  const lifecycleObservations: Array<Record<string, unknown>> = []
+  const identityObservations: Array<Record<string, unknown>> = []
+  const restrictedIdentityObservations: Array<Record<string, unknown>> = []
   const transitions: Array<Record<string, unknown>> = []
   const stateObservations: Array<Record<string, unknown>> = []
   const networkObservations: Array<Record<string, unknown>> = []
@@ -490,6 +495,7 @@ test('preserves A/B/C sessions with execution-joined measured evidence', async (
   const initialIdentity = new Map<string, Record<string, unknown>>()
   const awaySamples: Array<Record<string, unknown>> = []
   let publicEvidence: Record<string, unknown> | undefined
+  let restrictedEvidence: Record<string, unknown> | undefined
   let cleanup: Record<string, unknown> | undefined
   let controlUnchanged = false
   let storageEvidence: Record<string, unknown> | undefined
@@ -518,11 +524,21 @@ test('preserves A/B/C sessions with execution-joined measured evidence', async (
         active.getAttribute('aria-label') ?? active.textContent?.trim() ?? ''
       return role + ':' + name
     })
-  const observeSurface = async (page: Page, closed = false) => {
+  const observeSurface = async (
+    page: Page,
+    link: {
+      transitionId: string
+      transitionExecutionId: string
+      projectToken: string
+      phase: 'before' | 'after'
+    },
+    closed = false
+  ) => {
     const row = closed
       ? {
           observationId: id(),
           executionId,
+          ...link,
           measured: true,
           observedNs: nowNs(),
           url: 'closed',
@@ -532,6 +548,7 @@ test('preserves A/B/C sessions with execution-joined measured evidence', async (
       : {
           observationId: id(),
           executionId,
+          ...link,
           measured: true,
           observedNs: nowNs(),
           url: new URL(page.url()).pathname,
@@ -559,12 +576,23 @@ test('preserves A/B/C sessions with execution-joined measured evidence', async (
       shutdown: count('runtime.shutdown.invoked'),
     }
   }
-  const beginTransition = async (transitionId: string, page: Page) => ({
-    transitionId,
-    transitionExecutionId: id(),
-    before: await observeSurface(page),
-    beforeOrdinal: events.length,
-  })
+  const beginTransition = async (transitionId: string, page: Page) => {
+    const transitionExecutionId = id()
+    const project = projectByKey.get(transitionId.slice(-1) as 'A' | 'B' | 'C')!
+    const projectToken = deriveProjectOwnerToken(project.id)
+    return {
+      transitionId,
+      transitionExecutionId,
+      projectToken,
+      before: await observeSurface(page, {
+        transitionId,
+        transitionExecutionId,
+        projectToken,
+        phase: 'before',
+      }),
+      beforeOrdinal: events.length,
+    }
+  }
   const finishTransition = async (
     started: Awaited<ReturnType<typeof beginTransition>>,
     page: Page,
@@ -575,7 +603,16 @@ test('preserves A/B/C sessions with execution-joined measured evidence', async (
       closed?: boolean
     }
   ) => {
-    const after = await observeSurface(page, options.closed)
+    const after = await observeSurface(
+      page,
+      {
+        transitionId: started.transitionId,
+        transitionExecutionId: started.transitionExecutionId,
+        projectToken: started.projectToken,
+        phase: 'after',
+      },
+      options.closed
+    )
     let home: Record<string, unknown> | undefined
     if (options.home) {
       const cards = []
@@ -604,20 +641,48 @@ test('preserves A/B/C sessions with execution-joined measured evidence', async (
       expect(runtimeControlsPresent).toBe(0)
       expect(after.focus).toBe('heading:Ascend')
     }
+    const eventRange = {
+      beforeOrdinal: started.beforeOrdinal,
+      afterOrdinal: events.length,
+    }
+    const deltas = eventDeltas(started.beforeOrdinal, events.length)
+    const focusObservation = {
+      observationId: id(),
+      executionId,
+      transitionId: started.transitionId,
+      transitionExecutionId: started.transitionExecutionId,
+      projectToken: started.projectToken,
+      measured: true,
+      observedNs: nowNs(),
+      focus: after.focus,
+    }
+    const lifecycleObservation = {
+      observationId: id(),
+      executionId,
+      transitionId: started.transitionId,
+      transitionExecutionId: started.transitionExecutionId,
+      projectToken: started.projectToken,
+      measured: true,
+      observedNs: nowNs(),
+      eventRange,
+      eventDeltas: deltas,
+    }
+    focusObservations.push(focusObservation)
+    lifecycleObservations.push(lifecycleObservation)
     const row = {
       transitionId: started.transitionId,
       executionId,
       transitionExecutionId: started.transitionExecutionId,
+      projectToken: started.projectToken,
       measured: true,
       input: options.input,
       ...(options.workflowId ? { workflowId: options.workflowId } : {}),
       beforeObservationId: started.before.observationId,
       afterObservationId: after.observationId,
-      eventRange: {
-        beforeOrdinal: started.beforeOrdinal,
-        afterOrdinal: events.length,
-      },
-      eventDeltas: eventDeltas(started.beforeOrdinal, events.length),
+      focusObservationId: focusObservation.observationId,
+      lifecycleObservationId: lifecycleObservation.observationId,
+      eventRange,
+      eventDeltas: deltas,
       ...(home ? { home } : {}),
     }
     transitions.push(row)
@@ -627,7 +692,8 @@ test('preserves A/B/C sessions with execution-joined measured evidence', async (
     page: Page,
     workflowId: string,
     project: ProjectFixture,
-    transitionExecutionId: string
+    transitionExecutionId: string,
+    transitionId: string
   ) => {
     const expected = BL014_WORKFLOW_EXPECTATIONS.find(
       (row) => row.id === workflowId
@@ -638,8 +704,9 @@ test('preserves A/B/C sessions with execution-joined measured evidence', async (
       project: project.key,
       projectToken: deriveProjectOwnerToken(project.id),
       reconnection: expected.reconnection,
-      executionId: id(),
+      executionId,
       transitionExecutionId,
+      transitionId,
       management: 0,
       extensionHost: 0,
       unknown: 0,
@@ -685,6 +752,7 @@ test('preserves A/B/C sessions with execution-joined measured evidence', async (
         executionId,
         measured: true,
         workflowId: workflow.id,
+        transitionId: workflow.transitionId,
         transitionExecutionId: workflow.transitionExecutionId,
         projectToken: workflow.projectToken,
         stableUrl: url.pathname,
@@ -740,6 +808,7 @@ test('preserves A/B/C sessions with execution-joined measured evidence', async (
           executionId,
           measured: true,
           workflowId: workflow.id,
+          transitionId: workflow.transitionId,
           transitionExecutionId: workflow.transitionExecutionId,
           projectToken: workflow.projectToken,
           stableUrl: url.pathname,
@@ -787,6 +856,7 @@ test('preserves A/B/C sessions with execution-joined measured evidence', async (
         expect(matchCount).toBe(0)
         negativeAssertions.push({
           observationId: id(),
+          executionId,
           measured: true,
           project: other.key,
           projectToken: deriveProjectOwnerToken(other.id),
@@ -937,7 +1007,8 @@ test('preserves A/B/C sessions with execution-joined measured evidence', async (
         page,
         workflowId,
         project,
-        started.transitionExecutionId
+        started.transitionExecutionId,
+        started.transitionId
       )
       await page.keyboard.press('Enter')
       await expect(page).toHaveURL(
@@ -993,14 +1064,69 @@ test('preserves A/B/C sessions with execution-joined measured evidence', async (
       await activeFileIsVisible(page, project)
       const proof = await runTerminalProof(page, project)
       terminalProofs.set(project.key, proof)
-      initialIdentity.set(project.key, identity(project))
-      await stateObservation(
+      const exactIdentity = identity(project)
+      initialIdentity.set(project.key, exactIdentity)
+      const initialState = await stateObservation(
         'initial-' + project.key,
         page,
         project,
         proof.text,
         proof.values
       )
+      const projectToken = deriveProjectOwnerToken(project.id)
+      const makeIdentityPart = (kind: string, value: unknown) => ({
+        observationId: id(),
+        executionId,
+        measured: true,
+        observedNs: nowNs(),
+        projectToken,
+        kind,
+        digest: digestSessionEvidence(value),
+      })
+      const identityObservation = {
+        observationId: id(),
+        executionId,
+        initialExecutionId: initialState.observationId,
+        measured: true,
+        observedNs: nowNs(),
+        project: project.key,
+        projectToken,
+        stableRoute: exactIdentity.stableRoute,
+        runtimeIdentityDigest: digestSessionEvidence(exactIdentity),
+        fixtureObservation: makeIdentityPart(
+          'fixture',
+          beforeManifest[projects.indexOf(project)]
+        ),
+        explorerObservation: makeIdentityPart('explorer', {
+          file: project.fileName,
+          visible: true,
+        }),
+        editorObservation: makeIdentityPart('editor', project.fileName),
+        terminalObservation: makeIdentityPart('terminal', proof.text),
+        gitObservation: makeIdentityPart(
+          'git',
+          beforeManifest[projects.indexOf(project)]
+        ),
+      }
+      identityObservations.push(identityObservation)
+      restrictedIdentityObservations.push({
+        observationId: identityObservation.observationId,
+        executionId,
+        measured: true,
+        observedNs: nowNs(),
+        project: project.key,
+        projectToken,
+        runtime: { ...exactIdentity, canonicalPath: project.canonicalPath },
+        fixtureObservationId:
+          identityObservation.fixtureObservation.observationId,
+        explorerObservationId:
+          identityObservation.explorerObservation.observationId,
+        editorObservationId:
+          identityObservation.editorObservation.observationId,
+        terminalObservationId:
+          identityObservation.terminalObservation.observationId,
+        gitObservationId: identityObservation.gitObservation.observationId,
+      })
       if (key !== 'A') await homeFromWorkbench('initial-home-' + key)
     }
     expect(new Set(projects.map(identityDigest)).size).toBe(3)
@@ -1139,7 +1265,8 @@ test('preserves A/B/C sessions with execution-joined measured evidence', async (
       page,
       'history-forward-B',
       b,
-      historyForward.transitionExecutionId
+      historyForward.transitionExecutionId,
+      historyForward.transitionId
     )
     await page.goForward({
       waitUntil: 'domcontentloaded',
@@ -1213,7 +1340,8 @@ test('preserves A/B/C sessions with execution-joined measured evidence', async (
       page,
       'direct-A',
       a,
-      directA.transitionExecutionId
+      directA.transitionExecutionId,
+      directA.transitionId
     )
     await page.goto(origin + '/projects/' + a.id + '/workbench/', {
       waitUntil: 'domcontentloaded',
@@ -1235,7 +1363,8 @@ test('preserves A/B/C sessions with execution-joined measured evidence', async (
       page,
       'reload-A',
       a,
-      reloadA.transitionExecutionId
+      reloadA.transitionExecutionId,
+      reloadA.transitionId
     )
     await page.reload({ waitUntil: 'domcontentloaded', timeout: operationMs })
     await ready(page, a.fileName)
@@ -1321,7 +1450,8 @@ test('preserves A/B/C sessions with execution-joined measured evidence', async (
       freshPage,
       'fresh-B',
       b,
-      freshStarted.transitionExecutionId
+      freshStarted.transitionExecutionId,
+      freshStarted.transitionId
     )
     await freshPage.goto(origin + '/projects/' + b.id + '/workbench/', {
       waitUntil: 'domcontentloaded',
@@ -1389,7 +1519,8 @@ test('preserves A/B/C sessions with execution-joined measured evidence', async (
       page,
       'probe-C',
       c,
-      probeC.transitionExecutionId
+      probeC.transitionExecutionId,
+      probeC.transitionId
     )
     await page.goto(origin + '/projects/' + c.id + '/workbench/', {
       waitUntil: 'domcontentloaded',
@@ -1431,7 +1562,8 @@ test('preserves A/B/C sessions with execution-joined measured evidence', async (
       reopenPage,
       'reopen-B',
       b,
-      reopenStarted.transitionExecutionId
+      reopenStarted.transitionExecutionId,
+      reopenStarted.transitionId
     )
     await reopenPage.goto(origin + '/projects/' + b.id + '/workbench/', {
       waitUntil: 'domcontentloaded',
@@ -1482,7 +1614,7 @@ test('preserves A/B/C sessions with execution-joined measured evidence', async (
     )
     expect(startEvents).toHaveLength(3)
     publicEvidence = {
-      schemaVersion: 2,
+      schemaVersion: 3,
       provenance: 'playwright-observation',
       executed: true,
       execution: {
@@ -1493,14 +1625,19 @@ test('preserves A/B/C sessions with execution-joined measured evidence', async (
       },
       events,
       observations,
+      focusObservations,
+      lifecycleObservations,
       transitions,
+      identityObservations,
       projects: projects.map((project) => ({
         key: project.key,
         projectToken: deriveProjectOwnerToken(project.id),
         initialExecutionId: stateObservations.find(
           (row) => row.label === 'initial-' + project.key
         )!.observationId,
-        identityObservationId: id(),
+        identityObservationId: identityObservations.find(
+          (row) => row.project === project.key
+        )!.observationId,
         initialStartCount: startEvents.filter(
           (event) => event.projectToken === deriveProjectOwnerToken(project.id)
         ).length,
@@ -1520,7 +1657,7 @@ test('preserves A/B/C sessions with execution-joined measured evidence', async (
       stateObservations,
       awaySamples,
       counter: {
-        executionId: id(),
+        executionId,
         visibleBeforeLeave,
         visibleReturn,
         pidLiveBeforeLeave:
@@ -1549,6 +1686,7 @@ test('preserves A/B/C sessions with execution-joined measured evidence', async (
       workflows,
       networkObservations,
       cleanup: {
+        executionId,
         measured: true,
         manifestEqual: true,
         beforeManifestDigest,
@@ -1559,32 +1697,24 @@ test('preserves A/B/C sessions with execution-joined measured evidence', async (
         disposableFiles: [],
       },
     }
-    await writeFile(
-      restrictedPath,
-      JSON.stringify(
-        {
-          schemaVersion: 2,
-          executionId,
-          fixtureRoot,
-          databasePath,
-          apiPort,
-          webPort,
-          webPid: web.pid,
-          webStart,
-          counterPid,
-          counterStart,
-          counterCommandDigest,
-          initialIdentity: Object.fromEntries(initialIdentity),
-          transitions,
-          storageEvidence,
-          observations: restrictedObservations,
-          control: { port: controlAddress.port },
-        },
-        null,
-        2
-      ) + '\n',
-      { mode: 0o600 }
-    )
+    restrictedEvidence = {
+      schemaVersion: 3,
+      executionId,
+      fixtureRoot,
+      databasePath,
+      api: { port: apiPort },
+      webListener: { port: webPort },
+      web: { pid: web.pid, processStartTime: webStart },
+      counterPid,
+      counterStart,
+      counterCommandDigest,
+      initialIdentity: Object.fromEntries(initialIdentity),
+      identityObservations: restrictedIdentityObservations,
+      transitions,
+      storageEvidence,
+      observations: restrictedObservations,
+      control: { port: controlAddress.port },
+    }
   } finally {
     const runtimeBefore = projects.filter((project) =>
       runtime.inspect(project.id)
@@ -1643,6 +1773,44 @@ test('preserves A/B/C sessions with execution-joined measured evidence', async (
         .toBeNull()
         .catch(() => undefined)
     }
+    const counterOwner = {
+      pid: counterPid,
+      processStartTime: counterStart,
+      identityDigest: digestSessionEvidence([counterPid, counterStart]),
+      commandDigest: counterCommandDigest,
+    }
+    const artifactEntries = await Promise.all(
+      [
+        ['counterOutput', counterOutput],
+        ['counterIdentity', counterIdentity],
+      ].map(async ([kind, artifactPath]) => {
+        const content = await readFile(artifactPath!)
+        return {
+          kind,
+          path: artifactPath,
+          pathDigest: digestSessionEvidence(artifactPath),
+          contentDigest: digestSessionEvidence(content.toString('utf8')),
+          ownerIdentityDigest: counterOwner.identityDigest,
+          executionId,
+          declarationObservationId: id(),
+          preCleanupProbeObservationId: id(),
+        }
+      })
+    )
+    const artifactManifest = {
+      manifestId: id(),
+      executionId,
+      measured: true,
+      owner: counterOwner,
+      entries: artifactEntries,
+      manifestDigest: digestSessionEvidence({
+        executionId,
+        owner: counterOwner,
+        entries: artifactEntries,
+      }),
+    }
+    if (restrictedEvidence)
+      restrictedEvidence.artifactManifest = artifactManifest
     await Promise.all(
       contexts.map((context) => context.close().catch(() => undefined))
     )
@@ -1724,6 +1892,7 @@ test('preserves A/B/C sessions with execution-joined measured evidence', async (
     }
     const resources = BL014_RESOURCE_CLASSES.map((resourceClass) => ({
       resourceClass,
+      executionId,
       beforeObservationId: id(),
       afterObservationId: id(),
       measured: true,
@@ -1733,6 +1902,7 @@ test('preserves A/B/C sessions with execution-joined measured evidence', async (
     }))
     const projectResiduals = projects.map((project) => ({
       projectToken: deriveProjectOwnerToken(project.id),
+      executionId,
       observationId: id(),
       measured: true,
       resourceClasses: ['runtime-groups', 'listeners', 'sockets', 'fixtures'],
@@ -1750,6 +1920,7 @@ test('preserves A/B/C sessions with execution-joined measured evidence', async (
         Number(afterCounts.fixtures > 0),
     }))
     cleanup = {
+      executionId,
       measured: true,
       manifestEqual: publicEvidence !== undefined,
       beforeManifestDigest: publicEvidence
@@ -1761,12 +1932,22 @@ test('preserves A/B/C sessions with execution-joined measured evidence', async (
             .afterManifestDigest
         : digestSessionEvidence('missing'),
       controlUnchanged,
+      restrictedArtifactManifestDigest: artifactManifest.manifestDigest,
       resources,
       projects: projectResiduals,
-      disposableFiles: [counterOutput, counterIdentity].map((file) => ({
+      disposableFiles: artifactEntries.map((entry) => ({
+        kind: entry.kind,
+        executionId,
+        declarationObservationId: entry.declarationObservationId,
+        beforeObservationId: entry.preCleanupProbeObservationId,
+        afterObservationId: id(),
         observationId: id(),
         measured: true,
-        pathDigest: digestSessionEvidence(file),
+        pathDigest: entry.pathDigest,
+        contentDigest: entry.contentDigest,
+        ownerIdentityDigest: entry.ownerIdentityDigest,
+        existedBeforeCleanup: true,
+        probedAfterCleanup: true,
         absent: afterCounts['disposable-evidence-files'] === 0,
       })),
     }
@@ -1786,13 +1967,21 @@ test('preserves A/B/C sessions with execution-joined measured evidence', async (
   expect(publicEvidence).toBeDefined()
   publicEvidence!.cleanup = cleanup
   ;(publicEvidence!.execution as Record<string, unknown>).finishedNs = nowNs()
-  if (!validateSessionSwitchingEvidence(publicEvidence))
+  expect(restrictedEvidence).toBeDefined()
+  await writeFile(
+    restrictedPath,
+    JSON.stringify(restrictedEvidence, null, 2) + String.fromCharCode(10),
+    { mode: 0o600 }
+  )
+  if (!validateSessionSwitchingEvidence(publicEvidence, restrictedEvidence))
     await writeFile(
       evidencePath,
       JSON.stringify(publicEvidence, null, 2) + String.fromCharCode(10),
       { mode: 0o600 }
     )
-  expect(validateSessionSwitchingEvidence(publicEvidence)).toBe(true)
+  expect(
+    validateSessionSwitchingEvidence(publicEvidence, restrictedEvidence)
+  ).toBe(true)
   const restricted = await readFile(restrictedPath, 'utf8')
   const publicScan = scanProtectedEvidence({
     scanId: 'bl014-public-scan-' + executionId,

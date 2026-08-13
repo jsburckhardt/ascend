@@ -226,7 +226,7 @@ const eventCount = (
       event.event === name
   ).length
 
-export function validateSessionSwitchingEvidence(value: unknown): boolean {
+function validateSessionSwitchingEvidenceBase(value: unknown): boolean {
   const evidence = object(value)
   if (
     evidence?.schemaVersion !== 2 ||
@@ -656,4 +656,341 @@ export function validateSessionSwitchingEvidence(value: unknown): boolean {
   return !/(?:localhost|https?:\/\/|wss?:\/\/|canonicalPath|internalUrl|reconnectionToken|assigned|constructed)/iu.test(
     JSON.stringify(evidence)
   )
+}
+
+export interface SessionSwitchingArtifactProbe {
+  kind: string
+  path: string
+  executionId: string
+  measured: boolean
+  absent: boolean
+}
+
+const evidenceRows = (
+  value: unknown
+): Record<string, unknown>[] | undefined => {
+  if (!Array.isArray(value)) return undefined
+  const parsed = value.map(object)
+  return parsed.some((row) => row === undefined)
+    ? undefined
+    : (parsed as Record<string, unknown>[])
+}
+
+export function validateSessionSwitchingEvidence(
+  value: unknown,
+  restrictedValue: unknown
+): boolean {
+  const evidence = object(value)
+  const restricted = object(restrictedValue)
+  const execution = object(evidence?.execution)
+  if (
+    evidence?.schemaVersion !== 3 ||
+    restricted?.schemaVersion !== 3 ||
+    !executionId(execution?.id) ||
+    restricted.executionId !== execution.id ||
+    !validateSessionSwitchingEvidenceBase({ ...evidence, schemaVersion: 2 })
+  )
+    return false
+  const rootExecutionId = execution.id
+  const projects = evidenceRows(evidence.projects)!
+  const transitions = evidenceRows(evidence.transitions)!
+  const surfaces = evidenceRows(evidence.observations)
+  const focuses = evidenceRows(evidence.focusObservations)
+  const lifecycles = evidenceRows(evidence.lifecycleObservations)
+  const identities = evidenceRows(evidence.identityObservations)
+  const exactIdentities = evidenceRows(restricted.identityObservations)
+  if (
+    !surfaces ||
+    surfaces.length !== BL014_TRANSITION_ORDER.length * 2 ||
+    !focuses ||
+    focuses.length !== BL014_TRANSITION_ORDER.length ||
+    !lifecycles ||
+    lifecycles.length !== BL014_TRANSITION_ORDER.length ||
+    !identities ||
+    identities.length !== projects.length ||
+    !exactIdentities ||
+    exactIdentities.length !== projects.length
+  )
+    return false
+  const tokens = new Map<string, unknown>(
+    projects.map((row) => [String(row.key), row.projectToken])
+  )
+  const routes = new Map<string, string>(
+    BL014_FIXTURES.map((fixture) => [
+      fixture.key,
+      '/projects/' + fixture.id + '/workbench/',
+    ])
+  )
+  const identityKinds = ['fixture', 'explorer', 'editor', 'terminal', 'git']
+  const identityIds: unknown[] = []
+  for (const project of projects) {
+    const publicRows = identities.filter(
+      (row) => row.observationId === project.identityObservationId
+    )
+    const restrictedRows = exactIdentities.filter(
+      (row) => row.observationId === project.identityObservationId
+    )
+    if (publicRows.length !== 1 || restrictedRows.length !== 1) return false
+    const identity = publicRows[0]!
+    const exact = restrictedRows[0]!
+    const runtime = object(exact.runtime)
+    identityIds.push(identity.observationId)
+    if (
+      identity.executionId !== rootExecutionId ||
+      exact.executionId !== rootExecutionId ||
+      identity.measured !== true ||
+      exact.measured !== true ||
+      identity.project !== project.key ||
+      exact.project !== project.key ||
+      identity.projectToken !== project.projectToken ||
+      exact.projectToken !== project.projectToken ||
+      identity.initialExecutionId !== project.initialExecutionId ||
+      identity.stableRoute !== routes.get(String(project.key)) ||
+      identity.runtimeIdentityDigest !== project.identityDigest ||
+      !runtime ||
+      !positiveInteger(runtime.pid) ||
+      typeof runtime.processStartTime !== 'string' ||
+      runtime.processStartTime.length === 0 ||
+      !positiveInteger(runtime.port) ||
+      runtime.stableRoute !== identity.stableRoute ||
+      typeof runtime.canonicalPath !== 'string' ||
+      digestSessionEvidence({
+        pid: runtime.pid,
+        processStartTime: runtime.processStartTime,
+        port: runtime.port,
+        stableRoute: runtime.stableRoute,
+      }) !== project.identityDigest
+    )
+      return false
+    for (const kind of identityKinds) {
+      const observation = object(identity[kind + 'Observation'])
+      if (
+        !observation ||
+        !executionId(observation.observationId) ||
+        observation.executionId !== rootExecutionId ||
+        observation.projectToken !== project.projectToken ||
+        observation.measured !== true ||
+        !digest(observation.digest) ||
+        exact[kind + 'ObservationId'] !== observation.observationId
+      )
+        return false
+      identityIds.push(observation.observationId)
+    }
+    if (
+      object(identity.explorerObservation)?.digest !== project.explorerDigest ||
+      object(identity.editorObservation)?.digest !== project.editorFileDigest ||
+      object(identity.terminalObservation)?.digest !== project.terminalDigest ||
+      object(identity.gitObservation)?.digest !== project.gitDigest
+    )
+      return false
+  }
+  if (!unique(identityIds)) return false
+  const surfaceById = new Map(surfaces.map((row) => [row.observationId, row]))
+  const focusById = new Map(focuses.map((row) => [row.observationId, row]))
+  const lifecycleById = new Map(
+    lifecycles.map((row) => [row.observationId, row])
+  )
+  if (
+    surfaceById.size !== surfaces.length ||
+    focusById.size !== focuses.length ||
+    lifecycleById.size !== lifecycles.length ||
+    !unique(transitions.map((row) => row.transitionExecutionId))
+  )
+    return false
+  const referencedSurfaces: unknown[] = []
+  const referencedFocuses: unknown[] = []
+  const referencedLifecycles: unknown[] = []
+  for (const transition of transitions) {
+    const expectedToken = tokens.get(String(transition.transitionId).slice(-1))
+    const before = surfaceById.get(transition.beforeObservationId)
+    const after = surfaceById.get(transition.afterObservationId)
+    const focus = focusById.get(transition.focusObservationId)
+    const lifecycle = lifecycleById.get(transition.lifecycleObservationId)
+    if (!before || !after || !focus || !lifecycle) return false
+    referencedSurfaces.push(before.observationId, after.observationId)
+    referencedFocuses.push(focus.observationId)
+    referencedLifecycles.push(lifecycle.observationId)
+    for (const [phase, row] of [
+      ['before', before],
+      ['after', after],
+    ] as const)
+      if (
+        row.executionId !== rootExecutionId ||
+        row.transitionId !== transition.transitionId ||
+        row.transitionExecutionId !== transition.transitionExecutionId ||
+        row.projectToken !== expectedToken ||
+        row.phase !== phase
+      )
+        return false
+    if (
+      transition.projectToken !== expectedToken ||
+      focus.executionId !== rootExecutionId ||
+      focus.transitionId !== transition.transitionId ||
+      focus.transitionExecutionId !== transition.transitionExecutionId ||
+      focus.projectToken !== expectedToken ||
+      focus.focus !== after.focus ||
+      lifecycle.executionId !== rootExecutionId ||
+      lifecycle.transitionId !== transition.transitionId ||
+      lifecycle.transitionExecutionId !== transition.transitionExecutionId ||
+      lifecycle.projectToken !== expectedToken ||
+      JSON.stringify(lifecycle.eventRange) !==
+        JSON.stringify(transition.eventRange) ||
+      JSON.stringify(lifecycle.eventDeltas) !==
+        JSON.stringify(transition.eventDeltas)
+    )
+      return false
+  }
+  if (
+    !unique(referencedSurfaces) ||
+    referencedSurfaces.length !== surfaces.length ||
+    !unique(referencedFocuses) ||
+    referencedFocuses.length !== focuses.length ||
+    !unique(referencedLifecycles) ||
+    referencedLifecycles.length !== lifecycles.length
+  )
+    return false
+  const workflows = evidenceRows(evidence.workflows)!
+  const network = evidenceRows(evidence.networkObservations)!
+  if (
+    !unique(workflows.map((row) => row.id)) ||
+    !unique(network.map((row) => row.observationId))
+  )
+    return false
+  for (const workflow of workflows) {
+    const transition = transitions.filter(
+      (row) => row.workflowId === workflow.id
+    )
+    const networkRows = network.filter((row) => row.workflowId === workflow.id)
+    if (transition.length !== 1 || networkRows.length < 3) return false
+    const linked = transition[0]!
+    const route = routes.get(String(workflow.project))!
+    if (
+      workflow.executionId !== rootExecutionId ||
+      workflow.transitionId !== linked.transitionId ||
+      workflow.transitionExecutionId !== linked.transitionExecutionId ||
+      workflow.projectToken !== linked.projectToken ||
+      networkRows.filter((row) => row.role === 'http').length === 0 ||
+      networkRows.filter((row) => row.role === 'Management').length !== 1 ||
+      networkRows.filter((row) => row.role === 'ExtensionHost').length !== 1
+    )
+      return false
+    if (
+      networkRows.some(
+        (row) =>
+          row.executionId !== rootExecutionId ||
+          row.transitionId !== linked.transitionId ||
+          row.transitionExecutionId !== linked.transitionExecutionId ||
+          row.projectToken !== linked.projectToken ||
+          !['http', 'Management', 'ExtensionHost'].includes(String(row.role)) ||
+          typeof row.stableUrl !== 'string' ||
+          !String(row.stableUrl).startsWith(route)
+      )
+    )
+      return false
+  }
+  const workflowIds = new Set(workflows.map((row) => row.id))
+  if (
+    network.some((row) => !workflowIds.has(row.workflowId)) ||
+    transitions.filter((row) => row.workflowId !== undefined).length !==
+      workflows.length
+  )
+    return false
+  const joinedObservationIds = [
+    ...surfaces.map((row) => row.observationId),
+    ...focuses.map((row) => row.observationId),
+    ...lifecycles.map((row) => row.observationId),
+    ...identityIds,
+    ...network.map((row) => row.observationId),
+  ]
+  if (!unique(joinedObservationIds)) return false
+  const cleanup = object(evidence.cleanup)
+  const disposable = evidenceRows(cleanup?.disposableFiles)
+  const manifest = object(restricted.artifactManifest)
+  const entries = evidenceRows(manifest?.entries)
+  const owner = object(manifest?.owner)
+  if (
+    cleanup?.executionId !== rootExecutionId ||
+    !digest(cleanup.restrictedArtifactManifestDigest) ||
+    !disposable ||
+    disposable.length !== 2 ||
+    !manifest ||
+    manifest.executionId !== rootExecutionId ||
+    manifest.measured !== true ||
+    !executionId(manifest.manifestId) ||
+    manifest.manifestDigest !== cleanup.restrictedArtifactManifestDigest ||
+    manifest.manifestDigest !==
+      digestSessionEvidence({
+        executionId: manifest.executionId,
+        owner,
+        entries,
+      }) ||
+    !owner ||
+    !positiveInteger(owner.pid) ||
+    typeof owner.processStartTime !== 'string' ||
+    !digest(owner.identityDigest) ||
+    !digest(owner.commandDigest) ||
+    object(evidence.counter)?.processIdentityDigest !== owner.identityDigest ||
+    !entries ||
+    entries.length !== 2 ||
+    JSON.stringify(entries.map((row) => row.kind)) !==
+      JSON.stringify(['counterOutput', 'counterIdentity'])
+  )
+    return false
+  for (const entry of entries) {
+    const declarations = disposable.filter((row) => row.kind === entry.kind)
+    if (declarations.length !== 1) return false
+    const row = declarations[0]!
+    if (
+      entry.executionId !== rootExecutionId ||
+      typeof entry.path !== 'string' ||
+      digestSessionEvidence(entry.path) !== entry.pathDigest ||
+      !digest(entry.contentDigest) ||
+      entry.ownerIdentityDigest !== owner.identityDigest ||
+      !executionId(entry.declarationObservationId) ||
+      !executionId(entry.preCleanupProbeObservationId) ||
+      row.executionId !== rootExecutionId ||
+      row.declarationObservationId !== entry.declarationObservationId ||
+      row.beforeObservationId !== entry.preCleanupProbeObservationId ||
+      !executionId(row.afterObservationId) ||
+      row.pathDigest !== entry.pathDigest ||
+      row.contentDigest !== entry.contentDigest ||
+      row.ownerIdentityDigest !== owner.identityDigest ||
+      row.existedBeforeCleanup !== true ||
+      row.probedAfterCleanup !== true ||
+      row.absent !== true
+    )
+      return false
+  }
+  return true
+}
+
+export function validateSessionSwitchingResidualDeclarations(
+  publicValue: unknown,
+  restrictedValue: unknown,
+  probes: SessionSwitchingArtifactProbe[],
+  expectedPaths: Record<string, string>
+): boolean {
+  if (!validateSessionSwitchingEvidence(publicValue, restrictedValue))
+    return false
+  const evidence = object(publicValue)!
+  const restricted = object(restrictedValue)!
+  const execution = object(evidence.execution)!
+  const manifest = object(restricted.artifactManifest)!
+  const entries = manifest.entries as Array<Record<string, unknown>>
+  if (
+    probes.length !== entries.length ||
+    !unique(probes.map((probe) => probe.kind))
+  )
+    return false
+  return entries.every((entry) => {
+    const matches = probes.filter((probe) => probe.kind === entry.kind)
+    return (
+      matches.length === 1 &&
+      expectedPaths[String(entry.kind)] === entry.path &&
+      matches[0]!.path === entry.path &&
+      matches[0]!.executionId === execution.id &&
+      matches[0]!.measured === true &&
+      matches[0]!.absent === true
+    )
+  })
 }

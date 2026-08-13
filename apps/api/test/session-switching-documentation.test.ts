@@ -35,9 +35,15 @@ describe('BL-014 application documentation contract', () => {
     expect(runbook).toContain('unsupported')
     expect(runbook).toContain('mode-0600')
     expect(runbook).toContain('All twelve resource classes')
-    expect(runbook).toContain(
-      'all 24 transition rows and 48 before/after surface observations'
-    )
+    expect(runbook).toContain('schema-version-3')
+    expect(runbook).toContain('project.identityObservationId')
+    expect(runbook).toContain('focus observation')
+    expect(runbook).toContain('lifecycle-delta observation')
+    expect(runbook).toContain('Missing, duplicate, orphan, cross-token')
+    expect(runbook).toContain('a-counter.log')
+    expect(runbook).toContain('a-counter-identity.json')
+    expect(runbook).toContain('predeleted fake paths')
+    expect(runbook).not.toContain('schema-version-2 public evidence')
     expect(runbook).toContain(
       'exactly one Management and one ExtensionHost socket'
     )

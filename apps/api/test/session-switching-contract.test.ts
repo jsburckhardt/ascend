@@ -13,6 +13,7 @@ import {
   BL014_RESOURCE_CLASSES,
   digestSessionEvidence,
   validateSessionSwitchingEvidence,
+  validateSessionSwitchingResidualDeclarations,
 } from '../src/session-switching-contract.js'
 import { deriveProjectOwnerToken } from '../src/project-runtime-contract.js'
 
@@ -37,6 +38,24 @@ const evidence = () => {
   }
   for (const fixture of BL014_FIXTURES)
     addEvent('runtime.start.succeeded', deriveProjectOwnerToken(fixture.id))
+  const runtimes = BL014_FIXTURES.map((fixture, index) => ({
+    pid: 100 + index,
+    processStartTime: String(1000 + index),
+    port: 4100 + index,
+    stableRoute: '/projects/' + fixture.id + '/workbench/',
+  }))
+  const projects = BL014_FIXTURES.map((fixture, index) => ({
+    key: fixture.key,
+    projectToken: deriveProjectOwnerToken(fixture.id),
+    initialExecutionId: observed(),
+    identityObservationId: observed(),
+    initialStartCount: 1,
+    identityDigest: digest(runtimes[index]),
+    explorerDigest: digest(['explorer', index]),
+    editorFileDigest: digest(['editor', index]),
+    terminalDigest: digest(['terminal', index]),
+    gitDigest: digest(['git', index]),
+  }))
   const observations = Array.from(
     { length: BL014_TRANSITION_ORDER.length * 2 },
     (_, index) => ({
@@ -49,9 +68,68 @@ const evidence = () => {
       focus: index % 2 === 0 ? 'heading:Ascend' : 'workbench',
     })
   )
+  const focusObservations: Array<Record<string, unknown>> = []
+  const lifecycleObservations: Array<Record<string, unknown>> = []
+  const workflowTransitions: Record<string, string> = {
+    'initial-open-B': 'initial-B',
+    'initial-open-C': 'initial-C',
+    'initial-open-A': 'initial-A',
+    'switch-open-B': 'open-B',
+    'history-forward-B': 'history-forward-B',
+    'switch-open-C': 'open-C',
+    'switch-open-A': 'open-A',
+    'revisit-open-B': 'revisit-B',
+    'revisit-open-C': 'revisit-C',
+    'direct-A': 'direct-A',
+    'reload-A': 'reload-A',
+    'fresh-B': 'fresh-B',
+    'probe-C': 'probe-C',
+    'reopen-B': 'reopen-B',
+  }
   const transitions = BL014_TRANSITION_ORDER.map((transitionId, index) => {
     const beforeOrdinal = events.length
     addEvent('transition.observed')
+    const transitionExecutionId = observed()
+    const projectToken = projects.find(
+      (project) => project.key === transitionId.slice(-1)
+    )!.projectToken
+    const before = observations[index * 2]!
+    const after = observations[index * 2 + 1]!
+    Object.assign(before, {
+      transitionId,
+      transitionExecutionId,
+      projectToken,
+      phase: 'before',
+    })
+    Object.assign(after, {
+      transitionId,
+      transitionExecutionId,
+      projectToken,
+      phase: 'after',
+    })
+    const focusObservation = {
+      observationId: observed(),
+      executionId,
+      measured: true,
+      transitionId,
+      transitionExecutionId,
+      projectToken,
+      focus: after.focus,
+    }
+    const eventRange = { beforeOrdinal, afterOrdinal: events.length }
+    const eventDeltas = { request: 0, start: 0, reuse: 0, stop: 0, shutdown: 0 }
+    const lifecycleObservation = {
+      observationId: observed(),
+      executionId,
+      measured: true,
+      transitionId,
+      transitionExecutionId,
+      projectToken,
+      eventRange,
+      eventDeltas,
+    }
+    focusObservations.push(focusObservation)
+    lifecycleObservations.push(lifecycleObservation)
     const home = transitionId.includes('home-')
       ? {
           cards: BL014_FIXTURES.map((fixture) => ({ project: fixture.key })),
@@ -62,26 +140,64 @@ const evidence = () => {
     return {
       transitionId,
       executionId,
+      transitionExecutionId,
+      projectToken,
       measured: true,
-      beforeObservationId: observations[index * 2]!.observationId,
-      afterObservationId: observations[index * 2 + 1]!.observationId,
-      eventRange: { beforeOrdinal, afterOrdinal: events.length },
-      eventDeltas: { request: 0, start: 0, reuse: 0, stop: 0, shutdown: 0 },
+      ...(workflowTransitions[transitionId]
+        ? { workflowId: workflowTransitions[transitionId] }
+        : {}),
+      beforeObservationId: before.observationId,
+      afterObservationId: after.observationId,
+      focusObservationId: focusObservation.observationId,
+      lifecycleObservationId: lifecycleObservation.observationId,
+      eventRange,
+      eventDeltas,
       ...(home ? { home } : {}),
     }
   })
-  const projects = BL014_FIXTURES.map((fixture, index) => ({
-    key: fixture.key,
-    projectToken: deriveProjectOwnerToken(fixture.id),
-    initialExecutionId: observed(),
-    identityObservationId: observed(),
-    initialStartCount: 1,
-    identityDigest: digest(['identity', index]),
-    explorerDigest: digest(['explorer', index]),
-    editorFileDigest: digest(['editor', index]),
-    terminalDigest: digest(['terminal', index]),
-    gitDigest: digest(['git', index]),
-  }))
+  const identityObservations = projects.map((project, index) => {
+    const part = (kind: string, value: unknown) => ({
+      observationId: observed(),
+      executionId,
+      measured: true,
+      projectToken: project.projectToken,
+      kind,
+      digest: digest(value),
+    })
+    return {
+      observationId: project.identityObservationId,
+      executionId,
+      initialExecutionId: project.initialExecutionId,
+      measured: true,
+      project: project.key,
+      projectToken: project.projectToken,
+      stableRoute: runtimes[index]!.stableRoute,
+      runtimeIdentityDigest: project.identityDigest,
+      fixtureObservation: part('fixture', ['fixture', index]),
+      explorerObservation: part('explorer', ['explorer', index]),
+      editorObservation: part('editor', ['editor', index]),
+      terminalObservation: part('terminal', ['terminal', index]),
+      gitObservation: part('git', ['git', index]),
+    }
+  })
+  const restrictedIdentityObservations = identityObservations.map(
+    (identity, index) => ({
+      observationId: identity.observationId,
+      executionId,
+      measured: true,
+      project: identity.project,
+      projectToken: identity.projectToken,
+      runtime: {
+        ...runtimes[index],
+        canonicalPath: '/fixture/' + identity.project,
+      },
+      fixtureObservationId: identity.fixtureObservation.observationId,
+      explorerObservationId: identity.explorerObservation.observationId,
+      editorObservationId: identity.editorObservation.observationId,
+      terminalObservationId: identity.terminalObservation.observationId,
+      gitObservationId: identity.gitObservation.observationId,
+    })
+  )
   const stateLabels = [
     'initial-A',
     'initial-B',
@@ -110,6 +226,7 @@ const evidence = () => {
         'git-sentinel',
       ].map((resourceClass) => ({
         observationId: observed(),
+        executionId,
         measured: true,
         project: fixture.key,
         resourceClass,
@@ -139,14 +256,20 @@ const evidence = () => {
       negativeAssertions: negatives,
     }
   })
-  const workflows = BL014_WORKFLOW_EXPECTATIONS.map((expected) => ({
-    ...expected,
-    projectToken: projects.find((row) => row.key === expected.project)!
-      .projectToken,
-    executionId: observed(),
-    transitionExecutionId: observed(),
-    unknown: 0,
-  }))
+  const workflows = BL014_WORKFLOW_EXPECTATIONS.map((expected) => {
+    const transition = transitions.find(
+      (row) => row.workflowId === expected.id
+    )!
+    return {
+      ...expected,
+      projectToken: projects.find((row) => row.key === expected.project)!
+        .projectToken,
+      executionId,
+      transitionId: transition.transitionId,
+      transitionExecutionId: transition.transitionExecutionId,
+      unknown: 0,
+    }
+  })
   const networkObservations = workflows.flatMap((workflow) =>
     [
       { role: 'http' },
@@ -162,6 +285,8 @@ const evidence = () => {
       executionId,
       measured: true,
       workflowId: workflow.id,
+      transitionId: workflow.transitionId,
+      transitionExecutionId: workflow.transitionExecutionId,
       projectToken: workflow.projectToken,
       stableUrl:
         '/projects/bl014-' + workflow.project.toLowerCase() + '/workbench/',
@@ -171,8 +296,39 @@ const evidence = () => {
       leakClasses: [],
     }))
   )
-  return {
-    schemaVersion: 2,
+  const artifactOwner = {
+    pid: 900,
+    processStartTime: '9000',
+    identityDigest: digest('pid'),
+    commandDigest: digest('command'),
+  }
+  const artifactEntries = [
+    ['counterOutput', '/results/a-counter.log'],
+    ['counterIdentity', '/results/a-counter-identity.json'],
+  ].map(([kind, artifactPath]) => ({
+    kind,
+    path: artifactPath,
+    pathDigest: digest(artifactPath),
+    contentDigest: digest([kind, 'content']),
+    ownerIdentityDigest: artifactOwner.identityDigest,
+    executionId,
+    declarationObservationId: observed(),
+    preCleanupProbeObservationId: observed(),
+  }))
+  const artifactManifest = {
+    manifestId: observed(),
+    executionId,
+    measured: true,
+    owner: artifactOwner,
+    entries: artifactEntries,
+    manifestDigest: digest({
+      executionId,
+      owner: artifactOwner,
+      entries: artifactEntries,
+    }),
+  }
+  const publicEvidence = {
+    schemaVersion: 3,
     provenance: 'playwright-observation',
     executed: true,
     execution: {
@@ -183,8 +339,11 @@ const evidence = () => {
     },
     events,
     observations,
+    focusObservations,
+    lifecycleObservations,
     transitions,
     projects,
+    identityObservations,
     stateObservations,
     awaySamples: [2, 5].map((sequence) => ({
       observationId: observed(),
@@ -198,14 +357,14 @@ const evidence = () => {
       outputSequence: sequence,
     })),
     counter: {
-      executionId: observed(),
+      executionId,
       visibleBeforeLeave: 1,
       visibleReturn: 6,
       pidLiveBeforeLeave: true,
       processIdentityDigest: digest('pid'),
     },
     freshStorage: {
-      executionId: observed(),
+      executionId,
       measured: true,
       before: {
         cookies: 1,
@@ -226,15 +385,19 @@ const evidence = () => {
     workflows,
     networkObservations,
     cleanup: {
+      executionId,
       measured: true,
       manifestEqual: true,
       beforeManifestDigest: digest('manifest'),
       afterManifestDigest: digest('manifest'),
       controlUnchanged: true,
+      restrictedArtifactManifestDigest: artifactManifest.manifestDigest,
       resources: BL014_RESOURCE_CLASSES.map((resourceClass) => ({
         resourceClass,
+        executionId,
         beforeObservationId: observed(),
         afterObservationId: observed(),
+        observationId: observed(),
         measured: true,
         before: 1,
         after: 0,
@@ -242,18 +405,36 @@ const evidence = () => {
       })),
       projects: projects.map((project) => ({
         projectToken: project.projectToken,
+        executionId,
         observationId: observed(),
         measured: true,
         resourceClasses: ['runtime-groups'],
         residuals: 0,
       })),
-      disposableFiles: [1, 2].map(() => ({
+      disposableFiles: artifactEntries.map((entry) => ({
+        kind: entry.kind,
+        executionId,
+        declarationObservationId: entry.declarationObservationId,
+        beforeObservationId: entry.preCleanupProbeObservationId,
+        afterObservationId: observed(),
         observationId: observed(),
         measured: true,
+        pathDigest: entry.pathDigest,
+        contentDigest: entry.contentDigest,
+        ownerIdentityDigest: entry.ownerIdentityDigest,
+        existedBeforeCleanup: true,
+        probedAfterCleanup: true,
         absent: true,
       })),
     },
   }
+  const restrictedEvidence = {
+    schemaVersion: 3,
+    executionId,
+    identityObservations: restrictedIdentityObservations,
+    artifactManifest,
+  }
+  return { publicEvidence, restrictedEvidence }
 }
 
 afterEach(async () => {
@@ -334,8 +515,8 @@ describe('BL-014 fixture and evidence contracts', () => {
   })
 
   it('accepts complete executed evidence and rejects synthetic or unsafe mutations', () => {
-    const valid = evidence()
-    expect(validateSessionSwitchingEvidence(valid)).toBe(true)
+    const { publicEvidence: valid, restrictedEvidence: restricted } = evidence()
+    expect(validateSessionSwitchingEvidence(valid, restricted)).toBe(true)
     const mutations = [
       { ...valid, executed: false },
       { ...valid, provenance: 'constructed' },
@@ -415,8 +596,218 @@ describe('BL-014 fixture and evidence contracts', () => {
       },
       { ...valid, unsafeAuthority: 'http://localhost/private' },
     ]
-    expect(mutations.map(validateSessionSwitchingEvidence)).toEqual(
-      mutations.map(() => false)
+    expect(
+      mutations.map((mutation) =>
+        validateSessionSwitchingEvidence(mutation, restricted)
+      )
+    ).toEqual(mutations.map(() => false))
+
+    const joinMutations: Array<[unknown, unknown]> = [
+      [
+        valid,
+        {
+          ...restricted,
+          identityObservations: restricted.identityObservations.slice(1),
+        },
+      ],
+      [
+        valid,
+        {
+          ...restricted,
+          identityObservations: restricted.identityObservations.map(
+            (row, index) =>
+              index === 0
+                ? { ...row, projectToken: valid.projects[1]!.projectToken }
+                : row
+          ),
+        },
+      ],
+      [
+        { ...valid, focusObservations: valid.focusObservations.slice(1) },
+        restricted,
+      ],
+      [
+        {
+          ...valid,
+          focusObservations: valid.focusObservations.map((row, index) =>
+            index === 0 ? { ...row, executionId: crypto.randomUUID() } : row
+          ),
+        },
+        restricted,
+      ],
+      [
+        {
+          ...valid,
+          focusObservations: valid.focusObservations.map((row, index) =>
+            index === 1
+              ? {
+                  ...row,
+                  observationId: valid.focusObservations[0]!.observationId,
+                }
+              : row
+          ),
+        },
+        restricted,
+      ],
+      [
+        {
+          ...valid,
+          lifecycleObservations: valid.lifecycleObservations.slice(1),
+        },
+        restricted,
+      ],
+      [
+        {
+          ...valid,
+          lifecycleObservations: valid.lifecycleObservations.map(
+            (row, index) =>
+              index === 0
+                ? { ...row, projectToken: valid.projects[0]!.projectToken }
+                : row
+          ),
+        },
+        restricted,
+      ],
+      [
+        {
+          ...valid,
+          observations: valid.observations.map((row, index) =>
+            index === 0 ? { ...row, executionId: crypto.randomUUID() } : row
+          ),
+        },
+        restricted,
+      ],
+      [
+        {
+          ...valid,
+          workflows: valid.workflows.map((row, index) =>
+            index === 0
+              ? { ...row, transitionExecutionId: crypto.randomUUID() }
+              : row
+          ),
+        },
+        restricted,
+      ],
+      [
+        {
+          ...valid,
+          networkObservations: valid.networkObservations.map((row, index) =>
+            index === 0
+              ? {
+                  ...row,
+                  observationId: valid.focusObservations[0]!.observationId,
+                  executionId: crypto.randomUUID(),
+                }
+              : row
+          ),
+        },
+        restricted,
+      ],
+      [
+        {
+          ...valid,
+          networkObservations: valid.networkObservations.map((row, index) =>
+            index === 0 ? { ...row, transitionId: 'switch-open-C' } : row
+          ),
+        },
+        restricted,
+      ],
+      [
+        {
+          ...valid,
+          networkObservations: valid.networkObservations.map((row, index) =>
+            index === 0 ? { ...row, role: 'Tunnel' } : row
+          ),
+        },
+        restricted,
+      ],
+      [
+        {
+          ...valid,
+          networkObservations: valid.networkObservations.map((row, index) =>
+            index === 0
+              ? { ...row, stableUrl: '/projects/bl014-c/workbench/' }
+              : row
+          ),
+        },
+        restricted,
+      ],
+      [
+        {
+          ...valid,
+          cleanup: {
+            ...valid.cleanup,
+            disposableFiles: valid.cleanup.disposableFiles.slice(1),
+          },
+        },
+        restricted,
+      ],
+      [
+        {
+          ...valid,
+          cleanup: {
+            ...valid.cleanup,
+            disposableFiles: valid.cleanup.disposableFiles.map((row, index) =>
+              index === 0 ? { ...row, existedBeforeCleanup: false } : row
+            ),
+          },
+        },
+        restricted,
+      ],
+    ]
+    expect(
+      joinMutations.map(([publicMutation, restrictedMutation]) =>
+        validateSessionSwitchingEvidence(publicMutation, restrictedMutation)
+      )
+    ).toEqual(joinMutations.map(() => false))
+
+    const probes = restricted.artifactManifest.entries.map((entry) => ({
+      kind: entry.kind,
+      path: entry.path,
+      executionId: valid.execution.id,
+      measured: true,
+      absent: true,
+    }))
+    const expectedPaths = Object.fromEntries(
+      restricted.artifactManifest.entries.map((entry) => [
+        entry.kind,
+        entry.path,
+      ])
     )
+    expect(
+      validateSessionSwitchingResidualDeclarations(
+        valid,
+        restricted,
+        probes,
+        expectedPaths
+      )
+    ).toBe(true)
+    expect(
+      [
+        probes.slice(1),
+        probes.map((probe, index) =>
+          index === 0 ? { ...probe, path: '/tmp/predeleted-fake' } : probe
+        ),
+        probes.map((probe, index) =>
+          index === 0 ? { ...probe, measured: false } : probe
+        ),
+        probes.map((probe, index) =>
+          index === 0 ? { ...probe, absent: false } : probe
+        ),
+      ].map((probeMutation) =>
+        validateSessionSwitchingResidualDeclarations(
+          valid,
+          restricted,
+          probeMutation,
+          expectedPaths
+        )
+      )
+    ).toEqual([false, false, false, false])
+    expect(
+      validateSessionSwitchingResidualDeclarations(valid, restricted, probes, {
+        ...expectedPaths,
+        counterOutput: '/tmp/wrong-counter-output',
+      })
+    ).toBe(false)
   })
 })

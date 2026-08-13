@@ -1,6 +1,9 @@
 import { createHash } from 'node:crypto'
 import type { IncomingHttpHeaders } from 'node:http'
-import type { RuntimeFailureCategory } from './project-runtime-contract.js'
+import {
+  deriveProjectOwnerToken,
+  type RuntimeFailureCategory,
+} from './project-runtime-contract.js'
 
 export const WORKBENCH_HEADER_TIMEOUT_MS = 5_000 as const
 export const WORKBENCH_SHUTDOWN_TIMEOUT_MS = 5_000 as const
@@ -373,10 +376,7 @@ export interface WorkbenchSafeEvent {
 }
 
 export function tokenizeWorkbenchProjectId(projectId: string): string {
-  return (
-    'project-' +
-    createHash('sha256').update(projectId).digest('hex').slice(0, 16)
-  )
+  return deriveProjectOwnerToken(projectId)
 }
 
 export function serializeWorkbenchEvent(

@@ -1,4 +1,7 @@
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { createServer } from 'node:net'
+import os from 'node:os'
+import path from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import {
   RuntimeFailure,
@@ -402,6 +405,112 @@ describe('project runtime process boundary', () => {
     }
     await expect(ready.process.isAlive()).resolves.toBe(false)
     await expect(loopbackListenerIsAbsent(ready.port)).resolves.toBe(true)
+  })
+
+  it('executes isolated A/B/C argv, cwd, user, and environment allowlists through real processes', async () => {
+    const fixtureRoot = await mkdtemp(
+      path.join(os.tmpdir(), 'ascend-bl013-launch-')
+    )
+    const projects = await Promise.all(
+      ['a', 'b', 'c'].map(async (label) => {
+        const canonicalPath = path.join(fixtureRoot, label)
+        await mkdir(canonicalPath)
+        await writeFile(
+          path.join(canonicalPath, 'terminal-sentinel.txt'),
+          'PROTECTED_LAUNCH_' + label.toUpperCase()
+        )
+        return { label, canonicalPath }
+      })
+    )
+    const user = os.userInfo()
+    const environment = {
+      PATH: '/usr/local/bin:/usr/bin:/bin',
+      HOME: user.homedir,
+      USER: user.username,
+      LOGNAME: user.username,
+      SHELL: user.shell || '/bin/sh',
+      LANG: 'C.UTF-8',
+      BL001_FAKE_MODE: 'project-runtime-fixture',
+      BL013_CAPTURE_LAUNCH: '1',
+    }
+    const config = createProjectRuntimeConfig({
+      executablePath: new URL('fixtures/fake-code-server.mjs', import.meta.url)
+        .pathname,
+      expectedUser: user.username,
+      environment,
+      readinessTimeoutMs: 5_000,
+    })
+    const runtimes = await Promise.all(
+      projects.map((project) =>
+        launchReadyRuntime({
+          config,
+          canonicalPath: project.canonicalPath,
+          ownerToken: 'project-launch-' + project.label,
+          signal: new AbortController().signal,
+        })
+      )
+    )
+    try {
+      const records = await Promise.all(
+        projects.map(async (project) => ({
+          project,
+          record: JSON.parse(
+            await readFile(
+              path.join(project.canonicalPath, '.bl013-launch.json'),
+              'utf8'
+            )
+          ) as {
+            argv: string[]
+            cwd: string
+            user: string
+            environment: Record<string, string>
+          },
+        }))
+      )
+      for (const { project, record } of records) {
+        expect(record.argv.at(-1)).toBe(project.canonicalPath)
+        expect(
+          record.argv.filter((value) => value === project.canonicalPath)
+        ).toHaveLength(1)
+        expect(record.cwd).toBe(project.canonicalPath)
+        expect(record.user).toBe(user.username)
+        expect(record.environment).toEqual(environment)
+        const serialized = JSON.stringify(record)
+        for (const peer of projects.filter(
+          (candidate) => candidate.label !== project.label
+        )) {
+          expect(serialized).not.toContain(peer.canonicalPath)
+          expect(serialized).not.toContain(
+            'PROTECTED_LAUNCH_' + peer.label.toUpperCase()
+          )
+        }
+      }
+      expect(
+        new Set(
+          runtimes.map(
+            (runtime) =>
+              String(runtime.process.pid) +
+              ':' +
+              runtime.process.processStartTime +
+              ':' +
+              String(runtime.port)
+          )
+        ).size
+      ).toBe(3)
+    } finally {
+      await Promise.all(
+        runtimes.map((runtime) =>
+          runtime.process.terminate(500, 500, runtime.port)
+        )
+      )
+      await rm(fixtureRoot, { recursive: true, force: true })
+    }
+    await Promise.all(
+      runtimes.map(async (runtime) => {
+        await expect(runtime.process.isAlive()).resolves.toBe(false)
+        await expect(loopbackListenerIsAbsent(runtime.port)).resolves.toBe(true)
+      })
+    )
   })
 
   it('bounds default sleep completion and both cancellation paths', async () => {

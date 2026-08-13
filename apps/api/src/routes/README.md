@@ -28,3 +28,12 @@ functionality into the `plugins` folder, and share it via
 
 If you're a bit confused about using `async/await` to write routes, you would
 better take a look at [Promise resolution](https://fastify.dev/docs/latest/Reference/Routes/#promise-resolution) for more details.
+
+
+## Ascend project and workbench routes
+
+The public project registration and list payload remains exactly id, name, canonicalPath, and createdAt. Runtime PID, process-start identity, port, internal URL, stable route, owner token, handles, state, and ephemeral user-data path are trusted in-process values only; BL-013 adds no schema, migration, runtime payload, Stop endpoint, or Restart endpoint.
+
+The stable /projects/{projectId}/workbench/ HTTP and WebSocket boundary resolves one stable-ID-keyed runtime snapshot per active project. It rejects a snapshot whose ID, canonical path, route, owner token, loopback URL, or port does not match the persisted project and parsed route, and rejects any snapshot that is not the exact running object still owned by ProjectRuntimeManager. Interleaved A/B/C requests, upgrades, and frames remain bound to their matching project token and target. Global application shutdown is the only exposed runtime shutdown path.
+
+Use just verify-project-runtime-isolation for the 12-scenario schema-version-2 matrix, its exact 70-record event catalog, 18 pre-forward mismatch rows, six rejected cross-project frame-destination attempts through the production forwarding boundary, persisted-close and measured task-settlement audits, and the Chromium exact-status replacement episode; use just proof-project-runtime-isolation-residual-audit for the independent exact-resource inventory. These are test/evidence refinements and change no public API contract. BL-014 switching/session persistence, BL-015 performance, and public lifecycle controls are explicitly not API capabilities.

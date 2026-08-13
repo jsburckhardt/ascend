@@ -1,8 +1,10 @@
+import { readFile } from 'node:fs/promises'
 import { describe, expect, it, vi } from 'vitest'
 import {
   RuntimeFailure,
   createProjectRuntimeConfig,
 } from '../src/project-runtime-contract.js'
+import { validateRuntimeManagerSource } from '../src/project-runtime-isolation-contract.js'
 import { createProjectRuntimeManager } from '../src/project-runtime-manager.js'
 import type {
   OwnedRuntimeProcess,
@@ -33,15 +35,18 @@ function runtime(pid: number) {
     pid,
     processStartTime: String(pid * 10),
     exit: exited.promise,
-    terminate: vi.fn(async (_graceful, _force, port) => ({
-      pid,
-      processStartTime: String(pid * 10),
-      port,
-      outcome: 'graceful' as const,
-      processAbsent: true,
-      processGroupAbsent: true,
-      listenerAbsent: true,
-    })),
+    terminate: vi.fn(async (_graceful, _force, port) => {
+      exited.resolve({ code: 0, signal: null, addressInUse: false })
+      return {
+        pid,
+        processStartTime: String(pid * 10),
+        port,
+        outcome: 'graceful' as const,
+        processAbsent: true,
+        processGroupAbsent: true,
+        listenerAbsent: true,
+      }
+    }),
     audit: vi.fn(async (port) => ({
       pid,
       processStartTime: String(pid * 10),
@@ -283,7 +288,7 @@ describe('project runtime manager', () => {
     }
   )
 
-  it('rejects an already-cancelled caller and replaces an unhealthy runtime', async () => {
+  it('rejects cancellation, marks an unhealthy runtime failed, and replaces explicitly', async () => {
     const first = runtime(107)
     const replacement = runtime(108)
     vi.mocked(first.process.isAlive).mockResolvedValue(false)
@@ -315,10 +320,332 @@ describe('project runtime manager', () => {
         projectId: project.id,
         canonicalPath: project.canonicalPath,
       })
+    ).rejects.toMatchObject({ category: 'early-exit-code' })
+    await expect(
+      manager.start({
+        projectId: project.id,
+        canonicalPath: project.canonicalPath,
+      })
     ).resolves.toMatchObject({ pid: 108 })
     expect(first.process.terminate).toHaveBeenCalledTimes(1)
     expect(manager.lastFailure('unknown')).toBeUndefined()
     expect(manager.inspect('unknown')).toBeUndefined()
+    await manager.shutdown()
+  })
+
+  it('holds registered, starting, running, and failed entries in one stable-ID map', async () => {
+    const projects = [
+      { ...project, id: 'project-a', canonicalPath: '/projects/a' },
+      { ...project, id: 'project-b', canonicalPath: '/projects/b' },
+      { ...project, id: 'project-c', canonicalPath: '/projects/c' },
+    ]
+    const bGate = deferred<ReadyRuntime>()
+    const a = runtime(201)
+    const b = runtime(202)
+    const launch = vi.fn(
+      async ({ canonicalPath }: { canonicalPath: string }) => {
+        if (canonicalPath === '/projects/a') return a.ready
+        if (canonicalPath === '/projects/b') return bGate.promise
+        throw new RuntimeFailure('spawn-error')
+      }
+    )
+    const manager = createProjectRuntimeManager({
+      findProjectById: vi.fn(async (id) =>
+        projects.find((item) => item.id === id)
+      ),
+      config,
+      processDependencies,
+      launch,
+    })
+    manager.register('project-d', '/projects/d')
+    const aSnapshot = await manager.start({
+      projectId: 'project-a',
+      canonicalPath: '/projects/a',
+    })
+    const bStart = manager.start({
+      projectId: 'project-b',
+      canonicalPath: '/projects/b',
+    })
+    await expect(
+      manager.start({
+        projectId: 'project-c',
+        canonicalPath: '/projects/c',
+      })
+    ).rejects.toMatchObject({ category: 'spawn-error' })
+    await vi.waitFor(() =>
+      expect(
+        manager
+          .inspectEntries()
+          .map(({ state }) => state)
+          .sort()
+      ).toEqual(['failed', 'registered', 'running', 'starting'])
+    )
+    expect(Object.isFrozen(aSnapshot)).toBe(true)
+    expect(aSnapshot).toMatchObject({
+      stableRoute: '/projects/project-a/workbench/',
+      ownerToken: expect.stringMatching(/^project-[a-f0-9]{16}$/u),
+    })
+    bGate.resolve(b.ready)
+    await expect(bStart).resolves.toMatchObject({ pid: 202 })
+    await manager.shutdown()
+  })
+
+  it('rejects singleton and path/name keyed runtime state source fixtures', async () => {
+    const production = await readFile(
+      new URL('../src/project-runtime-manager.ts', import.meta.url),
+      'utf8'
+    )
+    expect(validateRuntimeManagerSource(production)).toEqual({
+      accepted: true,
+      violations: [],
+    })
+    for (const fixture of [
+      'const activeRuntime = undefined; const entries = new Map<string, ProjectRuntimeEntry>(); const ownership = new Map<string, ManagedOwnership>()',
+      'const runtimeByPath = new Map<string, ProjectRuntimeEntry>(); const entries = new Map<string, ProjectRuntimeEntry>(); const ownership = new Map<string, ManagedOwnership>()',
+      'const runtimeByName = new Map<string, ProjectRuntimeEntry>(); const entries = new Map<string, ProjectRuntimeEntry>(); const ownership = new Map<string, ManagedOwnership>()',
+      'const entries = new Map<CanonicalPath, ProjectRuntimeEntry>(); const ownership = new Map<string, ManagedOwnership>()',
+    ]) {
+      expect(validateRuntimeManagerSource(fixture).accepted).toBe(false)
+    }
+  })
+
+  it('partitions 24 interleaved A/B/C callers and reuses only each healthy identity', async () => {
+    const projects = ['a', 'b', 'c'].map((id) => ({
+      ...project,
+      id: 'project-' + id,
+      canonicalPath: '/fixtures/' + id,
+    }))
+    const gates = new Map(
+      projects.map((item) => [item.canonicalPath, deferred<ReadyRuntime>()])
+    )
+    const ready = new Map([
+      ['/fixtures/a', runtime(301)],
+      ['/fixtures/b', runtime(302)],
+      ['/fixtures/c', runtime(303)],
+    ])
+    const launches: Array<{
+      canonicalPath: string
+      user: string
+      environment: Readonly<NodeJS.ProcessEnv>
+    }> = []
+    const launch = vi.fn(
+      ({
+        canonicalPath,
+        config: launchConfig,
+      }: {
+        canonicalPath: string
+        config: typeof config
+      }) => {
+        launches.push({
+          canonicalPath,
+          user: launchConfig.expectedUser,
+          environment: launchConfig.environment,
+        })
+        return gates.get(canonicalPath)!.promise
+      }
+    )
+    const manager = createProjectRuntimeManager({
+      findProjectById: vi.fn(async (id) =>
+        projects.find((item) => item.id === id)
+      ),
+      config,
+      processDependencies,
+      launch,
+    })
+    const calls = Array.from({ length: 8 }).flatMap(() =>
+      projects.map((item) => ({
+        projectId: item.id,
+        promise: manager.start({
+          projectId: item.id,
+          canonicalPath: item.canonicalPath,
+        }),
+      }))
+    )
+    await vi.waitFor(() => {
+      expect(launch).toHaveBeenCalledTimes(3)
+      expect(
+        manager.inspectEntries().filter(({ state }) => state === 'starting')
+      ).toHaveLength(3)
+      expect(
+        manager
+          .inspectEntries()
+          .map(({ waiterCount }) => waiterCount)
+          .sort()
+      ).toEqual([8, 8, 8])
+    })
+    for (const path of ['/fixtures/c', '/fixtures/a', '/fixtures/b'])
+      gates.get(path)!.resolve(ready.get(path)!.ready)
+    const snapshots = await Promise.all(calls.map(({ promise }) => promise))
+    for (const item of projects) {
+      const own = calls
+        .map(({ projectId }, index) => ({
+          projectId,
+          snapshot: snapshots[index],
+        }))
+        .filter(({ projectId }) => projectId === item.id)
+        .map(({ snapshot }) => snapshot)
+      expect(own).toHaveLength(8)
+      expect(own.every((snapshot) => snapshot === own[0])).toBe(true)
+      expect(new Set(own.map(({ projectId }) => projectId))).toEqual(
+        new Set([item.id])
+      )
+    }
+    expect(new Set(snapshots.map(({ pid }) => pid))).toEqual(
+      new Set([301, 302, 303])
+    )
+    expect(launches).toEqual(
+      projects.map((item) => ({
+        canonicalPath: item.canonicalPath,
+        user: 'fixture-user',
+        environment: { PATH: '/safe/bin' },
+      }))
+    )
+    const before = JSON.stringify(manager.inspectEntries())
+    for (const item of projects) {
+      const reused = await manager.start({
+        projectId: item.id,
+        canonicalPath: item.canonicalPath,
+      })
+      expect(reused).toBe(
+        snapshots.find(({ projectId }) => projectId === item.id)
+      )
+    }
+    await expect(
+      manager.start({
+        projectId: 'unknown',
+        canonicalPath: '/fixtures/unknown',
+      })
+    ).rejects.toMatchObject({ category: 'unknown-project' })
+    await expect(
+      manager.start({ projectId: 'project-a', canonicalPath: '/fixtures/b' })
+    ).rejects.toMatchObject({ category: 'canonical-path-invariant' })
+    expect(JSON.stringify(manager.inspectEntries())).toBe(before)
+    expect(launch).toHaveBeenCalledTimes(3)
+    await manager.shutdown()
+  })
+
+  it('awaits delayed completion and exit tasks without clearing tracked sets', async () => {
+    const delayed = runtime(350)
+    const launchStarted = deferred<void>()
+    const release = deferred<ReadyRuntime>()
+    const manager = createProjectRuntimeManager({
+      findProjectById: vi.fn(async () => project),
+      config,
+      processDependencies,
+      launch: vi.fn(async ({ onOwned }) => {
+        launchStarted.resolve()
+        const ready = await release.promise
+        onOwned?.(ready)
+        return ready
+      }),
+    })
+    const start = manager
+      .start({ projectId: project.id, canonicalPath: project.canonicalPath })
+      .catch((error: unknown) => error)
+    await launchStarted.promise
+    const before = manager.audit!()
+    expect(before.completionTasks).toBe(1)
+    const shutdown = manager.shutdown()
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(manager.audit!().completionTasks).toBe(1)
+    release.resolve(delayed.ready)
+    await expect(shutdown).resolves.toMatchObject({ status: 'ok' })
+    await expect(start).resolves.toMatchObject({ category: 'manager-shutdown' })
+    const returned = manager.audit!()
+    expect(returned).toMatchObject({
+      entryCount: 0,
+      ownershipRecords: 0,
+      completionTasks: 0,
+      backgroundTasks: 0,
+    })
+    expect(returned.completionTaskSettlements).toBeGreaterThan(
+      before.completionTaskSettlements
+    )
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(manager.audit!()).toEqual(returned)
+    const source = await readFile(
+      new URL('../src/project-runtime-manager.ts', import.meta.url),
+      'utf8'
+    )
+    expect(source).not.toContain('completionTasks.clear()')
+    expect(source).not.toContain('backgroundTasks.clear()')
+  })
+  it('cancels all eight B waiters and cleans only the orphaned B start', async () => {
+    const projects = ['a', 'b', 'c'].map((id) => ({
+      ...project,
+      id: 'cancel-' + id,
+      canonicalPath: '/cancel/' + id,
+    }))
+    const a = runtime(401)
+    const b = runtime(402)
+    const c = runtime(403)
+    const bStarted = deferred<void>()
+    const launch = vi.fn(
+      async ({
+        canonicalPath,
+        signal,
+      }: {
+        canonicalPath: string
+        signal: AbortSignal
+      }) => {
+        if (canonicalPath === '/cancel/a') return a.ready
+        if (canonicalPath === '/cancel/c') return c.ready
+        bStarted.resolve()
+        return new Promise<ReadyRuntime>((_resolve, reject) => {
+          signal.addEventListener(
+            'abort',
+            () => {
+              void b.process
+                .terminate(1, 1, b.ready.port)
+                .then(() => reject(new RuntimeFailure('caller-cancelled')))
+            },
+            { once: true }
+          )
+        })
+      }
+    )
+    const manager = createProjectRuntimeManager({
+      findProjectById: vi.fn(async (id) =>
+        projects.find((item) => item.id === id)
+      ),
+      config,
+      processDependencies,
+      launch,
+    })
+    const aStart = manager.start({
+      projectId: 'cancel-a',
+      canonicalPath: '/cancel/a',
+    })
+    const cStart = manager.start({
+      projectId: 'cancel-c',
+      canonicalPath: '/cancel/c',
+    })
+    const controllers = Array.from({ length: 8 }, () => new AbortController())
+    const bStarts = controllers.map((controller) =>
+      manager.start({
+        projectId: 'cancel-b',
+        canonicalPath: '/cancel/b',
+        signal: controller.signal,
+      })
+    )
+    await bStarted.promise
+    controllers.forEach((controller) => controller.abort())
+    const outcomes = await Promise.all(
+      bStarts.map((start) => start.catch((error: unknown) => error))
+    )
+    expect(outcomes).toHaveLength(8)
+    expect(
+      outcomes.every(
+        (error) =>
+          error instanceof RuntimeFailure &&
+          error.category === 'caller-cancelled'
+      )
+    ).toBe(true)
+    await expect(aStart).resolves.toMatchObject({ pid: 401 })
+    await expect(cStart).resolves.toMatchObject({ pid: 403 })
+    await vi.waitFor(() => expect(b.process.terminate).toHaveBeenCalledTimes(1))
+    expect(a.process.terminate).not.toHaveBeenCalled()
+    expect(c.process.terminate).not.toHaveBeenCalled()
     await manager.shutdown()
   })
 })

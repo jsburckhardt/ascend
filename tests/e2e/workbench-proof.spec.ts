@@ -269,15 +269,7 @@ const waitForAbort = async (signal: AbortSignal): Promise<void> => {
 }
 
 const openIntegratedTerminal = async (page: Page): Promise<void> => {
-  await page.keyboard.press('F1')
-  await expect(page.locator('.quick-input-widget')).toBeVisible({
-    timeout: 5_000,
-  })
-  await page.keyboard.insertText('Terminal: Create New Terminal')
-  await expect(
-    page.getByText('Terminal: Create New Terminal', { exact: true }).first()
-  ).toBeVisible({ timeout: 5_000 })
-  await page.keyboard.press('Enter')
+  await page.keyboard.press('Control+Backquote')
   const terminal = page.locator('.terminal.xterm').first()
   await expect(terminal).toBeVisible({ timeout: 10_000 })
   const terminalInput = page

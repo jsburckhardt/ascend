@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
   createProjectRuntimeConfig,
+  deriveProjectOwnerToken,
   RuntimeFailure,
 } from '../src/project-runtime-contract.js'
 import {
@@ -65,8 +66,11 @@ describe('project runtime lifecycle integration', () => {
       close: vi.fn(() => order.push('registration')),
     }
     const manager: ProjectRuntimeManager = {
+      register: vi.fn(),
       start: vi.fn(),
+      ownsSnapshot: vi.fn(() => true),
       inspect: vi.fn(),
+      inspectEntries: vi.fn(() => []),
       lastFailure: vi.fn(),
       lastCleanup: vi.fn(),
       lastShutdown: vi.fn(),
@@ -125,14 +129,14 @@ describe('project runtime lifecycle integration', () => {
     expect(events).toEqual([
       {
         event: 'runtime.start.requested',
-        projectId: project.id,
+        projectToken: deriveProjectOwnerToken(project.id),
         from: 'stopped',
         to: 'starting',
         elapsedMs: expect.any(Number),
       },
       {
         event: 'runtime.start.failed',
-        projectId: project.id,
+        projectToken: deriveProjectOwnerToken(project.id),
         from: 'starting',
         to: 'failed',
         elapsedMs: expect.any(Number),
@@ -203,19 +207,26 @@ describe('project runtime lifecycle integration', () => {
   })
 
   it('terminates each exact running owner once with finite escalation bounds', async () => {
-    const terminate = vi.fn(async (_graceful, _force, port) => ({
-      pid: 501,
-      processStartTime: '5010',
-      port,
-      outcome: 'graceful' as const,
-      processAbsent: true,
-      processGroupAbsent: true,
-      listenerAbsent: true,
-    }))
+    let settleExit!: () => void
+    const exit = new Promise<never>((_resolve) => {
+      settleExit = () => _resolve(undefined as never)
+    })
+    const terminate = vi.fn(async (_graceful, _force, port) => {
+      settleExit()
+      return {
+        pid: 501,
+        processStartTime: '5010',
+        port,
+        outcome: 'graceful' as const,
+        processAbsent: true,
+        processGroupAbsent: true,
+        listenerAbsent: true,
+      }
+    })
     const owned: OwnedRuntimeProcess = {
       pid: 501,
       processStartTime: '5010',
-      exit: neverExit(),
+      exit,
       terminate,
       audit: vi.fn(async (port) => ({
         pid: 501,

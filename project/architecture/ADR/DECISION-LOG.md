@@ -91,7 +91,7 @@ Short, actionable statements derived from ADRs and core-components. More than on
 | 53 | Keep runtime identities, ports, handles, and state only in runtime-manager memory | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-11 |
 | 54 | Coalesce concurrent starts and reuse only health-checked running workbenches | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-11 |
 | 55 | Enforce bounded loopback binding, health readiness, collision retries, and exact cleanup | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-11 |
-| 56 | Cancel caller waits independently and reserve shared cancellation for manager shutdown | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-11 |
+| 56 | Cancel orphaned project starts only when their caller wait count reaches zero | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-12 |
 | 57 | Emit bounded redacted lifecycle diagnostics and timing without raw canonical paths | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-11 |
 | 58 | Use application-owned in-process proxying for stable workbench HTTP and WebSocket traffic | ADR-260812-in-process-workbench-reverse-proxy | 2026-08-12 |
 | 59 | Use Node HTTP streams and direct ws dependency for proxy transport | ADR-260812-in-process-workbench-reverse-proxy | 2026-08-12 |
@@ -125,3 +125,8 @@ Short, actionable statements derived from ADRs and core-components. More than on
 | 87 | Render top-level route and load failures accessibly at the unchanged stable URL | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-12 |
 | 88 | Replace failed shell entries on Retry without adding browser history | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-12 |
 | 89 | Authenticate trusted front-door authority metadata with one aligned private token and refuse malformed pairs before runtime resolution | ADR-260812-browser-navigation-shell | 2026-08-12 |
+| 90 | Key every project lifecycle entry only by its stable project ID | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-12 |
+| 91 | Include stable route and opaque owner token in every immutable running snapshot | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-12 |
+| 92 | Use one opaque project token across runtime and proxy event attribution | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-12 |
+| 93 | Reject proxy snapshots that mismatch the persisted project or stable route or are not the exact manager-owned running object | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-12 |
+| 94 | Attribute proxy resource inventories and audits by opaque project token | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-12 |

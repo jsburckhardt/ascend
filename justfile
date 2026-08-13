@@ -106,6 +106,14 @@ verify-home-workbench api_build="true":
 proof-home-workbench-residual-audit:
     pnpm --filter @ascend/api exec tsx src/cli/home-workbench-residual-audit.ts
 
+verify-project-runtime-isolation:
+    BL013_ACCEPTANCE=1 pnpm exec vitest run apps/api/test/project-runtime-isolation-acceptance.test.ts apps/api/test/project-runtime-isolation-documentation.test.ts apps/api/test/project-runtime-contract.test.ts apps/api/test/project-runtime-manager.test.ts apps/api/test/project-runtime-lifecycle.test.ts apps/api/test/project-schema-minimization.test.ts apps/api/test/workbench-proxy-http.test.ts apps/api/test/workbench-proxy-websocket.test.ts --reporter=verbose
+    EXTENSIONS_GALLERY={} BL013_DESIGNATED=1 pnpm exec playwright test tests/e2e/project-runtime-isolation.spec.ts --project=chromium --workers=1 --retries=0
+    just proof-project-runtime-isolation-residual-audit
+
+proof-project-runtime-isolation-residual-audit:
+    pnpm --filter @ascend/api exec tsx src/cli/project-runtime-isolation-residual-audit.ts
+
 verify:
     pnpm format:check
     pnpm lint
@@ -120,3 +128,4 @@ verify:
     just proof-workbench-capacity-audit
     just verify-workbench-route
     just verify-home-workbench false
+    just verify-project-runtime-isolation

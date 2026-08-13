@@ -1,6 +1,8 @@
 #!/usr/bin/env node
-import { writeFile } from 'node:fs/promises'
+import { writeFile, readFile } from 'node:fs/promises'
 import http from 'node:http'
+import os from 'node:os'
+import path from 'node:path'
 
 if (process.env.BL001_CAPTURE_ARGV) {
   await writeFile(
@@ -19,6 +21,33 @@ if (process.env.BL001_CAPTURE_ENV) {
 }
 
 const mode = process.env.BL001_FAKE_MODE
+const fixtureMode = async () => {
+  if (mode !== 'project-runtime-fixture') return mode
+  try {
+    return (
+      await readFile(path.join(process.cwd(), '.bl013-mode'), 'utf8')
+    ).trim()
+  } catch {
+    return 'healthy'
+  }
+}
+if (process.env.BL013_CAPTURE_LAUNCH === '1') {
+  const allowedEnvironment = Object.fromEntries(
+    Object.keys(process.env)
+      .sort()
+      .map((key) => [key, process.env[key]])
+  )
+  await writeFile(
+    path.join(process.cwd(), '.bl013-launch.json'),
+    JSON.stringify({
+      argv: process.argv.slice(2),
+      cwd: process.cwd(),
+      user: os.userInfo().username,
+      environment: allowedEnvironment,
+    })
+  )
+}
+
 if (mode === 'early-exit') process.exit(23)
 if (mode === 'early-signal') process.kill(process.pid, 'SIGTERM')
 if (
@@ -26,26 +55,53 @@ if (
   mode === 'project-runtime-ignore-term' ||
   mode === 'project-runtime-health-body' ||
   mode === 'project-runtime-health-status' ||
-  mode === 'project-runtime-delayed-ready'
+  mode === 'project-runtime-delayed-ready' ||
+  mode === 'project-runtime-fixture'
 ) {
   const bindIndex = process.argv.indexOf('--bind-addr')
   const bind = process.argv[bindIndex + 1] ?? ''
   const port = Number(bind.slice(bind.lastIndexOf(':') + 1))
-  const server = http.createServer((request, response) => {
+  const server = http.createServer(async (request, response) => {
     if (request.url === '/stall') return
     if (request.url === '/healthz/') {
-      const status = mode === 'project-runtime-health-status' ? 503 : 200
-      const bodyStatus =
-        mode === 'project-runtime-health-body' ? 'unexpected' : 'alive'
-      const reply = () => {
+      const reply = async () => {
+        const activeMode = await fixtureMode()
+        const status =
+          mode === 'project-runtime-health-status' ||
+          activeMode === 'health-status' ||
+          activeMode === 'readiness-failure'
+            ? 503
+            : 200
+        const bodyStatus =
+          mode === 'project-runtime-health-body' || activeMode === 'health-body'
+            ? 'unexpected'
+            : 'alive'
         response.writeHead(status, { 'content-type': 'application/json' })
         response.end(JSON.stringify({ status: bodyStatus }))
       }
       if (mode === 'project-runtime-delayed-ready') {
-        setTimeout(reply, 150)
+        setTimeout(() => void reply(), 150)
       } else {
-        reply()
+        await reply()
       }
+      return
+    }
+    if (request.url?.startsWith('/terminal')) {
+      try {
+        const sentinel = await readFile(
+          path.join(process.cwd(), 'terminal-sentinel.txt'),
+          'utf8'
+        )
+        response.writeHead(200, { 'content-type': 'text/plain' })
+        response.end(sentinel)
+      } catch {
+        response.writeHead(500)
+        response.end()
+      }
+      return
+    }
+    if (request.url?.startsWith('/proxy-fail')) {
+      request.socket.destroy()
       return
     }
     response.writeHead(404)

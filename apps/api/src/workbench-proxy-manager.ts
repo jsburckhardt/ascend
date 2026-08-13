@@ -13,6 +13,8 @@ import { hasTrustedFrontDoorHeaders } from './front-door-contract.js'
 import type { ProjectLibrary } from './project-library.js'
 import {
   RuntimeFailure,
+  deriveProjectOwnerToken,
+  stableProjectRoute,
   type RuntimeSnapshot,
 } from './project-runtime-contract.js'
 import type { ProjectRuntimeManager } from './project-runtime-manager.js'
@@ -58,7 +60,7 @@ export interface WorkbenchProxyManager {
     route: StableWorkbenchRoute
   ): Promise<void>
   shutdown(): Promise<WorkbenchProxyAudit>
-  audit(): WorkbenchProxyAudit
+  audit(projectToken?: string): WorkbenchProxyAudit
 }
 
 export interface WorkbenchProxyManagerDependencies {
@@ -80,6 +82,13 @@ export interface WorkbenchProxyManagerDependencies {
     connectionOrdinal: number
     role: WorkbenchConnectionRole | 'cancelled-before-control' | 'unknown'
   }) => void
+  readonly selectWebSocketFrameDestination?: (input: {
+    readonly projectToken: string
+    readonly direction: 'to-upstream' | 'to-downstream'
+    readonly rightfulDestination: WebSocket
+    readonly data: RawData
+    readonly binary: boolean
+  }) => WebSocket
 }
 
 class UpstreamTimeoutError extends Error {}
@@ -136,11 +145,18 @@ async function sendUpgradeFailure(
   await new Promise<void>((resolve) => socket.end(payload, resolve))
 }
 
-function safeTarget(snapshot: RuntimeSnapshot): URL {
+function safeTarget(
+  snapshot: RuntimeSnapshot,
+  expected: { readonly projectId: string; readonly canonicalPath: string }
+): URL {
   if (
     snapshot.state !== 'running' ||
     snapshot.internalUrl === null ||
-    snapshot.port === null
+    snapshot.port === null ||
+    snapshot.projectId !== expected.projectId ||
+    snapshot.canonicalPath !== expected.canonicalPath ||
+    snapshot.stableRoute !== stableProjectRoute(expected.projectId) ||
+    snapshot.ownerToken !== deriveProjectOwnerToken(expected.projectId)
   ) {
     throw new RuntimeFailure('canonical-path-invariant')
   }
@@ -272,6 +288,9 @@ export function createWorkbenchProxyManager(
     dependencies.recordWebSocketDiagnostic ?? (() => undefined)
   const recordWebSocketRole =
     dependencies.recordWebSocketRole ?? (() => undefined)
+  const selectWebSocketFrameDestination =
+    dependencies.selectWebSocketFrameDestination ??
+    (({ rightfulDestination }) => rightfulDestination)
   let webSocketConnectionOrdinal = 0
   const headerTimeoutMs =
     dependencies.headerTimeoutMs ?? WORKBENCH_HEADER_TIMEOUT_MS
@@ -285,11 +304,11 @@ export function createWorkbenchProxyManager(
   ) {
     throw new Error('Workbench proxy bounds must be positive integers')
   }
-  const pending = new Set<AbortController>()
-  const httpRequests = new Set<ClientRequest>()
-  const httpResponses = new Set<IncomingMessage>()
-  const rawSockets = new Set<Socket>()
-  const webSockets = new Set<WebSocket>()
+  const pending = new Map<AbortController, string>()
+  const httpRequests = new Map<ClientRequest, string>()
+  const httpResponses = new Map<IncomingMessage, string>()
+  const rawSockets = new Map<Socket, string>()
+  const webSockets = new Map<WebSocket, string>()
   const downstreamServer = new WebSocketServer({
     noServer: true,
     perMessageDeflate: false,
@@ -297,14 +316,22 @@ export function createWorkbenchProxyManager(
   let shuttingDown = false
   let shutdownPromise: Promise<WorkbenchProxyAudit> | undefined
 
-  const audit = (): WorkbenchProxyAudit =>
+  const resourceCount = <T>(
+    resources: Map<T, string>,
+    token?: string
+  ): number =>
+    token === undefined
+      ? resources.size
+      : [...resources.values()].filter((value) => value === token).length
+
+  const audit = (projectToken?: string): WorkbenchProxyAudit =>
     Object.freeze({
       shuttingDown,
-      pendingOperations: pending.size,
-      upstreamHttpRequests: httpRequests.size,
-      upstreamHttpResponses: httpResponses.size,
-      rawSockets: rawSockets.size,
-      webSockets: webSockets.size,
+      pendingOperations: resourceCount(pending, projectToken),
+      upstreamHttpRequests: resourceCount(httpRequests, projectToken),
+      upstreamHttpResponses: resourceCount(httpResponses, projectToken),
+      rawSockets: resourceCount(rawSockets, projectToken),
+      webSockets: resourceCount(webSockets, projectToken),
     })
 
   const emit = (event: WorkbenchEventInput): void =>
@@ -360,13 +387,17 @@ export function createWorkbenchProxyManager(
     }
     if (project === undefined) throw workbenchFailure('unknown-project')
     if (shuttingDown) throw new RuntimeFailure('manager-shutdown')
-    return safeTarget(
-      await dependencies.projectRuntime.start({
-        projectId: project.id,
-        canonicalPath: project.canonicalPath,
-        signal,
-      })
-    )
+    const snapshot = await dependencies.projectRuntime.start({
+      projectId: project.id,
+      canonicalPath: project.canonicalPath,
+      signal,
+    })
+    if (!dependencies.projectRuntime.ownsSnapshot(snapshot))
+      throw new RuntimeFailure('canonical-path-invariant')
+    return safeTarget(snapshot, {
+      projectId: project.id,
+      canonicalPath: project.canonicalPath,
+    })
   }
 
   const failureFrom = (error: unknown): WorkbenchPublicFailure => {
@@ -390,7 +421,8 @@ export function createWorkbenchProxyManager(
   ): Promise<void> => {
     const startedAt = now()
     const controller = new AbortController()
-    pending.add(controller)
+    const projectToken = deriveProjectOwnerToken(route.projectId)
+    pending.set(controller, projectToken)
     emit({
       event: 'workbench.proxy.started',
       projectId: route.projectId,
@@ -421,7 +453,7 @@ export function createWorkbenchProxyManager(
           path: route.upstreamPath,
           headers,
         })
-        httpRequests.add(upstreamRequest)
+        httpRequests.set(upstreamRequest, projectToken)
         const timeout = setTimeout(
           () => upstreamRequest?.destroy(new UpstreamTimeoutError()),
           headerTimeoutMs
@@ -433,7 +465,7 @@ export function createWorkbenchProxyManager(
         }
         upstreamRequest.once('response', (upstreamResponse) => {
           clearTimeout(timeout)
-          httpResponses.add(upstreamResponse)
+          httpResponses.set(upstreamResponse, projectToken)
           try {
             const responseHeaders = filterWorkbenchHeaders(
               upstreamResponse.headers,
@@ -595,8 +627,11 @@ export function createWorkbenchProxyManager(
   const forwardMessage = async (
     target: WebSocket,
     data: RawData,
-    binary: boolean
+    binary: boolean,
+    projectToken: string
   ): Promise<void> => {
+    if (webSockets.get(target) !== projectToken)
+      throw new Error('WebSocket project destination mismatch')
     await waitForWritable(target)
     await new Promise<void>((resolve, reject) =>
       target.send(data, { binary }, (error) =>
@@ -608,10 +643,11 @@ export function createWorkbenchProxyManager(
   const bridge = (
     left: WebSocket,
     right: WebSocket,
-    connectionOrdinal: number
+    connectionOrdinal: number,
+    projectToken: string
   ): void => {
-    webSockets.add(left)
-    webSockets.add(right)
+    webSockets.set(left, projectToken)
+    webSockets.set(right, projectToken)
     let leftQueue = Promise.resolve()
     let rightQueue = Promise.resolve()
     let roleObserved = false
@@ -644,12 +680,38 @@ export function createWorkbenchProxyManager(
     left.on('message', (data, binary) => {
       observeRole(data)
       leftQueue = leftQueue
-        .then(() => forwardMessage(right, data, binary))
+        .then(() =>
+          forwardMessage(
+            selectWebSocketFrameDestination({
+              projectToken,
+              direction: 'to-upstream',
+              rightfulDestination: right,
+              data,
+              binary,
+            }),
+            data,
+            binary,
+            projectToken
+          )
+        )
         .catch(() => right.terminate())
     })
     right.on('message', (data, binary) => {
       rightQueue = rightQueue
-        .then(() => forwardMessage(left, data, binary))
+        .then(() =>
+          forwardMessage(
+            selectWebSocketFrameDestination({
+              projectToken,
+              direction: 'to-downstream',
+              rightfulDestination: left,
+              data,
+              binary,
+            }),
+            data,
+            binary,
+            projectToken
+          )
+        )
         .catch(() => left.terminate())
     })
     left.on('ping', (data) => {
@@ -717,8 +779,9 @@ export function createWorkbenchProxyManager(
     const startedAt = now()
     const connectionOrdinal = ++webSocketConnectionOrdinal
     const controller = new AbortController()
-    pending.add(controller)
-    rawSockets.add(socket)
+    const projectToken = deriveProjectOwnerToken(route.projectId)
+    pending.set(controller, projectToken)
+    rawSockets.set(socket, projectToken)
     socket.once('close', () => rawSockets.delete(socket))
     emit({
       event: 'workbench.proxy.started',
@@ -814,7 +877,12 @@ export function createWorkbenchProxyManager(
         )
       await new Promise<void>((resolve, reject) => {
         downstreamServer.handleUpgrade(request, socket, head, (downstream) => {
-          bridge(downstream, upstream as WebSocket, connectionOrdinal)
+          bridge(
+            downstream,
+            upstream as WebSocket,
+            connectionOrdinal,
+            projectToken
+          )
           resolve()
         })
         socket.once('error', reject)
@@ -844,10 +912,10 @@ export function createWorkbenchProxyManager(
   const shutdown = (): Promise<WorkbenchProxyAudit> => {
     shutdownPromise ??= (async () => {
       shuttingDown = true
-      for (const controller of pending) controller.abort()
-      for (const request of httpRequests) request.destroy()
-      for (const response of httpResponses) response.destroy()
-      for (const webSocket of webSockets) webSocket.terminate()
+      for (const controller of pending.keys()) controller.abort()
+      for (const request of httpRequests.keys()) request.destroy()
+      for (const response of httpResponses.keys()) response.destroy()
+      for (const webSocket of webSockets.keys()) webSocket.terminate()
       const deadline = now() + shutdownTimeoutMs
       while (
         (pending.size > 0 ||
@@ -859,8 +927,8 @@ export function createWorkbenchProxyManager(
       ) {
         await new Promise((resolve) => setTimeout(resolve, 5))
       }
-      for (const webSocket of webSockets) webSocket.terminate()
-      for (const socket of rawSockets) socket.destroy()
+      for (const webSocket of webSockets.keys()) webSocket.terminate()
+      for (const socket of rawSockets.keys()) socket.destroy()
       webSockets.clear()
       rawSockets.clear()
       return audit()

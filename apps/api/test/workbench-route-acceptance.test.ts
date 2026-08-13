@@ -252,6 +252,10 @@ describe('BL-011 executable acceptance coordinator', () => {
     await new Promise<void>((resolve) => closedServer.close(() => resolve()))
 
     const events: WorkbenchSafeEvent[] = []
+    // Harness-boot contention exceeded the prior 1 s observation window. This
+    // is one correlated settlement wait, not a request or assertion retry.
+    const failureEventSettlementMs = 5_000
+    const failureEventQuietMs = 25
     const runtimeCategories = new Map(
       WORKBENCH_FAILURE_TABLE.filter((row) =>
         row.category.startsWith('runtime:')
@@ -413,7 +417,7 @@ describe('BL-011 executable acceptance coordinator', () => {
             '?fault=' +
             privateSentinel
       activeExecutionPath = ['stable-route']
-      events.length = 0
+      const eventCursor = events.length
       if (category === 'manager-shutdown') await app.workbenchProxy.shutdown()
       const outcome = websocket
         ? await upgradeFailure(path)
@@ -423,11 +427,42 @@ describe('BL-011 executable acceptance coordinator', () => {
       }
       if (category === 'malformed-project-id')
         observeBoundary('route-validation')
+      const expectedTransport = websocket ? 'websocket' : 'http'
+      const expectedProjectToken = deriveProjectOwnerToken(projectId)
+      let correlatedEvent: WorkbenchSafeEvent | undefined
+      if (category !== 'malformed-project-id') {
+        await vi.waitFor(
+          () => {
+            const matches = events
+              .slice(eventCursor)
+              .filter(
+                (event) =>
+                  event.event === 'workbench.proxy.failed' &&
+                  event.projectToken === expectedProjectToken &&
+                  event.transport === expectedTransport &&
+                  event.classification === category
+              )
+            expect(matches).toHaveLength(1)
+            correlatedEvent = matches[0]
+          },
+          { timeout: failureEventSettlementMs, interval: 5 }
+        )
+        await new Promise((resolve) => setTimeout(resolve, failureEventQuietMs))
+        expect(
+          events
+            .slice(eventCursor)
+            .filter(
+              (event) =>
+                event.event === 'workbench.proxy.failed' &&
+                event.projectToken === expectedProjectToken &&
+                event.transport === expectedTransport
+            )
+        ).toEqual([correlatedEvent])
+      }
       const observedInternalError =
         category === 'malformed-project-id'
           ? 'malformed-project-id'
-          : events.find((event) => event.event === 'workbench.proxy.failed')
-              ?.classification
+          : correlatedEvent?.classification
       expect(observedInternalError).toBe(category)
       expect(outcome.status).toBe(tableRow.status)
       expect(envelope.error).toEqual({
@@ -476,6 +511,8 @@ describe('BL-011 executable acceptance coordinator', () => {
         executionIndex,
         executionId,
         transport: websocket ? 'websocket-upgrade' : 'http-request',
+        eventCursor,
+        correlatedEvent,
         executionPath,
         observedInternalError,
         category,
@@ -492,6 +529,11 @@ describe('BL-011 executable acceptance coordinator', () => {
       tableHash: WORKBENCH_FAILURE_TABLE_SHA256,
       declaredCategories: WORKBENCH_FAILURE_TABLE.map((row) => row.category),
       executions,
+      eventSettlement: {
+        strategy: 'execution-correlated-single-wait',
+        timeoutMs: failureEventSettlementMs,
+        quietMs: failureEventQuietMs,
+      },
     }
     expect(validateWorkbenchFailureMatrix(failureMatrix)).toBe(true)
     await mergeWorkbenchRouteEvidence({

@@ -53,6 +53,10 @@ Issue #27 routes Ascend-owned workbench HTTP and every WebSocket through `/proje
 Issue #29 connects exact Home `/` to `/projects/{encodedStableId}/workbench/` with native full-document history. The API serves an accessible top-level loading/error shell, performs marked same-URL document acquisition, and decorates the acquired full-page workbench with only an Ascend Projects header. Projects returns Home without stopping the reused runtime. Unknown and malformed IDs stay at the stable URL; retryable startup, proxy, generic load, and 15-second document-timeout failures offer same-URL Retry with stale-generation suppression.
 
 Development Vite and deployed front doors must forward /projects HTTP and WebSocket traffic to the API on the Home origin. ASCEND_FRONT_DOOR_TOKEN must align across the web proxy and API: unset local development uses ascend-development-front-door-v1, explicit values must be 16–256 characters, and malformed, partial, or mismatched trusted headers are refused before runtime start. Deployment injects the private authority/token pair and redacts it. No data, schema, or API-payload migration is required; overriding the default is an operational configuration change. Run just verify-home-workbench and just proof-home-workbench-residual-audit.
+## Project session switching
+
+Issue #33 proves that A/B/C memory-only runtimes survive keyboard Project Home switching without lifecycle calls. It separately exercises history, reload, a storage/cache/service-worker-cleared B context, B client close, and B reopen. The fresh-browser visible terminal/editor outcome is unsupported while runtime identity remains unchanged. Run just verify-session-switching and the independent residual audit; see [session-switching.md](session-switching.md) for exact sequence, bounds, evidence policy, cleanup, and exclusions.
+
 ## Source Documents
 
 - [`PRD.md`](../PRD.md) defines the MVP requirements and acceptance criteria.

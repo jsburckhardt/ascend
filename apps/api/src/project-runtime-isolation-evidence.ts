@@ -136,7 +136,10 @@ export function scanProtectedEvidence(input: {
   const encodedMatches: string[] = []
   for (const value of protectedValues) {
     const valueDigest = digest(value)
-    if (sourceText.includes(value)) literalMatches.push(valueDigest)
+    const literalPresent = /^[0-9]+$/u.test(value)
+      ? new RegExp('(?<![0-9.])' + value + '(?![0-9.])', 'u').test(sourceText)
+      : sourceText.includes(value)
+    if (literalPresent) literalMatches.push(valueDigest)
     const encodedForms = [
       encodeURIComponent(value),
       Buffer.from(value).toString('base64'),

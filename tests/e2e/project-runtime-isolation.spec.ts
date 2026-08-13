@@ -86,6 +86,7 @@ const terminalProof = async (
     branch: string
     marker: string
     gitStatus: string
+    dirtyFileName: string
   },
   createTerminal = true
 ): Promise<boolean> => {
@@ -109,31 +110,75 @@ const terminalProof = async (
   const terminal = visibleTerminals.last()
   await terminal.waitFor({ state: 'visible', timeout: operationMs })
   await expect
-    .poll(async () => (await terminal.innerText()).trim().length > 0, {
-      timeout: operationMs,
-    })
+    .poll(
+      async () => {
+        const text = (await terminal.innerText()).replace(/\s/gu, '')
+        return (
+          text.includes(expected.canonicalPath) &&
+          text.includes(expected.branch)
+        )
+      },
+      { timeout: operationMs }
+    )
     .toBe(true)
   const input = terminal.locator('textarea.xterm-helper-textarea')
   await input.focus()
   await expect(input).toBeFocused({ timeout: operationMs })
-  const executionMarker = 'DONE_' + String(++terminalProofOrdinal)
+  const readinessOrdinal = String(++terminalProofOrdinal)
+  const readinessMarker = 'READY_' + readinessOrdinal
+  const readinessGate = path.join(
+    resultRoot,
+    'terminal-readiness-' + readinessOrdinal + '.fifo'
+  )
+  await rm(readinessGate, { force: true })
+  await executeFile('mkfifo', [readinessGate])
+  const executionMarker = 'DONE_' + String(terminalProofOrdinal)
   const command =
-    'printf BL013_%s= PWD; pwd -P; printf BL013_%s= ROOT; git rev-parse --show-toplevel; ' +
-    'printf BL013_%s= BRANCH; git branch --show-current; printf BL013_%s= STATUS; git status --porcelain | base64 -w0; printf BL013_%s= STATUS_END; printf BL013_%s= MARKER; git config ascend.fixture; ' +
-    'printf BL013_%s= ' +
-    executionMarker
+    'printf BL013_READY_%s ' +
+    readinessOrdinal +
+    ' ; cat < ' +
+    readinessGate +
+    '; clear; /usr/local/bin/node ' +
+    path.join(REPOSITORY_ROOT, 'tests/e2e/fixtures/bl014-terminal-proof.mjs') +
+    ' ' +
+    expected.dirtyFileName +
+    ' ' +
+    executionMarker +
+    ' BL013'
   await page.keyboard.insertText(command)
   await page.keyboard.press('Enter')
+  let observedText = ''
   await expect
     .poll(
-      async () =>
-        (await terminal.innerText()).includes('BL013_' + executionMarker),
-      {
-        timeout: operationMs,
-      }
+      async () => {
+        observedText = await terminal.innerText()
+        return observedText.includes('BL013_' + readinessMarker)
+      },
+      { timeout: operationMs }
     )
     .toBe(true)
-  const normalized = (await terminal.innerText()).replace(/\s/gu, '')
+  await writeFile(readinessGate, 'continue\n')
+  await rm(readinessGate, { force: true })
+  try {
+    await expect
+      .poll(
+        async () => {
+          observedText = await terminal.innerText()
+          return observedText
+            .replace(/\s/gu, '')
+            .includes('BL013_DONE=' + executionMarker)
+        },
+        { timeout: operationMs }
+      )
+      .toBe(true)
+  } catch (error) {
+    throw new Error(
+      'BL-013 terminal proof did not complete: ' +
+        JSON.stringify({ executionMarker, observedText }),
+      { cause: error }
+    )
+  }
+  const normalized = observedText.replace(/\s/gu, '')
   const expectedStatusBase64 = Buffer.from(expected.gitStatus + '\n').toString(
     'base64'
   )
@@ -142,7 +187,7 @@ const terminalProof = async (
     'BL013_ROOT=' + expected.canonicalPath,
     'BL013_BRANCH=' + expected.branch,
     'BL013_STATUS=' + expectedStatusBase64 + 'BL013_STATUS_END=',
-    'BL013_MARKER=' + expected.marker,
+    'BL013_GIT_SENTINEL=' + expected.marker,
   ]
   const matches = required.map((marker) => normalized.includes(marker))
   expect(matches).toEqual([true, true, true, true, true])
@@ -240,6 +285,7 @@ test('keeps three Git workbenches isolated and explicitly replaces only B', asyn
         marker,
         fileName,
         editorSentinel: 'EDITOR_' + label.toUpperCase() + '_SENTINEL',
+        dirtyFileName,
         gitStatus,
       }
     })

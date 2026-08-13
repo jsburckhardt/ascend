@@ -23,11 +23,21 @@ let writing = Promise.resolve()
 const interval = setInterval(() => {
   sequence += 1
   const line = 'BL014_A_SEQUENCE=' + sequence + newline
-  process.stdout.write(line)
+  process.stdout.write(
+    sequence === 1
+      ? line
+      : String.fromCharCode(27) +
+          '[1A' +
+          String.fromCharCode(13) +
+          String.fromCharCode(27) +
+          '[2K' +
+          line
+  )
   writing = writing.then(() => handle.appendFile(line))
 }, 250)
 const finish = async () => {
   clearInterval(interval)
+  process.stdout.write(newline)
   await writing
   await handle.close()
   process.exit(0)

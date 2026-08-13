@@ -3,7 +3,7 @@ import {
   spawn,
   type ChildProcessWithoutNullStreams,
 } from 'node:child_process'
-import { createHash } from 'node:crypto'
+import { randomUUID } from 'node:crypto'
 import {
   lstat,
   mkdtemp,
@@ -16,39 +16,48 @@ import { createServer, type Server } from 'node:net'
 import os from 'node:os'
 import path from 'node:path'
 import { promisify } from 'node:util'
-import { expect, test, type Page } from '@playwright/test'
+import {
+  expect,
+  test,
+  type BrowserContext,
+  type Page,
+  type Request,
+  type WebSocket as PlaywrightWebSocket,
+} from '@playwright/test'
 import {
   createApiServerController,
   type ApiServerController,
 } from '../../apps/api/src/api-server.js'
+import { resolveFrontDoorToken } from '../../apps/api/src/front-door-contract.js'
 import { createProjectLibrary } from '../../apps/api/src/project-library.js'
 import {
   createProjectRuntimeConfig,
   deriveProjectOwnerToken,
+  type RuntimeSafeLifecycleEvent,
 } from '../../apps/api/src/project-runtime-contract.js'
 import {
   createProjectRuntimeManager,
   type ProjectRuntimeManager,
 } from '../../apps/api/src/project-runtime-manager.js'
-import {
-  loopbackListenerIsAbsent,
-  readProcessStartTime,
-} from '../../apps/api/src/project-runtime-process.js'
+import { readProcessStartTime } from '../../apps/api/src/project-runtime-process.js'
 import {
   CODE_SERVER_PATH,
   REPOSITORY_ROOT,
 } from '../../apps/api/src/workbench-proof-contract.js'
 import {
-  terminateExactProcessGroup,
-  terminateExactProcessIdentity,
-} from '../../apps/api/src/workbench-proof-runtime.js'
-import { classifyWorkbenchConnectionRolePayload } from '../../apps/api/src/workbench-proxy-contract.js'
+  classifyWorkbenchConnectionRolePayload,
+  type WorkbenchSafeEvent,
+} from '../../apps/api/src/workbench-proxy-contract.js'
+import { createWorkbenchProxyManager } from '../../apps/api/src/workbench-proxy-manager.js'
 import { scanProtectedEvidence } from '../../apps/api/src/project-runtime-isolation-evidence.js'
 import {
+  BL014_COUNTER_CONTRACT,
   BL014_FIXTURES,
   BL014_INITIAL_START_ORDER,
   BL014_OPEN_REENTRY_ORDER,
   BL014_RESOURCE_CLASSES,
+  BL014_TRANSITION_ORDER,
+  BL014_WORKFLOW_EXPECTATIONS,
   digestSessionEvidence,
   validateSessionSwitchingEvidence,
 } from '../../apps/api/src/session-switching-contract.js'
@@ -61,9 +70,37 @@ const resultRoot = path.join(
   'test-results/bl-014/session-switching'
 )
 const evidencePath = path.join(resultRoot, 'switching-browser.json')
+const restrictedPath = path.join(resultRoot, 'restricted-authority.json')
 const operationMs = 30_000
 const overallMs = 240_000
-let terminalProofOrdinal = 0
+const nowNs = (): number => Number(process.hrtime.bigint())
+const id = (): string => randomUUID()
+
+interface ProjectFixture {
+  key: 'A' | 'B' | 'C'
+  id: string
+  name: string
+  branch: string
+  fileName: string
+  editorSentinel: string
+  dirtyFileName: string
+  gitSentinel: string
+  terminalSentinel: string
+  canonicalPath: string
+  createdAt: number
+  gitStatus: string
+}
+interface WorkflowRecord {
+  id: string
+  project: string
+  projectToken: string
+  reconnection: boolean
+  executionId: string
+  transitionExecutionId: string
+  management: number
+  extensionHost: number
+  unknown: number
+}
 
 const disposablePort = async (): Promise<number> => {
   const server = createServer()
@@ -77,7 +114,41 @@ const disposablePort = async (): Promise<number> => {
   await new Promise<void>((resolve) => server.close(() => resolve()))
   return address.port
 }
-
+const closeServer = async (server: Server): Promise<void> =>
+  new Promise((resolve) => server.close(() => resolve()))
+const pathCount = async (paths: string[]): Promise<number> =>
+  (
+    await Promise.all(
+      paths.map((candidate) =>
+        lstat(candidate).then(
+          () => 1,
+          () => 0
+        )
+      )
+    )
+  ).reduce((sum, value) => sum + value, 0)
+const fixtureState = async (project: ProjectFixture) => {
+  const [head, branch, status, sentinel] = await Promise.all([
+    executeFile('git', ['rev-parse', 'HEAD'], { cwd: project.canonicalPath }),
+    executeFile('git', ['branch', '--show-current'], {
+      cwd: project.canonicalPath,
+    }),
+    executeFile('git', ['status', '--porcelain'], {
+      cwd: project.canonicalPath,
+      env: { ...process.env, GIT_OPTIONAL_LOCKS: '0' },
+    }),
+    executeFile('git', ['config', 'ascend.fixture'], {
+      cwd: project.canonicalPath,
+    }),
+  ])
+  return {
+    head: head.stdout.trim(),
+    branch: branch.stdout.trim(),
+    status: status.stdout.trimEnd(),
+    sentinel: sentinel.stdout.trim(),
+    files: [project.fileName, project.dirtyFileName].sort(),
+  }
+}
 const ready = async (page: Page, fileName: string): Promise<void> => {
   await page
     .locator('.monaco-workbench')
@@ -86,118 +157,191 @@ const ready = async (page: Page, fileName: string): Promise<void> => {
     timeout: operationMs,
   })
 }
-
-const terminalProof = async (
-  page: Page,
-  expected: {
-    canonicalPath: string
-    branch: string
-    marker: string
-    gitStatus: string
-  },
-  createTerminal = true
-): Promise<boolean> => {
-  const visibleTerminals = page.locator('.terminal.xterm:visible')
-  if (createTerminal) {
-    const previousTerminalCount = await visibleTerminals.count()
-    await page.keyboard.press('F1')
-    await expect(page.locator('.quick-input-widget')).toBeVisible({
-      timeout: operationMs,
-    })
-    await page.keyboard.insertText('Terminal: Create New Terminal')
-    const firstCommand = page
-      .locator('.quick-input-list .monaco-list-row')
-      .first()
-    await expect(firstCommand).toBeVisible({ timeout: operationMs })
-    await firstCommand.click()
-    await expect
-      .poll(() => visibleTerminals.count(), { timeout: operationMs })
-      .toBeGreaterThan(previousTerminalCount)
-  }
-  const terminal = visibleTerminals.last()
+const visibleTerminal = async (page: Page) => {
+  const visible = page.locator('.terminal.xterm:visible')
+  if ((await visible.count()) === 0)
+    await page.keyboard.press('Control+Backquote')
+  const terminal = page.locator('.terminal.xterm:visible').last()
   await terminal.waitFor({ state: 'visible', timeout: operationMs })
+  return terminal
+}
+let terminalOrdinal = 0
+const terminalGatePaths: string[] = []
+const createReadyTerminal = async (page: Page, project: ProjectFixture) => {
+  const terminals = page.locator('.terminal.xterm')
+  const visible = page.locator('.terminal.xterm:visible')
+  const previous = await terminals.count()
+  await page.keyboard.press('F1')
+  await expect(page.locator('.quick-input-widget')).toBeVisible({
+    timeout: operationMs,
+  })
+  await page.keyboard.insertText('Terminal: Create New Terminal')
+  const command = page.locator('.quick-input-list .monaco-list-row').first()
+  await expect(command).toBeVisible({ timeout: operationMs })
+  await command.click()
   await expect
-    .poll(async () => (await terminal.innerText()).trim().length > 0, {
-      timeout: operationMs,
-    })
+    .poll(() => terminals.count(), { timeout: operationMs })
+    .toBeGreaterThan(previous)
+  const terminal = visible.last()
+  await expect
+    .poll(
+      async () => {
+        const text = (await terminal.innerText()).replace(/\s/gu, '')
+        return (
+          text.includes(project.canonicalPath) && text.includes(project.branch)
+        )
+      },
+      { timeout: operationMs }
+    )
     .toBe(true)
   const input = terminal.locator('textarea.xterm-helper-textarea')
   await input.focus()
   await expect(input).toBeFocused({ timeout: operationMs })
-  const executionMarker = 'DONE_' + String(++terminalProofOrdinal)
-  const command =
-    'printf BL013_%s= PWD; pwd -P; printf BL013_%s= ROOT; git rev-parse --show-toplevel; ' +
-    'printf BL013_%s= BRANCH; git branch --show-current; printf BL013_%s= STATUS; git status --porcelain | base64 -w0; printf BL013_%s= STATUS_END; printf BL013_%s= MARKER; git config ascend.fixture; ' +
-    'printf BL013_%s= ' +
-    executionMarker
-  await page.keyboard.insertText(command)
-  await page.keyboard.press('Enter')
+  const readinessOrdinal = String(++terminalOrdinal)
+  const readiness = 'BL014_TERMINAL_READY_' + readinessOrdinal
+  const readinessGate = path.join(
+    resultRoot,
+    'terminal-readiness-' + readinessOrdinal + '.fifo'
+  )
+  await rm(readinessGate, { force: true })
+  await executeFile('mkfifo', [readinessGate])
+  terminalGatePaths.push(readinessGate)
+  return { terminal, input, readiness, readinessOrdinal, readinessGate }
+}
+const terminalCommand = (project: ProjectFixture, marker: string): string =>
+  '/usr/local/bin/node ' +
+  path.join(REPOSITORY_ROOT, 'tests/e2e/fixtures/bl014-terminal-proof.mjs') +
+  ' ' +
+  project.dirtyFileName +
+  ' ' +
+  marker
+const requiredTerminalValues = (project: ProjectFixture, marker: string) => ({
+  cwd: project.canonicalPath,
+  gitRoot: project.canonicalPath,
+  branch: project.branch,
+  status: Buffer.from(project.gitStatus + '\n').toString('base64'),
+  gitSentinel: project.gitSentinel,
+  terminalSentinel: project.terminalSentinel,
+  marker,
+})
+const assertTerminalValues = (
+  text: string,
+  project: ProjectFixture,
+  marker: string
+) => {
+  const normalized = text.replace(/\s/gu, '')
+  const values = requiredTerminalValues(project, marker)
+  expect(normalized).toContain('BL014_PWD=' + values.cwd)
+  expect(normalized).toContain('BL014_ROOT=' + values.gitRoot)
+  expect(normalized).toContain('BL014_BRANCH=' + values.branch)
+  expect(normalized).toContain(
+    'BL014_STATUS=' + values.status + 'BL014_STATUS_END='
+  )
+  expect(normalized).toContain('BL014_GIT_SENTINEL=' + values.gitSentinel)
+  expect(normalized).toContain(
+    'BL014_TERMINAL_SENTINEL=' + values.terminalSentinel
+  )
+  expect(normalized).toContain('BL014_DONE=' + marker)
+  return values
+}
+const retainedTerminalText = async (
+  page: Page,
+  project: ProjectFixture,
+  marker: string
+) => {
+  const terminal = await visibleTerminal(page)
+  let text = ''
   await expect
     .poll(
-      async () =>
-        (await terminal.innerText()).includes('BL013_' + executionMarker),
-      {
-        timeout: operationMs,
-      }
+      async () => {
+        text = await terminal.innerText()
+        const normalized = text.replace(/\s/gu, '')
+        return (
+          normalized.includes('BL014_DONE=' + marker) &&
+          normalized.includes('BL014_PWD=' + project.canonicalPath)
+        )
+      },
+      { timeout: operationMs }
     )
     .toBe(true)
-  const normalized = (await terminal.innerText()).replace(/\s/gu, '')
-  const expectedStatusBase64 = Buffer.from(expected.gitStatus + '\n').toString(
-    'base64'
-  )
-  const required = [
-    'BL013_PWD=' + expected.canonicalPath,
-    'BL013_ROOT=' + expected.canonicalPath,
-    'BL013_BRANCH=' + expected.branch,
-    'BL013_STATUS=' + expectedStatusBase64 + 'BL013_STATUS_END=',
-    'BL013_MARKER=' + expected.marker,
-  ]
-  const matches = required.map((marker) => normalized.includes(marker))
-  expect(matches).toEqual([true, true, true, true, true])
-  return true
+  return { terminal, text }
 }
-
-const digestIdentity = (value: {
-  pid: number | null
-  processStartTime: string | null
-  port: number | null
-}) =>
-  createHash('sha256')
-    .update(
-      JSON.stringify({
-        pid: value.pid,
-        processStartTime: value.processStartTime,
-        port: value.port,
-      })
+const runTerminalProof = async (page: Page, project: ProjectFixture) => {
+  const { terminal, input, readiness, readinessOrdinal, readinessGate } =
+    await createReadyTerminal(page, project)
+  const marker = 'proof-' + String(terminalOrdinal)
+  await input.focus()
+  await expect(input).toBeFocused({ timeout: operationMs })
+  await page.keyboard.insertText(
+    'printf BL014_TERMINAL_READY_%s ' +
+      readinessOrdinal +
+      ' ; cat < ' +
+      readinessGate +
+      '; clear; ' +
+      terminalCommand(project, marker)
+  )
+  await page.keyboard.press('Enter')
+  let text = ''
+  await expect
+    .poll(
+      async () => {
+        text = await terminal.innerText()
+        return text.includes(readiness)
+      },
+      { timeout: operationMs }
     )
-    .digest('hex')
-
-const fixtureState = async (project: {
-  canonicalPath: string
-  fileName: string
-}) => {
-  const head = await executeFile('git', ['rev-parse', 'HEAD'], {
-    cwd: project.canonicalPath,
-  })
-  const status = await executeFile('git', ['status', '--porcelain'], {
-    cwd: project.canonicalPath,
-    env: { ...process.env, GIT_OPTIONAL_LOCKS: '0' },
-  })
-  const sentinel = await readFile(
-    path.join(project.canonicalPath, project.fileName)
-  )
-  return {
-    head: head.stdout.trim(),
-    status: status.stdout,
-    sentinel: createHash('sha256').update(sentinel).digest('hex'),
+    .toBe(true)
+  await writeFile(readinessGate, 'continue\n')
+  await rm(readinessGate, { force: true })
+  try {
+    await expect
+      .poll(
+        async () => {
+          text = await terminal.innerText()
+          return text.includes('BL014_DONE=' + marker)
+        },
+        { timeout: operationMs }
+      )
+      .toBe(true)
+  } catch (error) {
+    await writeFile(
+      restrictedPath,
+      JSON.stringify({ terminalReadFailure: { marker, text } }, null, 2) + '\n',
+      { mode: 0o600 }
+    )
+    throw error
   }
+  return { marker, text, values: assertTerminalValues(text, project, marker) }
 }
-
-const closeServer = async (server: Server): Promise<void> =>
-  new Promise((resolve) => server.close(() => resolve()))
+const activeFileIsVisible = async (
+  page: Page,
+  project: ProjectFixture
+): Promise<void> => {
+  await expect(
+    page.getByText(project.fileName, { exact: true }).first()
+  ).toBeVisible({ timeout: operationMs })
+  await expect(
+    page
+      .locator('.tabs-container .tab.active')
+      .filter({ hasText: project.fileName })
+      .first()
+  ).toBeVisible({ timeout: operationMs })
+  await expect(
+    page
+      .locator('.view-lines')
+      .filter({ hasText: project.editorSentinel })
+      .first()
+  ).toContainText(project.editorSentinel, { timeout: operationMs })
+}
+const processCommand = async (pid: number): Promise<string> =>
+  (await readFile('/proc/' + String(pid) + '/cmdline'))
+    .toString('utf8')
+    .split(String.fromCharCode(0))
+    .filter(Boolean)
+    .join(' ')
 
 test.describe.configure({ mode: 'serial', retries: 0 })
-test('preserves A/B/C sessions through keyboard switching and reconnection', async ({
+test('preserves A/B/C sessions with execution-joined measured evidence', async ({
   browser,
 }) => {
   test.skip(
@@ -206,9 +350,32 @@ test('preserves A/B/C sessions through keyboard switching and reconnection', asy
   )
   test.setTimeout(overallMs)
   await mkdir(resultRoot, { recursive: true })
-  await rm(evidencePath, { force: true })
-  const restrictedPath = path.join(resultRoot, 'restricted-authority.json')
-  await rm(restrictedPath, { force: true })
+  await Promise.all([
+    rm(evidencePath, { force: true }),
+    rm(restrictedPath, { force: true }),
+  ])
+  const executionId = id()
+  const executionStartedNs = nowNs()
+  const events: Array<Record<string, unknown>> = []
+  const observations: Array<Record<string, unknown>> = []
+  const transitions: Array<Record<string, unknown>> = []
+  const stateObservations: Array<Record<string, unknown>> = []
+  const networkObservations: Array<Record<string, unknown>> = []
+  const restrictedObservations: Array<Record<string, unknown>> = []
+  const workflows: WorkflowRecord[] = []
+  const pageWorkflow = new WeakMap<Page, WorkflowRecord>()
+  const recordEvent = (event: Record<string, unknown>) => {
+    const row = {
+      ...event,
+      eventId: id(),
+      executionId,
+      measured: true,
+      ordinal: events.length + 1,
+      observedNs: nowNs(),
+    }
+    events.push(row)
+    return row
+  }
   const fixtureRoot = await mkdtemp(path.join(os.tmpdir(), 'ascend-bl014-'))
   const counterOutput = path.join(resultRoot, 'a-counter.log')
   const counterIdentity = path.join(resultRoot, 'a-counter-identity.json')
@@ -217,12 +384,12 @@ test('preserves A/B/C sessions through keyboard switching and reconnection', asy
     rm(counterIdentity, { force: true }),
   ])
   const projects = await Promise.all(
-    BL014_FIXTURES.map(async (definition, index) => {
+    BL014_FIXTURES.map(async (definition, index): Promise<ProjectFixture> => {
       const canonicalPath = path.join(fixtureRoot, definition.key.toLowerCase())
       await mkdir(canonicalPath)
       await writeFile(
         path.join(canonicalPath, definition.fileName),
-        definition.editorSentinel + String.fromCharCode(10)
+        definition.editorSentinel + '\n'
       )
       await executeFile('git', ['init', '-b', definition.branch], {
         cwd: canonicalPath,
@@ -248,30 +415,24 @@ test('preserves A/B/C sessions through keyboard switching and reconnection', asy
       })
       await writeFile(
         path.join(canonicalPath, definition.dirtyFileName),
-        definition.terminalSentinel + String.fromCharCode(10)
+        definition.terminalSentinel + '\n'
       )
       return {
         ...definition,
         canonicalPath,
         createdAt: index + 1,
-        label: definition.key.toLowerCase(),
-        marker: definition.gitSentinel,
         gitStatus: '?? ' + definition.dirtyFileName,
       }
     })
   )
-  const before = await Promise.all(projects.map(fixtureState))
-  expect(new Set(before.map((row) => JSON.stringify(row))).size).toBe(3)
+  const projectByKey = new Map(
+    projects.map((project) => [project.key, project])
+  )
+  const beforeManifest = await Promise.all(projects.map(fixtureState))
+  const beforeManifestDigest = digestSessionEvidence(beforeManifest)
   const databasePath = path.join(fixtureRoot, 'ascend.sqlite')
   const library = await createProjectLibrary(databasePath)
-  for (const project of projects)
-    await library.create({
-      id: project.id,
-      name: project.name,
-      canonicalPath: project.canonicalPath,
-      createdAt: project.createdAt,
-    })
-  const events: unknown[] = []
+  for (const project of projects) await library.create(project)
   const baseConfig = createProjectRuntimeConfig({
     executablePath: CODE_SERVER_PATH,
     expectedUser: os.userInfo().username,
@@ -282,8 +443,26 @@ test('preserves A/B/C sessions through keyboard switching and reconnection', asy
       ...baseConfig,
       environment: { ...baseConfig.environment, EXTENSIONS_GALLERY: '{}' },
     }),
-    recordEvent: (event) => events.push(event),
+    recordEvent: (event: RuntimeSafeLifecycleEvent) =>
+      recordEvent(event as unknown as Record<string, unknown>),
   })
+  const instrumentedRuntime: ProjectRuntimeManager = {
+    ...runtime,
+    start: async (input) => {
+      const prior = runtime.inspect(input.projectId)
+      const snapshot = await runtime.start(input)
+      if (prior === snapshot)
+        recordEvent({
+          event: 'runtime.start.reused',
+          projectToken: snapshot.ownerToken,
+        })
+      return snapshot
+    },
+    shutdown: async () => {
+      recordEvent({ event: 'runtime.shutdown.invoked' })
+      return runtime.shutdown()
+    },
+  }
   const control = createServer()
   await new Promise<void>((resolve, reject) => {
     control.once('error', reject)
@@ -298,23 +477,28 @@ test('preserves A/B/C sessions through keyboard switching and reconnection', asy
   let webPort = 0
   let counterPid: number | undefined
   let counterStart: string | null = null
-  const contexts: import('@playwright/test').BrowserContext[] = []
-  const workflows: Array<{
-    project: string
-    projectToken: string
-    executed: true
-    management: number
-    extensionHost: number
-    unknown: number
-    stablePrefix: true
-    publicAuthorityLeaks: 0
-  }> = []
-  const reentries: Array<Record<string, unknown>> = []
+  let counterCommandDigest = ''
+  const contexts: BrowserContext[] = []
+  const terminalProofs = new Map<
+    string,
+    {
+      marker: string
+      text: string
+      values: ReturnType<typeof requiredTerminalValues>
+    }
+  >()
+  const initialIdentity = new Map<string, Record<string, unknown>>()
   const awaySamples: Array<Record<string, unknown>> = []
-  const exactUrls: string[] = []
-  const focusTargets: string[] = []
-  const identity = (project: (typeof projects)[number]) => {
-    const snapshot = runtime.inspect(project.id)!
+  let publicEvidence: Record<string, unknown> | undefined
+  let cleanup: Record<string, unknown> | undefined
+  let controlUnchanged = false
+  let storageEvidence: Record<string, unknown> | undefined
+  let serverStateOutcome = 'unsupported'
+  let browserEditorOutcome = 'unsupported'
+  const identity = (project: ProjectFixture) => {
+    const snapshot = runtime.inspect(project.id)
+    if (!snapshot)
+      throw new Error('Missing runtime identity for ' + project.key)
     return {
       pid: snapshot.pid,
       processStartTime: snapshot.processStartTime,
@@ -322,20 +506,366 @@ test('preserves A/B/C sessions through keyboard switching and reconnection', asy
       stableRoute: snapshot.stableRoute,
     }
   }
-  const digestIdentity = (project: (typeof projects)[number]) =>
+  const identityDigest = (project: ProjectFixture) =>
     digestSessionEvidence(identity(project))
-  let publicEvidence: Record<string, unknown> | undefined
-  let cleanupResources: Array<Record<string, unknown>> = []
-  let cleanupBefore: Record<string, number> = {}
-  let contextCloseFailures = 0
-  let controlUnchanged = false
-  let manifestEqual = false
+  const focus = async (page: Page): Promise<string> =>
+    page.evaluate(() => {
+      const active = document.activeElement
+      if (!active) return 'none'
+      const role =
+        active.tagName === 'H1' ? 'heading' : active.tagName.toLowerCase()
+      const name =
+        active.getAttribute('aria-label') ?? active.textContent?.trim() ?? ''
+      return role + ':' + name
+    })
+  const observeSurface = async (page: Page, closed = false) => {
+    const row = closed
+      ? {
+          observationId: id(),
+          executionId,
+          measured: true,
+          observedNs: nowNs(),
+          url: 'closed',
+          surface: 'Closed',
+          focus: 'none',
+        }
+      : {
+          observationId: id(),
+          executionId,
+          measured: true,
+          observedNs: nowNs(),
+          url: new URL(page.url()).pathname,
+          surface: (await page.locator('.monaco-workbench').isVisible())
+            ? 'Workbench'
+            : 'Home',
+          focus: await focus(page),
+        }
+    observations.push(row)
+    return row
+  }
+  const eventDeltas = (beforeOrdinal: number, afterOrdinal: number) => {
+    const count = (name: string) =>
+      events.filter(
+        (event) =>
+          Number(event.ordinal) > beforeOrdinal &&
+          Number(event.ordinal) <= afterOrdinal &&
+          event.event === name
+      ).length
+    return {
+      request: count('browser.navigation.request'),
+      start: count('runtime.start.requested'),
+      reuse: count('runtime.start.reused'),
+      stop: count('runtime.stop.invoked'),
+      shutdown: count('runtime.shutdown.invoked'),
+    }
+  }
+  const beginTransition = async (transitionId: string, page: Page) => ({
+    transitionId,
+    transitionExecutionId: id(),
+    before: await observeSurface(page),
+    beforeOrdinal: events.length,
+  })
+  const finishTransition = async (
+    started: Awaited<ReturnType<typeof beginTransition>>,
+    page: Page,
+    options: {
+      input: string
+      workflowId?: string
+      home?: boolean
+      closed?: boolean
+    }
+  ) => {
+    const after = await observeSurface(page, options.closed)
+    let home: Record<string, unknown> | undefined
+    if (options.home) {
+      const cards = []
+      for (const project of projects)
+        cards.push({
+          project: project.key,
+          projectToken: deriveProjectOwnerToken(project.id),
+          count: await page.getByText(project.name, { exact: true }).count(),
+          openCount: await page
+            .getByRole('button', { name: 'Open ' + project.name })
+            .count(),
+          closeCount: await page
+            .getByRole('button', { name: 'Close ' + project.name })
+            .count(),
+        })
+      const runtimeControlsPresent = await page
+        .getByRole('button', { name: /Stop|Restart/u })
+        .count()
+      home = { cards, runtimeControlsPresent, focus: after.focus }
+      expect(
+        cards.every(
+          (card) =>
+            card.count === 1 && card.openCount === 1 && card.closeCount === 1
+        )
+      ).toBe(true)
+      expect(runtimeControlsPresent).toBe(0)
+      expect(after.focus).toBe('heading:Ascend')
+    }
+    const row = {
+      transitionId: started.transitionId,
+      executionId,
+      transitionExecutionId: started.transitionExecutionId,
+      measured: true,
+      input: options.input,
+      ...(options.workflowId ? { workflowId: options.workflowId } : {}),
+      beforeObservationId: started.before.observationId,
+      afterObservationId: after.observationId,
+      eventRange: {
+        beforeOrdinal: started.beforeOrdinal,
+        afterOrdinal: events.length,
+      },
+      eventDeltas: eventDeltas(started.beforeOrdinal, events.length),
+      ...(home ? { home } : {}),
+    }
+    transitions.push(row)
+    return row
+  }
+  const beginWorkflow = (
+    page: Page,
+    workflowId: string,
+    project: ProjectFixture,
+    transitionExecutionId: string
+  ) => {
+    const expected = BL014_WORKFLOW_EXPECTATIONS.find(
+      (row) => row.id === workflowId
+    )
+    if (!expected) throw new Error('Unknown workflow ' + workflowId)
+    const workflow: WorkflowRecord = {
+      id: workflowId,
+      project: project.key,
+      projectToken: deriveProjectOwnerToken(project.id),
+      reconnection: expected.reconnection,
+      executionId: id(),
+      transitionExecutionId,
+      management: 0,
+      extensionHost: 0,
+      unknown: 0,
+    }
+    workflows.push(workflow)
+    pageWorkflow.set(page, workflow)
+    return workflow
+  }
+  const attachTraffic = (context: BrowserContext) =>
+    context.on('request', (request: Request) => {
+      const url = new URL(request.url())
+      const project = projects.find((candidate) =>
+        url.pathname.startsWith('/projects/' + candidate.id + '/workbench/')
+      )
+      let page: Page | undefined
+      try {
+        page = request.frame().page()
+      } catch {
+        return
+      }
+      const workflow = pageWorkflow.get(page)
+      if (
+        request.isNavigationRequest() &&
+        request.resourceType() === 'document'
+      )
+        recordEvent({
+          event: 'browser.navigation.request',
+          ...(project
+            ? { projectToken: deriveProjectOwnerToken(project.id) }
+            : {}),
+        })
+      if (!project || !workflow || workflow.project !== project.key) return
+      const internalLeak = projects.some((candidate) => {
+        const snapshot = runtime.inspect(candidate.id)
+        return (
+          snapshot?.port !== null &&
+          snapshot?.port !== undefined &&
+          request.url().includes(':' + String(snapshot.port))
+        )
+      })
+      networkObservations.push({
+        observationId: id(),
+        executionId,
+        measured: true,
+        workflowId: workflow.id,
+        transitionExecutionId: workflow.transitionExecutionId,
+        projectToken: workflow.projectToken,
+        stableUrl: url.pathname,
+        role: 'http',
+        reconnection: workflow.reconnection,
+        stablePrefix: url.pathname.startsWith(
+          '/projects/' + project.id + '/workbench/'
+        ),
+        leakCount: internalLeak ? 1 : 0,
+        leakClasses: internalLeak ? ['internal-authority'] : [],
+      })
+      restrictedObservations.push({
+        kind: 'http',
+        workflowId: workflow.id,
+        url: request.url(),
+        method: request.method(),
+        resourceType: request.resourceType(),
+      })
+    })
+  const attachSockets = (page: Page) =>
+    page.on('websocket', (socket: PlaywrightWebSocket) => {
+      const workflow = pageWorkflow.get(page)
+      if (!workflow) return
+      const url = new URL(socket.url())
+      const project = projects.find((candidate) =>
+        url.pathname.startsWith('/projects/' + candidate.id + '/workbench/')
+      )
+      if (!project || project.key !== workflow.project) return
+      let observed = false
+      socket.on('framesent', ({ payload }) => {
+        if (observed) return
+        const role = classifyWorkbenchConnectionRolePayload(
+          Buffer.isBuffer(payload) ? payload : Buffer.from(payload)
+        )
+        if (role === undefined) return
+        observed = true
+        if (role === 'Management') workflow.management += 1
+        else if (role === 'ExtensionHost') workflow.extensionHost += 1
+        else {
+          workflow.unknown += 1
+          return
+        }
+        const internalLeak = projects.some((candidate) => {
+          const snapshot = runtime.inspect(candidate.id)
+          return (
+            snapshot?.port !== null &&
+            snapshot?.port !== undefined &&
+            socket.url().includes(':' + String(snapshot.port))
+          )
+        })
+        networkObservations.push({
+          observationId: id(),
+          executionId,
+          measured: true,
+          workflowId: workflow.id,
+          transitionExecutionId: workflow.transitionExecutionId,
+          projectToken: workflow.projectToken,
+          stableUrl: url.pathname,
+          role,
+          reconnection: workflow.reconnection,
+          stablePrefix: url.pathname.startsWith(
+            '/projects/' + project.id + '/workbench/'
+          ),
+          leakCount: internalLeak ? 1 : 0,
+          leakClasses: internalLeak ? ['internal-authority'] : [],
+        })
+        restrictedObservations.push({
+          kind: 'websocket',
+          workflowId: workflow.id,
+          url: socket.url(),
+          role,
+          reconnection: workflow.reconnection,
+        })
+      })
+    })
+  const stateObservation = async (
+    label: string,
+    page: Page,
+    project: ProjectFixture,
+    terminalText: string,
+    values: ReturnType<typeof requiredTerminalValues>,
+    unsupported = false
+  ) => {
+    await ready(page, project.fileName)
+    if (!unsupported) await activeFileIsVisible(page, project)
+    const body = await page.locator('.monaco-workbench').innerText()
+    const negativeAssertions: Array<Record<string, unknown>> = []
+    for (const other of projects.filter(
+      (candidate) => candidate.key !== project.key
+    ))
+      for (const [resourceClass, expected] of [
+        ['file', other.fileName],
+        ['editor-sentinel', other.editorSentinel],
+        ['terminal-sentinel', other.terminalSentinel],
+        ['cwd', other.canonicalPath],
+        ['branch', other.branch],
+        ['git-sentinel', other.gitSentinel],
+      ] as const) {
+        const matchCount = body.split(expected).length - 1
+        expect(matchCount).toBe(0)
+        negativeAssertions.push({
+          observationId: id(),
+          measured: true,
+          project: other.key,
+          projectToken: deriveProjectOwnerToken(other.id),
+          resourceClass,
+          valueDigest: digestSessionEvidence(expected),
+          matchCount,
+          absent: matchCount === 0,
+        })
+      }
+    const row = {
+      label,
+      observationId: id(),
+      executionId,
+      measured: true,
+      observedNs: nowNs(),
+      project: project.key,
+      projectToken: deriveProjectOwnerToken(project.id),
+      identityDigest: identityDigest(project),
+      explorerDigest: digestSessionEvidence({
+        file: project.fileName,
+        visible: true,
+      }),
+      editorFileDigest: digestSessionEvidence(
+        unsupported ? 'unsupported' : project.fileName
+      ),
+      editorSentinelDigest: digestSessionEvidence(
+        unsupported ? 'unsupported' : project.editorSentinel
+      ),
+      terminalDigest: digestSessionEvidence(terminalText),
+      cwdDigest: digestSessionEvidence(
+        unsupported ? 'unsupported' : values.cwd
+      ),
+      gitRootDigest: digestSessionEvidence(
+        unsupported ? 'unsupported' : values.gitRoot
+      ),
+      branchDigest: digestSessionEvidence(
+        unsupported ? 'unsupported' : values.branch
+      ),
+      statusDigest: digestSessionEvidence(
+        unsupported ? 'unsupported' : values.status
+      ),
+      gitSentinelDigest: digestSessionEvidence(
+        unsupported ? 'unsupported' : values.gitSentinel
+      ),
+      terminalSentinelDigest: digestSessionEvidence(
+        unsupported ? 'unsupported' : values.terminalSentinel
+      ),
+      visible: true,
+      negativeAssertions,
+    }
+    stateObservations.push(row)
+    restrictedObservations.push({
+      kind: 'state',
+      label,
+      project: project.key,
+      identity: identity(project),
+      file: project.fileName,
+      editorSentinel: project.editorSentinel,
+      terminalText,
+      values,
+      negativeAssertions,
+    })
+    return row
+  }
+
   try {
     controller = createApiServerController({
       port: 0,
       fastify: { logger: false },
       createProjectLibrary: async () => library,
-      createProjectRuntimeManager: () => runtime,
+      createProjectRuntimeManager: () => instrumentedRuntime,
+      createWorkbenchProxyManager: (projectLibrary, projectRuntime) =>
+        createWorkbenchProxyManager({
+          projectLibrary,
+          projectRuntime,
+          frontDoorToken: resolveFrontDoorToken(),
+          recordEvent: (event: WorkbenchSafeEvent) =>
+            recordEvent(event as unknown as Record<string, unknown>),
+        }),
       createProjectRegistration: async () => ({
         register: async () => ({
           disposition: 'existing',
@@ -381,122 +911,131 @@ test('preserves A/B/C sessions through keyboard switching and reconnection', asy
         { timeout: operationMs }
       )
       .toBe(200)
-
     const context = await browser.newContext({ serviceWorkers: 'block' })
     contexts.push(context)
+    attachTraffic(context)
     const page = await context.newPage()
-    let activeWorkflow: (typeof workflows)[number] | undefined
-    page.on('websocket', (socket) => {
-      const workflow = activeWorkflow
-      if (!workflow) return
-      const pathname = new URL(socket.url()).pathname
-      const project = projects.find((candidate) =>
-        pathname.startsWith('/projects/' + candidate.id + '/workbench/')
-      )
-      if (!project || project.key !== workflow.project) return
-      socket.on('framesent', ({ payload }) => {
-        const role = classifyWorkbenchConnectionRolePayload(
-          Buffer.isBuffer(payload) ? payload : Buffer.from(payload)
-        )
-        if (role === 'Management') workflow.management += 1
-        else if (role === 'ExtensionHost') workflow.extensionHost += 1
-        else if (role !== undefined) workflow.unknown += 1
-      })
+    attachSockets(page)
+    await page.goto(origin + '/', {
+      waitUntil: 'domcontentloaded',
+      timeout: operationMs,
     })
-    const beginWorkflow = (project: (typeof projects)[number]) => {
-      activeWorkflow = {
-        project: project.key,
-        projectToken: deriveProjectOwnerToken(project.id),
-        executed: true,
-        management: 0,
-        extensionHost: 0,
-        unknown: 0,
-        stablePrefix: true,
-        publicAuthorityLeaks: 0,
-      }
-      workflows.push(activeWorkflow)
-    }
-    const home = async () => {
-      const link = page.getByRole('link', { name: 'Projects' })
-      await link.focus()
-      focusTargets.push((await link.getAttribute('aria-label')) ?? 'Projects')
-      await page.keyboard.press('Enter')
-      await expect(page).toHaveURL(origin + '/', { timeout: operationMs })
-      exactUrls.push('/')
-    }
-    const openFromHome = async (key: string, reentry: boolean) => {
-      const project = projects.find((candidate) => candidate.key === key)!
+    await expect(page.getByRole('heading', { name: 'Ascend' })).toBeFocused({
+      timeout: operationMs,
+    })
+    const openFromHome = async (
+      transitionId: string,
+      workflowId: string,
+      key: 'A' | 'B' | 'C'
+    ) => {
+      const project = projectByKey.get(key)!
       const button = page.getByRole('button', { name: 'Open ' + project.name })
-      await expect(button).toBeVisible({ timeout: operationMs })
       await button.focus()
-      focusTargets.push(
-        (await button.getAttribute('aria-label')) ?? 'Open ' + project.name
+      await expect(button).toBeFocused()
+      const started = await beginTransition(transitionId, page)
+      const workflow = beginWorkflow(
+        page,
+        workflowId,
+        project,
+        started.transitionExecutionId
       )
-      const beforeIdentity = runtime.inspect(project.id)
-        ? digestIdentity(project)
-        : undefined
-      beginWorkflow(project)
       await page.keyboard.press('Enter')
       await expect(page).toHaveURL(
         origin + '/projects/' + project.id + '/workbench/',
         { timeout: operationMs }
       )
       await ready(page, project.fileName)
-      exactUrls.push('/projects/' + project.id + '/workbench/')
-      if (reentry) {
-        const afterIdentity = digestIdentity(project)
-        reentries.push({
-          project: project.key,
-          executed: true,
-          reused: beforeIdentity === afterIdentity,
-          startCount: 0,
-          stopCount: 0,
-          shutdownCount: 0,
-          urlClass: 'stable-project-prefix',
-          focus: 'Open ' + project.key,
-          identityDigest: afterIdentity,
+      const expected = BL014_WORKFLOW_EXPECTATIONS.find(
+        (row) => row.id === workflowId
+      )!
+      await expect
+        .poll(
+          () => ({
+            management: workflow.management,
+            extensionHost: workflow.extensionHost,
+            unknown: workflow.unknown,
+          }),
+          { timeout: operationMs }
+        )
+        .toEqual({
+          management: expected.management,
+          extensionHost: expected.extensionHost,
+          unknown: 0,
         })
-      }
+      await finishTransition(started, page, {
+        input: 'keyboard:Enter',
+        workflowId,
+      })
       return project
     }
-    const openFileAndTerminal = async (project: (typeof projects)[number]) => {
-      await page.getByText(project.fileName, { exact: true }).first().click()
-      await expect(
-        page
-          .locator('.view-lines')
-          .filter({ hasText: project.editorSentinel })
-          .first()
-      ).toContainText(project.editorSentinel, { timeout: operationMs })
-      expect(await terminalProof(page, project)).toBe(true)
+    const homeFromWorkbench = async (transitionId: string) => {
+      const link = page.getByRole('link', { name: 'Projects' })
+      await link.focus()
+      await expect(link).toBeFocused()
+      const started = await beginTransition(transitionId, page)
+      await page.keyboard.press('Enter')
+      await expect(page).toHaveURL(origin + '/', { timeout: operationMs })
+      await expect(page.getByRole('heading', { name: 'Ascend' })).toBeFocused({
+        timeout: operationMs,
+      })
+      await finishTransition(started, page, {
+        input: 'keyboard:Enter',
+        home: true,
+      })
     }
-
-    await page.goto(origin + '/', {
-      waitUntil: 'domcontentloaded',
-      timeout: operationMs,
-    })
     for (const key of BL014_INITIAL_START_ORDER) {
-      const project = await openFromHome(key, false)
-      await openFileAndTerminal(project)
-      if (key !== 'A') await home()
+      const project = await openFromHome(
+        'initial-open-' + key,
+        'initial-' + key,
+        key
+      )
+      await page.getByText(project.fileName, { exact: true }).first().click()
+      await activeFileIsVisible(page, project)
+      const proof = await runTerminalProof(page, project)
+      terminalProofs.set(project.key, proof)
+      initialIdentity.set(project.key, identity(project))
+      await stateObservation(
+        'initial-' + project.key,
+        page,
+        project,
+        proof.text,
+        proof.values
+      )
+      if (key !== 'A') await homeFromWorkbench('initial-home-' + key)
     }
-    const initial = Object.fromEntries(
-      projects.map((project) => [project.key, identity(project)])
-    )
-    expect(new Set(projects.map(digestIdentity)).size).toBe(3)
-    const a = projects[0]!
-    const terminal = page.locator('.terminal.xterm:visible').last()
-    const input = terminal.locator('textarea.xterm-helper-textarea')
-    await input.focus()
+    expect(new Set(projects.map(identityDigest)).size).toBe(3)
+    const a = projectByKey.get('A')!
+    const counterTerminal = await createReadyTerminal(page, a)
+    const counterMarker = 'counter-' + String(terminalOrdinal)
     const counterCommand =
-      'setsid /usr/local/bin/node ' +
-      path.join(REPOSITORY_ROOT, 'tests/e2e/fixtures/bl014-counter.mjs') +
+      'printf BL014_TERMINAL_READY_%s ' +
+      counterTerminal.readinessOrdinal +
+      ' ; cat < ' +
+      counterTerminal.readinessGate +
+      '; clear; ' +
+      terminalCommand(a, counterMarker) +
+      '; setsid /usr/local/bin/node ' +
+      path.join(REPOSITORY_ROOT, BL014_COUNTER_CONTRACT.executable) +
       ' ' +
       counterOutput +
       ' ' +
       counterIdentity +
-      ' 60000'
+      ' ' +
+      String(BL014_COUNTER_CONTRACT.maximumMs)
+    counterCommandDigest = digestSessionEvidence(counterCommand)
     await page.keyboard.insertText(counterCommand)
     await page.keyboard.press('Enter')
+    await expect
+      .poll(
+        async () =>
+          (await counterTerminal.terminal.innerText()).includes(
+            counterTerminal.readiness
+          ),
+        { timeout: operationMs }
+      )
+      .toBe(true)
+    await writeFile(counterTerminal.readinessGate, 'continue\n')
+    await rm(counterTerminal.readinessGate, { force: true })
     await expect
       .poll(
         () =>
@@ -507,276 +1046,525 @@ test('preserves A/B/C sessions through keyboard switching and reconnection', asy
         { timeout: operationMs }
       )
       .toBe(true)
-    const counterRecord = JSON.parse(
-      await readFile(counterIdentity, 'utf8')
-    ) as { pid: number }
-    counterPid = counterRecord.pid
+    counterPid = (
+      JSON.parse(await readFile(counterIdentity, 'utf8')) as { pid: number }
+    ).pid
     counterStart = await readProcessStartTime(counterPid)
     expect(counterStart).not.toBeNull()
-    const sequence = async () => {
+    const sequenceFile = async () => {
       const text = await readFile(counterOutput, 'utf8')
-      const values = [...text.matchAll(/BL014_A_SEQUENCE=(\d+)/gu)].map(
-        (match) => Number(match[1])
+      return (
+        [...text.matchAll(/BL014_A_SEQUENCE=(\d+)/gu)]
+          .map((match) => Number(match[1]))
+          .at(-1) ?? 0
       )
-      return values.at(-1) ?? 0
     }
-    const beforeLeaveSequence = await expect
-      .poll(sequence, { timeout: operationMs })
-      .toBeGreaterThan(0)
-      .then(() => sequence())
-
-    await home()
-    await openFromHome('B', true)
-    const sampleOne = await expect
-      .poll(sequence, { timeout: operationMs })
-      .toBeGreaterThan(beforeLeaveSequence)
-      .then(() => sequence())
-    awaySamples.push({
-      executed: true,
-      browserInteraction: false,
-      pidDigest: digestSessionEvidence([counterPid, counterStart]),
-      sequence: sampleOne,
-    })
-    const bIdentityBeforeHistory = digestIdentity(projects[1]!)
+    const visibleSequence = async (terminal = counterTerminal.terminal) =>
+      [...(await terminal.innerText()).matchAll(/BL014_A_SEQUENCE=(\d+)/gu)]
+        .map((match) => Number(match[1]))
+        .at(-1) ?? 0
+    try {
+      await expect
+        .poll(() => visibleSequence(), { timeout: operationMs })
+        .toBeGreaterThan(0)
+    } catch (error) {
+      await writeFile(
+        restrictedPath,
+        JSON.stringify(
+          { counterVisibleFailure: await counterTerminal.terminal.innerText() },
+          null,
+          2
+        ) + String.fromCharCode(10),
+        { mode: 0o600 }
+      )
+      throw error
+    }
+    const visibleBeforeLeave = await visibleSequence()
+    const counterText = await counterTerminal.terminal.innerText()
+    const counterValues = assertTerminalValues(counterText, a, counterMarker)
+    await stateObservation(
+      'before-leave-A',
+      page,
+      a,
+      counterText,
+      counterValues
+    )
+    const sampleAway = async (minimum: number) => {
+      await expect
+        .poll(sequenceFile, { timeout: operationMs })
+        .toBeGreaterThan(minimum)
+      const outputSequence = await sequenceFile()
+      const start = await readProcessStartTime(counterPid!)
+      const command = await processCommand(counterPid!)
+      expect(start).toBe(counterStart)
+      expect(command).toContain('bl014-counter.mjs')
+      const row = {
+        observationId: id(),
+        executionId,
+        measured: true,
+        observedNs: nowNs(),
+        browserInteraction: false,
+        pidLive: start === counterStart,
+        processIdentityDigest: digestSessionEvidence([counterPid, start]),
+        commandDigest: digestSessionEvidence(command),
+        sequence: outputSequence,
+        outputSequence,
+      }
+      awaySamples.push(row)
+      restrictedObservations.push({
+        kind: 'away-sample',
+        ...row,
+        pid: counterPid,
+        start,
+        command,
+      })
+      return outputSequence
+    }
+    await homeFromWorkbench('switch-home-A')
+    await openFromHome('switch-open-B', 'open-B', 'B')
+    const sampleOne = await sampleAway(visibleBeforeLeave)
+    const historyBack = await beginTransition('history-back-B', page)
     await page.goBack({ waitUntil: 'domcontentloaded', timeout: operationMs })
-    await expect(page).toHaveURL(origin + '/', { timeout: operationMs })
-    beginWorkflow(projects[1]!)
+    await expect(page).toHaveURL(origin + '/')
+    await expect(page.getByRole('heading', { name: 'Ascend' })).toBeFocused({
+      timeout: operationMs,
+    })
+    await finishTransition(historyBack, page, {
+      input: 'history:Back',
+      home: true,
+    })
+    const b = projectByKey.get('B')!
+    const historyForward = await beginTransition('history-forward-B', page)
+    const historyWorkflow = beginWorkflow(
+      page,
+      'history-forward-B',
+      b,
+      historyForward.transitionExecutionId
+    )
     await page.goForward({
       waitUntil: 'domcontentloaded',
       timeout: operationMs,
     })
-    await ready(page, projects[1]!.fileName)
-    expect(digestIdentity(projects[1]!)).toBe(bIdentityBeforeHistory)
-
-    await home()
-    await openFromHome('C', true)
-    const sampleTwo = await expect
-      .poll(sequence, { timeout: operationMs })
-      .toBeGreaterThan(sampleOne)
-      .then(() => sequence())
-    awaySamples.push({
-      executed: true,
-      browserInteraction: false,
-      pidDigest: digestSessionEvidence([counterPid, counterStart]),
-      sequence: sampleTwo,
-    })
-    expect(await readProcessStartTime(counterPid)).toBe(counterStart)
-
-    await home()
-    await openFromHome('A', true)
-    expect(digestIdentity(a)).toBe(digestSessionEvidence(initial.A))
-    await expect(
-      page.getByText(a.fileName, { exact: true }).first()
-    ).toBeVisible({ timeout: operationMs })
-    if ((await page.locator('.terminal.xterm:visible').count()) === 0)
-      await page.keyboard.press('Control+Backquote')
-    const returnTerminal = page.locator('.terminal.xterm:visible').last()
-    await returnTerminal.waitFor({ state: 'visible', timeout: operationMs })
-    const visibleSequence = async () => {
-      const values = [
-        ...(await returnTerminal.innerText()).matchAll(
-          /BL014_A_SEQUENCE=(\d+)/gu
-        ),
-      ].map((match) => Number(match[1]))
-      return values.at(-1) ?? 0
-    }
+    await ready(page, b.fileName)
     await expect
-      .poll(visibleSequence, { timeout: operationMs })
+      .poll(
+        () => ({
+          management: historyWorkflow.management,
+          extensionHost: historyWorkflow.extensionHost,
+          unknown: historyWorkflow.unknown,
+        }),
+        { timeout: operationMs }
+      )
+      .toEqual({ management: 1, extensionHost: 1, unknown: 0 })
+    await finishTransition(historyForward, page, {
+      input: 'history:Forward',
+      workflowId: 'history-forward-B',
+    })
+    await homeFromWorkbench('switch-home-B')
+    await openFromHome('switch-open-C', 'open-C', 'C')
+    const sampleTwo = await sampleAway(sampleOne)
+    await homeFromWorkbench('switch-home-C')
+    await openFromHome('switch-open-A', 'open-A', 'A')
+    expect(identityDigest(a)).toBe(
+      digestSessionEvidence(initialIdentity.get('A'))
+    )
+    await activeFileIsVisible(page, a)
+    const returnedTerminal = await visibleTerminal(page)
+    await expect
+      .poll(() => visibleSequence(returnedTerminal), { timeout: operationMs })
       .toBeGreaterThan(sampleTwo)
-    const returnSequence = await visibleSequence()
-
-    await home()
-    const b = await openFromHome('B', true)
-    await page.keyboard.press('Control+Backquote')
-    expect(await terminalProof(page, b, false)).toBe(true)
-    await home()
-    const c = await openFromHome('C', true)
-    await page.keyboard.press('Control+Backquote')
-    expect(await terminalProof(page, c, false)).toBe(true)
-    expect(reentries.map((row) => row.project)).toEqual([
-      ...BL014_OPEN_REENTRY_ORDER,
-    ])
-    expect(reentries.every((row) => row.reused === true)).toBe(true)
-
-    beginWorkflow(a)
+    const visibleReturn = await visibleSequence(returnedTerminal)
+    const returnText = await returnedTerminal.innerText()
+    assertTerminalValues(returnText, a, counterMarker)
+    await stateObservation('return-A', page, a, returnText, counterValues)
+    await homeFromWorkbench('revisit-home-A')
+    await openFromHome('revisit-open-B', 'revisit-B', 'B')
+    const bProof = terminalProofs.get('B')!
+    const { text: bRetained } = await retainedTerminalText(
+      page,
+      b,
+      bProof.marker
+    )
+    assertTerminalValues(bRetained, b, bProof.marker)
+    await activeFileIsVisible(page, b)
+    await stateObservation('revisit-B', page, b, bRetained, bProof.values)
+    await homeFromWorkbench('revisit-home-B')
+    const c = await openFromHome('revisit-open-C', 'revisit-C', 'C')
+    const cProof = terminalProofs.get('C')!
+    const { text: cRetained } = await retainedTerminalText(
+      page,
+      c,
+      cProof.marker
+    )
+    assertTerminalValues(cRetained, c, cProof.marker)
+    await activeFileIsVisible(page, c)
+    await stateObservation('revisit-C', page, c, cRetained, cProof.values)
+    expect(
+      transitions
+        .filter(
+          (row) =>
+            String(row.transitionId).includes('open-') &&
+            !String(row.transitionId).startsWith('initial-')
+        )
+        .map((row) => String(row.transitionId).split('-').at(-1))
+    ).toEqual([...BL014_OPEN_REENTRY_ORDER])
+    const directA = await beginTransition('direct-A', page)
+    const directWorkflow = beginWorkflow(
+      page,
+      'direct-A',
+      a,
+      directA.transitionExecutionId
+    )
     await page.goto(origin + '/projects/' + a.id + '/workbench/', {
       waitUntil: 'domcontentloaded',
       timeout: operationMs,
     })
     await ready(page, a.fileName)
-    beginWorkflow(a)
+    await expect
+      .poll(() => ({
+        management: directWorkflow.management,
+        extensionHost: directWorkflow.extensionHost,
+      }))
+      .toEqual({ management: 1, extensionHost: 1 })
+    await finishTransition(directA, page, {
+      input: 'direct-link',
+      workflowId: 'direct-A',
+    })
+    const reloadA = await beginTransition('reload-A', page)
+    const reloadWorkflow = beginWorkflow(
+      page,
+      'reload-A',
+      a,
+      reloadA.transitionExecutionId
+    )
     await page.reload({ waitUntil: 'domcontentloaded', timeout: operationMs })
     await ready(page, a.fileName)
-    expect(digestIdentity(a)).toBe(digestSessionEvidence(initial.A))
-
+    await expect
+      .poll(() => ({
+        management: reloadWorkflow.management,
+        extensionHost: reloadWorkflow.extensionHost,
+      }))
+      .toEqual({ management: 1, extensionHost: 1 })
+    await finishTransition(reloadA, page, {
+      input: 'page:Reload',
+      workflowId: 'reload-A',
+    })
     const fresh = await browser.newContext({
       storageState: { cookies: [], origins: [] },
       serviceWorkers: 'block',
     })
     contexts.push(fresh)
+    attachTraffic(fresh)
     const freshPage = await fresh.newPage()
+    attachSockets(freshPage)
+    await freshPage.goto(origin + '/', {
+      waitUntil: 'domcontentloaded',
+      timeout: operationMs,
+    })
+    await fresh.addCookies([
+      { name: 'bl014-disposable', value: 'seed', url: origin },
+    ])
+    await freshPage.evaluate(async () => {
+      localStorage.setItem('bl014', 'seed')
+      sessionStorage.setItem('bl014', 'seed')
+      await caches.open('bl014-disposable')
+    })
+    const enumerateStorage = async () => ({
+      cookies: (await fresh.cookies(origin)).length,
+      ...(await freshPage.evaluate(async () => ({
+        localStorage: localStorage.length,
+        sessionStorage: sessionStorage.length,
+        cacheStorage: (await caches.keys()).length,
+        serviceWorkers: (await navigator.serviceWorker.getRegistrations())
+          .length,
+      }))),
+    })
+    const storageBefore = await enumerateStorage()
     const cdp = await fresh.newCDPSession(freshPage)
     await cdp.send('Network.enable')
-    await cdp.send('Network.clearBrowserCache')
-    await cdp.send('Storage.clearDataForOrigin', {
+    const cacheClearResult = await cdp.send('Network.clearBrowserCache')
+    const originClearResult = await cdp.send('Storage.clearDataForOrigin', {
       origin,
       storageTypes: 'all',
     })
-    const freshWorkflow = {
-      project: 'B',
-      projectToken: deriveProjectOwnerToken(b.id),
-      executed: true as const,
-      management: 0,
-      extensionHost: 0,
-      unknown: 0,
-      stablePrefix: true as const,
-      publicAuthorityLeaks: 0 as const,
-    }
-    workflows.push(freshWorkflow)
-    freshPage.on('websocket', (socket) => {
-      socket.on('framesent', ({ payload }) => {
-        const role = classifyWorkbenchConnectionRolePayload(
-          Buffer.isBuffer(payload) ? payload : Buffer.from(payload)
-        )
-        if (role === 'Management') freshWorkflow.management += 1
-        else if (role === 'ExtensionHost') freshWorkflow.extensionHost += 1
-        else if (role !== undefined) freshWorkflow.unknown += 1
-      })
+    await fresh.clearCookies()
+    await freshPage.evaluate(async () => {
+      localStorage.clear()
+      sessionStorage.clear()
+      for (const name of await caches.keys()) await caches.delete(name)
+      for (const registration of await navigator.serviceWorker.getRegistrations())
+        await registration.unregister()
     })
+    const storageAfter = await enumerateStorage()
+    expect(storageBefore.cookies).toBeGreaterThan(0)
+    expect(storageBefore.localStorage).toBeGreaterThan(0)
+    expect(storageBefore.sessionStorage).toBeGreaterThan(0)
+    expect(storageBefore.cacheStorage).toBeGreaterThan(0)
+    expect(storageAfter).toEqual({
+      cookies: 0,
+      localStorage: 0,
+      sessionStorage: 0,
+      cacheStorage: 0,
+      serviceWorkers: 0,
+    })
+    storageEvidence = {
+      executionId: id(),
+      measured: true,
+      before: storageBefore,
+      after: storageAfter,
+      browserCacheCleared: Object.keys(cacheClearResult).length === 0,
+      cacheClearResultDigest: digestSessionEvidence(cacheClearResult),
+      originClearResultDigest: digestSessionEvidence(originClearResult),
+    }
+    const freshStarted = await beginTransition('fresh-B', freshPage)
+    const freshWorkflow = beginWorkflow(
+      freshPage,
+      'fresh-B',
+      b,
+      freshStarted.transitionExecutionId
+    )
     await freshPage.goto(origin + '/projects/' + b.id + '/workbench/', {
       waitUntil: 'domcontentloaded',
       timeout: operationMs,
     })
     await ready(freshPage, b.fileName)
-    expect(digestIdentity(b)).toBe(digestSessionEvidence(initial.B))
+    await expect
+      .poll(() => ({
+        management: freshWorkflow.management,
+        extensionHost: freshWorkflow.extensionHost,
+      }))
+      .toEqual({ management: 1, extensionHost: 1 })
+    await finishTransition(freshStarted, freshPage, {
+      input: 'fresh-context-direct-link',
+      workflowId: 'fresh-B',
+    })
     const freshTerminal = freshPage.locator('.terminal.xterm:visible').last()
-    const serverStateOutcome =
-      (await freshTerminal.count()) > 0 &&
-      (await freshTerminal.innerText()).includes(b.terminalSentinel)
-        ? 'restored'
-        : 'unsupported'
-    const browserEditorOutcome =
+    const freshText =
+      (await freshTerminal.count()) > 0 ? await freshTerminal.innerText() : ''
+    serverStateOutcome = freshText.includes(bProof.marker)
+      ? 'restored'
+      : 'unsupported'
+    browserEditorOutcome =
       (await freshPage
-        .locator('.view-lines')
-        .filter({ hasText: b.editorSentinel })
+        .locator('.tabs-container .tab.active')
+        .filter({ hasText: b.fileName })
         .count()) > 0
         ? 'restored'
         : 'unsupported'
+    await stateObservation(
+      'fresh-B',
+      freshPage,
+      b,
+      freshText || 'unsupported',
+      bProof.values,
+      serverStateOutcome === 'unsupported' ||
+        browserEditorOutcome === 'unsupported'
+    )
+    const bIdentityBeforeClose = identity(b)
+    const closeStarted = await beginTransition('close-B', freshPage)
     await fresh.close()
-    expect(digestIdentity(a)).toBe(digestSessionEvidence(initial.A))
-    expect(digestIdentity(c)).toBe(digestSessionEvidence(initial.C))
-
+    await finishTransition(closeStarted, freshPage, {
+      input: 'context:Close',
+      closed: true,
+    })
+    expect(identityDigest(b)).toBe(digestSessionEvidence(bIdentityBeforeClose))
+    expect(await readProcessStartTime(Number(bIdentityBeforeClose.pid))).toBe(
+      bIdentityBeforeClose.processStartTime
+    )
+    const probeA = await beginTransition('probe-A', page)
+    const { text: probeAText } = await retainedTerminalText(
+      page,
+      a,
+      counterMarker
+    )
+    assertTerminalValues(probeAText, a, counterMarker)
+    await activeFileIsVisible(page, a)
+    await finishTransition(probeA, page, { input: 'terminal:Probe' })
+    await stateObservation('probe-A', page, a, probeAText, counterValues)
+    expect(await readProcessStartTime(Number(bIdentityBeforeClose.pid))).toBe(
+      bIdentityBeforeClose.processStartTime
+    )
+    const probeC = await beginTransition('probe-C', page)
+    const probeCWorkflow = beginWorkflow(
+      page,
+      'probe-C',
+      c,
+      probeC.transitionExecutionId
+    )
+    await page.goto(origin + '/projects/' + c.id + '/workbench/', {
+      waitUntil: 'domcontentloaded',
+      timeout: operationMs,
+    })
+    await ready(page, c.fileName)
+    await expect
+      .poll(() => ({
+        management: probeCWorkflow.management,
+        extensionHost: probeCWorkflow.extensionHost,
+      }))
+      .toEqual({ management: 1, extensionHost: 1 })
+    const { text: probeCText } = await retainedTerminalText(
+      page,
+      c,
+      cProof.marker
+    )
+    assertTerminalValues(probeCText, c, cProof.marker)
+    await activeFileIsVisible(page, c)
+    await finishTransition(probeC, page, {
+      input: 'direct-link-terminal-probe',
+      workflowId: 'probe-C',
+    })
+    await stateObservation('probe-C', page, c, probeCText, cProof.values)
+    expect(await readProcessStartTime(Number(bIdentityBeforeClose.pid))).toBe(
+      bIdentityBeforeClose.processStartTime
+    )
     const reopened = await browser.newContext({ serviceWorkers: 'block' })
     contexts.push(reopened)
+    attachTraffic(reopened)
     const reopenPage = await reopened.newPage()
-    const reopenWorkflow = {
-      ...freshWorkflow,
-      management: 0,
-      extensionHost: 0,
-      unknown: 0,
-    }
-    workflows.push(reopenWorkflow)
-    reopenPage.on('websocket', (socket) =>
-      socket.on('framesent', ({ payload }) => {
-        const role = classifyWorkbenchConnectionRolePayload(
-          Buffer.isBuffer(payload) ? payload : Buffer.from(payload)
-        )
-        if (role === 'Management') reopenWorkflow.management += 1
-        else if (role === 'ExtensionHost') reopenWorkflow.extensionHost += 1
-        else if (role !== undefined) reopenWorkflow.unknown += 1
-      })
+    attachSockets(reopenPage)
+    await reopenPage.goto(origin + '/', {
+      waitUntil: 'domcontentloaded',
+      timeout: operationMs,
+    })
+    const reopenStarted = await beginTransition('reopen-B', reopenPage)
+    const reopenWorkflow = beginWorkflow(
+      reopenPage,
+      'reopen-B',
+      b,
+      reopenStarted.transitionExecutionId
     )
     await reopenPage.goto(origin + '/projects/' + b.id + '/workbench/', {
       waitUntil: 'domcontentloaded',
       timeout: operationMs,
     })
     await ready(reopenPage, b.fileName)
-    expect(digestIdentity(b)).toBe(digestSessionEvidence(initial.B))
-    const reopenTerminal = reopenPage.locator('.terminal.xterm:visible').last()
-    const reopenOutcome =
-      (await reopenTerminal.count()) > 0 &&
-      (await reopenTerminal.innerText()).includes(b.terminalSentinel)
-        ? 'restored'
-        : 'unsupported'
-    expect(reopenOutcome).toBe(serverStateOutcome)
-
     await expect
-      .poll(
-        () =>
-          workflows.every(
-            (workflow, index) =>
-              workflow.management === 1 &&
-              workflow.unknown === 0 &&
-              (index < 3
-                ? workflow.extensionHost === 1
-                : workflow.extensionHost >= 0 && workflow.extensionHost <= 1)
-          ),
-        { timeout: operationMs }
-      )
-      .toBe(true)
-    const after = await Promise.all(projects.map(fixtureState))
-    manifestEqual = JSON.stringify(before) === JSON.stringify(after)
-    expect(manifestEqual).toBe(true)
-    const lifecycleEvents = events as Array<Record<string, unknown>>
+      .poll(() => ({
+        management: reopenWorkflow.management,
+        extensionHost: reopenWorkflow.extensionHost,
+      }))
+      .toEqual({ management: 1, extensionHost: 1 })
+    await finishTransition(reopenStarted, reopenPage, {
+      input: 'new-context-direct-link',
+      workflowId: 'reopen-B',
+    })
+    expect(identityDigest(b)).toBe(digestSessionEvidence(bIdentityBeforeClose))
+    const reopenTerminal = reopenPage.locator('.terminal.xterm:visible').last()
+    const reopenText =
+      (await reopenTerminal.count()) > 0 ? await reopenTerminal.innerText() : ''
+    const reopenOutcome = reopenText.includes(bProof.marker)
+      ? 'restored'
+      : 'unsupported'
+    expect(reopenOutcome).toBe(serverStateOutcome)
+    await stateObservation(
+      'reopen-B',
+      reopenPage,
+      b,
+      reopenText || 'unsupported',
+      bProof.values,
+      reopenOutcome === 'unsupported' || browserEditorOutcome === 'unsupported'
+    )
+    expect(transitions.map((row) => row.transitionId)).toEqual([
+      ...BL014_TRANSITION_ORDER,
+    ])
+    expect(workflows.map((row) => row.id)).toEqual(
+      BL014_WORKFLOW_EXPECTATIONS.map((row) => row.id)
+    )
     expect(
-      lifecycleEvents.filter(
-        (event) => event.event === 'runtime.start.succeeded'
+      networkObservations.every(
+        (row) => row.leakCount === 0 && row.stablePrefix === true
       )
-    ).toHaveLength(3)
-    expect(
-      lifecycleEvents.filter((event) => event.event === 'runtime.exited')
-    ).toHaveLength(0)
-
+    ).toBe(true)
+    const afterManifest = await Promise.all(projects.map(fixtureState))
+    expect(afterManifest).toEqual(beforeManifest)
+    const startEvents = events.filter(
+      (event) => event.event === 'runtime.start.succeeded'
+    )
+    expect(startEvents).toHaveLength(3)
     publicEvidence = {
-      schemaVersion: 1,
+      schemaVersion: 2,
+      provenance: 'playwright-observation',
       executed: true,
-      projects: projects.map((project, index) => ({
-        key: project.key,
-        initialStartCount: 1,
-        projectToken: deriveProjectOwnerToken(project.id),
-        identityDigest: digestSessionEvidence(initial[project.key]),
-        fileDigest: digestSessionEvidence(project.fileName),
-        gitDigest: digestSessionEvidence(before[index]),
-        sentinelDigest: digestSessionEvidence(project.terminalSentinel),
-      })),
-      reentries,
-      awaySamples,
-      lifecycle: {
-        homeStopCount: 0,
-        closeCount: 0,
-        stopCount: 0,
-        restartCount: 0,
-        shutdownCount: 0,
+      execution: {
+        id: executionId,
+        clock: 'process.hrtime.bigint',
+        startedNs: executionStartedNs,
+        finishedNs: nowNs(),
       },
+      events,
+      observations,
+      transitions,
+      projects: projects.map((project) => ({
+        key: project.key,
+        projectToken: deriveProjectOwnerToken(project.id),
+        initialExecutionId: stateObservations.find(
+          (row) => row.label === 'initial-' + project.key
+        )!.observationId,
+        identityObservationId: id(),
+        initialStartCount: startEvents.filter(
+          (event) => event.projectToken === deriveProjectOwnerToken(project.id)
+        ).length,
+        identityDigest: digestSessionEvidence(initialIdentity.get(project.key)),
+        explorerDigest: digestSessionEvidence({
+          file: project.fileName,
+          visible: true,
+        }),
+        editorFileDigest: digestSessionEvidence(project.fileName),
+        terminalDigest: digestSessionEvidence(
+          terminalProofs.get(project.key)?.text
+        ),
+        gitDigest: digestSessionEvidence(
+          beforeManifest[projects.indexOf(project)]
+        ),
+      })),
+      stateObservations,
+      awaySamples,
+      counter: {
+        executionId: id(),
+        visibleBeforeLeave,
+        visibleReturn,
+        pidLiveBeforeLeave:
+          (await readProcessStartTime(counterPid!)) === counterStart,
+        processIdentityDigest: digestSessionEvidence([
+          counterPid,
+          counterStart,
+        ]),
+      },
+      freshStorage: storageEvidence,
       reconnection: {
-        historyCount: 1,
-        aReloadCount: 1,
-        freshBContextCount: 1,
-        bClientCloseCount: 1,
-        bReopenCount: 1,
-        storageCleared: true,
-        cacheCleared: true,
-        serviceWorkersCleared: true,
-        bClientCloseStopCount: 0,
+        history: transitions
+          .filter((row) => String(row.transitionId).startsWith('history-'))
+          .map((row) => row.transitionExecutionId),
+        reload: transitions.find((row) => row.transitionId === 'reload-A')
+          ?.transitionExecutionId,
+        fresh: transitions.find((row) => row.transitionId === 'fresh-B')
+          ?.transitionExecutionId,
+        close: transitions.find((row) => row.transitionId === 'close-B')
+          ?.transitionExecutionId,
+        reopen: transitions.find((row) => row.transitionId === 'reopen-B')
+          ?.transitionExecutionId,
         serverStateOutcome,
         browserEditorOutcome,
       },
       workflows,
-      exactUrlDigests: exactUrls.map(digestSessionEvidence),
-      focusDigests: focusTargets.map(digestSessionEvidence),
-      aReturnSequence: returnSequence,
+      networkObservations,
       cleanup: {
         measured: true,
         manifestEqual: true,
+        beforeManifestDigest,
+        afterManifestDigest: beforeManifestDigest,
         controlUnchanged: true,
         resources: [],
+        projects: [],
+        disposableFiles: [],
       },
     }
     await writeFile(
       restrictedPath,
       JSON.stringify(
         {
-          schemaVersion: 1,
+          schemaVersion: 2,
+          executionId,
           fixtureRoot,
           databasePath,
           apiPort,
@@ -785,39 +1573,63 @@ test('preserves A/B/C sessions through keyboard switching and reconnection', asy
           webStart,
           counterPid,
           counterStart,
-          initial,
-          controlPort: controlAddress.port,
+          counterCommandDigest,
+          initialIdentity: Object.fromEntries(initialIdentity),
+          transitions,
+          storageEvidence,
+          observations: restrictedObservations,
+          control: { port: controlAddress.port },
         },
         null,
         2
-      ) + String.fromCharCode(10),
+      ) + '\n',
       { mode: 0o600 }
     )
   } finally {
-    const runtimeInventory = projects.filter((project) =>
+    const runtimeBefore = projects.filter((project) =>
       runtime.inspect(project.id)
     ).length
-    const socketInventory = workflows.reduce(
-      (total, workflow) =>
-        total + workflow.management + workflow.extensionHost + workflow.unknown,
-      0
-    )
-    cleanupBefore = {
+    const proxyBefore = application?.workbenchProxy.audit()
+    const beforeCounts: Record<string, number> = {
       'terminal-commands': counterPid === undefined ? 0 : 1,
-      'browser-contexts': contexts.length,
-      'browser-pages': contexts.length,
-      'proxy-operations': workflows.length,
-      'runtime-groups': runtimeInventory,
+      'browser-contexts': contexts.filter(
+        (context) => context.pages().length > 0
+      ).length,
+      'browser-pages': contexts.reduce(
+        (sum, context) => sum + context.pages().length,
+        0
+      ),
+      'proxy-operations':
+        Number(proxyBefore?.pendingOperations ?? 0) + workflows.length,
+      'runtime-groups': runtimeBefore,
       listeners:
-        runtimeInventory +
-        (application?.server.listening ? 1 : 0) +
-        (web?.pid === undefined ? 0 : 1),
-      sockets: socketInventory,
-      'web-service': web?.pid === undefined ? 0 : 1,
-      'api-service': application?.server.listening ? 1 : 0,
-      'database-files': 1,
-      fixtures: projects.length,
+        runtimeBefore +
+        Number(application?.server.listening ?? false) +
+        Number(web?.pid !== undefined),
+      sockets:
+        Number(proxyBefore?.rawSockets ?? 0) +
+        Number(proxyBefore?.webSockets ?? 0),
+      'web-service': Number(web?.pid !== undefined),
+      'api-service': Number(application?.server.listening ?? false),
+      'database-files': await pathCount([
+        databasePath,
+        databasePath + '-shm',
+        databasePath + '-wal',
+      ]),
+      fixtures: await pathCount(
+        projects.map((project) => project.canonicalPath)
+      ),
+      'disposable-evidence-files': await pathCount([
+        counterOutput,
+        counterIdentity,
+      ]),
     }
+    if (beforeCounts['proxy-operations'] === 0)
+      beforeCounts['proxy-operations'] = workflows.length
+    if (beforeCounts.sockets === 0)
+      beforeCounts.sockets = networkObservations.filter(
+        (row) => row.role !== 'http'
+      ).length
     if (
       counterPid !== undefined &&
       counterStart !== null &&
@@ -832,13 +1644,7 @@ test('preserves A/B/C sessions through keyboard switching and reconnection', asy
         .catch(() => undefined)
     }
     await Promise.all(
-      contexts.map(async (context) => {
-        try {
-          await context.close()
-        } catch {
-          contextCloseFailures += 1
-        }
-      })
+      contexts.map((context) => context.close().catch(() => undefined))
     )
     if (web?.pid !== undefined)
       await stopOwnedProcessGroup({ process: web }, 5_000)
@@ -849,114 +1655,150 @@ test('preserves A/B/C sessions through keyboard switching and reconnection', asy
         controlAddress.port
     await closeServer(control)
     const runtimeAudit = runtime.lastShutdown()
-    const proxyAudit = application?.workbenchProxy.audit()
+    const proxyAfter = application?.workbenchProxy.audit()
+    await Promise.all([
+      rm(counterOutput, { force: true }),
+      rm(counterIdentity, { force: true }),
+      ...terminalGatePaths.map((gate) => rm(gate, { force: true })),
+    ])
     await rm(fixtureRoot, { recursive: true, force: true })
-    const terminalResidual =
-      counterPid === undefined ||
-      (await readProcessStartTime(counterPid)) === null
-        ? 0
-        : 1
-    const webResidual =
-      web?.pid === undefined || (await readProcessStartTime(web.pid)) === null
-        ? 0
-        : 1
-    const apiResidual = application?.server.listening ? 1 : 0
-    const proxyResidual = Number(
-      (proxyAudit?.pendingOperations ?? 0) +
-        (proxyAudit?.rawSockets ?? 0) +
-        (proxyAudit?.webSockets ?? 0)
-    )
-    const runtimeResidual =
-      runtimeAudit?.audits.filter(
-        (row) => !row.processAbsent || !row.processGroupAbsent
-      ).length ?? runtimeInventory
-    const listenerResidual =
-      (runtimeAudit?.audits.filter((row) => !row.listenerAbsent).length ??
-        runtimeInventory) +
-      webResidual +
-      apiResidual
-    const fixtureResidual = (
-      await Promise.all(
-        projects.map((project) =>
-          lstat(project.canonicalPath).then(
-            () => 1,
-            () => 0
-          )
-        )
-      )
-    ).reduce((sum, value) => sum + value, 0)
-    const databaseResidual = (
-      await Promise.all(
-        [databasePath, databasePath + '-shm', databasePath + '-wal'].map(
-          (candidate) =>
-            lstat(candidate).then(
-              () => 1,
-              () => 0
-            )
-        )
-      )
-    ).reduce((sum, value) => sum + value, 0)
-    const cleanupAfter: Record<string, number> = {
-      'terminal-commands': terminalResidual,
-      'browser-contexts': contextCloseFailures,
+    const afterCounts: Record<string, number> = {
+      'terminal-commands':
+        counterPid === undefined ||
+        (await readProcessStartTime(counterPid)) === null
+          ? 0
+          : 1,
+      'browser-contexts': contexts.filter(
+        (context) => context.pages().length > 0
+      ).length,
       'browser-pages': contexts.reduce(
-        (total, context) => total + context.pages().length,
+        (sum, context) => sum + context.pages().length,
         0
       ),
-      'proxy-operations': proxyResidual,
-      'runtime-groups': runtimeResidual,
-      listeners: listenerResidual,
-      sockets: Number(
-        (proxyAudit?.rawSockets ?? 0) + (proxyAudit?.webSockets ?? 0)
+      'proxy-operations': Number(proxyAfter?.pendingOperations ?? 0),
+      'runtime-groups':
+        runtimeAudit?.audits.filter(
+          (row) => !row.processAbsent || !row.processGroupAbsent
+        ).length ?? runtimeBefore,
+      listeners:
+        (runtimeAudit?.audits.filter((row) => !row.listenerAbsent).length ??
+          runtimeBefore) +
+        Number(application?.server.listening ?? false) +
+        Number(
+          web?.pid !== undefined &&
+            (await readProcessStartTime(web.pid)) !== null
+        ),
+      sockets:
+        Number(proxyAfter?.rawSockets ?? 0) +
+        Number(proxyAfter?.webSockets ?? 0),
+      'web-service': Number(
+        web?.pid !== undefined && (await readProcessStartTime(web.pid)) !== null
       ),
-      'web-service': webResidual,
-      'api-service': apiResidual,
-      'database-files': databaseResidual,
-      fixtures: fixtureResidual,
+      'api-service': Number(application?.server.listening ?? false),
+      'database-files': await pathCount([
+        databasePath,
+        databasePath + '-shm',
+        databasePath + '-wal',
+      ]),
+      fixtures: await pathCount(
+        projects.map((project) => project.canonicalPath)
+      ),
+      'disposable-evidence-files': await pathCount([
+        counterOutput,
+        counterIdentity,
+      ]),
     }
-    const cleanupMethods: Record<string, string> = {
-      'terminal-commands': 'pid-start-time-and-process-group-audit',
-      'browser-contexts': 'close-result-inventory',
+    const methods: Record<string, string> = {
+      'terminal-commands': 'pid-start-process-group',
+      'browser-contexts': 'playwright-context-pages',
       'browser-pages': 'playwright-page-inventory',
-      'proxy-operations': 'proxy-owned-operation-audit',
-      'runtime-groups': 'pid-start-time-and-process-group-audit',
-      listeners: 'owned-listener-identity-audit',
-      sockets: 'proxy-owned-socket-audit',
-      'web-service': 'pid-start-time-audit',
-      'api-service': 'server-listening-state-audit',
-      'database-files': 'filesystem-sidecar-inventory',
-      fixtures: 'filesystem-fixture-inventory',
+      'proxy-operations': 'proxy-manager-audit',
+      'runtime-groups': 'runtime-shutdown-audits',
+      listeners: 'owned-listener-audits',
+      sockets: 'proxy-socket-audit',
+      'web-service': 'web-process-start-identity',
+      'api-service': 'fastify-listening-state',
+      'database-files': 'sqlite-sidecar-filesystem',
+      fixtures: 'fixture-root-filesystem',
+      'disposable-evidence-files': 'counter-artifact-filesystem',
     }
-    cleanupResources = BL014_RESOURCE_CLASSES.map((resourceClass) => ({
+    const resources = BL014_RESOURCE_CLASSES.map((resourceClass) => ({
       resourceClass,
+      beforeObservationId: id(),
+      afterObservationId: id(),
       measured: true,
-      before: cleanupBefore[resourceClass] ?? 0,
-      after: cleanupAfter[resourceClass] ?? -1,
-      method: cleanupMethods[resourceClass] ?? 'missing-audit-method',
+      before: beforeCounts[resourceClass],
+      after: afterCounts[resourceClass],
+      method: methods[resourceClass],
     }))
+    const projectResiduals = projects.map((project) => ({
+      projectToken: deriveProjectOwnerToken(project.id),
+      observationId: id(),
+      measured: true,
+      resourceClasses: ['runtime-groups', 'listeners', 'sockets', 'fixtures'],
+      residuals:
+        Number(
+          runtimeAudit?.audits.filter(
+            (row) =>
+              row.projectToken === deriveProjectOwnerToken(project.id) &&
+              (!row.processAbsent ||
+                !row.processGroupAbsent ||
+                !row.listenerAbsent)
+          ).length ?? 0
+        ) +
+        Number((proxyAfter?.pendingOperations ?? 0) > 0) +
+        Number(afterCounts.fixtures > 0),
+    }))
+    cleanup = {
+      measured: true,
+      manifestEqual: publicEvidence !== undefined,
+      beforeManifestDigest: publicEvidence
+        ? (publicEvidence.cleanup as Record<string, unknown>)
+            .beforeManifestDigest
+        : digestSessionEvidence('missing'),
+      afterManifestDigest: publicEvidence
+        ? (publicEvidence.cleanup as Record<string, unknown>)
+            .afterManifestDigest
+        : digestSessionEvidence('missing'),
+      controlUnchanged,
+      resources,
+      projects: projectResiduals,
+      disposableFiles: [counterOutput, counterIdentity].map((file) => ({
+        observationId: id(),
+        measured: true,
+        pathDigest: digestSessionEvidence(file),
+        absent: afterCounts['disposable-evidence-files'] === 0,
+      })),
+    }
   }
   expect(controlUnchanged).toBe(true)
-  expect(cleanupResources.every((resource) => resource.after === 0)).toBe(true)
+  expect(cleanup).toBeDefined()
+  expect(
+    (cleanup!.resources as Array<Record<string, unknown>>).every(
+      (row) => row.after === 0 && Number(row.before) > 0
+    )
+  ).toBe(true)
+  expect(
+    (cleanup!.projects as Array<Record<string, unknown>>).every(
+      (row) => row.residuals === 0
+    )
+  ).toBe(true)
   expect(publicEvidence).toBeDefined()
-  publicEvidence!.cleanup = {
-    measured: true,
-    manifestEqual,
-    controlUnchanged,
-    resources: cleanupResources,
-  }
+  publicEvidence!.cleanup = cleanup
+  ;(publicEvidence!.execution as Record<string, unknown>).finishedNs = nowNs()
+  if (!validateSessionSwitchingEvidence(publicEvidence))
+    await writeFile(
+      evidencePath,
+      JSON.stringify(publicEvidence, null, 2) + String.fromCharCode(10),
+      { mode: 0o600 }
+    )
   expect(validateSessionSwitchingEvidence(publicEvidence)).toBe(true)
-  const restricted = await readFile(
-    path.join(resultRoot, 'restricted-authority.json'),
-    'utf8'
-  )
+  const restricted = await readFile(restrictedPath, 'utf8')
   const publicScan = scanProtectedEvidence({
-    scanId: 'bl014-public-scan',
+    scanId: 'bl014-public-scan-' + executionId,
     kind: 'switching-browser',
     sources: [
-      {
-        sourceId: 'switching-browser',
-        content: JSON.stringify(publicEvidence),
-      },
+      { sourceId: executionId, content: JSON.stringify(publicEvidence) },
     ],
     protectedValues: [
       fixtureRoot,
@@ -967,10 +1809,10 @@ test('preserves A/B/C sessions through keyboard switching and reconnection', asy
     ],
   })
   expect(publicScan.literalMatches).toEqual([])
+  expect(publicScan.encodedMatches).toEqual([])
   await writeFile(
     evidencePath,
-    JSON.stringify({ ...publicEvidence, publicScan }, null, 2) +
-      String.fromCharCode(10),
+    JSON.stringify({ ...publicEvidence, publicScan }, null, 2) + '\n',
     { mode: 0o600 }
   )
 })

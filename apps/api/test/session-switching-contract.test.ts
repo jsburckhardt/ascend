@@ -1,4 +1,5 @@
 import { execFile } from 'node:child_process'
+import { randomUUID } from 'node:crypto'
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
@@ -7,7 +8,8 @@ import { afterEach, describe, expect, it } from 'vitest'
 import {
   BL014_COUNTER_CONTRACT,
   BL014_FIXTURES,
-  BL014_OPEN_REENTRY_ORDER,
+  BL014_TRANSITION_ORDER,
+  BL014_WORKFLOW_EXPECTATIONS,
   BL014_RESOURCE_CLASSES,
   digestSessionEvidence,
   validateSessionSwitchingEvidence,
@@ -18,87 +20,241 @@ const execute = promisify(execFile)
 const roots: string[] = []
 const digest = (value: unknown) => digestSessionEvidence(value)
 
-const evidence = () => ({
-  schemaVersion: 1,
-  executed: true,
-  projects: BL014_FIXTURES.map((fixture, index) => ({
-    key: fixture.key,
-    initialStartCount: 1,
-    projectToken: deriveProjectOwnerToken(fixture.id),
-    identityDigest: digest(['identity', index]),
-    fileDigest: digest(fixture.fileName),
-    gitDigest: digest([fixture.branch, fixture.dirtyFileName]),
-    sentinelDigest: digest(fixture.terminalSentinel),
-  })),
-  reentries: BL014_OPEN_REENTRY_ORDER.map((project, index) => ({
-    project,
-    executed: true,
-    reused: true,
-    startCount: 0,
-    stopCount: 0,
-    shutdownCount: 0,
-    urlClass: 'stable-project-prefix',
-    focus: 'Open ' + project,
-    identityDigest: digest(['identity', project.charCodeAt(0) - 65]),
-    executionId: 'reentry-' + String(index + 1),
-  })),
-  awaySamples: [
-    {
-      executed: true,
-      browserInteraction: false,
-      pidDigest: digest('a-pid'),
-      sequence: 2,
-    },
-    {
-      executed: true,
-      browserInteraction: false,
-      pidDigest: digest('a-pid'),
-      sequence: 5,
-    },
-  ],
-  lifecycle: {
-    homeStopCount: 0,
-    closeCount: 0,
-    stopCount: 0,
-    restartCount: 0,
-    shutdownCount: 0,
-  },
-  reconnection: {
-    historyCount: 1,
-    aReloadCount: 1,
-    freshBContextCount: 1,
-    bClientCloseCount: 1,
-    bReopenCount: 1,
-    storageCleared: true,
-    cacheCleared: true,
-    serviceWorkersCleared: true,
-    bClientCloseStopCount: 0,
-    serverStateOutcome: 'restored',
-    browserEditorOutcome: 'unsupported',
-  },
-  workflows: Array.from({ length: 11 }, (_, index) => ({
-    executed: true,
-    project: BL014_FIXTURES[index % 3]!.key,
-    projectToken: deriveProjectOwnerToken(BL014_FIXTURES[index % 3]!.id),
-    management: 1,
-    extensionHost: 1,
-    unknown: 0,
-    stablePrefix: true,
-    publicAuthorityLeaks: 0,
-  })),
-  cleanup: {
-    measured: true,
-    manifestEqual: true,
-    controlUnchanged: true,
-    resources: BL014_RESOURCE_CLASSES.map((resourceClass) => ({
-      resourceClass,
+const evidence = () => {
+  const executionId = randomUUID()
+  const observed = () => randomUUID()
+  const events: Array<Record<string, unknown>> = []
+  const addEvent = (event: string, projectToken?: string) => {
+    events.push({
+      eventId: observed(),
+      executionId,
       measured: true,
-      before: 1,
-      after: 0,
-      method: 'exact-owned-identity-audit',
+      ordinal: events.length + 1,
+      observedNs: events.length + 1,
+      event,
+      ...(projectToken ? { projectToken } : {}),
+    })
+  }
+  for (const fixture of BL014_FIXTURES)
+    addEvent('runtime.start.succeeded', deriveProjectOwnerToken(fixture.id))
+  const observations = Array.from(
+    { length: BL014_TRANSITION_ORDER.length * 2 },
+    (_, index) => ({
+      observationId: observed(),
+      executionId,
+      measured: true,
+      observedNs: index + 1,
+      url: index % 2 === 0 ? '/' : '/projects/bl014-a/workbench/',
+      surface: index % 2 === 0 ? 'Home' : 'Workbench',
+      focus: index % 2 === 0 ? 'heading:Ascend' : 'workbench',
+    })
+  )
+  const transitions = BL014_TRANSITION_ORDER.map((transitionId, index) => {
+    const beforeOrdinal = events.length
+    addEvent('transition.observed')
+    const home = transitionId.includes('home-')
+      ? {
+          cards: BL014_FIXTURES.map((fixture) => ({ project: fixture.key })),
+          runtimeControlsPresent: 0,
+          focus: 'heading:Ascend',
+        }
+      : undefined
+    return {
+      transitionId,
+      executionId,
+      measured: true,
+      beforeObservationId: observations[index * 2]!.observationId,
+      afterObservationId: observations[index * 2 + 1]!.observationId,
+      eventRange: { beforeOrdinal, afterOrdinal: events.length },
+      eventDeltas: { request: 0, start: 0, reuse: 0, stop: 0, shutdown: 0 },
+      ...(home ? { home } : {}),
+    }
+  })
+  const projects = BL014_FIXTURES.map((fixture, index) => ({
+    key: fixture.key,
+    projectToken: deriveProjectOwnerToken(fixture.id),
+    initialExecutionId: observed(),
+    identityObservationId: observed(),
+    initialStartCount: 1,
+    identityDigest: digest(['identity', index]),
+    explorerDigest: digest(['explorer', index]),
+    editorFileDigest: digest(['editor', index]),
+    terminalDigest: digest(['terminal', index]),
+    gitDigest: digest(['git', index]),
+  }))
+  const stateLabels = [
+    'initial-A',
+    'initial-B',
+    'initial-C',
+    'before-leave-A',
+    'return-A',
+    'revisit-B',
+    'revisit-C',
+    'fresh-B',
+    'probe-A',
+    'probe-C',
+    'reopen-B',
+  ]
+  const stateObservations = stateLabels.map((label) => {
+    const key = label.endsWith('-B') ? 'B' : label.endsWith('-C') ? 'C' : 'A'
+    const project = projects.find((row) => row.key === key)!
+    const negatives = BL014_FIXTURES.filter(
+      (fixture) => fixture.key !== key
+    ).flatMap((fixture) =>
+      [
+        'file',
+        'editor-sentinel',
+        'terminal-sentinel',
+        'cwd',
+        'branch',
+        'git-sentinel',
+      ].map((resourceClass) => ({
+        observationId: observed(),
+        measured: true,
+        project: fixture.key,
+        resourceClass,
+        matchCount: 0,
+        absent: true,
+      }))
+    )
+    return {
+      label,
+      observationId: observed(),
+      executionId,
+      measured: true,
+      project: key,
+      projectToken: project.projectToken,
+      identityDigest: project.identityDigest,
+      explorerDigest: digest([label, 'explorer']),
+      editorFileDigest: digest([label, 'editor']),
+      editorSentinelDigest: digest([label, 'editor-sentinel']),
+      terminalDigest: digest([label, 'terminal']),
+      cwdDigest: digest([label, 'cwd']),
+      gitRootDigest: digest([label, 'root']),
+      branchDigest: digest([label, 'branch']),
+      statusDigest: digest([label, 'status']),
+      gitSentinelDigest: digest([label, 'git-sentinel']),
+      terminalSentinelDigest: digest([label, 'terminal-sentinel']),
+      visible: true,
+      negativeAssertions: negatives,
+    }
+  })
+  const workflows = BL014_WORKFLOW_EXPECTATIONS.map((expected) => ({
+    ...expected,
+    projectToken: projects.find((row) => row.key === expected.project)!
+      .projectToken,
+    executionId: observed(),
+    transitionExecutionId: observed(),
+    unknown: 0,
+  }))
+  const networkObservations = workflows.flatMap((workflow) =>
+    [
+      { role: 'http' },
+      ...Array.from({ length: workflow.management }, () => ({
+        role: 'Management',
+      })),
+      ...Array.from({ length: workflow.extensionHost }, () => ({
+        role: 'ExtensionHost',
+      })),
+    ].map((row) => ({
+      ...row,
+      observationId: observed(),
+      executionId,
+      measured: true,
+      workflowId: workflow.id,
+      projectToken: workflow.projectToken,
+      stableUrl:
+        '/projects/bl014-' + workflow.project.toLowerCase() + '/workbench/',
+      reconnection: workflow.reconnection,
+      stablePrefix: true,
+      leakCount: 0,
+      leakClasses: [],
+    }))
+  )
+  return {
+    schemaVersion: 2,
+    provenance: 'playwright-observation',
+    executed: true,
+    execution: {
+      id: executionId,
+      clock: 'process.hrtime.bigint',
+      startedNs: 1,
+      finishedNs: 2,
+    },
+    events,
+    observations,
+    transitions,
+    projects,
+    stateObservations,
+    awaySamples: [2, 5].map((sequence) => ({
+      observationId: observed(),
+      executionId,
+      measured: true,
+      browserInteraction: false,
+      pidLive: true,
+      processIdentityDigest: digest('pid'),
+      commandDigest: digest('command'),
+      sequence,
+      outputSequence: sequence,
     })),
-  },
-})
+    counter: {
+      executionId: observed(),
+      visibleBeforeLeave: 1,
+      visibleReturn: 6,
+      pidLiveBeforeLeave: true,
+      processIdentityDigest: digest('pid'),
+    },
+    freshStorage: {
+      executionId: observed(),
+      measured: true,
+      before: {
+        cookies: 1,
+        localStorage: 1,
+        sessionStorage: 1,
+        cacheStorage: 1,
+        serviceWorkers: 0,
+      },
+      after: {
+        cookies: 0,
+        localStorage: 0,
+        sessionStorage: 0,
+        cacheStorage: 0,
+        serviceWorkers: 0,
+      },
+      browserCacheCleared: true,
+    },
+    workflows,
+    networkObservations,
+    cleanup: {
+      measured: true,
+      manifestEqual: true,
+      beforeManifestDigest: digest('manifest'),
+      afterManifestDigest: digest('manifest'),
+      controlUnchanged: true,
+      resources: BL014_RESOURCE_CLASSES.map((resourceClass) => ({
+        resourceClass,
+        beforeObservationId: observed(),
+        afterObservationId: observed(),
+        measured: true,
+        before: 1,
+        after: 0,
+        method: 'measured-resource-audit',
+      })),
+      projects: projects.map((project) => ({
+        projectToken: project.projectToken,
+        observationId: observed(),
+        measured: true,
+        resourceClasses: ['runtime-groups'],
+        residuals: 0,
+      })),
+      disposableFiles: [1, 2].map(() => ({
+        observationId: observed(),
+        measured: true,
+        absent: true,
+      })),
+    },
+  }
+}
 
 afterEach(async () => {
   await Promise.all(
@@ -159,7 +315,7 @@ describe('BL-014 fixture and evidence contracts', () => {
   it('declares one 250ms counter with a maximum below 90 seconds', async () => {
     expect(BL014_COUNTER_CONTRACT).toMatchObject({
       cadenceMs: 250,
-      maximumMs: 60_000,
+      maximumMs: 90_000,
       maximumAllowedMs: 90_000,
     })
     expect(BL014_COUNTER_CONTRACT.maximumMs).toBeLessThanOrEqual(
@@ -182,6 +338,7 @@ describe('BL-014 fixture and evidence contracts', () => {
     expect(validateSessionSwitchingEvidence(valid)).toBe(true)
     const mutations = [
       { ...valid, executed: false },
+      { ...valid, provenance: 'constructed' },
       { ...valid, projects: valid.projects.slice(0, 2) },
       { ...valid, projects: [...valid.projects, valid.projects[0]] },
       {
@@ -191,24 +348,52 @@ describe('BL-014 fixture and evidence contracts', () => {
           identityDigest: valid.projects[0]!.identityDigest,
         })),
       },
-      { ...valid, reentries: valid.reentries.slice(0, 4) },
       {
         ...valid,
-        reentries: valid.reentries.map((row, index) =>
-          index === 0 ? { ...row, reused: false, startCount: 1 } : row
-        ),
+        events: valid.events.map((row) => ({
+          ...row,
+          eventId: valid.events[0]!.eventId,
+        })),
       },
       {
         ...valid,
-        awaySamples: valid.awaySamples.map((row) => ({ ...row, sequence: 2 })),
+        transitions: valid.transitions.map((row, index) =>
+          index === 0
+            ? { ...row, eventDeltas: { ...row.eventDeltas, request: 99 } }
+            : row
+        ),
+      },
+      { ...valid, transitions: valid.transitions.slice(0, -1) },
+      { ...valid, stateObservations: valid.stateObservations.slice(1) },
+      {
+        ...valid,
+        awaySamples: valid.awaySamples.map((row) => ({
+          ...row,
+          sequence: 2,
+          outputSequence: 2,
+        })),
       },
       {
         ...valid,
         workflows: valid.workflows.map((row, index) =>
           index === 0
-            ? { ...row, projectToken: valid.projects[1]!.projectToken }
+            ? { ...row, projectToken: valid.projects[0]!.projectToken }
             : row
         ),
+      },
+      {
+        ...valid,
+        networkObservations: valid.networkObservations.filter(
+          (row) =>
+            !(row.workflowId === 'initial-B' && row.role === 'Management')
+        ),
+      },
+      {
+        ...valid,
+        freshStorage: {
+          ...valid.freshStorage,
+          after: { ...valid.freshStorage.after, localStorage: 1 },
+        },
       },
       {
         ...valid,

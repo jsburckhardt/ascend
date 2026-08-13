@@ -34,7 +34,17 @@ describe('BL-014 application documentation contract', () => {
     expect(runbook).toContain('90,000 ms')
     expect(runbook).toContain('unsupported')
     expect(runbook).toContain('mode-0600')
-    expect(runbook).toContain('eleven resource classes')
+    expect(runbook).toContain('All twelve resource classes')
+    expect(runbook).toContain(
+      'all 24 transition rows and 48 before/after surface observations'
+    )
+    expect(runbook).toContain(
+      'exactly one Management and one ExtensionHost socket'
+    )
+    expect(runbook).toContain('seeded disposable cookies')
+    expect(runbook).toContain('rather than a hardcoded A/B/C list')
+    expect(runbook).toContain('FIFO handshake')
+    expect(runbook).toContain('no duplicate root `just harness-boot` recipe')
     expect(runbook).toContain(
       'BL-015 performance benchmarking remains deferred'
     )
@@ -50,5 +60,6 @@ describe('BL-014 application documentation contract', () => {
     expect(proof).toContain('dispatched once behind its lock')
     expect(justfile).toContain('verify-session-switching:')
     expect(justfile).toContain('proof-session-switching-residual-audit:')
+    expect(justfile).not.toContain('harness-boot:')
   })
 })

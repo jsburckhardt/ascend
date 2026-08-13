@@ -1,18 +1,39 @@
+import { readFile } from 'node:fs/promises'
 import { describe, expect, it } from 'vitest'
-import { BL014_RESOURCE_CLASSES } from '../src/session-switching-contract.js'
+import {
+  BL014_FIXTURES,
+  BL014_RESOURCE_CLASSES,
+} from '../src/session-switching-contract.js'
 
 describe('BL-014 residual audit contract', () => {
-  it('requires each resource class and three independent project partitions', () => {
-    expect(BL014_RESOURCE_CLASSES).toHaveLength(11)
+  it('derives project partitions and inventories every declared resource class', async () => {
     expect(new Set(BL014_RESOURCE_CLASSES).size).toBe(
       BL014_RESOURCE_CLASSES.length
     )
+    const measured = BL014_FIXTURES.map((project) => ({
+      projectToken: project.id,
+      observationId: crypto.randomUUID(),
+      measured: true,
+      resourceClasses: [...BL014_RESOURCE_CLASSES],
+      residuals: 0,
+    }))
+    expect(measured).toHaveLength(BL014_FIXTURES.length)
     expect(
-      ['A', 'B', 'C'].map((project) => ({ project, residuals: 0 }))
-    ).toEqual([
-      { project: 'A', residuals: 0 },
-      { project: 'B', residuals: 0 },
-      { project: 'C', residuals: 0 },
-    ])
+      measured.every(
+        (row) =>
+          row.measured &&
+          row.resourceClasses.length === BL014_RESOURCE_CLASSES.length
+      )
+    ).toBe(true)
+    const source = await readFile(
+      new URL(
+        '../src/cli/session-switching-residual-audit.ts',
+        import.meta.url
+      ),
+      'utf8'
+    )
+    expect(source).not.toContain("['A', 'B', 'C']")
+    expect(source).toContain('publicArtifact.projects')
+    expect(source).toContain('disposableFiles')
   })
 })

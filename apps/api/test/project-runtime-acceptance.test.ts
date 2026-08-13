@@ -105,6 +105,7 @@ function virtualRuntime(pid: number, port: number) {
     })),
     terminate: vi.fn(async (_graceful, _force, auditPort) => {
       alive = false
+      exited.resolve({ code: 0, signal: null, addressInUse: false })
       return {
         pid,
         processStartTime: String(pid * 10),

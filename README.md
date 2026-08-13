@@ -39,6 +39,9 @@ just proof-project-runtime
 just proof-project-runtime-residual-audit
 just verify-project-runtime-isolation
 just proof-project-runtime-isolation-residual-audit
+just verify-session-switching-phase0
+just verify-session-switching
+just proof-session-switching-residual-audit
 just verify
 ```
 
@@ -146,4 +149,9 @@ One cancelled B waiter does not cancel the seven callers sharing B’s running r
 
 Run `just verify-project-runtime-isolation` for the fake matrix and no-retry three-Git-fixture Chromium A/B/C episode. The repositories use distinct untracked filenames, and Chromium requires each integrated-terminal Git status to equal its project-specific expected value; public evidence retains three distinct status digests. After repository-only exact B group/identity termination, A/C terminal commands execute again; a fresh B browser context and page record one Management and one ExtensionHost role for the replacement while A/C retain their original role sets. The stable URL contains the encoded stable project ID. Public evidence stores correlated identity/route/event digests and the declared one-way project token, while excluding raw canonical paths, internal ports/authorities, credentials, and secrets. One ignored mode-0600 restricted artifact retains explicitly allowed exact cleanup authority. `just proof-project-runtime-isolation-residual-audit` independently probes initial/replacement process identities, listeners, SQLite files/sidecars, fixtures, and the control, and validates measured browser, proxy, runtime/process-group, socket, terminal, and background-work inventories. Assigned zero rows and unexecuted scans fail. Commands use repository-local fixtures, finite bounds, no hosted service, credential, network dependency, or manual judgment.
 
-This proves immediate isolation while all three projects are active. BL-014 session switching or persistence continuity, BL-015 performance targets, public lifecycle controls, broader lifecycle state, restart reconciliation, scheduling, quotas, and multi-host operation remain deferred.
+This proves immediate isolation while all three projects are active. BL-014 now separately proves bounded session switching and runtime reuse; BL-015 performance targets, public lifecycle controls, broader lifecycle state, restart reconciliation, scheduling, quotas, and multi-host operation remain deferred.
+
+
+## Preserve sessions while switching (BL-014)
+
+The no-retry designated gate starts exactly A/B/C once, performs the keyboard A → Home → B → Home → C → Home → A sequence plus B/C revisits, and proves exactly five reuse-only Open re-entries with zero Home stop or shutdown calls. A’s visible 250 ms counter advances under host-only away sampling and returns with the same runtime and command identity. History, A reload, fresh B client state, B client close, and B reopen are separate from the Open count. The observed fresh-browser server-terminal and browser-editor restoration outcome is unsupported while the same B runtime remains live and reusable. See docs/session-switching.md for ownership limits, commands, 90-second counter and 240-second scenario bounds, safe/restricted evidence, cleanup, BL-015 deferral, and no-migration statement.

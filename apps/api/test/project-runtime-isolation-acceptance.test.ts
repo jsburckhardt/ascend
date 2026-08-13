@@ -1910,6 +1910,31 @@ describe.sequential('BL-013 executable fake matrix', () => {
     expect(validateProjectRuntimeIsolationEvidence(artifact)).toBe(true)
   }, 120_000)
 
+  it('does not treat an internal port embedded inside a decimal timing as a disclosure', () => {
+    const scan = scanProtectedEvidence({
+      scanId: 'numeric-boundary-regression',
+      kind: 'public-artifact',
+      sources: [
+        {
+          sourceId: 'timing',
+          content: JSON.stringify({ elapsedMs: 0.25318199396133423 }),
+        },
+      ],
+      protectedValues: ['39613'],
+    })
+    expect(scan.literalMatches).toEqual([])
+    expect(
+      scanProtectedEvidence({
+        scanId: 'numeric-port-regression',
+        kind: 'public-artifact',
+        sources: [
+          { sourceId: 'port', content: JSON.stringify({ port: 39613 }) },
+        ],
+        protectedValues: ['39613'],
+      }).literalMatches
+    ).toHaveLength(1)
+  })
+
   it('rejects browser evidence with identical project Git statuses', () => {
     const browser = {
       distinctGitStatuses: true,

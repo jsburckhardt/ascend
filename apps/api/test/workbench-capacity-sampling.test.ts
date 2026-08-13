@@ -34,6 +34,9 @@ class FakeClock implements CapacityClock {
   }
 }
 const runId = '00000000-0000-4000-8000-000000000011'
+// Classification workloads get one finite settlement attempt. Harness-boot's
+// full topology can delay a short child beyond one second without changing it.
+const fullContentionClassificationTimeoutMs = 5_000
 const readySlot = (slot = 1): CapacitySlot => ({
   runId,
   cohort: 3,
@@ -251,7 +254,7 @@ describe('capacity sampling and workload', () => {
       slot: 1,
       cwd: BL001_FIXTURE,
       durationMs: 50,
-      timeoutMs: 1_000,
+      timeoutMs: fullContentionClassificationTimeoutMs,
     })
     expect(controller.identity).toMatchObject({
       pid: expect.any(Number),
@@ -269,6 +272,9 @@ describe('capacity sampling and workload', () => {
     })
     expect(result.endMonotonicMs).toBeGreaterThanOrEqual(
       result.startMonotonicMs
+    )
+    expect(result.endMonotonicMs - result.startMonotonicMs).toBeLessThanOrEqual(
+      fullContentionClassificationTimeoutMs
     )
   })
 
@@ -291,7 +297,7 @@ describe('capacity sampling and workload', () => {
       slot: 1,
       cwd: BL001_FIXTURE,
       durationMs: 10,
-      timeoutMs: 1_000,
+      timeoutMs: fullContentionClassificationTimeoutMs,
       outputLimitBytes: 10,
     })
     const overflowResult = await overflow.finish()
@@ -309,7 +315,7 @@ describe('capacity sampling and workload', () => {
         cohort: 1,
         slot: 1,
         cwd: BL001_FIXTURE,
-        timeoutMs: 1_000,
+        timeoutMs: fullContentionClassificationTimeoutMs,
         outputLimitBytes: 4_096,
         scriptPath: path.join(
           REPOSITORY_ROOT,
@@ -427,7 +433,7 @@ describe('capacity sampling and workload', () => {
       cohort: 1,
       slot: 1,
       cwd: BL001_FIXTURE,
-      timeoutMs: 1_000,
+      timeoutMs: fullContentionClassificationTimeoutMs,
       scriptPath: path.join(
         REPOSITORY_ROOT,
         'apps/api/test/fixtures/workbench-capacity-nonzero.mjs'

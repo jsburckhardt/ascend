@@ -114,6 +114,17 @@ verify-project-runtime-isolation:
 proof-project-runtime-isolation-residual-audit:
     pnpm --filter @ascend/api exec tsx src/cli/project-runtime-isolation-residual-audit.ts
 
+verify-session-switching-phase0:
+    for run in 1 2; do echo BL-014-Phase-0-contention; just verify-focused apps/api/test/workbench-route-acceptance.test.ts apps/api/test/workbench-proof-terminal-timing.test.ts apps/api/test/workbench-proof-terminal-episode.test.ts --reporter=verbose; done
+
+verify-session-switching:
+    BL014_ACCEPTANCE=1 pnpm exec vitest run apps/api/test/session-switching-contract.test.ts apps/api/test/session-switching-matrix.test.ts apps/api/test/session-switching-residual-audit.test.ts apps/web/src/session-switching-component.test.tsx --reporter=verbose
+    EXTENSIONS_GALLERY={} BL014_DESIGNATED=1 pnpm exec playwright test tests/e2e/session-switching.spec.ts --project=chromium --workers=1 --retries=0
+    just proof-session-switching-residual-audit
+
+proof-session-switching-residual-audit:
+    pnpm --filter @ascend/api exec tsx src/cli/session-switching-residual-audit.ts
+
 verify:
     pnpm format:check
     pnpm lint
@@ -129,3 +140,4 @@ verify:
     just verify-workbench-route
     just verify-home-workbench false
     just verify-project-runtime-isolation
+    just verify-session-switching

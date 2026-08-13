@@ -46,6 +46,10 @@ import {
   type TerminalRawEvidence,
 } from '../../apps/api/src/workbench-proof-terminal.js'
 import { runTerminalParityEpisode } from '../../apps/api/src/workbench-proof-terminal-episode.js'
+import {
+  TerminalParityTiming,
+  validateTerminalParityTimingEvidence,
+} from '../../apps/api/src/workbench-proof-terminal-timing.js'
 
 interface CommandResult {
   code: number
@@ -279,10 +283,9 @@ const openIntegratedTerminal = async (page: Page): Promise<void> => {
   await terminalInput.focus()
 }
 
-const startTerminalCommandOnce = async (
+const dispatchTerminalCommandOnce = async (
   page: Page,
   command: string,
-  startEvidencePath: string,
   lockName: string
 ): Promise<void> => {
   const lockPath = path.join(BL001_ROOT, lockName)
@@ -290,19 +293,28 @@ const startTerminalCommandOnce = async (
   const terminalInput = page
     .getByRole('textbox', { name: /^Terminal /u })
     .first()
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    await terminalInput.focus()
-    await page.keyboard.insertText(
-      `if /usr/bin/mkdir "${lockPath}" 2>/dev/null; then exec ${command}; fi`
-    )
-    await page.keyboard.press('Enter')
-    const deadline = Date.now() + 10_000
-    while (Date.now() < deadline) {
-      if (await pathExists(startEvidencePath)) return
-      await new Promise((resolve) => setTimeout(resolve, 50))
-    }
+  await terminalInput.focus()
+  await page.keyboard.insertText(
+    'if /usr/bin/mkdir "' +
+      lockPath +
+      '" 2>/dev/null; then exec ' +
+      command +
+      '; fi'
+  )
+  await page.keyboard.press('Enter')
+}
+
+const waitForTerminalCommandStartEvidence = async (
+  startEvidencePath: string
+): Promise<void> => {
+  const deadline = Date.now() + 10_000
+  while (Date.now() < deadline) {
+    if (await pathExists(startEvidencePath)) return
+    await new Promise((resolve) => setTimeout(resolve, 50))
   }
-  throw new Error('Integrated terminal did not start its exact-once command')
+  throw new Error(
+    'Integrated terminal single dispatch produced no start evidence'
+  )
 }
 
 test.describe.configure({ mode: 'serial' })
@@ -357,12 +369,12 @@ test('cancels an in-progress real integrated command on overall timeout', async 
           REPOSITORY_ROOT,
           'tests/e2e/fixtures/terminal-timeout-command.mjs'
         )}\" \"${timeoutCommandPidFile}\"`
-        await startTerminalCommandOnce(
+        await dispatchTerminalCommandOnce(
           page,
           timeoutCommand,
-          timeoutCommandPidFile,
           'timeout-command-started'
         )
+        await waitForTerminalCommandStartEvidence(timeoutCommandPidFile)
         const identity = JSON.parse(
           await readFile(timeoutCommandPidFile, 'utf8')
         ) as TrackedCommandIdentity
@@ -421,6 +433,7 @@ test('proves one designated-host workbench with terminal parity', async ({
 }) => {
   test.setTimeout(TERMINAL_EPISODE_TIMEOUT_MS + 15_000)
   const episodeStartedAt = Date.now()
+  const timing = new TerminalParityTiming()
   await removeAbsentPriorRuns()
   const fixtureBefore = await snapshotFixture()
   const injectionBefore = await pathExists(BL001_INJECTION_SENTINEL)
@@ -457,11 +470,15 @@ test('proves one designated-host workbench with terminal parity', async ({
   let repeatedStop: CommandResult | null = null
   let browserContextClosed = false
   let terminalCreationActions = 0
+  let dispatchCount = 0
   let browserObserved = false
   let cleanupAbsent = false
   let exactProcessAbsent = false
   let listenerAbsent = false
   let commandCleanup = false
+  let cleanupStartedMs: number | null = null
+  let cleanupFailed = false
+  let readinessEvidence: Record<string, unknown> | null = null
   const trackedCommands = new Map<number, TrackedCommandIdentity>()
   let testError: unknown = null
   let processes: Awaited<ReturnType<typeof readManagedProcesses>> = []
@@ -477,37 +494,68 @@ test('proves one designated-host workbench with terminal parity', async ({
     await runTerminalParityEpisode<ProofHandle, OwnedBrowserContext>({
       timeoutMs: TERMINAL_EPISODE_TIMEOUT_MS,
       preflight: async () => {
-        await preflightFixedExecutables(process.env.PATH ?? '')
+        await timing.measure('prerequisiteDirect', async () => {
+          await preflightFixedExecutables(process.env.PATH ?? '')
+          direct = await captureTerminalContext({
+            context: 'direct',
+            cwd: canonicalPath,
+          })
+          await writeJsonAtomic(DIRECT_RAW_EVIDENCE, direct)
+        })
       },
       startWorkbench: async () => {
-        direct = await captureTerminalContext({
-          context: 'direct',
-          cwd: canonicalPath,
+        await timing.measure('workbenchStart', async () => {
+          start = await runJust('proof-start')
+          expect(start.code).toBe(0)
+          const stdoutLines = start.stdout
+            .trim()
+            .split(String.fromCharCode(10))
+            .filter(Boolean)
+          expect(stdoutLines).toHaveLength(1)
+          handle = parseProofHandle(stdoutLines[0])
         })
-        await writeJsonAtomic(DIRECT_RAW_EVIDENCE, direct)
-
-        start = await runJust('proof-start')
-        expect(start.code).toBe(0)
-        const stdoutLines = start.stdout.trim().split('\n').filter(Boolean)
-        expect(stdoutLines).toHaveLength(1)
-        handle = parseProofHandle(stdoutLines[0])
-        processes = await readManagedProcesses(handle.pid)
-        listeners = await readManagedListeners(
-          processes.map((entry) => entry.pid)
-        )
-        expect(processes.length).toBeGreaterThan(0)
-        expect(
-          processes.some(
-            (entry) =>
-              entry.argv.filter((argument) => argument === BL001_FIXTURE)
-                .length === 1
+        await timing.measure('listenerHttpReadiness', async () => {
+          if (!handle || !start)
+            throw new Error('Workbench start evidence absent')
+          processes = await readManagedProcesses(handle.pid)
+          listeners = await readManagedListeners(
+            processes.map((entry) => entry.pid)
           )
-        ).toBe(true)
-        expect(
-          listeners.some(
-            (entry) => entry.port === Number(new URL(handle.url).port)
+          expect(processes.length).toBeGreaterThan(0)
+          expect(
+            processes.some(
+              (entry) =>
+                entry.argv.filter((argument) => argument === BL001_FIXTURE)
+                  .length === 1
+            )
+          ).toBe(true)
+          const exactPort = Number(new URL(handle.url).port)
+          const listenerMatches = listeners.filter(
+            (entry) => entry.port === exactPort
           )
-        ).toBe(true)
+          expect(listenerMatches).toHaveLength(1)
+          const readyEvent = start.stderr
+            .split(String.fromCharCode(10))
+            .flatMap((line) => {
+              try {
+                return [JSON.parse(line) as Record<string, unknown>]
+              } catch {
+                return []
+              }
+            })
+            .find((event) => event.event === 'runtime.start.succeeded')
+          expect(readyEvent).toBeDefined()
+          expect(Number(readyEvent?.readinessStatus)).toBeGreaterThanOrEqual(
+            200
+          )
+          expect(Number(readyEvent?.readinessStatus)).toBeLessThan(400)
+          readinessEvidence = {
+            exactOwnedListenerCount: listenerMatches.length,
+            httpStatusClass: 'success-or-redirect',
+            consequenceObserved: true,
+          }
+        })
+        if (!handle) throw new Error('Workbench handle absent after readiness')
         return handle
       },
       openBrowser: async () => {
@@ -523,11 +571,15 @@ test('proves one designated-host workbench with terminal parity', async ({
       },
       run: async (startedHandle, ownedContext, signal) => {
         signal.throwIfAborted()
-        const page = await ownedContext.browserContext.newPage()
-        await page.goto(startedHandle.url, { waitUntil: 'domcontentloaded' })
-        await expect(page.locator('.monaco-workbench')).toBeVisible({
-          timeout: 15_000,
+        let page: Page | null = null
+        await timing.measure('browserWorkbenchReadiness', async () => {
+          page = await ownedContext.browserContext.newPage()
+          await page.goto(startedHandle.url, { waitUntil: 'domcontentloaded' })
+          await expect(page.locator('.monaco-workbench')).toBeVisible({
+            timeout: 15_000,
+          })
         })
+        if (!page) throw new Error('Browser workbench page absent')
         await page.keyboard.press('Control+Shift+E')
         await expect(
           page.getByText(EXPLORER_SENTINEL, { exact: true }).first()
@@ -537,12 +589,14 @@ test('proves one designated-host workbench with terminal parity', async ({
           .getByRole('button', { name: /^Open Preview to the Side/u })
           .click()
         await expect
-          .poll(() => renderedPreviewIsVisible(page), { timeout: 15_000 })
+          .poll(() => renderedPreviewIsVisible(page!), { timeout: 15_000 })
           .toBe(true)
         browserObserved = true
 
-        await openIntegratedTerminal(page)
-        terminalCreationActions += 1
+        await timing.measure('terminalCreation', async () => {
+          await openIntegratedTerminal(page!)
+          terminalCreationActions += 1
+        })
         const integratedCommand = `setsid \"${path.join(
           REPOSITORY_ROOT,
           'apps/api/node_modules/.bin/tsx'
@@ -550,20 +604,26 @@ test('proves one designated-host workbench with terminal parity', async ({
           REPOSITORY_ROOT,
           'apps/api/src/cli/proof-terminal-integrated.ts'
         )}\"`
-        signal.throwIfAborted()
-        await startTerminalCommandOnce(
-          page,
-          integratedCommand,
-          INTEGRATED_COMMAND_IDENTITIES,
-          'integrated-command-started'
-        )
-        await expect
-          .poll(() => pathExists(INTEGRATED_RAW_EVIDENCE), { timeout: 45_000 })
-          .toBe(true)
-        signal.throwIfAborted()
-        integrated = JSON.parse(
-          await readFile(INTEGRATED_RAW_EVIDENCE, 'utf8')
-        ) as TerminalRawEvidence
+        await timing.measure('commandDispatch', async () => {
+          signal.throwIfAborted()
+          dispatchCount += 1
+          await dispatchTerminalCommandOnce(
+            page!,
+            integratedCommand,
+            'integrated-command-started'
+          )
+        })
+        await timing.measure('commandEvidence', async () => {
+          await expect
+            .poll(() => pathExists(INTEGRATED_RAW_EVIDENCE), {
+              timeout: 10_000,
+            })
+            .toBe(true)
+          signal.throwIfAborted()
+          integrated = JSON.parse(
+            await readFile(INTEGRATED_RAW_EVIDENCE, 'utf8')
+          ) as TerminalRawEvidence
+        })
 
         expect(terminalCreationActions).toBe(1)
         expect(commandByKey(direct, 'hostname').normalized.stdout).toBe(
@@ -617,36 +677,53 @@ test('proves one designated-host workbench with terminal parity', async ({
         )
       },
       cancelTrackedCommands: async () => {
-        commandCleanup = await cancelAndAuditTrackedCommands(
-          handle,
-          trackedCommands,
-          [direct, integrated]
-        )
-        if (!commandCleanup)
-          throw new Error('A terminal command identity remains live')
+        cleanupStartedMs ??= timing.start('cleanup')
+        try {
+          commandCleanup = await cancelAndAuditTrackedCommands(
+            handle,
+            trackedCommands,
+            [direct, integrated]
+          )
+          if (!commandCleanup)
+            throw new Error('A terminal command identity remains live')
+        } catch (error) {
+          cleanupFailed = true
+          throw error
+        }
       },
       stopWorkbench: async (startedHandle) => {
-        stop = await runJust('proof-stop', JSON.stringify(startedHandle))
-        repeatedStop = await runJust(
-          'proof-stop',
-          JSON.stringify(startedHandle)
-        )
-        let audit = await auditHandleCleanup(startedHandle)
-        if (!audit.exactProcessAbsent || !audit.listenerAbsent) {
-          await stopWorkbenchProof(startedHandle)
-          audit = await auditHandleCleanup(startedHandle)
+        try {
+          stop = await runJust('proof-stop', JSON.stringify(startedHandle))
+          repeatedStop = await runJust(
+            'proof-stop',
+            JSON.stringify(startedHandle)
+          )
+          let audit = await auditHandleCleanup(startedHandle)
+          if (!audit.exactProcessAbsent || !audit.listenerAbsent) {
+            await stopWorkbenchProof(startedHandle)
+            audit = await auditHandleCleanup(startedHandle)
+          }
+          exactProcessAbsent = audit.exactProcessAbsent
+          listenerAbsent = audit.listenerAbsent
+          cleanupAbsent = exactProcessAbsent && listenerAbsent
+          if (stop.code !== 0 || repeatedStop.code !== 0 || !cleanupAbsent)
+            throw new Error('Exact workbench cleanup failed')
+        } catch (error) {
+          cleanupFailed = true
+          throw error
         }
-        exactProcessAbsent = audit.exactProcessAbsent
-        listenerAbsent = audit.listenerAbsent
-        cleanupAbsent = exactProcessAbsent && listenerAbsent
-        if (stop.code !== 0 || repeatedStop.code !== 0 || !cleanupAbsent)
-          throw new Error('Exact workbench cleanup failed')
       },
       auditWorkbenchAbsent: async (startedHandle) => {
         const audit = await auditHandleCleanup(startedHandle)
         exactProcessAbsent = audit.exactProcessAbsent
         listenerAbsent = audit.listenerAbsent
         cleanupAbsent = exactProcessAbsent && listenerAbsent
+        if (cleanupStartedMs !== null)
+          timing.finish(
+            'cleanup',
+            cleanupStartedMs,
+            cleanupFailed || !cleanupAbsent ? 'failed' : 'passed'
+          )
         return cleanupAbsent
       },
     })
@@ -672,6 +749,18 @@ test('proves one designated-host workbench with terminal parity', async ({
       testError ??= new Error('Fixture integrity changed')
     }
 
+    const timingEvidence = {
+      dispatchCount,
+      playwrightRetries: 0,
+      steps: timing.steps,
+    }
+    if (!validateTerminalParityTimingEvidence(timingEvidence))
+      testError ??= new Error('Terminal parity timing evidence is incomplete')
+    if (!readinessEvidence)
+      testError ??= new Error(
+        'Exact listener and HTTP readiness evidence absent'
+      )
+
     await writeJsonAtomic(TERMINAL_EPISODE_EVIDENCE, {
       version: 1,
       host,
@@ -682,6 +771,8 @@ test('proves one designated-host workbench with terminal parity', async ({
         chromium: true,
         fixedTools: TERMINAL_TOOL_COMMANDS.map(({ command }) => command),
       },
+      timing: timingEvidence,
+      readiness: readinessEvidence,
       timeoutsMs: {
         command: TERMINAL_COMMAND_TIMEOUT_MS,
         episode: TERMINAL_EPISODE_TIMEOUT_MS,
@@ -711,6 +802,8 @@ test('proves one designated-host workbench with terminal parity', async ({
         renderedSentinel: MARKDOWN_RENDERED_SENTINEL,
         observed: browserObserved,
         terminalCreationActions,
+        dispatchCount,
+        playwrightRetries: 0,
         contextClosed: browserContextClosed,
       },
       parity: {

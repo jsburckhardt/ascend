@@ -18,7 +18,7 @@ API requests, project registration, workbench lifecycle transitions, health chan
 - Runtime logs MUST be structured records written to standard output or standard error.
 - Fastify's built-in structured logger is the default application logger.
 - Lifecycle event names MUST remain stable and follow the event catalog in `PRD.md`.
-- Multi-project lifecycle and proxy events MUST use the shared deterministic opaque project token; raw project IDs, canonical paths, internal authorities, commands, environment, Git, terminal, editor, and source values MUST NOT be logged.
+- Multi-project lifecycle and proxy events MUST use the shared deterministic opaque one-way project token, which MAY appear in safe logs and declared privacy-safe public evidence for correlation. Raw project IDs, canonical paths, internal ports/authorities, credentials, secrets, commands, environment, Git, terminal, editor, and source values MUST NOT be logged; browser stable URLs separately carry the encoded persisted stable project ID.
 - Logs MUST NOT include source contents, terminal contents, command output, clipboard data, prompts, credentials, or secrets.
 - OpenTelemetry defaults and environment configuration MUST provide traces and metrics independently of application log formatting.
 

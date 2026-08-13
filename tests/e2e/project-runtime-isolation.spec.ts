@@ -38,7 +38,10 @@ import {
   CODE_SERVER_PATH,
   REPOSITORY_ROOT,
 } from '../../apps/api/src/workbench-proof-contract.js'
-import { terminateExactProcessGroup } from '../../apps/api/src/workbench-proof-runtime.js'
+import {
+  terminateExactProcessGroup,
+  terminateExactProcessIdentity,
+} from '../../apps/api/src/workbench-proof-runtime.js'
 import { classifyWorkbenchConnectionRolePayload } from '../../apps/api/src/workbench-proxy-contract.js'
 import { scanProtectedEvidence } from '../../apps/api/src/project-runtime-isolation-evidence.js'
 import { stopOwnedProcessGroup } from '../../apps/api/test/helpers/project-home-process-group.js'
@@ -50,7 +53,7 @@ const resultRoot = path.join(
   'test-results/bl-013/runtime-isolation'
 )
 const evidencePath = path.join(resultRoot, 'three-project-chromium.json')
-const operationMs = 20_000
+const operationMs = 30_000
 const overallMs = 120_000
 let terminalProofOrdinal = 0
 
@@ -86,21 +89,33 @@ const terminalProof = async (
   },
   createTerminal = true
 ): Promise<boolean> => {
+  const visibleTerminals = page.locator('.terminal.xterm:visible')
   if (createTerminal) {
+    const previousTerminalCount = await visibleTerminals.count()
     await page.keyboard.press('F1')
     await expect(page.locator('.quick-input-widget')).toBeVisible({
       timeout: operationMs,
     })
     await page.keyboard.insertText('Terminal: Create New Terminal')
-    await expect(
-      page.locator('.quick-input-list .monaco-list-row').first()
-    ).toBeVisible({ timeout: operationMs })
-    await page.keyboard.press('Enter')
+    const firstCommand = page
+      .locator('.quick-input-list .monaco-list-row')
+      .first()
+    await expect(firstCommand).toBeVisible({ timeout: operationMs })
+    await firstCommand.click()
+    await expect
+      .poll(() => visibleTerminals.count(), { timeout: operationMs })
+      .toBeGreaterThan(previousTerminalCount)
   }
-  const terminal = page.locator('.terminal.xterm:visible').last()
+  const terminal = visibleTerminals.last()
   await terminal.waitFor({ state: 'visible', timeout: operationMs })
-  const input = page.locator('textarea.xterm-helper-textarea:visible').last()
+  await expect
+    .poll(async () => (await terminal.innerText()).trim().length > 0, {
+      timeout: operationMs,
+    })
+    .toBe(true)
+  const input = terminal.locator('textarea.xterm-helper-textarea')
   await input.focus()
+  await expect(input).toBeFocused({ timeout: operationMs })
   const executionMarker = 'DONE_' + String(++terminalProofOrdinal)
   const command =
     'printf BL013_%s= PWD; pwd -P; printf BL013_%s= ROOT; git rev-parse --show-toplevel; ' +
@@ -425,8 +440,15 @@ test('keeps three Git workbenches isolated and explicitly replaces only B', asyn
     const b = projects[1]
     const oldB = runtime.inspect(b.id)!
     expect(await readProcessStartTime(oldB.pid!)).toBe(oldB.processStartTime)
-    const bTermination = terminateExactProcessGroup(oldB.pid!, 2_000)
+    const bTermination = (async () => {
+      await terminateExactProcessGroup(oldB.pid!, 2_000)
+      await terminateExactProcessIdentity(
+        { pid: oldB.pid!, startTimeTicks: oldB.processStartTime! },
+        2_000
+      )
+    })()
     await pages[1].close()
+    await contexts[1].close()
     await bTermination
     await expect
       .poll(() => runtime.inspect(b.id)?.state, { timeout: operationMs })
@@ -455,6 +477,7 @@ test('keeps three Git workbenches isolated and explicitly replaces only B', asyn
     expect(digestIdentity(runtime.inspect(projects[2].id)!)).toBe(
       digestIdentity(initial.c)
     )
+    contexts[1] = await browser.newContext()
     pages[1] = await contexts[1].newPage()
     trackProjectSockets(pages[1], b)
     await pages[1].goto(

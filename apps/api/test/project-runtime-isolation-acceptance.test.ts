@@ -19,7 +19,11 @@ import {
   BL013_EVENT_EXPECTATIONS,
   BL013_MISMATCH_CLASSES,
   BL013_SCENARIOS,
+  finishMonotonicMeasurement,
+  isBoundedMonotonicMeasurement,
+  monotonicNowMs,
   scanProtectedEvidence,
+  type MonotonicDurationMeasurement,
   validateProjectRuntimeIsolationEvidence,
 } from '../src/project-runtime-isolation-evidence.js'
 import { validateRuntimeManagerSource } from '../src/project-runtime-isolation-contract.js'
@@ -94,16 +98,19 @@ interface ControlledRuntime {
   readonly contacts: string[]
   readonly frameReceipts: ControlledFrameReceipt[]
   readonly terminalSentinel: string
+  readonly terminationTimings: MonotonicDurationMeasurement[]
   crash(exit?: RuntimeExit): Promise<void>
   setTerminationOutcome(outcome: RuntimeTerminationOutcome): void
 }
 
 async function controlledRuntime(
   label: string,
-  terminalSentinel: string
+  terminalSentinel: string,
+  cleanupBoundMs = 120_000
 ): Promise<ControlledRuntime> {
   const contacts: string[] = []
   const frameReceipts: ControlledFrameReceipt[] = []
+  const terminationTimings: MonotonicDurationMeasurement[] = []
   const exited = deferred<RuntimeExit>()
   let alive = true
   let terminationOutcome: RuntimeTerminationOutcome = 'graceful'
@@ -175,9 +182,17 @@ async function controlledRuntime(
       listenerAbsent: !server.listening,
     }),
     terminate: async (_graceful, _force, ownedPort) => {
+      const startedMs = monotonicNowMs()
       alive = false
       exited.resolve({ code: 0, signal: null, addressInUse: false })
       await close()
+      terminationTimings.push(
+        finishMonotonicMeasurement({
+          measurementId: 'controlled-runtime-cleanup-' + label,
+          startedMs,
+          boundMs: cleanupBoundMs,
+        })
+      )
       return {
         pid,
         processStartTime: 'controlled-start-' + String(pid),
@@ -201,6 +216,7 @@ async function controlledRuntime(
     contacts,
     frameReceipts,
     terminalSentinel,
+    terminationTimings,
     async crash(exit = { code: 77, signal: null, addressInUse: false }) {
       alive = false
       await close()
@@ -1436,7 +1452,14 @@ async function buildArtifact() {
     ]),
   })
 
-  async function shutdownMatrix() {
+  async function shutdownMatrix(measurementId: string) {
+    const managerShutdownBoundMs =
+      config.gracefulShutdownMs + config.forceShutdownMs + 1_000
+    const taskSettlementBoundMs = managerShutdownBoundMs
+    const projectCleanupBoundMs =
+      config.gracefulShutdownMs + config.forceShutdownMs
+    const postReturnObservationBoundMs = 1_000
+    const postReturnWaitMs = 40
     const events: RuntimeSafeLifecycleEvent[] = []
     const runtimes = new Map<string, ControlledRuntime>()
     const cGate = deferred<ReadyRuntime>()
@@ -1449,7 +1472,11 @@ async function buildArtifact() {
         const project = projects.find(
           (candidate) => candidate.canonicalPath === canonicalPath
         )!
-        const runtime = await controlledRuntime(project.label, project.sentinel)
+        const runtime = await controlledRuntime(
+          project.label,
+          project.sentinel,
+          projectCleanupBoundMs
+        )
         runtimes.set(project.label, runtime)
         if (project.label === 'b') runtime.setTerminationOutcome('escalated')
         if (project.label !== 'c') return runtime.ready
@@ -1492,6 +1519,8 @@ async function buildArtifact() {
       expect(local.inspect(projects[2].id)?.state).toBe('starting')
     )
     const preShutdownAudit = local.audit!()
+    const managerShutdownStartedMs = monotonicNowMs()
+    const taskSettlementStartedMs = monotonicNowMs()
     const first = local.shutdown()
     const second = local.shutdown()
     const during = await local
@@ -1501,6 +1530,11 @@ async function buildArtifact() {
       })
       .catch((error: unknown) => error)
     const result = await first
+    const managerShutdown = finishMonotonicMeasurement({
+      measurementId: measurementId + '-manager-shutdown',
+      startedMs: managerShutdownStartedMs,
+      boundMs: managerShutdownBoundMs,
+    })
     const cOutcome = await cStart
     const after = await local
       .start({
@@ -1519,12 +1553,34 @@ async function buildArtifact() {
       { timeout: 1_000 }
     )
     const postShutdownAudit = local.audit!()
-    await new Promise((resolve) => setTimeout(resolve, 40))
+    const taskSettlement = finishMonotonicMeasurement({
+      measurementId: measurementId + '-task-settlement',
+      startedMs: taskSettlementStartedMs,
+      boundMs: taskSettlementBoundMs,
+    })
+    const postReturnStartedMs = monotonicNowMs()
+    await new Promise((resolve) => setTimeout(resolve, postReturnWaitMs))
+    const postReturnObservation = finishMonotonicMeasurement({
+      measurementId: measurementId + '-post-return-observation',
+      startedMs: postReturnStartedMs,
+      boundMs: postReturnObservationBoundMs,
+    })
     const postReturnAudit = local.audit!()
     const postReturnMutationCount =
       JSON.stringify(postShutdownAudit) === JSON.stringify(postReturnAudit)
         ? 0
         : 1
+    const projectCleanup = projects.map((project) => {
+      const timing = runtimes.get(project.label)?.terminationTimings.at(-1)
+      if (timing === undefined)
+        throw new Error('Missing measured cleanup for project ' + project.label)
+      const projectToken = deriveProjectOwnerToken(project.id)
+      return {
+        ...timing,
+        measurementId: measurementId + '-cleanup-' + projectToken,
+        projectToken,
+      }
+    })
     const controlAlive = await unrelated.ready.process.isAlive()
     const controlListener = await terminalProbe(
       {
@@ -1543,6 +1599,18 @@ async function buildArtifact() {
       'UNRELATED_CONTROL_SENTINEL'
     )
     await unrelated.ready.process.terminate(1, 1, unrelated.ready.port)
+    const timings = {
+      managerShutdown,
+      taskSettlement,
+      projectCleanup,
+      postReturnObservation,
+    }
+    const timingsWithinBound = [
+      managerShutdown,
+      taskSettlement,
+      postReturnObservation,
+      ...projectCleanup,
+    ].every((timing) => isBoundedMonotonicMeasurement(timing))
     return {
       events,
       first,
@@ -1555,12 +1623,16 @@ async function buildArtifact() {
       postShutdownAudit,
       postReturnAudit,
       postReturnMutationCount,
+      postReturnWaitMs,
+      managerShutdownBoundMs,
+      timings,
+      timingsWithinBound,
       controlAlive,
       controlListenerAlive: controlListener.passed,
       unrelated,
     }
   }
-  const shutdown = await shutdownMatrix()
+  const shutdown = await shutdownMatrix('global-shutdown-manager-audit')
   const outcomeByToken = Object.fromEntries(
     shutdown.result.audits.map((audit) => [audit.projectToken, audit.outcome])
   )
@@ -1577,9 +1649,10 @@ async function buildArtifact() {
       shutdown.postShutdownAudit.ownershipRecords === 0 &&
       shutdown.postShutdownAudit.completionTasks === 0 &&
       shutdown.postShutdownAudit.backgroundTasks === 0 &&
-      shutdown.postReturnMutationCount === 0,
+      shutdown.postReturnMutationCount === 0 &&
+      shutdown.timingsWithinBound,
     invocationCount: 3,
-    elapsedMs: 1,
+    elapsedMs: shutdown.timings.managerShutdown.elapsedMs,
     observations: [
       {
         projectAuditCount: shutdown.result.audits.length,
@@ -1604,7 +1677,7 @@ async function buildArtifact() {
           measurementId: 'global-shutdown-manager-audit',
           inspector: 'runtime-manager-audit',
           executed: true,
-          boundedWaitMs: 1_000,
+          boundedWaitMs: shutdown.managerShutdownBoundMs,
           before: shutdown.preShutdownAudit,
           after: shutdown.postShutdownAudit,
           settlement: {
@@ -1616,10 +1689,11 @@ async function buildArtifact() {
             backgroundSettlementDelta:
               shutdown.postShutdownAudit.backgroundTaskSettlements -
               shutdown.preShutdownAudit.backgroundTaskSettlements,
-            postReturnWaitMs: 40,
+            postReturnWaitMs: shutdown.postReturnWaitMs,
             postReturnMutationCount: shutdown.postReturnMutationCount,
             postReturnAudit: shutdown.postReturnAudit,
           },
+          timings: shutdown.timings,
         },
       },
     ],
@@ -1648,7 +1722,7 @@ async function buildArtifact() {
       },
     ]),
   })
-  const shutdownRace = await shutdownMatrix()
+  const shutdownRace = await shutdownMatrix('shutdown-race-manager-audit')
   scenarios.push({
     scenario: 'shutdown-race',
     executionId: 'scenario-shutdown-race',
@@ -1665,9 +1739,10 @@ async function buildArtifact() {
       shutdownRace.postShutdownAudit.ownershipRecords === 0 &&
       shutdownRace.postShutdownAudit.completionTasks === 0 &&
       shutdownRace.postShutdownAudit.backgroundTasks === 0 &&
-      shutdownRace.postReturnMutationCount === 0,
+      shutdownRace.postReturnMutationCount === 0 &&
+      shutdownRace.timingsWithinBound,
     invocationCount: 4,
-    elapsedMs: 1,
+    elapsedMs: shutdownRace.timings.managerShutdown.elapsedMs,
     observations: [
       {
         memoizedShutdown: shutdownRace.first === shutdownRace.second,
@@ -1684,7 +1759,7 @@ async function buildArtifact() {
           measurementId: 'shutdown-race-manager-audit',
           inspector: 'runtime-manager-audit',
           executed: true,
-          boundedWaitMs: 1_000,
+          boundedWaitMs: shutdownRace.managerShutdownBoundMs,
           before: shutdownRace.preShutdownAudit,
           after: shutdownRace.postShutdownAudit,
           settlement: {
@@ -1696,10 +1771,11 @@ async function buildArtifact() {
             backgroundSettlementDelta:
               shutdownRace.postShutdownAudit.backgroundTaskSettlements -
               shutdownRace.preShutdownAudit.backgroundTaskSettlements,
-            postReturnWaitMs: 40,
+            postReturnWaitMs: shutdownRace.postReturnWaitMs,
             postReturnMutationCount: shutdownRace.postReturnMutationCount,
             postReturnAudit: shutdownRace.postReturnAudit,
           },
+          timings: shutdownRace.timings,
         },
       },
     ],
@@ -1847,6 +1923,30 @@ describe.sequential('BL-013 executable fake matrix', () => {
     browser.projects[2].gitStatusDigest = browser.projects[0].gitStatusDigest
     expect(validateProjectRuntimeIsolationBrowserEvidence(browser)).toBe(false)
   })
+  it('accepts a slow near-bound duration and rejects timeout or failure timing', () => {
+    const nearBound: MonotonicDurationMeasurement = {
+      measurementId: 'near-bound-regression',
+      clock: 'process.hrtime.bigint',
+      measured: true,
+      startedMs: 10_000,
+      endedMs: 10_999,
+      elapsedMs: 999,
+      boundMs: 1_000,
+      outcome: 'completed',
+    }
+    expect(isBoundedMonotonicMeasurement(nearBound)).toBe(true)
+    expect(
+      isBoundedMonotonicMeasurement({
+        ...nearBound,
+        endedMs: 11_001,
+        elapsedMs: 1_001,
+      })
+    ).toBe(false)
+    expect(
+      isBoundedMonotonicMeasurement({ ...nearBound, outcome: 'failed' })
+    ).toBe(false)
+  })
+
   it('rejects incomplete, copied, unscanned, assertion-only, and residual artifacts', async () => {
     const artifact = await artifactPromise
     const mutate = (change: (copy: any) => void) => {
@@ -1993,6 +2093,43 @@ describe.sequential('BL-013 executable fake matrix', () => {
           (scenario: any) => scenario.scenario === 'shutdown-race'
         )
         race.observations[0].managerAudit.inspector = 'assigned-zero'
+      })
+    ).toBe(false)
+    expect(
+      mutate((copy) => {
+        const race = copy.scenarios.find(
+          (scenario: any) => scenario.scenario === 'shutdown-race'
+        )
+        race.observations[0].managerAudit.timings.managerShutdown = {
+          measurementId: 'shutdown-race-manager-audit-manager-shutdown',
+          clock: 'assigned-duration',
+          measured: true,
+          startedMs: 0,
+          endedMs: 1,
+          elapsedMs: 1,
+          boundMs: race.observations[0].managerAudit.boundedWaitMs,
+          outcome: 'completed',
+        }
+        race.elapsedMs = 1
+      })
+    ).toBe(false)
+    expect(
+      mutate((copy) => {
+        const race = copy.scenarios.find(
+          (scenario: any) => scenario.scenario === 'shutdown-race'
+        )
+        const timing = race.observations[0].managerAudit.timings.taskSettlement
+        timing.endedMs = timing.startedMs + timing.boundMs + 1
+        timing.elapsedMs = timing.boundMs + 1
+      })
+    ).toBe(false)
+    expect(
+      mutate((copy) => {
+        const race = copy.scenarios.find(
+          (scenario: any) => scenario.scenario === 'shutdown-race'
+        )
+        race.observations[0].managerAudit.timings.projectCleanup[0].outcome =
+          'failed'
       })
     ).toBe(false)
     expect(

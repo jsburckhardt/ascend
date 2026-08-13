@@ -40,6 +40,67 @@ const record = (value: unknown): Record<string, unknown> | undefined =>
     ? (value as Record<string, unknown>)
     : undefined
 
+export interface MonotonicDurationMeasurement {
+  readonly measurementId: string
+  readonly clock: 'process.hrtime.bigint'
+  readonly measured: true
+  readonly startedMs: number
+  readonly endedMs: number
+  readonly elapsedMs: number
+  readonly boundMs: number
+  readonly outcome: 'completed' | 'failed'
+}
+
+export const monotonicNowMs = (): number =>
+  Number(process.hrtime.bigint()) / 1_000_000
+
+export const finishMonotonicMeasurement = (input: {
+  readonly measurementId: string
+  readonly startedMs: number
+  readonly boundMs: number
+  readonly outcome?: 'completed' | 'failed'
+}): MonotonicDurationMeasurement => {
+  const endedMs = monotonicNowMs()
+  return Object.freeze({
+    measurementId: input.measurementId,
+    clock: 'process.hrtime.bigint',
+    measured: true,
+    startedMs: input.startedMs,
+    endedMs,
+    elapsedMs: endedMs - input.startedMs,
+    boundMs: input.boundMs,
+    outcome: input.outcome ?? 'completed',
+  })
+}
+
+export const isBoundedMonotonicMeasurement = (
+  value: unknown,
+  expectedMeasurementId?: string,
+  expectedBoundMs?: number
+): value is MonotonicDurationMeasurement => {
+  const measurement = record(value)
+  return (
+    measurement?.measurementId !== undefined &&
+    (expectedMeasurementId === undefined ||
+      measurement.measurementId === expectedMeasurementId) &&
+    measurement.clock === 'process.hrtime.bigint' &&
+    measurement.measured === true &&
+    Number.isFinite(measurement.startedMs) &&
+    Number(measurement.startedMs) >= 0 &&
+    Number.isFinite(measurement.endedMs) &&
+    Number(measurement.endedMs) >= Number(measurement.startedMs) &&
+    Number.isFinite(measurement.elapsedMs) &&
+    Number(measurement.elapsedMs) ===
+      Number(measurement.endedMs) - Number(measurement.startedMs) &&
+    Number.isSafeInteger(measurement.boundMs) &&
+    Number(measurement.boundMs) > 0 &&
+    (expectedBoundMs === undefined ||
+      measurement.boundMs === expectedBoundMs) &&
+    Number(measurement.elapsedMs) <= Number(measurement.boundMs) &&
+    measurement.outcome === 'completed'
+  )
+}
+
 const digest = (value: string): string =>
   createHash('sha256').update(value).digest('hex')
 
@@ -293,13 +354,21 @@ export const BL013_EVENT_EXPECTATIONS: Readonly<
 const measuredManagerAudit = (
   value: unknown,
   measurementId: string,
-  timeoutMs: number
+  timeoutMs: number,
+  expectedProjectTokens: readonly unknown[]
 ): boolean => {
   const measurement = record(value)
   const before = record(measurement?.before)
   const after = record(measurement?.after)
   const settlement = record(measurement?.settlement)
   const postReturnAudit = record(settlement?.postReturnAudit)
+  const timings = record(measurement?.timings)
+  const managerShutdown = record(timings?.managerShutdown)
+  const taskSettlement = record(timings?.taskSettlement)
+  const postReturnObservation = record(timings?.postReturnObservation)
+  const projectCleanup = Array.isArray(timings?.projectCleanup)
+    ? timings.projectCleanup.map(record)
+    : []
   const countKeys = [
     'entryCount',
     'startingEntries',
@@ -307,6 +376,18 @@ const measuredManagerAudit = (
     'completionTasks',
     'backgroundTasks',
   ] as const
+  const cleanupTokens = projectCleanup.map((timing) => timing?.projectToken)
+  const durationBoundsValid = [
+    managerShutdown,
+    taskSettlement,
+    postReturnObservation,
+    ...projectCleanup,
+  ].every(
+    (timing) =>
+      Number.isSafeInteger(timing?.boundMs) &&
+      Number(timing?.boundMs) > 0 &&
+      Number(timing?.boundMs) <= timeoutMs
+  )
   return (
     measurement?.measurementId === measurementId &&
     measurement.inspector === 'runtime-manager-audit' &&
@@ -339,7 +420,34 @@ const measuredManagerAudit = (
     postReturnAudit?.completionTaskSettlements ===
       after?.completionTaskSettlements &&
     postReturnAudit?.backgroundTaskSettlements ===
-      after?.backgroundTaskSettlements
+      after?.backgroundTaskSettlements &&
+    durationBoundsValid &&
+    isBoundedMonotonicMeasurement(
+      managerShutdown,
+      measurementId + '-manager-shutdown',
+      Number(measurement.boundedWaitMs)
+    ) &&
+    isBoundedMonotonicMeasurement(
+      taskSettlement,
+      measurementId + '-task-settlement'
+    ) &&
+    isBoundedMonotonicMeasurement(
+      postReturnObservation,
+      measurementId + '-post-return-observation'
+    ) &&
+    Number(postReturnObservation?.elapsedMs) >=
+      Number(settlement.postReturnWaitMs) - 1 &&
+    projectCleanup.length === expectedProjectTokens.length &&
+    new Set(cleanupTokens).size === expectedProjectTokens.length &&
+    expectedProjectTokens.every((token) => cleanupTokens.includes(token)) &&
+    projectCleanup.every(
+      (timing) =>
+        safeProjectToken(timing?.projectToken) &&
+        isBoundedMonotonicMeasurement(
+          timing,
+          measurementId + '-cleanup-' + String(timing?.projectToken)
+        )
+    )
   )
 }
 
@@ -396,7 +504,7 @@ export function validateProjectRuntimeIsolationEvidence(
       scenario.passed !== true ||
       !Number.isSafeInteger(scenario.invocationCount) ||
       Number(scenario.invocationCount) < 1 ||
-      !Number.isSafeInteger(scenario.elapsedMs) ||
+      !Number.isFinite(scenario.elapsedMs) ||
       Number(scenario.elapsedMs) < 0 ||
       !Array.isArray(scenario.observations) ||
       scenario.observations.length === 0 ||
@@ -465,6 +573,12 @@ export function validateProjectRuntimeIsolationEvidence(
   const invalidNoMutation = record(invalidIdentifiers?.noMutation)
   const globalShutdown = observation('global-shutdown')
   const shutdownRace = observation('shutdown-race')
+  const globalShutdownTiming = record(
+    record(record(globalShutdown?.managerAudit)?.timings)?.managerShutdown
+  )
+  const shutdownRaceTiming = record(
+    record(record(shutdownRace?.managerAudit)?.timings)?.managerShutdown
+  )
   if (
     scenarioByName.get('interleaved-24')?.invocationCount !== 24 ||
     observation('interleaved-24')?.launchCount !== 3 ||
@@ -503,8 +617,11 @@ export function validateProjectRuntimeIsolationEvidence(
     !measuredManagerAudit(
       globalShutdown.managerAudit,
       'global-shutdown-manager-audit',
-      Number(artifact.timeoutMs)
+      Number(artifact.timeoutMs),
+      [projectTokens.a, projectTokens.b, projectTokens.c]
     ) ||
+    scenarioByName.get('global-shutdown')?.elapsedMs !==
+      globalShutdownTiming?.elapsedMs ||
     shutdownRace?.memoizedShutdown !== true ||
     shutdownRace.duringRejected !== true ||
     shutdownRace.afterRejected !== true ||
@@ -514,8 +631,11 @@ export function validateProjectRuntimeIsolationEvidence(
     !measuredManagerAudit(
       shutdownRace.managerAudit,
       'shutdown-race-manager-audit',
-      Number(artifact.timeoutMs)
-    )
+      Number(artifact.timeoutMs),
+      [projectTokens.a, projectTokens.b, projectTokens.c]
+    ) ||
+    scenarioByName.get('shutdown-race')?.elapsedMs !==
+      shutdownRaceTiming?.elapsedMs
   )
     return false
   const orderedPairs = ['a>b', 'a>c', 'b>a', 'b>c', 'c>a', 'c>b']

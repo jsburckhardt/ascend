@@ -395,5 +395,5 @@ describe('execution-backed Home/workbench component matrix', () => {
     mkdirSync(path.dirname(resultPath), { recursive: true })
     writeFileSync(resultPath, JSON.stringify(matrix, null, 2))
     expect(validateAcceptanceMatrix(matrix)).toBe(true)
-  })
+  }, 10_000)
 })

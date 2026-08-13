@@ -45,6 +45,13 @@ describe('BL-013 application documentation contract', () => {
       'persisted-close',
       'distinct untracked filenames',
       'missing, wrong, extra, misattributed',
+      'encoded stable project ID',
+      'one-way project token',
+      'privacy-safe public evidence',
+      'process.hrtime.bigint',
+      'configured bound',
+      'assigned-duration',
+      'explicitly allowed authority details',
     ])
       expect(complete).toContain(phrase)
     expect(readme).toContain(

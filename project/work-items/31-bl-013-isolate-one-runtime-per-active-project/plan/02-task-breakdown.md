@@ -78,7 +78,7 @@ Add explicit waiter accounting to each starting entry. A single cancelled B wait
 
 ### Expected Evidence
 - V-6 failure/replacement matrix with old/new B identities, unchanged A/C digests, typed outcomes, launch counts, and terminal checks.
-- V-7 cancellation/shutdown matrix with waiter counts, cleanup audits, race outcomes, finite timing, zero owned residuals, and surviving unrelated identity. The completed correction awaits tracked completion/background promises without direct task-set clearing, then independently measures immediate and delayed post-return zero maps and rejects assigned-zero or cleared-without-settlement provenance.
+- V-7 cancellation/shutdown matrix with waiter counts, cleanup audits, race outcomes, finite timing, zero owned residuals, and surviving unrelated identity. The completed correction awaits tracked completion/background promises without direct task-set clearing, then independently measures immediate and delayed post-return zero maps. Manager shutdown, task settlement, every project cleanup, and delayed post-return observation retain real monotonic start/end/elapsed values and configured bounds; assigned-duration, over-bound, failed, assigned-zero, and cleared-without-settlement provenance is rejected.
 
 ## Task T-4: Fail closed across proxy targets, resources, frames, and events
 
@@ -154,7 +154,7 @@ Create one versioned execution-backed BL-013 fake evidence artifact. Include the
 - Union residual test deduplicates exact owned identities only and requires every process/group/listener/socket absent.
 
 ### Expected Evidence
-- V-8 `test-results/bl-013/runtime-isolation/fake-matrix.json` with schema version, bounds, execution records, AC map, event expectations, public scans, and zero-residual union. The completed validator enforces the exact 70-record scenario catalog and rejects missing, wrong, extra, misattributed, reordered, incomplete AC-12, and unmeasured AC-18 mutations.
+- V-8 `test-results/bl-013/runtime-isolation/fake-matrix.json` with schema version, bounds, execution records, AC map, event expectations, public scans, and zero-residual union. The completed validator enforces the exact 70-record scenario catalog and rejects missing, wrong, extra, misattributed, reordered, incomplete AC-12, unmeasured AC-18, assigned-duration, over-bound, and failed-duration mutations.
 - Contract-guard report with accepted production source and rejected negative fixtures.
 
 ## Task T-7: Run the real three-project Chromium isolation episode
@@ -170,7 +170,7 @@ Create one versioned execution-backed BL-013 fake evidence artifact. Include the
 Add one no-retry designated Chromium scenario with three disposable directories under a controlled root. Initialize separate Git repositories, branches, status changes, local configuration, Explorer/editor sentinels, terminal markers, and integrity manifests. Register A/B/C, navigate all three stable routes in separate pages/contexts while all runtimes remain active, classify sockets, and transiently capture exact identities/ports. Use a repository-local test authority, unavailable in production/public routes, to terminate only B by exact PID/start identity. Prove A/C identity and terminal continuity, observe B failure, then trigger one explicit stable-route start and prove only B is replaced. Retain bounded booleans, digests, tokens, and counts rather than protected values.
 
 ### Acceptance Criteria
-- AC-5 and AC-21: all three project-specific Explorer/editor/terminal/Git observations pass concurrently; B termination and replacement do not alter A/C.
+- AC-5 and AC-21: all three project-specific Explorer/editor/terminal/Git observations pass concurrently; Exact B group/identity termination and replacement in a fresh browser context do not alter A/C.
 - AC-6 and AC-10: routes/sockets stay project-local and healthy reopen reuses only the matching identity.
 - AC-13 and AC-14: injected B failure and one replacement are contained with no auto-retry.
 - AC-22, AC-23, AC-26, AC-27: evidence is redacted, cleanup-complete, offline/repeatable, and explicitly limited to immediate concurrent isolation.
@@ -233,4 +233,4 @@ Add root `verify-project-runtime-isolation` and residual-audit recipes, compose 
 - Scan dependencies, routes, and UI for forbidden public stop/restart or BL-014/BL-015 additions.
 
 ### Expected Evidence
-- V-11 command/exit/duration record, documentation matrix, clean-tree before/after hashes, prior-gate outcomes, full `just verify` result, and scope/dependency scan. Documentation now distinguishes 18 pre-forward target failures from six executed frame-delivery rows and records exact event and shutdown-audit counts.
+- V-11 command/exit/duration record, documentation matrix, clean-tree before/after hashes, prior-gate outcomes, full `just verify` result, and scope/dependency scan. Documentation now distinguishes 18 pre-forward target failures from six executed frame-delivery rows, records exact event and shutdown-audit counts, and correctly separates the encoded stable-ID URL from the one-way public-safe correlation token and restricted authority evidence.

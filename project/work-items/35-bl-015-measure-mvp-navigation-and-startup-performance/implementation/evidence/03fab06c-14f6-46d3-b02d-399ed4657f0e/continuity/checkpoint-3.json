@@ -1,0 +1,12 @@
+{
+  "ordinal": 3,
+  "attemptId": "continuity-3",
+  "retry": 0,
+  "sourceExecutionId": "ba57feba-b70e-433e-a8b2-3e22fc6307bd",
+  "passed": true,
+  "failure": null,
+  "publicDigest": "d3528dc1a13be24ae1cfd1dde96f639ccad4728fe6ad4509ad39e7531ac18b44",
+  "restrictedDigest": "0ed3ddf6a8a8a9d0fea296926e02a83e347c129f269dc203e41e3bd63feda681",
+  "stateCrossingOrLoss": false,
+  "cleanupPassed": true
+}

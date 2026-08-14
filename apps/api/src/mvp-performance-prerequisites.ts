@@ -14,8 +14,11 @@ import { checkCapacityPrerequisites } from './workbench-capacity-prerequisites.j
 import { readProcessStartTime } from './project-runtime-process.js'
 import { BL001_FIXTURE, REPOSITORY_ROOT } from './workbench-proof-contract.js'
 import {
+  MVP_DESIGNATED_HOST,
   MVP_PERFORMANCE_GUARD,
   MVP_PERFORMANCE_RESULT_ROOT,
+  digestMvpPerformance,
+  type MvpHostIdentity,
   type MvpPlan,
 } from './mvp-performance-contract.js'
 
@@ -28,6 +31,8 @@ export interface MvpPrerequisiteResult {
   passed: boolean
   records: MvpPrerequisiteRecord[]
   host: Record<string, unknown>
+  hostIdentity: MvpHostIdentity | null
+  hostIdentityDigest: string | null
   versions: { node: string; chromium: string; codeServer: string }
   failure: string | null
   attempts: 0
@@ -76,14 +81,44 @@ const loadAndMemory = async () => {
   )
   return { loadAverage, availableMemoryKiB }
 }
+const capacityHostIdentity = (
+  host: Awaited<ReturnType<typeof checkCapacityPrerequisites>>['host']
+): MvpHostIdentity | null =>
+  host
+    ? {
+        ubuntuVersion: host.ubuntuVersion,
+        hostname: host.hostname,
+        user: host.user,
+        uid: host.uid,
+        repository: host.repository,
+        cgroup: host.cgroup,
+      }
+    : null
+
+export const readMvpDesignatedHostIdentity =
+  async (): Promise<MvpHostIdentity> => {
+    const capacity = await checkCapacityPrerequisites()
+    const identity = capacityHostIdentity(capacity.host)
+    if (!identity) throw new Error('designated-host-identity-unavailable')
+    return identity
+  }
+
 export const checkMvpPerformancePrerequisites =
   async (): Promise<MvpPrerequisiteResult> => {
     const capacity = await checkCapacityPrerequisites()
+    const hostIdentity = capacityHostIdentity(capacity.host)
     const records: MvpPrerequisiteRecord[] = capacity.records.map((record) => ({
       ...record,
     }))
     const add = (name: string, passed: boolean, detail: string) =>
       records.push({ name, passed, detail })
+    add(
+      'designated-host-declaration-match',
+      JSON.stringify(hostIdentity) === JSON.stringify(MVP_DESIGNATED_HOST),
+      hostIdentity
+        ? 'observed host and cgroup match immutable declaration'
+        : 'designated host identity unavailable'
+    )
     const required = [
       path.join(baseline, 'run.json'),
       path.join(baseline, 'samples.json'),
@@ -170,6 +205,10 @@ export const checkMvpPerformancePrerequisites =
         cgroup: capacity.host?.cgroup ?? null,
         preAttemptLoad: load,
       },
+      hostIdentity,
+      hostIdentityDigest: hostIdentity
+        ? digestMvpPerformance(hostIdentity)
+        : null,
       versions: {
         node: process.version,
         chromium: chromium

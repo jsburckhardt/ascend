@@ -19,6 +19,7 @@ import {
   MVP_PERFORMANCE_RESULT_ROOT,
   digestMvpPerformance,
 } from './mvp-performance-contract.js'
+import { atomicWriteMvpJson } from './mvp-performance-evidence.js'
 import { createProjectLibrary } from './project-library.js'
 import {
   createProjectRuntimeConfig,
@@ -68,6 +69,8 @@ export interface IntegratedCapacityRecord {
     workloadTimeoutMs: number
     workloadOutputLimitBytes: number
     runtimeMethodComparableToBl004: true
+    baselineRunId: string
+    baselineMeasurementMethod: string
   }
   cohorts: Array<{
     cohort: number
@@ -89,11 +92,29 @@ export interface IntegratedCapacityRecord {
     failures: string[]
   }>
   comparison: Array<{
-    cohort: number | string
+    cohort: number | 'historical-1'
+    field:
+      | 'load1Average'
+      | 'minimumAvailableMemoryKiB'
+      | 'runtimeCpuAveragePercent'
+      | 'runtimeRssAverageKiB'
     classification: 'comparable' | 'directional-only' | 'not-comparable'
     reason: string
-    baseline: string
-    observed: string
+    baseline: {
+      runId: string
+      method: string
+      sourceFile: string
+      sampleCount: number
+      value: number
+    }
+    current: {
+      runId: string
+      method: string
+      sourceFile: string
+      sampleCount: number
+      value: number
+    } | null
+    delta: number | null
   }>
   finalResidualAudit: {
     complete: boolean
@@ -216,9 +237,80 @@ const countDatabaseResiduals = async (database: string) => {
   return count
 }
 
+const BL004_BASELINE_RUN_ID = '853037e6-5dab-43cf-bcf8-61f1e8bbdb18'
+const BL004_BASELINE_ROOT = path.join(
+  REPOSITORY_ROOT,
+  'project/work-items/11-bl-004-establish-the-workbench-capacity-baseline/implementation/evidence',
+  BL004_BASELINE_RUN_ID
+)
+const BL004_SAMPLE_SOURCE = path.join(BL004_BASELINE_ROOT, 'samples.json')
+const BL004_RUN_SOURCE = path.join(BL004_BASELINE_ROOT, 'run.json')
+type CapacityDeltaField =
+  IntegratedCapacityRecord['comparison'][number]['field']
+const roundedRaw = (value: number): number => Number(value.toFixed(6))
+const capacityRawMetric = (
+  samples: ScheduledSample[],
+  field: CapacityDeltaField
+): { sampleCount: number; value: number } => {
+  const hosts = samples.flatMap((sample) => (sample.host ? [sample.host] : []))
+  const trees = samples.flatMap((sample) =>
+    sample.processTrees.flatMap((tree) => (tree.sample ? [tree.sample] : []))
+  )
+  const values =
+    field === 'load1Average'
+      ? hosts.map((host) => host.loadAverage[0]!)
+      : field === 'minimumAvailableMemoryKiB'
+        ? hosts.map((host) => host.availableMemoryKiB)
+        : field === 'runtimeCpuAveragePercent'
+          ? trees.map((tree) => tree.cpuPercent)
+          : trees.map((tree) => tree.rssKiB)
+  if (!values.length) throw new Error('capacity-delta-source-empty:' + field)
+  const value =
+    field === 'minimumAvailableMemoryKiB'
+      ? Math.min(...values)
+      : values.reduce((sum, item) => sum + item, 0) / values.length
+  return { sampleCount: values.length, value: roundedRaw(value) }
+}
+const CAPACITY_DELTA_FIELDS: readonly CapacityDeltaField[] = [
+  'load1Average',
+  'minimumAvailableMemoryKiB',
+  'runtimeCpuAveragePercent',
+  'runtimeRssAverageKiB',
+]
+export const redactCapacityEvidence = <T>(value: T, runId: string): T =>
+  JSON.parse(
+    JSON.stringify(value, (key, entry) => {
+      if (entry === null || entry === undefined) return entry
+      if (key === 'port')
+        return digestMvpPerformance({ runId, port: entry }).slice(0, 24)
+      if (key === 'address') return 'loopback-redacted'
+      if (key === 'cwd')
+        return (
+          'path-digest:' +
+          digestMvpPerformance({ runId, path: entry }).slice(0, 24)
+        )
+      if (
+        key === 'pid' ||
+        key === 'rootPid' ||
+        key === 'startTimeTicks' ||
+        key === 'inode'
+      )
+        return (
+          'identity-digest:' +
+          digestMvpPerformance({ runId, identity: entry }).slice(0, 24)
+        )
+      if (key === 'memberPids')
+        return (entry as unknown[]).map((identity) =>
+          digestMvpPerformance({ runId, identity }).slice(0, 24)
+        )
+      return entry
+    })
+  ) as T
+
 export const runIntegratedCapacitySection = async (
   runId: string,
-  planHash: string
+  planHash: string,
+  signal?: AbortSignal
 ): Promise<IntegratedCapacityRecord> => {
   const cohorts: IntegratedCapacityRecord['cohorts'] = []
   let runtimeResiduals = 0,
@@ -227,6 +319,15 @@ export const runIntegratedCapacitySection = async (
     databaseResiduals = 0,
     fixtureResiduals = 0
   for (const cohort of MVP_CAPACITY_COHORTS) {
+    if (signal?.aborted) throw signal.reason
+    await atomicWriteMvpJson(
+      path.join(
+        MVP_PERFORMANCE_EVIDENCE_ROOT,
+        runId,
+        'capacity-in-progress.json'
+      ),
+      { runId, planHash, cohort, attemptId: 'capacity-' + cohort }
+    )
     const root = await mkdtemp(
       path.join(os.tmpdir(), 'ascend-bl015-capacity-' + cohort + '-')
     )
@@ -327,7 +428,12 @@ export const runIntegratedCapacitySection = async (
               accept: 'text/html',
               'x-ascend-workbench-document': '1',
             },
-            signal: AbortSignal.timeout(CAPACITY_MEMBER_TIMEOUT_MS),
+            signal: signal
+              ? AbortSignal.any([
+                  signal,
+                  AbortSignal.timeout(CAPACITY_MEMBER_TIMEOUT_MS),
+                ])
+              : AbortSignal.timeout(CAPACITY_MEMBER_TIMEOUT_MS),
           })
           await response.arrayBuffer()
           const snapshot = runtime.inspect(id)
@@ -383,7 +489,8 @@ export const runIntegratedCapacitySection = async (
           slots.push(missingSlot(runId, cohort, slot, reason))
         }
       }
-      const stopReason = () => null
+      if (signal?.aborted) throw signal.reason
+      const stopReason = () => (signal?.aborted ? String(signal.reason) : null)
       const onProbeFailure = (reason: string) =>
         failures.push('probe:' + reason)
       try {
@@ -511,7 +618,7 @@ export const runIntegratedCapacitySection = async (
       responsivenessPassed &&
       cleanupPassed &&
       failures.length === 0
-    cohorts.push({
+    const cohortRecord: IntegratedCapacityRecord['cohorts'][number] = {
       cohort,
       attemptId: 'capacity-' + cohort,
       retry: 0,
@@ -529,48 +636,142 @@ export const runIntegratedCapacitySection = async (
       residuals,
       gate: cohort === 3 ? (complete ? 'met' : 'blocker') : 'finding',
       failures,
-    })
+    }
+    cohorts.push(cohortRecord)
+    await atomicWriteMvpJson(
+      path.join(
+        MVP_PERFORMANCE_RESULT_ROOT,
+        runId,
+        'capacity-checkpoint-' + cohort + '-restricted.json'
+      ),
+      cohortRecord,
+      0o600
+    )
+    await atomicWriteMvpJson(
+      path.join(
+        MVP_PERFORMANCE_EVIDENCE_ROOT,
+        runId,
+        'capacity-checkpoint-' + cohort + '.json'
+      ),
+      redactCapacityEvidence(cohortRecord, runId)
+    )
+    await atomicWriteMvpJson(
+      path.join(
+        MVP_PERFORMANCE_EVIDENCE_ROOT,
+        runId,
+        'capacity-in-progress.json'
+      ),
+      {
+        runId,
+        planHash,
+        cohort,
+        attemptId: cohortRecord.attemptId,
+        status: 'complete',
+      }
+    )
+    await atomicWriteMvpJson(
+      path.join(MVP_PERFORMANCE_EVIDENCE_ROOT, runId, 'capacity-partial.json'),
+      redactCapacityEvidence(
+        { schemaVersion: 1, runId, planHash, cohorts, interrupted: true },
+        runId
+      )
+    )
   }
+  const baselineRun = JSON.parse(await readFile(BL004_RUN_SOURCE, 'utf8')) as {
+    runId: string
+    measurementMethod: string
+  }
+  const baselineSamples = (
+    JSON.parse(await readFile(BL004_SAMPLE_SOURCE, 'utf8')) as {
+      runId: string
+      samples: ScheduledSample[]
+    }
+  ).samples
+  if (
+    baselineRun.runId !== BL004_BASELINE_RUN_ID ||
+    baselineSamples.some((sample) => sample.runId !== BL004_BASELINE_RUN_ID)
+  )
+    throw new Error('capacity-baseline-source-run-mismatch')
+  const baselineSource = path.relative(REPOSITORY_ROOT, BL004_SAMPLE_SOURCE)
+  const currentSource = path.relative(
+    REPOSITORY_ROOT,
+    path.join(MVP_PERFORMANCE_EVIDENCE_ROOT, runId, 'capacity.json')
+  )
   const comparison: IntegratedCapacityRecord['comparison'] = [
-    {
-      cohort: 'historical-1',
-      classification: 'not-comparable',
-      reason: 'BL-015 has no fresh one-member cohort',
-      baseline: 'BL-004 designated run',
-      observed: 'not-run',
-    },
-    ...MVP_CAPACITY_COHORTS.flatMap((cohort) => [
-      {
-        cohort,
-        classification: 'comparable' as const,
-        reason:
-          'runtime-tree samples reuse BL-004 probe offsets workload units formulas and completeness',
-        baseline: 'BL-004 designated raw samples',
-        observed: 'BL-015 integrated runtime-tree raw samples',
-      },
-      {
-        cohort,
-        classification: 'directional-only' as const,
-        reason:
-          'integrated API and web overhead is additional to the BL-004 raw-runtime method',
-        baseline: 'raw code-server only',
-        observed: 'integrated product services plus runtime',
-      },
-    ]),
+    ...CAPACITY_DELTA_FIELDS.map((field) => {
+      const baseline = capacityRawMetric(
+        baselineSamples.filter((sample) => sample.cohort === 1),
+        field
+      )
+      return {
+        cohort: 'historical-1' as const,
+        field,
+        classification: 'not-comparable' as const,
+        reason: 'BL-015 has no fresh one-member cohort raw source',
+        baseline: {
+          runId: BL004_BASELINE_RUN_ID,
+          method: baselineRun.measurementMethod,
+          sourceFile: baselineSource,
+          ...baseline,
+        },
+        current: null,
+        delta: null,
+      }
+    }),
+    ...MVP_CAPACITY_COHORTS.flatMap((cohort) =>
+      CAPACITY_DELTA_FIELDS.map((field) => {
+        const baseline = capacityRawMetric(
+          baselineSamples.filter((sample) => sample.cohort === cohort),
+          field
+        )
+        const current = capacityRawMetric(
+          cohorts.find((row) => row.cohort === cohort)!.samples,
+          field
+        )
+        const runtimeField = field.startsWith('runtime')
+        return {
+          cohort,
+          field,
+          classification: runtimeField
+            ? ('comparable' as const)
+            : ('directional-only' as const),
+          reason: runtimeField
+            ? 'identical BL-004 proc sampling field formula schedule units and runtime-tree scope'
+            : 'same raw host field and schedule but BL-015 includes integrated API and web service load',
+          baseline: {
+            runId: BL004_BASELINE_RUN_ID,
+            method: baselineRun.measurementMethod,
+            sourceFile: baselineSource,
+            ...baseline,
+          },
+          current: {
+            runId,
+            method: runtimeField
+              ? baselineRun.measurementMethod
+              : baselineRun.measurementMethod +
+                '; integrated API and web services included in host totals',
+            sourceFile: currentSource,
+            ...current,
+          },
+          delta: roundedRaw(current.value - baseline.value),
+        }
+      })
+    ),
   ]
+  const finalResidualTotal =
+    runtimeResiduals +
+    listenerResiduals +
+    webResiduals +
+    databaseResiduals +
+    fixtureResiduals
   const finalResidualAudit = {
-    complete: true,
+    complete: finalResidualTotal === 0,
     runtimeResiduals,
     listenerResiduals,
     webResiduals,
     databaseResiduals,
     fixtureResiduals,
-    total:
-      runtimeResiduals +
-      listenerResiduals +
-      webResiduals +
-      databaseResiduals +
-      fixtureResiduals,
+    total: finalResidualTotal,
   }
   const result: IntegratedCapacityRecord = {
     schemaVersion: 1,
@@ -584,6 +785,8 @@ export const runIntegratedCapacitySection = async (
       workloadTimeoutMs: CAPACITY_WORKLOAD_TIMEOUT_MS,
       workloadOutputLimitBytes: CAPACITY_WORKLOAD_OUTPUT_LIMIT_BYTES,
       runtimeMethodComparableToBl004: true,
+      baselineRunId: BL004_BASELINE_RUN_ID,
+      baselineMeasurementMethod: baselineRun.measurementMethod,
     },
     cohorts,
     comparison,
@@ -596,18 +799,10 @@ export const runIntegratedCapacitySection = async (
     mode: 0o600,
   })
   await chmod(restrictedPath, 0o600)
-  const safe = JSON.parse(
-    JSON.stringify(result, (key, value) =>
-      key === 'port'
-        ? digestMvpPerformance({ runId, port: value }).slice(0, 24)
-        : key === 'address'
-          ? 'loopback-redacted'
-          : value
-    )
-  ) as IntegratedCapacityRecord
-  await writeFile(
+  const safe = redactCapacityEvidence(result, runId)
+  await atomicWriteMvpJson(
     path.join(MVP_PERFORMANCE_EVIDENCE_ROOT, runId, 'capacity.json'),
-    JSON.stringify(safe, null, 2) + '\n'
+    safe
   )
   return safe
 }

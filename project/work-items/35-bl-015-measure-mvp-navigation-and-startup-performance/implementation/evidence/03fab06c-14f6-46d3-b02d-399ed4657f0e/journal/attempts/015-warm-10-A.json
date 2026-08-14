@@ -1,0 +1,356 @@
+{
+  "schemaVersion": 1,
+  "state": "complete",
+  "attempt": {
+    "schemaVersion": 1,
+    "runId": "03fab06c-14f6-46d3-b02d-399ed4657f0e",
+    "planHash": "fbef2984622899e1521dc9e6818102ef623af444472d2e929124074a1aff0eaf",
+    "attemptId": "warm-10-A",
+    "kind": "warm",
+    "ordinal": 15,
+    "project": "A",
+    "retry": 0,
+    "startedAt": "2026-08-14T00:04:54.556Z",
+    "host": {
+      "ubuntuVersion": "Ubuntu 24.04.4 LTS",
+      "hostname": "03f809395a5d",
+      "user": "vscode",
+      "uid": 1000,
+      "repository": "/workspaces/ascend",
+      "cgroup": {
+        "version": "v2",
+        "path": "/",
+        "cpuMax": "max 100000",
+        "cpusetEffective": "0-19",
+        "memoryMax": "max",
+        "memoryHigh": "max",
+        "swapMax": "max",
+        "pidsMax": "max"
+      }
+    },
+    "versions": {
+      "node": "v22.23.2",
+      "chromium": "151.0.7922.34",
+      "codeServer": "4.131.0"
+    },
+    "browser": {
+      "context": "retained",
+      "cache": "retained",
+      "originStorage": "retained",
+      "prewarmedRuntime": false
+    },
+    "precheck": {
+      "passed": true,
+      "load": [7.89, 4.66, 2.75],
+      "availableMemoryKiB": 19012076,
+      "runtimeAudit": {
+        "healthPassed": true,
+        "identityUnchanged": true,
+        "listenerCount": 1,
+        "duplicateRuntimeCount": 0,
+        "transientResourceCount": 0
+      }
+    },
+    "runtime": {
+      "projectToken": "project-e58bc3a045ecbcb2",
+      "identityDigest": "74e28a1d5690f39b046f842936f937bd0bd0861a1f3039763e54d56ad0a96ddc",
+      "pidDigest": "4a3689f56e53d1bbb18fb06fca0e3b90f97e57d6029782b83de681ef9af48532",
+      "startDigest": "d2f04b34e12c74de0da9ca8e712021089a4da6aaadef9de30af718c8372ad9ec",
+      "portToken": "395bcd28c66537742780e348"
+    },
+    "stableUrl": "/projects/bl014-a/workbench/",
+    "clock": "process.hrtime.bigint",
+    "eventsNs": {
+      "activation": "2494350524330",
+      "runtime-start-requested": "2494400800311",
+      "runtime-health-ready": "2494409245438",
+      "stable-document-ready": "2495877039033",
+      "explorer-sentinel-ready": "2496416192842",
+      "terminal-prompt-ready": "2499194382279",
+      "workbench-usable": "2499194382279"
+    },
+    "phasesNs": {
+      "activation-to-runtime-start-requested": "50275981",
+      "runtime-start-requested-to-runtime-health-ready": "8445127",
+      "runtime-health-ready-to-stable-document-ready": "1467793595",
+      "stable-document-ready-to-explorer-sentinel-ready": "539153809",
+      "explorer-sentinel-ready-to-terminal-prompt-ready": "2778189437",
+      "terminal-prompt-ready-to-workbench-usable": "0",
+      "total": "4843857949"
+    },
+    "observedTotalNs": "4843857949",
+    "statisticalTotalNs": "4843857949",
+    "status": "success",
+    "failureClass": null,
+    "targetMs": 2000,
+    "targetMet": false,
+    "artifacts": {
+      "screenshot": "captured",
+      "trace": "captured",
+      "network": "captured",
+      "manifestId": "7be1d35bed08a8c656a887a6cdeb5e3b99040095402992f3fd33f2959915d1cd"
+    },
+    "boundary": {
+      "kind": "reuse",
+      "passed": true,
+      "measuredResiduals": 0,
+      "expectedIdentityCount": 1,
+      "runtimeAudit": {
+        "healthPassed": true,
+        "identityUnchanged": true,
+        "listenerCount": 1,
+        "duplicateRuntimeCount": 0,
+        "transientResourceCount": 0
+      }
+    },
+    "homeReturned": true
+  },
+  "artifact": {
+    "attemptId": "warm-10-A",
+    "manifestId": "7be1d35bed08a8c656a887a6cdeb5e3b99040095402992f3fd33f2959915d1cd",
+    "screenshot": {
+      "status": "captured",
+      "restrictedPath": "test-results/bl-015/03fab06c-14f6-46d3-b02d-399ed4657f0e/warm-10-A.png",
+      "requiredMode": "0600",
+      "protectedData": true,
+      "digest": "512ed4c0c4075fd496605cded4b1ceef727669eda17a0abf217eb297239bab0d"
+    },
+    "trace": {
+      "status": "captured",
+      "restrictedPath": "test-results/bl-015/03fab06c-14f6-46d3-b02d-399ed4657f0e/warm-10-A.zip",
+      "requiredMode": "0600",
+      "protectedData": true,
+      "digest": "c6d9fe24d30aa97bad18dedccfc97d4acc9a26ae6e39884356609730c2432de5"
+    },
+    "network": {
+      "status": "captured",
+      "entries": [
+        {
+          "method": "GET",
+          "pathDigest": "4bbd1b13c469db4bff68f3d7cfe88e71ed8701cfe81f337e6f83defdb35d9f45",
+          "kind": "document"
+        },
+        {
+          "method": "GET",
+          "pathDigest": "4bbd1b13c469db4bff68f3d7cfe88e71ed8701cfe81f337e6f83defdb35d9f45",
+          "kind": "fetch"
+        },
+        {
+          "method": "GET",
+          "pathDigest": "4bbd1b13c469db4bff68f3d7cfe88e71ed8701cfe81f337e6f83defdb35d9f45",
+          "kind": "fetch"
+        },
+        {
+          "method": "GET",
+          "pathDigest": "bce46da1708b9e83a5f63539940a1e1306e3cd921aa8ca47cefc5b2d7ac3d900",
+          "kind": "stylesheet"
+        },
+        {
+          "method": "GET",
+          "pathDigest": "74947b8f9831fa0b263185eee8afbdd73acaccff8f1399df609f1df1f7de88a6",
+          "kind": "script"
+        },
+        {
+          "method": "GET",
+          "pathDigest": "f5e5bdbe9886a1ade160cf23c8c2758e913e111acfa1e918921c8bf2695e18f8",
+          "kind": "script"
+        },
+        {
+          "method": "GET",
+          "pathDigest": "a3aae0a54b6bf94190dab342c6a3f1f7ed6f2ac34a5ffa568e60d40a358f18a3",
+          "kind": "fetch"
+        },
+        {
+          "method": "GET",
+          "pathDigest": "9b9abf5e36cbfb33204b2d01485db56273b49755d13ff836c6631d2930d66b3f",
+          "kind": "script"
+        },
+        {
+          "method": "GET",
+          "pathDigest": "20d70ce7a0bc5f72254ec041ec2f6acff9721533a6c57225297bea33146c1a44",
+          "kind": "script"
+        },
+        {
+          "method": "GET",
+          "pathDigest": "b5b2b63b7889df9b97873b9c8151102d4ae756d18734e4a8f0d287ec0f68b136",
+          "kind": "image"
+        },
+        {
+          "method": "GET",
+          "pathDigest": "6fd3140a6b2f26e31c6229688b0f356d88e93114035b236ff94b8aea18aaac65",
+          "kind": "document"
+        },
+        {
+          "method": "GET",
+          "pathDigest": "6972270ec904fb7d24c64c209715fd1c82be80a78c0ff7ceb92ef273a6142eb7",
+          "kind": "font"
+        },
+        {
+          "method": "GET",
+          "pathDigest": "6c0d711f3f0b61aa8545a7f8d1edab820a17ba0bc7e52058042dcfdb1f4585ba",
+          "kind": "script"
+        },
+        {
+          "method": "GET",
+          "pathDigest": "940312a2190bd5c5c6169b8dc6a040d0e699ca62e8f776e1b1ee0e8b14dce61d",
+          "kind": "script"
+        },
+        {
+          "method": "GET",
+          "pathDigest": "49c05fc7409a440c4b0cb7e1a8397d4945f4e1596f5475bde455ab3bca7956af",
+          "kind": "script"
+        },
+        {
+          "method": "GET",
+          "pathDigest": "d355dae9a1af4d2c85bc2e679d7ab58a9f4ffd1aa11f380b6fdcb6603997ebc9",
+          "kind": "script"
+        },
+        {
+          "method": "GET",
+          "pathDigest": "52053243da0958fe8242333542189e53c48a33f63f6dc9161ec5c932cbcde541",
+          "kind": "fetch"
+        },
+        {
+          "method": "GET",
+          "pathDigest": "52053243da0958fe8242333542189e53c48a33f63f6dc9161ec5c932cbcde541",
+          "kind": "fetch"
+        },
+        {
+          "method": "GET",
+          "pathDigest": "52053243da0958fe8242333542189e53c48a33f63f6dc9161ec5c932cbcde541",
+          "kind": "fetch"
+        },
+        {
+          "method": "GET",
+          "pathDigest": "dd0381924e7298f572baae5cfcb41887c0233911c1b6c7cf2f34c1ffb580af53",
+          "kind": "image"
+        },
+        {
+          "method": "GET",
+          "pathDigest": "52053243da0958fe8242333542189e53c48a33f63f6dc9161ec5c932cbcde541",
+          "kind": "font"
+        },
+        {
+          "method": "GET",
+          "pathDigest": "52053243da0958fe8242333542189e53c48a33f63f6dc9161ec5c932cbcde541",
+          "kind": "fetch"
+        },
+        {
+          "method": "GET",
+          "pathDigest": "52053243da0958fe8242333542189e53c48a33f63f6dc9161ec5c932cbcde541",
+          "kind": "fetch"
+        },
+        {
+          "method": "GET",
+          "pathDigest": "b36620c962f732a8b519caef6f0cc04f5b953604369545ceaad62abf0de2572e",
+          "kind": "script"
+        },
+        {
+          "method": "GET",
+          "pathDigest": "7e1d121bcef318b79ab3d13908bb22b56a5b8fc6e09ace280ca45981aab28012",
+          "kind": "script"
+        },
+        {
+          "method": "GET",
+          "pathDigest": "a7c2cbe50c10b6bb7bd362cb00357808fbea57304626948c01bf75356b0a7b97",
+          "kind": "script"
+        },
+        {
+          "method": "GET",
+          "pathDigest": "5ad2e7779ec048b89058dc6d5149d7be28da5e721b6878981c113550c9ba40f8",
+          "kind": "script"
+        },
+        {
+          "method": "GET",
+          "pathDigest": "93be43dc938494d46c9e0086294a45c6fdda8bc1667b573fe5c0116fedf080f2",
+          "kind": "script"
+        },
+        {
+          "method": "GET",
+          "pathDigest": "14c73391eb8c8ebbd5cff76bf2cef31d5d8c2a2dd0a3a86f10979eb90b5f5857",
+          "kind": "script"
+        },
+        {
+          "method": "GET",
+          "pathDigest": "3edb3121914a93dc236dbeaef203a3b4903fea0cc323b46390c077581410bbf0",
+          "kind": "script"
+        },
+        {
+          "method": "GET",
+          "pathDigest": "df7e940f72aa93cbcb6d70cc35124b0767c7a0e353043c7c24b660ea9be7b952",
+          "kind": "document"
+        },
+        {
+          "method": "GET",
+          "pathDigest": "656a55e3788bc6c960517f6ff859bdf1c0c8b0278999528e7de0d065f0b91a89",
+          "kind": "script"
+        },
+        {
+          "method": "GET",
+          "pathDigest": "67c1ccfd23eff89c3581efab688130dce5d84ad8fc5c53ff9c641fec7e473be2",
+          "kind": "script"
+        },
+        {
+          "method": "GET",
+          "pathDigest": "7e2df3dea56792413b5ad1af4554d72510e48ebf27e746bcded277eab56a85fc",
+          "kind": "script"
+        },
+        {
+          "method": "GET",
+          "pathDigest": "fd4d46f6469db63fcb53867cd78a1884ce81321565ff60f39a0676d83f740597",
+          "kind": "script"
+        },
+        {
+          "method": "GET",
+          "pathDigest": "84639b0da759036302c66a786ff98f36d8fc0066375ac8b91c3b371a429513ac",
+          "kind": "script"
+        },
+        {
+          "method": "GET",
+          "pathDigest": "55aee9a258e0d5e10bc09a5f74f2aa1340379cb9c77fc1e98a24dc2b689f9e96",
+          "kind": "script"
+        },
+        {
+          "method": "GET",
+          "pathDigest": "1eec5ad92bd50b38d8b1419335108034917846371a16d03206d4dac4e15fd64f",
+          "kind": "script"
+        },
+        {
+          "method": "GET",
+          "pathDigest": "1257bcae7fe9d69638add06f3b8269fab80793ce0adce0ec8645b85542a37500",
+          "kind": "script"
+        },
+        {
+          "method": "GET",
+          "pathDigest": "091b30f87398f894de190eadec1da56232d67e96f4e63d133668241ff56a8e2b",
+          "kind": "script"
+        },
+        {
+          "method": "GET",
+          "pathDigest": "b84085841482fc6ed9591c700df95581d500f84b904b896251e2b26ee0460ddc",
+          "kind": "script"
+        },
+        {
+          "method": "GET",
+          "pathDigest": "df707024efb39d3b6426e21387cc11b9376bd195077e6fe544a6b7b24c65aa73",
+          "kind": "script"
+        },
+        {
+          "method": "GET",
+          "pathDigest": "70e6302bddb35512a15629d05ce2ace560e682b266bb5606b58399c8f53c81cd",
+          "kind": "script"
+        },
+        {
+          "method": "GET",
+          "pathDigest": "6c1b8a6e5339b58cd0beee5ff838da9f1f65c4a3e14750b46aa5a8865148f841",
+          "kind": "script"
+        },
+        {
+          "method": "GET",
+          "pathDigest": "7cef2472dca8e7ef3df1f51c50a0b765c37f939f4357556b71e6db2356c35c59",
+          "kind": "fetch"
+        }
+      ]
+    }
+  }
+}

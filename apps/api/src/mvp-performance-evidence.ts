@@ -1,4 +1,13 @@
-import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
+import {
+  access,
+  mkdir,
+  readFile,
+  readdir,
+  rename,
+  rm,
+  stat,
+  writeFile,
+} from 'node:fs/promises'
 import path from 'node:path'
 import {
   MVP_COLD_ORDER,
@@ -16,12 +25,17 @@ import {
 import type { ContinuitySectionRecord } from './mvp-performance-continuity.js'
 import type { IntegratedCapacityRecord } from './mvp-performance-capacity.js'
 
-const atomic = async (target: string, value: unknown) => {
+export const atomicWriteMvpJson = async (
+  target: string,
+  value: unknown,
+  mode = 0o644
+) => {
   await mkdir(path.dirname(target), { recursive: true })
   const temporary = target + '.tmp-' + process.pid
   try {
     await writeFile(temporary, JSON.stringify(value, null, 2) + '\n', {
       flag: 'wx',
+      mode,
     })
     await rename(temporary, target)
   } catch (error) {
@@ -32,18 +46,257 @@ const atomic = async (target: string, value: unknown) => {
 export const writeMvpPlan = async (plan: MvpPlan): Promise<string> => {
   const directory = path.join(MVP_PERFORMANCE_EVIDENCE_ROOT, plan.runId)
   await mkdir(directory, { recursive: true })
-  await atomic(path.join(directory, 'plan.json'), plan)
+  await atomicWriteMvpJson(path.join(directory, 'plan.json'), plan)
   return directory
 }
-export const readMvpAttempts = async (runId: string): Promise<MvpAttempt[]> =>
-  (
-    JSON.parse(
+export interface MvpAttemptCheckpoint {
+  attempt: MvpAttempt
+  artifact: Record<string, unknown>
+}
+export interface MvpInvalidAttemptCheckpoint {
+  file: string
+  bytes: number
+  digest: string
+  classification: 'invalid-json' | 'owner-mismatch'
+}
+const attemptJournal = (runId: string) =>
+  path.join(MVP_PERFORMANCE_EVIDENCE_ROOT, runId, 'journal', 'attempts')
+const attemptJournalClosed = (runId: string) =>
+  path.join(MVP_PERFORMANCE_EVIDENCE_ROOT, runId, 'journal', 'closed.json')
+export const beginMvpAttemptCheckpoint = async (input: {
+  runId: string
+  planHash: string
+  attemptId: string
+  ordinal: number
+}): Promise<void> =>
+  atomicWriteMvpJson(
+    path.join(
+      MVP_PERFORMANCE_EVIDENCE_ROOT,
+      input.runId,
+      'journal',
+      'in-progress.json'
+    ),
+    { schemaVersion: 1, state: 'in-progress', ...input }
+  )
+export const completeMvpAttemptCheckpoint = async (
+  checkpoint: MvpAttemptCheckpoint
+): Promise<void> => {
+  const attempt = checkpoint.attempt
+  const target = path.join(
+    attemptJournal(attempt.runId),
+    String(attempt.ordinal).padStart(3, '0') + '-' + attempt.attemptId + '.json'
+  )
+  await access(attemptJournalClosed(attempt.runId)).then(
+    () => {
+      throw new Error('attempt-journal-closed')
+    },
+    () => undefined
+  )
+  await atomicWriteMvpJson(target, {
+    schemaVersion: 1,
+    state: 'complete',
+    ...checkpoint,
+  })
+  await access(attemptJournalClosed(attempt.runId)).then(
+    async () => {
+      await rm(target, { force: true })
+      throw new Error('attempt-journal-closed')
+    },
+    () => undefined
+  )
+}
+export const recoverMvpAttemptJournal = async (
+  runId: string,
+  planHash: string,
+  options: { tolerateInvalid?: boolean } = {}
+): Promise<{
+  checkpoints: MvpAttemptCheckpoint[]
+  inProgress: Record<string, unknown> | null
+  invalidCheckpoints: MvpInvalidAttemptCheckpoint[]
+}> => {
+  const directory = attemptJournal(runId)
+  const names = await readdir(directory).catch(() => [] as string[])
+  const checkpoints: MvpAttemptCheckpoint[] = []
+  const invalidCheckpoints: MvpInvalidAttemptCheckpoint[] = []
+  for (const name of names.filter((value) => value.endsWith('.json')).sort()) {
+    const content = await readFile(path.join(directory, name))
+    let value: MvpAttemptCheckpoint & { state?: string }
+    try {
+      value = JSON.parse(content.toString('utf8')) as MvpAttemptCheckpoint & {
+        state?: string
+      }
+    } catch (error) {
+      if (!options.tolerateInvalid) throw error
+      invalidCheckpoints.push({
+        file: name,
+        bytes: content.byteLength,
+        digest: digestMvpPerformance(content),
+        classification: 'invalid-json',
+      })
+      continue
+    }
+    if (
+      value.state !== 'complete' ||
+      value.attempt.runId !== runId ||
+      value.attempt.planHash !== planHash
+    ) {
+      if (options.tolerateInvalid) {
+        invalidCheckpoints.push({
+          file: name,
+          bytes: content.byteLength,
+          digest: digestMvpPerformance(content),
+          classification: 'owner-mismatch',
+        })
+        continue
+      }
+      throw new Error('attempt-journal-owner-mismatch')
+    }
+    checkpoints.push({ attempt: value.attempt, artifact: value.artifact })
+  }
+  const progress = await readFile(
+    path.join(
+      MVP_PERFORMANCE_EVIDENCE_ROOT,
+      runId,
+      'journal',
+      'in-progress.json'
+    ),
+    'utf8'
+  ).then(
+    (value) => JSON.parse(value) as Record<string, unknown>,
+    () => null
+  )
+  const completedIds = new Set(
+    checkpoints.map((value) => value.attempt.attemptId)
+  )
+  return {
+    checkpoints,
+    inProgress:
+      progress && !completedIds.has(String(progress.attemptId))
+        ? progress
+        : null,
+    invalidCheckpoints,
+  }
+}
+export const finalizeMvpAttemptJournal = async (
+  runId: string,
+  planHash: string
+): Promise<MvpAttempt[]> => {
+  await atomicWriteMvpJson(attemptJournalClosed(runId), {
+    schemaVersion: 1,
+    runId,
+    planHash,
+    closedAt: new Date().toISOString(),
+  })
+  const recovered = await recoverMvpAttemptJournal(runId, planHash)
+  const attempts = recovered.checkpoints.map((value) => value.attempt)
+  await atomicWriteMvpJson(
+    path.join(MVP_PERFORMANCE_EVIDENCE_ROOT, runId, 'attempts.json'),
+    { schemaVersion: 1, runId, planHash, attempts }
+  )
+  await atomicWriteMvpJson(
+    path.join(MVP_PERFORMANCE_EVIDENCE_ROOT, runId, 'browser-artifacts.json'),
+    {
+      schemaVersion: 1,
+      runId,
+      artifacts: recovered.checkpoints.map((value) => value.artifact),
+    }
+  )
+  await atomicWriteMvpJson(
+    path.join(MVP_PERFORMANCE_EVIDENCE_ROOT, runId, 'attempt-recovery.json'),
+    {
+      schemaVersion: 1,
+      runId,
+      completedAttemptIds: attempts.map((value) => value.attemptId),
+      inProgress: recovered.inProgress,
+      invalidCheckpoints: recovered.invalidCheckpoints,
+      fabricatedAttempts: 0,
+    }
+  )
+  return attempts
+}
+export const finalizeInterruptedMvpAttemptJournal = async (
+  runId: string,
+  planHash: string
+): Promise<{
+  attempts: MvpAttempt[]
+  inProgress: Record<string, unknown> | null
+  invalidCheckpoints: MvpInvalidAttemptCheckpoint[]
+}> => {
+  const recovered = await recoverMvpAttemptJournal(runId, planHash, {
+    tolerateInvalid: true,
+  })
+  const invalidRoot = path.join(
+    MVP_PERFORMANCE_EVIDENCE_ROOT,
+    runId,
+    'journal',
+    'invalid'
+  )
+  if (recovered.invalidCheckpoints.length)
+    await mkdir(invalidRoot, { recursive: true })
+  for (const invalidCheckpoint of recovered.invalidCheckpoints) {
+    const source = path.join(attemptJournal(runId), invalidCheckpoint.file)
+    const target = path.join(invalidRoot, invalidCheckpoint.file + '.invalid')
+    if ((await stat(source)).isFile()) await rename(source, target)
+  }
+  await atomicWriteMvpJson(attemptJournalClosed(runId), {
+    schemaVersion: 1,
+    runId,
+    planHash,
+    status: 'interrupted',
+    closedAt: new Date().toISOString(),
+  })
+  const attempts = recovered.checkpoints.map((value) => value.attempt)
+  await atomicWriteMvpJson(
+    path.join(MVP_PERFORMANCE_EVIDENCE_ROOT, runId, 'attempts.json'),
+    { schemaVersion: 1, runId, planHash, attempts }
+  )
+  await atomicWriteMvpJson(
+    path.join(MVP_PERFORMANCE_EVIDENCE_ROOT, runId, 'browser-artifacts.json'),
+    {
+      schemaVersion: 1,
+      runId,
+      artifacts: recovered.checkpoints.map((value) => value.artifact),
+    }
+  )
+  await atomicWriteMvpJson(
+    path.join(MVP_PERFORMANCE_EVIDENCE_ROOT, runId, 'attempt-recovery.json'),
+    {
+      schemaVersion: 1,
+      runId,
+      completedAttemptIds: attempts.map((value) => value.attemptId),
+      inProgress: recovered.inProgress,
+      invalidCheckpoints: recovered.invalidCheckpoints,
+      fabricatedAttempts: 0,
+      resumable: false,
+      disposition: 'retained-partial-new-run-required',
+    }
+  )
+  return {
+    attempts,
+    inProgress: recovered.inProgress,
+    invalidCheckpoints: recovered.invalidCheckpoints,
+  }
+}
+export const readMvpAttempts = async (runId: string): Promise<MvpAttempt[]> => {
+  try {
+    return (
+      JSON.parse(
+        await readFile(
+          path.join(MVP_PERFORMANCE_EVIDENCE_ROOT, runId, 'attempts.json'),
+          'utf8'
+        )
+      ) as { attempts: MvpAttempt[] }
+    ).attempts
+  } catch {
+    const plan = JSON.parse(
       await readFile(
-        path.join(MVP_PERFORMANCE_EVIDENCE_ROOT, runId, 'attempts.json'),
+        path.join(MVP_PERFORMANCE_EVIDENCE_ROOT, runId, 'plan.json'),
         'utf8'
       )
-    ) as { attempts: MvpAttempt[] }
-  ).attempts
+    ) as MvpPlan
+    return finalizeMvpAttemptJournal(runId, plan.planHash)
+  }
+}
 export const summarizeMvpPerformance = async (input: {
   plan: MvpPlan
   attempts: MvpAttempt[]
@@ -147,8 +400,8 @@ export const summarizeMvpPerformance = async (input: {
     approval: input.approval,
   }
   const root = path.join(MVP_PERFORMANCE_EVIDENCE_ROOT, input.plan.runId)
-  await atomic(path.join(root, 'summary.json'), summary)
-  await atomic(path.join(root, 'recomputation.json'), {
+  await atomicWriteMvpJson(path.join(root, 'summary.json'), summary)
+  await atomicWriteMvpJson(path.join(root, 'recomputation.json'), {
     schemaVersion: 1,
     runId: input.plan.runId,
     measurementHash,
@@ -157,11 +410,12 @@ export const summarizeMvpPerformance = async (input: {
     warm: warmStats,
     continuitySuccesses,
     capacity: summary.capacity,
+    capacityDeltas: input.capacity.comparison,
     metrics,
     overallDisposition: summary.overallDisposition,
     matched: true,
   })
-  await atomic(path.join(root, 'residual-audit.json'), {
+  await atomicWriteMvpJson(path.join(root, 'residual-audit.json'), {
     schemaVersion: 1,
     runId: input.plan.runId,
     attemptBoundaries: input.attempts.map((row) => ({
@@ -249,7 +503,15 @@ export const renderMvpComparison = (
     '',
     ...capacity.comparison.map(
       (row) =>
-        '- ' + row.cohort + ': ' + row.classification + ' — ' + row.reason
+        '- ' +
+        row.cohort +
+        ' ' +
+        row.field +
+        ': ' +
+        row.classification +
+        ' — ' +
+        row.reason +
+        (row.delta === null ? '' : '; delta=' + String(row.delta))
     ),
     '',
     'Approval: ' +

@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "runId": "965db988-d727-464f-940e-0d276743c485",
+  "basis": "stale-exact-owner-run-id-process-scan-and-explicit-fixture-root",
+  "staleGuardOwnerPid": 2724844,
+  "liveRunProcessesBefore": [],
+  "liveRunProcessesAfter": [],
+  "removedFixtureRoot": "/tmp/ascend-bl015-navigation-PyUl3L",
+  "fixtureRootAbsent": true,
+  "invalidArtifacts": [
+    {
+      "file": "cold-5-B.png",
+      "bytes": 0,
+      "digest": "f2fdf82740ddf66f28f1e790db05d1644868642906c7e86eb997f2534f3a7ab4"
+    },
+    {
+      "file": "cold-5-B.zip",
+      "bytes": 0,
+      "digest": "f2fdf82740ddf66f28f1e790db05d1644868642906c7e86eb997f2534f3a7ab4"
+    }
+  ],
+  "completedAttemptIds": ["cold-1-A", "cold-2-B", "cold-3-C", "cold-4-A"],
+  "invalidCheckpoints": [
+    {
+      "file": "005-cold-5-B.json",
+      "bytes": 0,
+      "digest": "f2fdf82740ddf66f28f1e790db05d1644868642906c7e86eb997f2534f3a7ab4",
+      "classification": "invalid-json"
+    }
+  ],
+  "complete": true,
+  "residuals": 0,
+  "guardAbsentAfterClear": true
+}

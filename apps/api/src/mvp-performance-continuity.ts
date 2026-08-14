@@ -7,6 +7,7 @@ import {
   MVP_PERFORMANCE_RESULT_ROOT,
   digestMvpPerformance,
 } from './mvp-performance-contract.js'
+import { atomicWriteMvpJson } from './mvp-performance-evidence.js'
 import { validateSessionSwitchingEvidence } from './session-switching-contract.js'
 import { REPOSITORY_ROOT } from './workbench-proof-contract.js'
 
@@ -35,7 +36,7 @@ interface ExecuteResult {
   stdout: string
   stderr: string
 }
-const executeExact = async (): Promise<ExecuteResult> =>
+const executeExact = async (signal?: AbortSignal): Promise<ExecuteResult> =>
   new Promise((resolve, reject) => {
     const child = spawn(
       'pnpm',
@@ -50,6 +51,7 @@ const executeExact = async (): Promise<ExecuteResult> =>
       ],
       {
         cwd: REPOSITORY_ROOT,
+        detached: true,
         env: {
           ...process.env,
           EXTENSIONS_GALLERY: '{}',
@@ -68,15 +70,23 @@ const executeExact = async (): Promise<ExecuteResult> =>
     child.stderr.on('data', (value: string) => {
       stderr = (stderr + value).slice(-32768)
     })
+    const onAbort = () => {
+      if (child.pid) process.kill(-child.pid, 'SIGTERM')
+    }
+    signal?.addEventListener('abort', onAbort, { once: true })
     child.once('error', reject)
-    child.once('close', (code) => resolve({ code, stdout, stderr }))
+    child.once('close', (code) => {
+      signal?.removeEventListener('abort', onAbort)
+      resolve({ code, stdout, stderr })
+    })
   })
 export const runMvpContinuitySection = async (
   runId: string,
   planHash: string,
   overrides: {
-    execute?: () => Promise<ExecuteResult>
+    execute?: (signal?: AbortSignal) => Promise<ExecuteResult>
     sourceRoot?: string
+    signal?: AbortSignal
   } = {}
 ): Promise<ContinuitySectionRecord> => {
   const execute = overrides.execute ?? executeExact
@@ -97,7 +107,35 @@ export const runMvpContinuitySection = async (
   await mkdir(restrictedTarget, { recursive: true })
   const runs: ContinuityRunRecord[] = []
   for (let ordinal = 1; ordinal <= MVP_CONTINUITY_RUNS; ordinal += 1) {
-    const executed = await execute()
+    if (overrides.signal?.aborted) throw overrides.signal.reason
+    await atomicWriteMvpJson(path.join(publicTarget, 'in-progress.json'), {
+      runId,
+      planHash,
+      ordinal,
+      attemptId: 'continuity-' + ordinal,
+    })
+    const executed = await execute(overrides.signal)
+    const controllerOutput = path.join(
+      restrictedTarget,
+      'controller-' + ordinal + '.json'
+    )
+    await writeFile(
+      controllerOutput,
+      JSON.stringify(
+        {
+          schemaVersion: 1,
+          runId,
+          attemptId: 'continuity-' + ordinal,
+          code: executed.code,
+          stdout: executed.stdout,
+          stderr: executed.stderr,
+        },
+        null,
+        2
+      ) + '\n',
+      { mode: 0o600 }
+    )
+    await chmod(controllerOutput, 0o600)
     let publicValue: Record<string, unknown> | null = null
     let restrictedValue: Record<string, unknown> | null = null
     let failure: string | null = null
@@ -156,7 +194,7 @@ export const runMvpContinuitySection = async (
       cleanup?.resources?.every((row) => row.after === 0) &&
       cleanup.projects?.every((row) => row.residuals === 0)
     )
-    runs.push({
+    const runRecord: ContinuityRunRecord = {
       ordinal,
       attemptId: 'continuity-' + ordinal,
       retry: 0,
@@ -167,7 +205,31 @@ export const runMvpContinuitySection = async (
       restrictedDigest,
       stateCrossingOrLoss: !valid,
       cleanupPassed,
+    }
+    runs.push(runRecord)
+    await atomicWriteMvpJson(
+      path.join(publicTarget, 'checkpoint-' + ordinal + '.json'),
+      runRecord
+    )
+    await atomicWriteMvpJson(path.join(publicTarget, 'in-progress.json'), {
+      runId,
+      planHash,
+      ordinal,
+      attemptId: runRecord.attemptId,
+      status: 'complete',
     })
+    await atomicWriteMvpJson(
+      path.join(MVP_PERFORMANCE_EVIDENCE_ROOT, runId, 'continuity.json'),
+      {
+        schemaVersion: 1,
+        runId,
+        planHash,
+        exactController: 'tests/e2e/session-switching.spec.ts',
+        count: 3,
+        runs,
+        interrupted: runs.length < MVP_CONTINUITY_RUNS,
+      }
+    )
   }
   const section: ContinuitySectionRecord = {
     schemaVersion: 1,
@@ -177,9 +239,9 @@ export const runMvpContinuitySection = async (
     count: 3,
     runs,
   }
-  await writeFile(
+  await atomicWriteMvpJson(
     path.join(MVP_PERFORMANCE_EVIDENCE_ROOT, runId, 'continuity.json'),
-    JSON.stringify(section, null, 2) + '\n'
+    section
   )
   return section
 }

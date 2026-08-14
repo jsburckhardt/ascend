@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "runId": "03fab06c-14f6-46d3-b02d-399ed4657f0e",
+  "declaration": {
+    "ubuntuVersion": "Ubuntu 24.04.4 LTS",
+    "hostname": "03f809395a5d",
+    "user": "vscode",
+    "uid": 1000,
+    "repository": "/workspaces/ascend",
+    "cgroup": {
+      "version": "v2",
+      "path": "/",
+      "cpuMax": "max 100000",
+      "cpusetEffective": "0-19",
+      "memoryMax": "max",
+      "memoryHigh": "max",
+      "swapMax": "max",
+      "pidsMax": "max"
+    }
+  },
+  "start": {
+    "ubuntuVersion": "Ubuntu 24.04.4 LTS",
+    "hostname": "03f809395a5d",
+    "user": "vscode",
+    "uid": 1000,
+    "repository": "/workspaces/ascend",
+    "cgroup": {
+      "version": "v2",
+      "path": "/",
+      "cpuMax": "max 100000",
+      "cpusetEffective": "0-19",
+      "memoryMax": "max",
+      "memoryHigh": "max",
+      "swapMax": "max",
+      "pidsMax": "max"
+    }
+  },
+  "startDigest": "b85022815dffa92fdcffa449301b51877c95af6e8707de60adb3632d8b589057",
+  "startMatchesDeclaration": true,
+  "end": {
+    "ubuntuVersion": "Ubuntu 24.04.4 LTS",
+    "hostname": "03f809395a5d",
+    "user": "vscode",
+    "uid": 1000,
+    "repository": "/workspaces/ascend",
+    "cgroup": {
+      "version": "v2",
+      "path": "/",
+      "cpuMax": "max 100000",
+      "cpusetEffective": "0-19",
+      "memoryMax": "max",
+      "memoryHigh": "max",
+      "swapMax": "max",
+      "pidsMax": "max"
+    }
+  },
+  "endDigest": "b85022815dffa92fdcffa449301b51877c95af6e8707de60adb3632d8b589057",
+  "endMatchesStart": true,
+  "endMatchesDeclaration": true
+}

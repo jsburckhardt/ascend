@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { redactCapacityEvidence } from '../src/mvp-performance-capacity.js'
 import { MVP_CAPACITY_COHORTS } from '../src/mvp-performance-contract.js'
 import {
   CAPACITY_PROBE,
@@ -39,6 +40,27 @@ describe('BL-015 integrated capacity method', () => {
       'requiredSamplesComplete',
     ])
       expect(source.replace(/\s/gu, '')).toContain(value)
+  })
+  it('redacts protected raw checkpoint paths and process identities', () => {
+    const safe = redactCapacityEvidence(
+      {
+        cwd: '/tmp/ascend-bl015-capacity-private/fixture-1',
+        pid: 123,
+        rootPid: 123,
+        memberPids: [123, 124],
+        startTimeTicks: '456',
+        address: '127.0.0.1',
+        port: 9999,
+        raw: { cpuPercent: 1.5, rssKiB: 200 },
+      },
+      'run'
+    )
+    expect(JSON.stringify(safe)).not.toContain('ascend-bl015-capacity-private')
+    expect(safe.cwd).toMatch(/^path-digest:/u)
+    expect(safe.pid).toMatch(/^identity-digest:/u)
+    expect(safe.address).toBe('loopback-redacted')
+    expect(safe.port).not.toBe(9999)
+    expect(safe.raw).toEqual({ cpuPercent: 1.5, rssKiB: 200 })
   })
   it('keeps cohort 3 as the sole gate and types BL-004 comparisons', async () => {
     const source = await readFile(

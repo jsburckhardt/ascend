@@ -30,12 +30,19 @@ import {
   MVP_PERFORMANCE_EVIDENCE_ROOT,
   MVP_PERFORMANCE_RESULT_ROOT,
   MVP_WARM_ORDER,
+  MVP_WARM_REUSE_TIMEOUT_MS,
   MVP_WARM_TARGET_MS,
   MVP_WARM_TIMEOUT_MS,
   digestMvpPerformance,
   type MvpAttempt,
   type MvpPlan,
 } from '../../apps/api/src/mvp-performance-contract.js'
+import {
+  atomicWriteMvpJson,
+  beginMvpAttemptCheckpoint,
+  completeMvpAttemptCheckpoint,
+  finalizeMvpAttemptJournal,
+} from '../../apps/api/src/mvp-performance-evidence.js'
 import { createProjectLibrary } from '../../apps/api/src/project-library.js'
 import {
   createProjectRuntimeConfig,
@@ -54,6 +61,10 @@ import {
   CODE_SERVER_PATH,
   REPOSITORY_ROOT,
 } from '../../apps/api/src/workbench-proof-contract.js'
+import {
+  inspectCapacityProcessTree,
+  readManagedListeners,
+} from '../../apps/api/src/workbench-proof-audit.js'
 import { terminateExactProcessGroup } from '../../apps/api/src/workbench-proof-runtime.js'
 import { createWorkbenchProxyManager } from '../../apps/api/src/workbench-proxy-manager.js'
 import { BL014_FIXTURES } from '../../apps/api/src/session-switching-contract.js'
@@ -65,6 +76,7 @@ const nowNs = () => process.hrtime.bigint()
 const resultRoot = path.join(MVP_PERFORMANCE_RESULT_ROOT, runId)
 const runRoot = path.join(MVP_PERFORMANCE_EVIDENCE_ROOT, runId)
 const restrictedPath = path.join(resultRoot, 'restricted-authority.json')
+const recoveryOwnershipPath = path.join(resultRoot, 'recovery-ownership.json')
 const operationMs = 30_000
 interface Fixture {
   key: 'A' | 'B' | 'C'
@@ -191,8 +203,9 @@ test('records five cold and ten warm controller-observed usable consequences', a
 }) => {
   test.skip(!designated, 'Set BL015_DESIGNATED=1 and BL015_RUN_ID')
   test.setTimeout(900_000)
-  await mkdir(runRoot, { recursive: true })
-  await mkdir(resultRoot, { recursive: true })
+  const priorUmask = process.umask(0o077)
+  await mkdir(runRoot, { recursive: true, mode: 0o700 })
+  await mkdir(resultRoot, { recursive: true, mode: 0o700 })
   const plan = JSON.parse(
     await readFile(path.join(runRoot, 'plan.json'), 'utf8')
   ) as MvpPlan
@@ -241,12 +254,13 @@ test('records five cold and ten warm controller-observed usable consequences', a
   const instrumented: ProjectRuntimeManager = {
     ...runtime,
     start: async (input) => {
-      if (activeEvents)
-        activeEvents['runtime-start-requested'] = nowNs().toString()
+      const attemptEvents = activeEvents
+      if (attemptEvents && !attemptEvents['runtime-start-requested'])
+        attemptEvents['runtime-start-requested'] = nowNs().toString()
       const snapshot = await runtime.start(input)
       activeSnapshot = snapshot
-      if (activeEvents)
-        activeEvents['runtime-health-ready'] = nowNs().toString()
+      if (attemptEvents && !attemptEvents['runtime-health-ready'])
+        attemptEvents['runtime-health-ready'] = nowNs().toString()
       return snapshot
     },
   }
@@ -258,6 +272,21 @@ test('records five cold and ten warm controller-observed usable consequences', a
   const attempts: MvpAttempt[] = []
   const restricted: Array<Record<string, unknown>> = []
   const artifactManifest: Array<Record<string, unknown>> = []
+  const persistRecoveryOwnership = () =>
+    atomicWriteMvpJson(
+      recoveryOwnershipPath,
+      {
+        schemaVersion: 1,
+        runId,
+        fixtureRoot,
+        databasePath,
+        api: { port: apiPort },
+        web: { pid: web?.pid, processStartTime: webStart, port: webPort },
+        attempts: restricted,
+      },
+      0o600
+    )
+  await persistRecoveryOwnership()
   try {
     controller = createApiServerController({
       port: 0,
@@ -304,6 +333,7 @@ test('records five cold and ten warm controller-observed usable consequences', a
       }
     )
     webStart = await readProcessStartTime(web.pid!)
+    await persistRecoveryOwnership()
     const origin = 'http://127.0.0.1:' + webPort
     await expect
       .poll(
@@ -317,6 +347,51 @@ test('records five cold and ten warm controller-observed usable consequences', a
         { timeout: operationMs }
       )
       .toBe(200)
+    const auditWarmRuntime = async (
+      fixture: Fixture,
+      expectedIdentity: string
+    ) =>
+      withBound(
+        (async () => {
+          const snapshot = await runtime.start({
+            projectId: fixture.id,
+            canonicalPath: fixture.canonicalPath,
+          })
+          await new Promise<void>((resolve) => setImmediate(resolve))
+          const tree = await inspectCapacityProcessTree(snapshot.pid)
+          const listeners = tree.ok
+            ? await readManagedListeners(
+                tree.rows.map((row) => row.pid),
+                { strict: true }
+              )
+            : []
+          const managerAudit = runtime.audit?.()
+          const activeForProject = runtime
+            .inspectEntries()
+            .filter(
+              (entry) =>
+                entry.projectId === fixture.id &&
+                (entry.state === 'running' || entry.state === 'starting')
+            ).length
+          return {
+            snapshot,
+            audit: {
+              healthPassed: tree.ok,
+              identityUnchanged:
+                publicIdentity(snapshot).identityDigest === expectedIdentity,
+              listenerCount: listeners.filter(
+                (listener) => listener.port === snapshot.port
+              ).length,
+              duplicateRuntimeCount: Math.max(0, activeForProject - 1),
+              transientResourceCount: managerAudit
+                ? managerAudit.startingEntries + managerAudit.completionTasks
+                : 1,
+            },
+          }
+        })(),
+        MVP_WARM_REUSE_TIMEOUT_MS,
+        'warm-runtime-audit-timeout'
+      )
     const perform = async (
       kind: 'cold' | 'warm',
       projectKey: 'A' | 'B' | 'C',
@@ -333,7 +408,13 @@ test('records five cold and ten warm controller-observed usable consequences', a
         '-' +
         projectKey
       const events: MvpAttempt['eventsNs'] = {}
-      activeEvents = events
+      await beginMvpAttemptCheckpoint({
+        runId,
+        planHash: plan.planHash,
+        attemptId,
+        ordinal,
+      })
+      activeEvents = null
       activeSnapshot = null
       const traffic: Array<Record<string, unknown>> = []
       const requestListener = (request: import('@playwright/test').Request) => {
@@ -346,7 +427,67 @@ test('records five cold and ten warm controller-observed usable consequences', a
       }
       page.on('request', requestListener)
       const pre = await load()
-      const preSnapshot = runtime.inspect(fixture.id)
+      let preSnapshot = runtime.inspect(fixture.id)
+      if (
+        kind === 'cold' &&
+        preSnapshot?.state === 'running' &&
+        preSnapshot.pid &&
+        preSnapshot.processStartTime &&
+        preSnapshot.port
+      ) {
+        await terminateExactProcessGroup(
+          preSnapshot.pid,
+          MVP_COLD_CLEANUP_TIMEOUT_MS
+        )
+        await expect
+          .poll(
+            async () => {
+              const state = runtime
+                .inspectEntries()
+                .find((entry) => entry.projectId === fixture.id)?.state
+              return (
+                (await readProcessStartTime(preSnapshot!.pid!)) !==
+                  preSnapshot!.processStartTime &&
+                (await loopbackListenerIsAbsent(preSnapshot!.port!)) &&
+                state !== 'running' &&
+                state !== 'starting'
+              )
+            },
+            { timeout: MVP_COLD_CLEANUP_TIMEOUT_MS }
+          )
+          .toBe(true)
+        preSnapshot = runtime.inspect(fixture.id)
+      }
+      const coldRuntimePresent = Boolean(
+        kind === 'cold' &&
+        preSnapshot?.state === 'running' &&
+        preSnapshot.pid &&
+        preSnapshot.processStartTime &&
+        preSnapshot.port &&
+        ((await readProcessStartTime(preSnapshot.pid)) ===
+          preSnapshot.processStartTime ||
+          !(await loopbackListenerIsAbsent(preSnapshot.port)))
+      )
+      let preRuntimeAudit: MvpAttempt['precheck']['runtimeAudit'] = null
+      if (kind === 'warm') {
+        try {
+          const checked = await auditWarmRuntime(
+            fixture,
+            initialIdentity.get(projectKey)!
+          )
+          preSnapshot = checked.snapshot
+          preRuntimeAudit = checked.audit
+        } catch {
+          preRuntimeAudit = {
+            healthPassed: false,
+            identityUnchanged: false,
+            listenerCount: 0,
+            duplicateRuntimeCount: 0,
+            transientResourceCount: 1,
+          }
+        }
+      }
+      activeEvents = events
       const targetMs = kind === 'cold' ? MVP_COLD_TARGET_MS : MVP_WARM_TARGET_MS
       const timeoutMs =
         kind === 'cold' ? MVP_COLD_TIMEOUT_MS : MVP_WARM_TIMEOUT_MS
@@ -358,6 +499,15 @@ test('records five cold and ten warm controller-observed usable consequences', a
       let homeReturned = false
       await context.tracing.startChunk({ title: attemptId })
       try {
+        if (
+          kind === 'warm' &&
+          (!preRuntimeAudit?.healthPassed ||
+            !preRuntimeAudit.identityUnchanged ||
+            preRuntimeAudit.listenerCount !== 1 ||
+            preRuntimeAudit.duplicateRuntimeCount !== 0 ||
+            preRuntimeAudit.transientResourceCount !== 0)
+        )
+          throw new Error('warm-precheck-failed')
         await withBound(
           (async () => {
             const button = page.getByRole('button', {
@@ -459,6 +609,7 @@ test('records five cold and ten warm controller-observed usable consequences', a
             : null
       let boundaryPassed = false
       let residuals = 0
+      let boundaryRuntimeAudit: MvpAttempt['boundary']['runtimeAudit'] = null
       if (
         kind === 'cold' &&
         snapshot?.pid &&
@@ -470,6 +621,11 @@ test('records five cold and ten warm controller-observed usable consequences', a
             snapshot.pid,
             MVP_COLD_CLEANUP_TIMEOUT_MS
           )
+          await expect
+            .poll(() => runtime.inspect(fixture.id)?.state, {
+              timeout: MVP_COLD_CLEANUP_TIMEOUT_MS,
+            })
+            .not.toBe('running')
         } catch {
           /* measured below */
         }
@@ -488,18 +644,44 @@ test('records five cold and ten warm controller-observed usable consequences', a
         boundaryPassed = false
       }
       if (kind === 'warm' && snapshot) {
-        const expected = initialIdentity.get(projectKey)
-        boundaryPassed = publicIdentity(snapshot).identityDigest === expected
-        residuals = boundaryPassed ? 0 : 1
         try {
-          const projects = page.getByRole('link', { name: 'Projects' })
-          await projects.focus()
-          await page.keyboard.press('Enter')
-          await expect(page).toHaveURL(origin + '/', { timeout: operationMs })
+          if (events.activation)
+            await withBound(
+              (async () => {
+                const projects = page.getByRole('link', { name: 'Projects' })
+                await projects.focus()
+                await page.keyboard.press('Enter')
+                await expect(page).toHaveURL(origin + '/', {
+                  timeout: MVP_WARM_REUSE_TIMEOUT_MS,
+                })
+              })(),
+              MVP_WARM_REUSE_TIMEOUT_MS,
+              'warm-home-return-timeout'
+            )
           homeReturned = true
+          const checked = await auditWarmRuntime(
+            fixture,
+            initialIdentity.get(projectKey)!
+          )
+          snapshot = checked.snapshot
+          boundaryRuntimeAudit = checked.audit
+          boundaryPassed =
+            checked.audit.healthPassed &&
+            checked.audit.identityUnchanged &&
+            checked.audit.listenerCount === 1 &&
+            checked.audit.duplicateRuntimeCount === 0 &&
+            checked.audit.transientResourceCount === 0
+          residuals = boundaryPassed ? 0 : 1
         } catch {
+          boundaryRuntimeAudit = {
+            healthPassed: false,
+            identityUnchanged: false,
+            listenerCount: 0,
+            duplicateRuntimeCount: 0,
+            transientResourceCount: 1,
+          }
           boundaryPassed = false
-          residuals += 1
+          residuals = 1
         }
       } else if (kind === 'warm') {
         residuals = 1
@@ -519,7 +701,7 @@ test('records five cold and ten warm controller-observed usable consequences', a
         project: projectKey,
         retry: 0,
         startedAt: new Date().toISOString(),
-        host: { hostname: os.hostname(), uid: os.userInfo().uid, cgroup: 'v2' },
+        host: plan.designatedHost,
         versions: {
           node: process.version,
           chromium: browser.version(),
@@ -529,15 +711,22 @@ test('records five cold and ten warm controller-observed usable consequences', a
           context: kind === 'cold' ? 'fresh' : 'retained',
           cache: kind === 'cold' ? 'cleared' : 'retained',
           originStorage: kind === 'cold' ? 'cleared' : 'retained',
-          prewarmedRuntime: kind === 'cold' && preSnapshot?.state === 'running',
+          prewarmedRuntime: coldRuntimePresent,
         },
         precheck: {
           passed:
             kind === 'cold'
-              ? preSnapshot?.state !== 'running'
-              : preSnapshot?.state === 'running',
+              ? !coldRuntimePresent
+              : Boolean(
+                  preRuntimeAudit?.healthPassed &&
+                  preRuntimeAudit.identityUnchanged &&
+                  preRuntimeAudit.listenerCount === 1 &&
+                  preRuntimeAudit.duplicateRuntimeCount === 0 &&
+                  preRuntimeAudit.transientResourceCount === 0
+                ),
           load: pre.load,
           availableMemoryKiB: pre.availableMemoryKiB,
+          runtimeAudit: preRuntimeAudit,
         },
         runtime: snapshot ? publicIdentity(snapshot) : null,
         stableUrl: '/projects/' + fixture.id + '/workbench/',
@@ -559,15 +748,19 @@ test('records five cold and ten warm controller-observed usable consequences', a
           passed: boundaryPassed,
           measuredResiduals: residuals,
           expectedIdentityCount: kind === 'cold' ? 0 : 1,
+          runtimeAudit: boundaryRuntimeAudit,
         },
         homeReturned,
       }
       attempts.push(row)
-      artifactManifest.push({
+      const artifactRecord = {
         attemptId,
         manifestId: capture.manifestId,
         screenshot: {
           status: capture.screenshot,
+          restrictedPath: path.relative(REPOSITORY_ROOT, screenshot),
+          requiredMode: '0600',
+          protectedData: true,
           digest:
             capture.screenshot === 'captured'
               ? digestMvpPerformance(await readFile(screenshot))
@@ -575,6 +768,9 @@ test('records five cold and ten warm controller-observed usable consequences', a
         },
         trace: {
           status: capture.trace,
+          restrictedPath: path.relative(REPOSITORY_ROOT, trace),
+          requiredMode: '0600',
+          protectedData: true,
           digest:
             capture.trace === 'captured'
               ? digestMvpPerformance(await readFile(trace))
@@ -588,6 +784,11 @@ test('records five cold and ten warm controller-observed usable consequences', a
             kind,
           })),
         },
+      }
+      artifactManifest.push(artifactRecord)
+      await completeMvpAttemptCheckpoint({
+        attempt: row,
+        artifact: artifactRecord,
       })
       if (snapshot)
         restricted.push({
@@ -601,12 +802,13 @@ test('records five cold and ten warm controller-observed usable consequences', a
           trace,
           network: traffic,
         })
+      await persistRecoveryOwnership()
       page.off('request', requestListener)
     }
     for (const [index, key] of MVP_COLD_ORDER.entries()) {
       const context = await browser.newContext({ serviceWorkers: 'block' })
       await context.clearCookies()
-      await context.tracing.start({ screenshots: true, snapshots: true })
+      await context.tracing.start({ screenshots: false, snapshots: false })
       const page = await context.newPage()
       await page.goto(origin + '/', {
         waitUntil: 'domcontentloaded',
@@ -625,7 +827,7 @@ test('records five cold and ten warm controller-observed usable consequences', a
       warmIdentity.set(key, publicIdentity(snapshot).identityDigest)
     }
     const warmContext = await browser.newContext({ serviceWorkers: 'block' })
-    await warmContext.tracing.start({ screenshots: true, snapshots: true })
+    await warmContext.tracing.start({ screenshots: false, snapshots: false })
     const warmPage = await warmContext.newPage()
     await warmPage.goto(origin + '/', {
       waitUntil: 'domcontentloaded',
@@ -634,22 +836,7 @@ test('records five cold and ten warm controller-observed usable consequences', a
     for (const [index, key] of MVP_WARM_ORDER.entries())
       await perform('warm', key, index + 6, warmContext, warmPage, warmIdentity)
     await warmContext.close()
-    await writeFile(
-      path.join(runRoot, 'attempts.json'),
-      JSON.stringify(
-        { schemaVersion: 1, runId, planHash: plan.planHash, attempts },
-        null,
-        2
-      ) + '\n'
-    )
-    await writeFile(
-      path.join(runRoot, 'browser-artifacts.json'),
-      JSON.stringify(
-        { schemaVersion: 1, runId, artifacts: artifactManifest },
-        null,
-        2
-      ) + '\n'
-    )
+    await finalizeMvpAttemptJournal(runId, plan.planHash)
   } finally {
     activeEvents = null
     activeSnapshot = null
@@ -683,5 +870,6 @@ test('records five cold and ten warm controller-observed usable consequences', a
     )
     await chmod(restrictedPath, 0o600)
     await rm(fixtureRoot, { recursive: true, force: true })
+    process.umask(priorUmask)
   }
 })

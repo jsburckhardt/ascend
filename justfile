@@ -128,8 +128,8 @@ verify-session-switching:
 proof-session-switching-residual-audit:
     pnpm --filter @ascend/api exec tsx src/cli/session-switching-residual-audit.ts
 
-measure-mvp-performance:
-    pnpm --filter @ascend/api exec tsx src/cli/measure-mvp-performance.ts
+measure-mvp-performance *args:
+    pnpm --filter @ascend/api exec tsx src/cli/measure-mvp-performance.ts {{args}}
 
 verify-mvp-performance:
     pnpm --filter @ascend/api exec tsx src/cli/verify-mvp-performance.ts

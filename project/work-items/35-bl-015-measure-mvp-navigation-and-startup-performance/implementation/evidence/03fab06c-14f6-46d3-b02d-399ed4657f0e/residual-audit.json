@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "runId": "03fab06c-14f6-46d3-b02d-399ed4657f0e",
+  "attemptBoundaries": [
+    {
+      "attemptId": "cold-1-A",
+      "passed": true,
+      "residuals": 0,
+      "expectedIdentityCount": 0
+    },
+    {
+      "attemptId": "cold-2-B",
+      "passed": true,
+      "residuals": 0,
+      "expectedIdentityCount": 0
+    },
+    {
+      "attemptId": "cold-3-C",
+      "passed": true,
+      "residuals": 0,
+      "expectedIdentityCount": 0
+    },
+    {
+      "attemptId": "cold-4-A",
+      "passed": true,
+      "residuals": 0,
+      "expectedIdentityCount": 0
+    },
+    {
+      "attemptId": "cold-5-B",
+      "passed": true,
+      "residuals": 0,
+      "expectedIdentityCount": 0
+    },
+    {
+      "attemptId": "warm-1-A",
+      "passed": true,
+      "residuals": 0,
+      "expectedIdentityCount": 1
+    },
+    {
+      "attemptId": "warm-2-B",
+      "passed": true,
+      "residuals": 0,
+      "expectedIdentityCount": 1
+    },
+    {
+      "attemptId": "warm-3-C",
+      "passed": true,
+      "residuals": 0,
+      "expectedIdentityCount": 1
+    },
+    {
+      "attemptId": "warm-4-A",
+      "passed": true,
+      "residuals": 0,
+      "expectedIdentityCount": 1
+    },
+    {
+      "attemptId": "warm-5-B",
+      "passed": true,
+      "residuals": 0,
+      "expectedIdentityCount": 1
+    },
+    {
+      "attemptId": "warm-6-C",
+      "passed": true,
+      "residuals": 0,
+      "expectedIdentityCount": 1
+    },
+    {
+      "attemptId": "warm-7-A",
+      "passed": true,
+      "residuals": 0,
+      "expectedIdentityCount": 1
+    },
+    {
+      "attemptId": "warm-8-B",
+      "passed": true,
+      "residuals": 0,
+      "expectedIdentityCount": 1
+    },
+    {
+      "attemptId": "warm-9-C",
+      "passed": true,
+      "residuals": 0,
+      "expectedIdentityCount": 1
+    },
+    {
+      "attemptId": "warm-10-A",
+      "passed": true,
+      "residuals": 0,
+      "expectedIdentityCount": 1
+    }
+  ],
+  "continuity": [
+    {
+      "attemptId": "continuity-1",
+      "cleanupPassed": true
+    },
+    {
+      "attemptId": "continuity-2",
+      "cleanupPassed": true
+    },
+    {
+      "attemptId": "continuity-3",
+      "cleanupPassed": true
+    }
+  ],
+  "capacity": {
+    "complete": true,
+    "runtimeResiduals": 0,
+    "listenerResiduals": 0,
+    "webResiduals": 0,
+    "databaseResiduals": 0,
+    "fixtureResiduals": 0,
+    "total": 0
+  },
+  "complete": true
+}

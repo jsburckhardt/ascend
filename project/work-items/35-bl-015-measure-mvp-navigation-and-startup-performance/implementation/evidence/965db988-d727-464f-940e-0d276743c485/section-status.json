@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "runId": "965db988-d727-464f-940e-0d276743c485",
+  "overallBoundMs": 2400000,
+  "overallToleranceMs": 1000,
+  "sections": [
+    {
+      "name": "prerequisites",
+      "boundMs": 60000,
+      "startedElapsedMs": 24,
+      "endedElapsedMs": 407,
+      "status": "complete",
+      "partialEvidenceRetained": false
+    },
+    {
+      "name": "cold-warm",
+      "boundMs": 850000,
+      "startedElapsedMs": 422,
+      "endedElapsedMs": null,
+      "status": "failed",
+      "partialEvidenceRetained": true,
+      "recoveryEndedAt": "2026-08-14T00:02:31.303Z"
+    }
+  ]
+}

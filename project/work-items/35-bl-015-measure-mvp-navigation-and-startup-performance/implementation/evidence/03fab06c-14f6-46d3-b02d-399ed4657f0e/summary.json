@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "runId": "03fab06c-14f6-46d3-b02d-399ed4657f0e",
+  "planHash": "fbef2984622899e1521dc9e6818102ef623af444472d2e929124074a1aff0eaf",
+  "measurementHash": "27bf78da25201a9033ea18369523d9dffef15d4b11e69e8026962bc432f09cc5",
+  "completedAt": "2026-08-14T00:10:28.206Z",
+  "cold": {
+    "orderedAttemptIds": [
+      "cold-1-A",
+      "cold-2-B",
+      "cold-3-C",
+      "cold-4-A",
+      "cold-5-B"
+    ],
+    "sortedSourceAttemptIds": [
+      "cold-5-B",
+      "cold-3-C",
+      "cold-1-A",
+      "cold-2-B",
+      "cold-4-A"
+    ],
+    "sourceDurationsNs": [
+      "6726558693",
+      "6861184841",
+      "7261495265",
+      "7398416570",
+      "7406815820"
+    ],
+    "medianNs": "7261495265",
+    "p95Ns": "7406815820",
+    "maximumNs": "7406815820",
+    "failures": 0,
+    "preStartFailures": 0,
+    "identityChanges": 0,
+    "targetMisses": 0
+  },
+  "warm": {
+    "orderedAttemptIds": [
+      "warm-1-A",
+      "warm-2-B",
+      "warm-3-C",
+      "warm-4-A",
+      "warm-5-B",
+      "warm-6-C",
+      "warm-7-A",
+      "warm-8-B",
+      "warm-9-C",
+      "warm-10-A"
+    ],
+    "sortedSourceAttemptIds": [
+      "warm-7-A",
+      "warm-5-B",
+      "warm-6-C",
+      "warm-9-C",
+      "warm-10-A",
+      "warm-3-C",
+      "warm-2-B",
+      "warm-1-A",
+      "warm-8-B",
+      "warm-4-A"
+    ],
+    "sourceDurationsNs": [
+      "4371617274",
+      "4559622340",
+      "4730841068",
+      "4840511304",
+      "4843857949",
+      "6185193421",
+      "6379624571",
+      "6405780301",
+      "7283406060",
+      "7342974338"
+    ],
+    "medianNs": "5514525685",
+    "p95Ns": "7342974338",
+    "maximumNs": "7342974338",
+    "failures": 0,
+    "preStartFailures": 0,
+    "identityChanges": 0,
+    "targetMisses": 10
+  },
+  "continuity": {
+    "successes": 3,
+    "total": 3,
+    "metric2": 1,
+    "disposition": "met"
+  },
+  "capacity": [
+    {
+      "cohort": 3,
+      "ready": 3,
+      "workloadsPassed": 3,
+      "requiredSamplesComplete": true,
+      "responsivenessPassed": true,
+      "cleanupPassed": true,
+      "gate": "met"
+    },
+    {
+      "cohort": 5,
+      "ready": 5,
+      "workloadsPassed": 5,
+      "requiredSamplesComplete": true,
+      "responsivenessPassed": true,
+      "cleanupPassed": true,
+      "gate": "finding"
+    },
+    {
+      "cohort": 10,
+      "ready": 10,
+      "workloadsPassed": 10,
+      "requiredSamplesComplete": true,
+      "responsivenessPassed": true,
+      "cleanupPassed": true,
+      "gate": "finding"
+    }
+  ],
+  "metrics": {
+    "nfr002Metric4": "met",
+    "nfr001Metric3": "blocker",
+    "continuityMetric2": "met",
+    "nfr003Capacity3": "met"
+  },
+  "overallDisposition": "blocker",
+  "approval": null
+}

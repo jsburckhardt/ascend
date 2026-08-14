@@ -1,0 +1,1507 @@
+{
+  "schemaVersion": 1,
+  "runId": "03fab06c-14f6-46d3-b02d-399ed4657f0e",
+  "planHash": "fbef2984622899e1521dc9e6818102ef623af444472d2e929124074a1aff0eaf",
+  "attempts": [
+    {
+      "schemaVersion": 1,
+      "runId": "03fab06c-14f6-46d3-b02d-399ed4657f0e",
+      "planHash": "fbef2984622899e1521dc9e6818102ef623af444472d2e929124074a1aff0eaf",
+      "attemptId": "cold-1-A",
+      "kind": "cold",
+      "ordinal": 1,
+      "project": "A",
+      "retry": 0,
+      "startedAt": "2026-08-14T00:03:19.512Z",
+      "host": {
+        "ubuntuVersion": "Ubuntu 24.04.4 LTS",
+        "hostname": "03f809395a5d",
+        "user": "vscode",
+        "uid": 1000,
+        "repository": "/workspaces/ascend",
+        "cgroup": {
+          "version": "v2",
+          "path": "/",
+          "cpuMax": "max 100000",
+          "cpusetEffective": "0-19",
+          "memoryMax": "max",
+          "memoryHigh": "max",
+          "swapMax": "max",
+          "pidsMax": "max"
+        }
+      },
+      "versions": {
+        "node": "v22.23.2",
+        "chromium": "151.0.7922.34",
+        "codeServer": "4.131.0"
+      },
+      "browser": {
+        "context": "fresh",
+        "cache": "cleared",
+        "originStorage": "cleared",
+        "prewarmedRuntime": false
+      },
+      "precheck": {
+        "passed": true,
+        "load": [4.79, 3.47, 2.21],
+        "availableMemoryKiB": 20175700,
+        "runtimeAudit": null
+      },
+      "runtime": {
+        "projectToken": "project-e58bc3a045ecbcb2",
+        "identityDigest": "5b1c7eead3ed7f0a2377329c7df074fafe93598dcd9db908691fe1c598a00212",
+        "pidDigest": "733f3fda0606d37a0e3b1b5f2d664935444c36b6e4c33d60108e91c3d530aaf9",
+        "startDigest": "11cf8ebe77c858f1706a2977a999e3446271215575f4e2c5ac38c576e5867f7b",
+        "portToken": "c0d6dcb5defcfe36848c2879"
+      },
+      "stableUrl": "/projects/bl014-a/workbench/",
+      "clock": "process.hrtime.bigint",
+      "eventsNs": {
+        "activation": "2397349065941",
+        "runtime-start-requested": "2397400732328",
+        "runtime-health-ready": "2397913043235",
+        "stable-document-ready": "2400775280100",
+        "explorer-sentinel-ready": "2401015969019",
+        "terminal-prompt-ready": "2404610561206",
+        "workbench-usable": "2404610561206"
+      },
+      "phasesNs": {
+        "activation-to-runtime-start-requested": "51666387",
+        "runtime-start-requested-to-runtime-health-ready": "512310907",
+        "runtime-health-ready-to-stable-document-ready": "2862236865",
+        "stable-document-ready-to-explorer-sentinel-ready": "240688919",
+        "explorer-sentinel-ready-to-terminal-prompt-ready": "3594592187",
+        "terminal-prompt-ready-to-workbench-usable": "0",
+        "total": "7261495265"
+      },
+      "observedTotalNs": "7261495265",
+      "statisticalTotalNs": "7261495265",
+      "status": "success",
+      "failureClass": null,
+      "targetMs": 15000,
+      "targetMet": true,
+      "artifacts": {
+        "screenshot": "captured",
+        "trace": "captured",
+        "network": "captured",
+        "manifestId": "0ad7a9578bda3ea27fa904cc104aab021b9d311512692a73122cc4294faf0e4f"
+      },
+      "boundary": {
+        "kind": "absence",
+        "passed": true,
+        "measuredResiduals": 0,
+        "expectedIdentityCount": 0,
+        "runtimeAudit": null
+      },
+      "homeReturned": false
+    },
+    {
+      "schemaVersion": 1,
+      "runId": "03fab06c-14f6-46d3-b02d-399ed4657f0e",
+      "planHash": "fbef2984622899e1521dc9e6818102ef623af444472d2e929124074a1aff0eaf",
+      "attemptId": "cold-2-B",
+      "kind": "cold",
+      "ordinal": 2,
+      "project": "B",
+      "retry": 0,
+      "startedAt": "2026-08-14T00:03:27.523Z",
+      "host": {
+        "ubuntuVersion": "Ubuntu 24.04.4 LTS",
+        "hostname": "03f809395a5d",
+        "user": "vscode",
+        "uid": 1000,
+        "repository": "/workspaces/ascend",
+        "cgroup": {
+          "version": "v2",
+          "path": "/",
+          "cpuMax": "max 100000",
+          "cpusetEffective": "0-19",
+          "memoryMax": "max",
+          "memoryHigh": "max",
+          "swapMax": "max",
+          "pidsMax": "max"
+        }
+      },
+      "versions": {
+        "node": "v22.23.2",
+        "chromium": "151.0.7922.34",
+        "codeServer": "4.131.0"
+      },
+      "browser": {
+        "context": "fresh",
+        "cache": "cleared",
+        "originStorage": "cleared",
+        "prewarmedRuntime": false
+      },
+      "precheck": {
+        "passed": true,
+        "load": [4.89, 3.51, 2.23],
+        "availableMemoryKiB": 20108248,
+        "runtimeAudit": null
+      },
+      "runtime": {
+        "projectToken": "project-0e1ab8bae4d31227",
+        "identityDigest": "7f86d2629e07ef12671078cdfb29a8a24936e724f363a0ca98c4693b80353127",
+        "pidDigest": "ee79cb988b51dd93d4087bb7967e3e3a02339fbada065e3acec0f80bab59922d",
+        "startDigest": "6266457ab7b1eace99350be88a5ee82b9ad36afb3acd92593e84f57d9f823c6b",
+        "portToken": "7fde11562c7261119c19f306"
+      },
+      "stableUrl": "/projects/bl014-b/workbench/",
+      "clock": "process.hrtime.bigint",
+      "eventsNs": {
+        "activation": "2405249083817",
+        "runtime-start-requested": "2405283305961",
+        "runtime-health-ready": "2405779535283",
+        "stable-document-ready": "2408754814973",
+        "explorer-sentinel-ready": "2408975228212",
+        "terminal-prompt-ready": "2412647500387",
+        "workbench-usable": "2412647500387"
+      },
+      "phasesNs": {
+        "activation-to-runtime-start-requested": "34222144",
+        "runtime-start-requested-to-runtime-health-ready": "496229322",
+        "runtime-health-ready-to-stable-document-ready": "2975279690",
+        "stable-document-ready-to-explorer-sentinel-ready": "220413239",
+        "explorer-sentinel-ready-to-terminal-prompt-ready": "3672272175",
+        "terminal-prompt-ready-to-workbench-usable": "0",
+        "total": "7398416570"
+      },
+      "observedTotalNs": "7398416570",
+      "statisticalTotalNs": "7398416570",
+      "status": "success",
+      "failureClass": null,
+      "targetMs": 15000,
+      "targetMet": true,
+      "artifacts": {
+        "screenshot": "captured",
+        "trace": "captured",
+        "network": "captured",
+        "manifestId": "5e0d56a07f24a78ddad60ae52d778f12222f798735a44ef9d4f3b37ff1c6c858"
+      },
+      "boundary": {
+        "kind": "absence",
+        "passed": true,
+        "measuredResiduals": 0,
+        "expectedIdentityCount": 0,
+        "runtimeAudit": null
+      },
+      "homeReturned": false
+    },
+    {
+      "schemaVersion": 1,
+      "runId": "03fab06c-14f6-46d3-b02d-399ed4657f0e",
+      "planHash": "fbef2984622899e1521dc9e6818102ef623af444472d2e929124074a1aff0eaf",
+      "attemptId": "cold-3-C",
+      "kind": "cold",
+      "ordinal": 3,
+      "project": "C",
+      "retry": 0,
+      "startedAt": "2026-08-14T00:03:34.885Z",
+      "host": {
+        "ubuntuVersion": "Ubuntu 24.04.4 LTS",
+        "hostname": "03f809395a5d",
+        "user": "vscode",
+        "uid": 1000,
+        "repository": "/workspaces/ascend",
+        "cgroup": {
+          "version": "v2",
+          "path": "/",
+          "cpuMax": "max 100000",
+          "cpusetEffective": "0-19",
+          "memoryMax": "max",
+          "memoryHigh": "max",
+          "swapMax": "max",
+          "pidsMax": "max"
+        }
+      },
+      "versions": {
+        "node": "v22.23.2",
+        "chromium": "151.0.7922.34",
+        "codeServer": "4.131.0"
+      },
+      "browser": {
+        "context": "fresh",
+        "cache": "cleared",
+        "originStorage": "cleared",
+        "prewarmedRuntime": false
+      },
+      "precheck": {
+        "passed": true,
+        "load": [5.21, 3.63, 2.28],
+        "availableMemoryKiB": 20193248,
+        "runtimeAudit": null
+      },
+      "runtime": {
+        "projectToken": "project-83c7164485f4dd78",
+        "identityDigest": "8c9eea95a80f542c80c567fdd4cd8c66c1fb2e490fc4a4ff7ff3525d3bdf4409",
+        "pidDigest": "13e0d2a0568eed190bb92126a7d9c11d9847c7227969288bcd1a96efb2c66188",
+        "startDigest": "5b311bc2db19764f20141e8be3665d3dcc6e3e67e93fc342c01e8d3ec8beedca",
+        "portToken": "73b93c343fb1ee704f38722d"
+      },
+      "stableUrl": "/projects/bl014-c/workbench/",
+      "clock": "process.hrtime.bigint",
+      "eventsNs": {
+        "activation": "2413237047661",
+        "runtime-start-requested": "2413283360067",
+        "runtime-health-ready": "2413774550375",
+        "stable-document-ready": "2416554180559",
+        "explorer-sentinel-ready": "2416855179536",
+        "terminal-prompt-ready": "2420098232502",
+        "workbench-usable": "2420098232502"
+      },
+      "phasesNs": {
+        "activation-to-runtime-start-requested": "46312406",
+        "runtime-start-requested-to-runtime-health-ready": "491190308",
+        "runtime-health-ready-to-stable-document-ready": "2779630184",
+        "stable-document-ready-to-explorer-sentinel-ready": "300998977",
+        "explorer-sentinel-ready-to-terminal-prompt-ready": "3243052966",
+        "terminal-prompt-ready-to-workbench-usable": "0",
+        "total": "6861184841"
+      },
+      "observedTotalNs": "6861184841",
+      "statisticalTotalNs": "6861184841",
+      "status": "success",
+      "failureClass": null,
+      "targetMs": 15000,
+      "targetMet": true,
+      "artifacts": {
+        "screenshot": "captured",
+        "trace": "captured",
+        "network": "captured",
+        "manifestId": "01280c784dc1be00baeac5495afd072833d586e507d54c97659f2de77a9ccb30"
+      },
+      "boundary": {
+        "kind": "absence",
+        "passed": true,
+        "measuredResiduals": 0,
+        "expectedIdentityCount": 0,
+        "runtimeAudit": null
+      },
+      "homeReturned": false
+    },
+    {
+      "schemaVersion": 1,
+      "runId": "03fab06c-14f6-46d3-b02d-399ed4657f0e",
+      "planHash": "fbef2984622899e1521dc9e6818102ef623af444472d2e929124074a1aff0eaf",
+      "attemptId": "cold-4-A",
+      "kind": "cold",
+      "ordinal": 4,
+      "project": "A",
+      "retry": 0,
+      "startedAt": "2026-08-14T00:03:42.775Z",
+      "host": {
+        "ubuntuVersion": "Ubuntu 24.04.4 LTS",
+        "hostname": "03f809395a5d",
+        "user": "vscode",
+        "uid": 1000,
+        "repository": "/workspaces/ascend",
+        "cgroup": {
+          "version": "v2",
+          "path": "/",
+          "cpuMax": "max 100000",
+          "cpusetEffective": "0-19",
+          "memoryMax": "max",
+          "memoryHigh": "max",
+          "swapMax": "max",
+          "pidsMax": "max"
+        }
+      },
+      "versions": {
+        "node": "v22.23.2",
+        "chromium": "151.0.7922.34",
+        "codeServer": "4.131.0"
+      },
+      "browser": {
+        "context": "fresh",
+        "cache": "cleared",
+        "originStorage": "cleared",
+        "prewarmedRuntime": false
+      },
+      "precheck": {
+        "passed": true,
+        "load": [5.12, 3.63, 2.29],
+        "availableMemoryKiB": 19849316,
+        "runtimeAudit": null
+      },
+      "runtime": {
+        "projectToken": "project-e58bc3a045ecbcb2",
+        "identityDigest": "4e8f36704d9644936dd8812fe46f5098bf30a8a6120b7500fd6acdb9c438e7c4",
+        "pidDigest": "a7523876db3e34c1912458b415d074645d5cdfea9fee4005107bca0b943eb9bd",
+        "startDigest": "b5736ae85230a96ccaa0b97ec13a89eb0ca0f2a4a536224489105def1e1d378f",
+        "portToken": "9c2e2268835150d936c4a6d6"
+      },
+      "stableUrl": "/projects/bl014-a/workbench/",
+      "clock": "process.hrtime.bigint",
+      "eventsNs": {
+        "activation": "2420554234793",
+        "runtime-start-requested": "2420589365675",
+        "runtime-health-ready": "2421103052762",
+        "stable-document-ready": "2424251157155",
+        "explorer-sentinel-ready": "2424795047488",
+        "terminal-prompt-ready": "2427961050613",
+        "workbench-usable": "2427961050613"
+      },
+      "phasesNs": {
+        "activation-to-runtime-start-requested": "35130882",
+        "runtime-start-requested-to-runtime-health-ready": "513687087",
+        "runtime-health-ready-to-stable-document-ready": "3148104393",
+        "stable-document-ready-to-explorer-sentinel-ready": "543890333",
+        "explorer-sentinel-ready-to-terminal-prompt-ready": "3166003125",
+        "terminal-prompt-ready-to-workbench-usable": "0",
+        "total": "7406815820"
+      },
+      "observedTotalNs": "7406815820",
+      "statisticalTotalNs": "7406815820",
+      "status": "success",
+      "failureClass": null,
+      "targetMs": 15000,
+      "targetMet": true,
+      "artifacts": {
+        "screenshot": "captured",
+        "trace": "captured",
+        "network": "captured",
+        "manifestId": "58f899ac9fa76c1e6be4f8c3a30098f8d2caa30acdfe884598ac6b610fb94ab3"
+      },
+      "boundary": {
+        "kind": "absence",
+        "passed": true,
+        "measuredResiduals": 0,
+        "expectedIdentityCount": 0,
+        "runtimeAudit": null
+      },
+      "homeReturned": false
+    },
+    {
+      "schemaVersion": 1,
+      "runId": "03fab06c-14f6-46d3-b02d-399ed4657f0e",
+      "planHash": "fbef2984622899e1521dc9e6818102ef623af444472d2e929124074a1aff0eaf",
+      "attemptId": "cold-5-B",
+      "kind": "cold",
+      "ordinal": 5,
+      "project": "B",
+      "retry": 0,
+      "startedAt": "2026-08-14T00:03:50.022Z",
+      "host": {
+        "ubuntuVersion": "Ubuntu 24.04.4 LTS",
+        "hostname": "03f809395a5d",
+        "user": "vscode",
+        "uid": 1000,
+        "repository": "/workspaces/ascend",
+        "cgroup": {
+          "version": "v2",
+          "path": "/",
+          "cpuMax": "max 100000",
+          "cpusetEffective": "0-19",
+          "memoryMax": "max",
+          "memoryHigh": "max",
+          "swapMax": "max",
+          "pidsMax": "max"
+        }
+      },
+      "versions": {
+        "node": "v22.23.2",
+        "chromium": "151.0.7922.34",
+        "codeServer": "4.131.0"
+      },
+      "browser": {
+        "context": "fresh",
+        "cache": "cleared",
+        "originStorage": "cleared",
+        "prewarmedRuntime": false
+      },
+      "precheck": {
+        "passed": true,
+        "load": [5.44, 3.75, 2.34],
+        "availableMemoryKiB": 20098196,
+        "runtimeAudit": null
+      },
+      "runtime": {
+        "projectToken": "project-0e1ab8bae4d31227",
+        "identityDigest": "9cfddb693977a64b9aaa9082950987b5b86ebf1613eb8f45dab20d69a87c2c98",
+        "pidDigest": "07100f772eceed2ef23ba98a7efc794e78340637b9dea54679b08518610f4a85",
+        "startDigest": "64e47042f9ea665beac8af45b53315a2fef82f54c7cd32382ef122a08732dc44",
+        "portToken": "91761f163f303aaf015bd210"
+      },
+      "stableUrl": "/projects/bl014-b/workbench/",
+      "clock": "process.hrtime.bigint",
+      "eventsNs": {
+        "activation": "2428408224142",
+        "runtime-start-requested": "2428447478293",
+        "runtime-health-ready": "2428886680817",
+        "stable-document-ready": "2431783238993",
+        "explorer-sentinel-ready": "2432048789541",
+        "terminal-prompt-ready": "2435134782835",
+        "workbench-usable": "2435134782835"
+      },
+      "phasesNs": {
+        "activation-to-runtime-start-requested": "39254151",
+        "runtime-start-requested-to-runtime-health-ready": "439202524",
+        "runtime-health-ready-to-stable-document-ready": "2896558176",
+        "stable-document-ready-to-explorer-sentinel-ready": "265550548",
+        "explorer-sentinel-ready-to-terminal-prompt-ready": "3085993294",
+        "terminal-prompt-ready-to-workbench-usable": "0",
+        "total": "6726558693"
+      },
+      "observedTotalNs": "6726558693",
+      "statisticalTotalNs": "6726558693",
+      "status": "success",
+      "failureClass": null,
+      "targetMs": 15000,
+      "targetMet": true,
+      "artifacts": {
+        "screenshot": "captured",
+        "trace": "captured",
+        "network": "captured",
+        "manifestId": "ab999adab6e835594df81c628387328a2c1a7fc3bc918e2665e1a5aa45c198a6"
+      },
+      "boundary": {
+        "kind": "absence",
+        "passed": true,
+        "measuredResiduals": 0,
+        "expectedIdentityCount": 0,
+        "runtimeAudit": null
+      },
+      "homeReturned": false
+    },
+    {
+      "schemaVersion": 1,
+      "runId": "03fab06c-14f6-46d3-b02d-399ed4657f0e",
+      "planHash": "fbef2984622899e1521dc9e6818102ef623af444472d2e929124074a1aff0eaf",
+      "attemptId": "warm-1-A",
+      "kind": "warm",
+      "ordinal": 6,
+      "project": "A",
+      "retry": 0,
+      "startedAt": "2026-08-14T00:03:58.688Z",
+      "host": {
+        "ubuntuVersion": "Ubuntu 24.04.4 LTS",
+        "hostname": "03f809395a5d",
+        "user": "vscode",
+        "uid": 1000,
+        "repository": "/workspaces/ascend",
+        "cgroup": {
+          "version": "v2",
+          "path": "/",
+          "cpuMax": "max 100000",
+          "cpusetEffective": "0-19",
+          "memoryMax": "max",
+          "memoryHigh": "max",
+          "swapMax": "max",
+          "pidsMax": "max"
+        }
+      },
+      "versions": {
+        "node": "v22.23.2",
+        "chromium": "151.0.7922.34",
+        "codeServer": "4.131.0"
+      },
+      "browser": {
+        "context": "retained",
+        "cache": "retained",
+        "originStorage": "retained",
+        "prewarmedRuntime": false
+      },
+      "precheck": {
+        "passed": true,
+        "load": [5.65, 3.82, 2.37],
+        "availableMemoryKiB": 19625088,
+        "runtimeAudit": {
+          "healthPassed": true,
+          "identityUnchanged": true,
+          "listenerCount": 1,
+          "duplicateRuntimeCount": 0,
+          "transientResourceCount": 0
+        }
+      },
+      "runtime": {
+        "projectToken": "project-e58bc3a045ecbcb2",
+        "identityDigest": "74e28a1d5690f39b046f842936f937bd0bd0861a1f3039763e54d56ad0a96ddc",
+        "pidDigest": "4a3689f56e53d1bbb18fb06fca0e3b90f97e57d6029782b83de681ef9af48532",
+        "startDigest": "d2f04b34e12c74de0da9ca8e712021089a4da6aaadef9de30af718c8372ad9ec",
+        "portToken": "395bcd28c66537742780e348"
+      },
+      "stableUrl": "/projects/bl014-a/workbench/",
+      "clock": "process.hrtime.bigint",
+      "eventsNs": {
+        "activation": "2437131262014",
+        "runtime-start-requested": "2437179734151",
+        "runtime-health-ready": "2437187666651",
+        "stable-document-ready": "2440112058548",
+        "explorer-sentinel-ready": "2440383385525",
+        "terminal-prompt-ready": "2443537042315",
+        "workbench-usable": "2443537042315"
+      },
+      "phasesNs": {
+        "activation-to-runtime-start-requested": "48472137",
+        "runtime-start-requested-to-runtime-health-ready": "7932500",
+        "runtime-health-ready-to-stable-document-ready": "2924391897",
+        "stable-document-ready-to-explorer-sentinel-ready": "271326977",
+        "explorer-sentinel-ready-to-terminal-prompt-ready": "3153656790",
+        "terminal-prompt-ready-to-workbench-usable": "0",
+        "total": "6405780301"
+      },
+      "observedTotalNs": "6405780301",
+      "statisticalTotalNs": "6405780301",
+      "status": "success",
+      "failureClass": null,
+      "targetMs": 2000,
+      "targetMet": false,
+      "artifacts": {
+        "screenshot": "captured",
+        "trace": "captured",
+        "network": "captured",
+        "manifestId": "d042775b1bb49f0517d4c18861fa076d27595da2fb46d4b3f4dcd6d9a4194e74"
+      },
+      "boundary": {
+        "kind": "reuse",
+        "passed": true,
+        "measuredResiduals": 0,
+        "expectedIdentityCount": 1,
+        "runtimeAudit": {
+          "healthPassed": true,
+          "identityUnchanged": true,
+          "listenerCount": 1,
+          "duplicateRuntimeCount": 0,
+          "transientResourceCount": 0
+        }
+      },
+      "homeReturned": true
+    },
+    {
+      "schemaVersion": 1,
+      "runId": "03fab06c-14f6-46d3-b02d-399ed4657f0e",
+      "planHash": "fbef2984622899e1521dc9e6818102ef623af444472d2e929124074a1aff0eaf",
+      "attemptId": "warm-2-B",
+      "kind": "warm",
+      "ordinal": 7,
+      "project": "B",
+      "retry": 0,
+      "startedAt": "2026-08-14T00:04:05.650Z",
+      "host": {
+        "ubuntuVersion": "Ubuntu 24.04.4 LTS",
+        "hostname": "03f809395a5d",
+        "user": "vscode",
+        "uid": 1000,
+        "repository": "/workspaces/ascend",
+        "cgroup": {
+          "version": "v2",
+          "path": "/",
+          "cpuMax": "max 100000",
+          "cpusetEffective": "0-19",
+          "memoryMax": "max",
+          "memoryHigh": "max",
+          "swapMax": "max",
+          "pidsMax": "max"
+        }
+      },
+      "versions": {
+        "node": "v22.23.2",
+        "chromium": "151.0.7922.34",
+        "codeServer": "4.131.0"
+      },
+      "browser": {
+        "context": "retained",
+        "cache": "retained",
+        "originStorage": "retained",
+        "prewarmedRuntime": false
+      },
+      "precheck": {
+        "passed": true,
+        "load": [5.56, 3.86, 2.4],
+        "availableMemoryKiB": 19541656,
+        "runtimeAudit": {
+          "healthPassed": true,
+          "identityUnchanged": true,
+          "listenerCount": 1,
+          "duplicateRuntimeCount": 0,
+          "transientResourceCount": 0
+        }
+      },
+      "runtime": {
+        "projectToken": "project-0e1ab8bae4d31227",
+        "identityDigest": "3bdfd426c70d035c4e5cda21fa8e0952e49836c8a5ad6baf31bcd58f096698bc",
+        "pidDigest": "ab92f2c90e3337eed0b68b2ec1b56b6fa45a9461c711406b7ed01be7b29f75ee",
+        "startDigest": "ca4937093d9f925b7ea3e8ba71dbfa035b8a12dfd39d6071dd636a9fb85b3356",
+        "portToken": "8de37695d1b4cea1e8a18d3c"
+      },
+      "stableUrl": "/projects/bl014-b/workbench/",
+      "clock": "process.hrtime.bigint",
+      "eventsNs": {
+        "activation": "2444057488142",
+        "runtime-start-requested": "2444088735011",
+        "runtime-health-ready": "2444094111234",
+        "stable-document-ready": "2446834850191",
+        "explorer-sentinel-ready": "2447129719609",
+        "terminal-prompt-ready": "2450437112713",
+        "workbench-usable": "2450437112713"
+      },
+      "phasesNs": {
+        "activation-to-runtime-start-requested": "31246869",
+        "runtime-start-requested-to-runtime-health-ready": "5376223",
+        "runtime-health-ready-to-stable-document-ready": "2740738957",
+        "stable-document-ready-to-explorer-sentinel-ready": "294869418",
+        "explorer-sentinel-ready-to-terminal-prompt-ready": "3307393104",
+        "terminal-prompt-ready-to-workbench-usable": "0",
+        "total": "6379624571"
+      },
+      "observedTotalNs": "6379624571",
+      "statisticalTotalNs": "6379624571",
+      "status": "success",
+      "failureClass": null,
+      "targetMs": 2000,
+      "targetMet": false,
+      "artifacts": {
+        "screenshot": "captured",
+        "trace": "captured",
+        "network": "captured",
+        "manifestId": "23b6aec04b4ba2282317428dca09c5d83f1beabbfbda0c195001a02db41ac227"
+      },
+      "boundary": {
+        "kind": "reuse",
+        "passed": true,
+        "measuredResiduals": 0,
+        "expectedIdentityCount": 1,
+        "runtimeAudit": {
+          "healthPassed": true,
+          "identityUnchanged": true,
+          "listenerCount": 1,
+          "duplicateRuntimeCount": 0,
+          "transientResourceCount": 0
+        }
+      },
+      "homeReturned": true
+    },
+    {
+      "schemaVersion": 1,
+      "runId": "03fab06c-14f6-46d3-b02d-399ed4657f0e",
+      "planHash": "fbef2984622899e1521dc9e6818102ef623af444472d2e929124074a1aff0eaf",
+      "attemptId": "warm-3-C",
+      "kind": "warm",
+      "ordinal": 8,
+      "project": "C",
+      "retry": 0,
+      "startedAt": "2026-08-14T00:04:12.496Z",
+      "host": {
+        "ubuntuVersion": "Ubuntu 24.04.4 LTS",
+        "hostname": "03f809395a5d",
+        "user": "vscode",
+        "uid": 1000,
+        "repository": "/workspaces/ascend",
+        "cgroup": {
+          "version": "v2",
+          "path": "/",
+          "cpuMax": "max 100000",
+          "cpusetEffective": "0-19",
+          "memoryMax": "max",
+          "memoryHigh": "max",
+          "swapMax": "max",
+          "pidsMax": "max"
+        }
+      },
+      "versions": {
+        "node": "v22.23.2",
+        "chromium": "151.0.7922.34",
+        "codeServer": "4.131.0"
+      },
+      "browser": {
+        "context": "retained",
+        "cache": "retained",
+        "originStorage": "retained",
+        "prewarmedRuntime": false
+      },
+      "precheck": {
+        "passed": true,
+        "load": [5.76, 3.93, 2.43],
+        "availableMemoryKiB": 19403912,
+        "runtimeAudit": {
+          "healthPassed": true,
+          "identityUnchanged": true,
+          "listenerCount": 1,
+          "duplicateRuntimeCount": 0,
+          "transientResourceCount": 0
+        }
+      },
+      "runtime": {
+        "projectToken": "project-83c7164485f4dd78",
+        "identityDigest": "3bf120f1038a4088890ab05668acbaec469d4eb6300bf8d28f8145563f553cc5",
+        "pidDigest": "13a78bc2a753fa5bbe28aa358efab5d95acd844c3a3467ebb5492c05f920b030",
+        "startDigest": "3edb39a342d7ffb205a78ae14ce2ce2a25a22af59e7cad5ee9d87c359979adc7",
+        "portToken": "2096126e01c67047fcf6497b"
+      },
+      "stableUrl": "/projects/bl014-c/workbench/",
+      "clock": "process.hrtime.bigint",
+      "eventsNs": {
+        "activation": "2451024697521",
+        "runtime-start-requested": "2451057749196",
+        "runtime-health-ready": "2451063663318",
+        "stable-document-ready": "2453575428283",
+        "explorer-sentinel-ready": "2453804681940",
+        "terminal-prompt-ready": "2457209890942",
+        "workbench-usable": "2457209890942"
+      },
+      "phasesNs": {
+        "activation-to-runtime-start-requested": "33051675",
+        "runtime-start-requested-to-runtime-health-ready": "5914122",
+        "runtime-health-ready-to-stable-document-ready": "2511764965",
+        "stable-document-ready-to-explorer-sentinel-ready": "229253657",
+        "explorer-sentinel-ready-to-terminal-prompt-ready": "3405209002",
+        "terminal-prompt-ready-to-workbench-usable": "0",
+        "total": "6185193421"
+      },
+      "observedTotalNs": "6185193421",
+      "statisticalTotalNs": "6185193421",
+      "status": "success",
+      "failureClass": null,
+      "targetMs": 2000,
+      "targetMet": false,
+      "artifacts": {
+        "screenshot": "captured",
+        "trace": "captured",
+        "network": "captured",
+        "manifestId": "1eeb70127f8498383cac25e53cee797a7153c1faffbf0b897f46b7bfd4551f25"
+      },
+      "boundary": {
+        "kind": "reuse",
+        "passed": true,
+        "measuredResiduals": 0,
+        "expectedIdentityCount": 1,
+        "runtimeAudit": {
+          "healthPassed": true,
+          "identityUnchanged": true,
+          "listenerCount": 1,
+          "duplicateRuntimeCount": 0,
+          "transientResourceCount": 0
+        }
+      },
+      "homeReturned": true
+    },
+    {
+      "schemaVersion": 1,
+      "runId": "03fab06c-14f6-46d3-b02d-399ed4657f0e",
+      "planHash": "fbef2984622899e1521dc9e6818102ef623af444472d2e929124074a1aff0eaf",
+      "attemptId": "warm-4-A",
+      "kind": "warm",
+      "ordinal": 9,
+      "project": "A",
+      "retry": 0,
+      "startedAt": "2026-08-14T00:04:20.569Z",
+      "host": {
+        "ubuntuVersion": "Ubuntu 24.04.4 LTS",
+        "hostname": "03f809395a5d",
+        "user": "vscode",
+        "uid": 1000,
+        "repository": "/workspaces/ascend",
+        "cgroup": {
+          "version": "v2",
+          "path": "/",
+          "cpuMax": "max 100000",
+          "cpusetEffective": "0-19",
+          "memoryMax": "max",
+          "memoryHigh": "max",
+          "swapMax": "max",
+          "pidsMax": "max"
+        }
+      },
+      "versions": {
+        "node": "v22.23.2",
+        "chromium": "151.0.7922.34",
+        "codeServer": "4.131.0"
+      },
+      "browser": {
+        "context": "retained",
+        "cache": "retained",
+        "originStorage": "retained",
+        "prewarmedRuntime": false
+      },
+      "precheck": {
+        "passed": true,
+        "load": [5.82, 4, 2.47],
+        "availableMemoryKiB": 19342816,
+        "runtimeAudit": {
+          "healthPassed": true,
+          "identityUnchanged": true,
+          "listenerCount": 1,
+          "duplicateRuntimeCount": 0,
+          "transientResourceCount": 0
+        }
+      },
+      "runtime": {
+        "projectToken": "project-e58bc3a045ecbcb2",
+        "identityDigest": "74e28a1d5690f39b046f842936f937bd0bd0861a1f3039763e54d56ad0a96ddc",
+        "pidDigest": "4a3689f56e53d1bbb18fb06fca0e3b90f97e57d6029782b83de681ef9af48532",
+        "startDigest": "d2f04b34e12c74de0da9ca8e712021089a4da6aaadef9de30af718c8372ad9ec",
+        "portToken": "395bcd28c66537742780e348"
+      },
+      "stableUrl": "/projects/bl014-a/workbench/",
+      "clock": "process.hrtime.bigint",
+      "eventsNs": {
+        "activation": "2457844638497",
+        "runtime-start-requested": "2457871076730",
+        "runtime-health-ready": "2457876071217",
+        "stable-document-ready": "2459028650839",
+        "explorer-sentinel-ready": "2459440178297",
+        "terminal-prompt-ready": "2465187612835",
+        "workbench-usable": "2465187612835"
+      },
+      "phasesNs": {
+        "activation-to-runtime-start-requested": "26438233",
+        "runtime-start-requested-to-runtime-health-ready": "4994487",
+        "runtime-health-ready-to-stable-document-ready": "1152579622",
+        "stable-document-ready-to-explorer-sentinel-ready": "411527458",
+        "explorer-sentinel-ready-to-terminal-prompt-ready": "5747434538",
+        "terminal-prompt-ready-to-workbench-usable": "0",
+        "total": "7342974338"
+      },
+      "observedTotalNs": "7342974338",
+      "statisticalTotalNs": "7342974338",
+      "status": "success",
+      "failureClass": null,
+      "targetMs": 2000,
+      "targetMet": false,
+      "artifacts": {
+        "screenshot": "captured",
+        "trace": "captured",
+        "network": "captured",
+        "manifestId": "36cc38809e4a4e2430a012f70566f811f9e83cbd9d46f4a523a1fd09a23883de"
+      },
+      "boundary": {
+        "kind": "reuse",
+        "passed": true,
+        "measuredResiduals": 0,
+        "expectedIdentityCount": 1,
+        "runtimeAudit": {
+          "healthPassed": true,
+          "identityUnchanged": true,
+          "listenerCount": 1,
+          "duplicateRuntimeCount": 0,
+          "transientResourceCount": 0
+        }
+      },
+      "homeReturned": true
+    },
+    {
+      "schemaVersion": 1,
+      "runId": "03fab06c-14f6-46d3-b02d-399ed4657f0e",
+      "planHash": "fbef2984622899e1521dc9e6818102ef623af444472d2e929124074a1aff0eaf",
+      "attemptId": "warm-5-B",
+      "kind": "warm",
+      "ordinal": 10,
+      "project": "B",
+      "retry": 0,
+      "startedAt": "2026-08-14T00:04:25.796Z",
+      "host": {
+        "ubuntuVersion": "Ubuntu 24.04.4 LTS",
+        "hostname": "03f809395a5d",
+        "user": "vscode",
+        "uid": 1000,
+        "repository": "/workspaces/ascend",
+        "cgroup": {
+          "version": "v2",
+          "path": "/",
+          "cpuMax": "max 100000",
+          "cpusetEffective": "0-19",
+          "memoryMax": "max",
+          "memoryHigh": "max",
+          "swapMax": "max",
+          "pidsMax": "max"
+        }
+      },
+      "versions": {
+        "node": "v22.23.2",
+        "chromium": "151.0.7922.34",
+        "codeServer": "4.131.0"
+      },
+      "browser": {
+        "context": "retained",
+        "cache": "retained",
+        "originStorage": "retained",
+        "prewarmedRuntime": false
+      },
+      "precheck": {
+        "passed": true,
+        "load": [5.51, 3.96, 2.47],
+        "availableMemoryKiB": 19231304,
+        "runtimeAudit": {
+          "healthPassed": true,
+          "identityUnchanged": true,
+          "listenerCount": 1,
+          "duplicateRuntimeCount": 0,
+          "transientResourceCount": 0
+        }
+      },
+      "runtime": {
+        "projectToken": "project-0e1ab8bae4d31227",
+        "identityDigest": "3bdfd426c70d035c4e5cda21fa8e0952e49836c8a5ad6baf31bcd58f096698bc",
+        "pidDigest": "ab92f2c90e3337eed0b68b2ec1b56b6fa45a9461c711406b7ed01be7b29f75ee",
+        "startDigest": "ca4937093d9f925b7ea3e8ba71dbfa035b8a12dfd39d6071dd636a9fb85b3356",
+        "portToken": "8de37695d1b4cea1e8a18d3c"
+      },
+      "stableUrl": "/projects/bl014-b/workbench/",
+      "clock": "process.hrtime.bigint",
+      "eventsNs": {
+        "activation": "2465913536856",
+        "runtime-start-requested": "2465949494898",
+        "runtime-health-ready": "2465955437959",
+        "stable-document-ready": "2467485156502",
+        "explorer-sentinel-ready": "2467884487245",
+        "terminal-prompt-ready": "2470473159196",
+        "workbench-usable": "2470473159196"
+      },
+      "phasesNs": {
+        "activation-to-runtime-start-requested": "35958042",
+        "runtime-start-requested-to-runtime-health-ready": "5943061",
+        "runtime-health-ready-to-stable-document-ready": "1529718543",
+        "stable-document-ready-to-explorer-sentinel-ready": "399330743",
+        "explorer-sentinel-ready-to-terminal-prompt-ready": "2588671951",
+        "terminal-prompt-ready-to-workbench-usable": "0",
+        "total": "4559622340"
+      },
+      "observedTotalNs": "4559622340",
+      "statisticalTotalNs": "4559622340",
+      "status": "success",
+      "failureClass": null,
+      "targetMs": 2000,
+      "targetMet": false,
+      "artifacts": {
+        "screenshot": "captured",
+        "trace": "captured",
+        "network": "captured",
+        "manifestId": "f0160dafba7702a8544d4d2146ddc101d2ef526b6324b786687fc5ec76d219f7"
+      },
+      "boundary": {
+        "kind": "reuse",
+        "passed": true,
+        "measuredResiduals": 0,
+        "expectedIdentityCount": 1,
+        "runtimeAudit": {
+          "healthPassed": true,
+          "identityUnchanged": true,
+          "listenerCount": 1,
+          "duplicateRuntimeCount": 0,
+          "transientResourceCount": 0
+        }
+      },
+      "homeReturned": true
+    },
+    {
+      "schemaVersion": 1,
+      "runId": "03fab06c-14f6-46d3-b02d-399ed4657f0e",
+      "planHash": "fbef2984622899e1521dc9e6818102ef623af444472d2e929124074a1aff0eaf",
+      "attemptId": "warm-6-C",
+      "kind": "warm",
+      "ordinal": 11,
+      "project": "C",
+      "retry": 0,
+      "startedAt": "2026-08-14T00:04:31.047Z",
+      "host": {
+        "ubuntuVersion": "Ubuntu 24.04.4 LTS",
+        "hostname": "03f809395a5d",
+        "user": "vscode",
+        "uid": 1000,
+        "repository": "/workspaces/ascend",
+        "cgroup": {
+          "version": "v2",
+          "path": "/",
+          "cpuMax": "max 100000",
+          "cpusetEffective": "0-19",
+          "memoryMax": "max",
+          "memoryHigh": "max",
+          "swapMax": "max",
+          "pidsMax": "max"
+        }
+      },
+      "versions": {
+        "node": "v22.23.2",
+        "chromium": "151.0.7922.34",
+        "codeServer": "4.131.0"
+      },
+      "browser": {
+        "context": "retained",
+        "cache": "retained",
+        "originStorage": "retained",
+        "prewarmedRuntime": false
+      },
+      "precheck": {
+        "passed": true,
+        "load": [6.03, 4.1, 2.52],
+        "availableMemoryKiB": 19199364,
+        "runtimeAudit": {
+          "healthPassed": true,
+          "identityUnchanged": true,
+          "listenerCount": 1,
+          "duplicateRuntimeCount": 0,
+          "transientResourceCount": 0
+        }
+      },
+      "runtime": {
+        "projectToken": "project-83c7164485f4dd78",
+        "identityDigest": "3bf120f1038a4088890ab05668acbaec469d4eb6300bf8d28f8145563f553cc5",
+        "pidDigest": "13a78bc2a753fa5bbe28aa358efab5d95acd844c3a3467ebb5492c05f920b030",
+        "startDigest": "3edb39a342d7ffb205a78ae14ce2ce2a25a22af59e7cad5ee9d87c359979adc7",
+        "portToken": "2096126e01c67047fcf6497b"
+      },
+      "stableUrl": "/projects/bl014-c/workbench/",
+      "clock": "process.hrtime.bigint",
+      "eventsNs": {
+        "activation": "2471098652378",
+        "runtime-start-requested": "2471131690900",
+        "runtime-health-ready": "2471136998570",
+        "stable-document-ready": "2472602999789",
+        "explorer-sentinel-ready": "2473224420133",
+        "terminal-prompt-ready": "2475829493446",
+        "workbench-usable": "2475829493446"
+      },
+      "phasesNs": {
+        "activation-to-runtime-start-requested": "33038522",
+        "runtime-start-requested-to-runtime-health-ready": "5307670",
+        "runtime-health-ready-to-stable-document-ready": "1466001219",
+        "stable-document-ready-to-explorer-sentinel-ready": "621420344",
+        "explorer-sentinel-ready-to-terminal-prompt-ready": "2605073313",
+        "terminal-prompt-ready-to-workbench-usable": "0",
+        "total": "4730841068"
+      },
+      "observedTotalNs": "4730841068",
+      "statisticalTotalNs": "4730841068",
+      "status": "success",
+      "failureClass": null,
+      "targetMs": 2000,
+      "targetMet": false,
+      "artifacts": {
+        "screenshot": "captured",
+        "trace": "captured",
+        "network": "captured",
+        "manifestId": "ca02a933f859414368edf8218fe166c08a77a2c1a1b75f7208f4d7008d903d00"
+      },
+      "boundary": {
+        "kind": "reuse",
+        "passed": true,
+        "measuredResiduals": 0,
+        "expectedIdentityCount": 1,
+        "runtimeAudit": {
+          "healthPassed": true,
+          "identityUnchanged": true,
+          "listenerCount": 1,
+          "duplicateRuntimeCount": 0,
+          "transientResourceCount": 0
+        }
+      },
+      "homeReturned": true
+    },
+    {
+      "schemaVersion": 1,
+      "runId": "03fab06c-14f6-46d3-b02d-399ed4657f0e",
+      "planHash": "fbef2984622899e1521dc9e6818102ef623af444472d2e929124074a1aff0eaf",
+      "attemptId": "warm-7-A",
+      "kind": "warm",
+      "ordinal": 12,
+      "project": "A",
+      "retry": 0,
+      "startedAt": "2026-08-14T00:04:35.882Z",
+      "host": {
+        "ubuntuVersion": "Ubuntu 24.04.4 LTS",
+        "hostname": "03f809395a5d",
+        "user": "vscode",
+        "uid": 1000,
+        "repository": "/workspaces/ascend",
+        "cgroup": {
+          "version": "v2",
+          "path": "/",
+          "cpuMax": "max 100000",
+          "cpusetEffective": "0-19",
+          "memoryMax": "max",
+          "memoryHigh": "max",
+          "swapMax": "max",
+          "pidsMax": "max"
+        }
+      },
+      "versions": {
+        "node": "v22.23.2",
+        "chromium": "151.0.7922.34",
+        "codeServer": "4.131.0"
+      },
+      "browser": {
+        "context": "retained",
+        "cache": "retained",
+        "originStorage": "retained",
+        "prewarmedRuntime": false
+      },
+      "precheck": {
+        "passed": true,
+        "load": [5.71, 4.06, 2.52],
+        "availableMemoryKiB": 19128664,
+        "runtimeAudit": {
+          "healthPassed": true,
+          "identityUnchanged": true,
+          "listenerCount": 1,
+          "duplicateRuntimeCount": 0,
+          "transientResourceCount": 0
+        }
+      },
+      "runtime": {
+        "projectToken": "project-e58bc3a045ecbcb2",
+        "identityDigest": "74e28a1d5690f39b046f842936f937bd0bd0861a1f3039763e54d56ad0a96ddc",
+        "pidDigest": "4a3689f56e53d1bbb18fb06fca0e3b90f97e57d6029782b83de681ef9af48532",
+        "startDigest": "d2f04b34e12c74de0da9ca8e712021089a4da6aaadef9de30af718c8372ad9ec",
+        "portToken": "395bcd28c66537742780e348"
+      },
+      "stableUrl": "/projects/bl014-a/workbench/",
+      "clock": "process.hrtime.bigint",
+      "eventsNs": {
+        "activation": "2476365026165",
+        "runtime-start-requested": "2476407926292",
+        "runtime-health-ready": "2476414693679",
+        "stable-document-ready": "2477971426052",
+        "explorer-sentinel-ready": "2479018761441",
+        "terminal-prompt-ready": "2480736643439",
+        "workbench-usable": "2480736643439"
+      },
+      "phasesNs": {
+        "activation-to-runtime-start-requested": "42900127",
+        "runtime-start-requested-to-runtime-health-ready": "6767387",
+        "runtime-health-ready-to-stable-document-ready": "1556732373",
+        "stable-document-ready-to-explorer-sentinel-ready": "1047335389",
+        "explorer-sentinel-ready-to-terminal-prompt-ready": "1717881998",
+        "terminal-prompt-ready-to-workbench-usable": "0",
+        "total": "4371617274"
+      },
+      "observedTotalNs": "4371617274",
+      "statisticalTotalNs": "4371617274",
+      "status": "success",
+      "failureClass": null,
+      "targetMs": 2000,
+      "targetMet": false,
+      "artifacts": {
+        "screenshot": "captured",
+        "trace": "captured",
+        "network": "captured",
+        "manifestId": "364e176ca89bd0cb0f02f58f0aad629b6823fd23368c47c19e57536ce242b568"
+      },
+      "boundary": {
+        "kind": "reuse",
+        "passed": true,
+        "measuredResiduals": 0,
+        "expectedIdentityCount": 1,
+        "runtimeAudit": {
+          "healthPassed": true,
+          "identityUnchanged": true,
+          "listenerCount": 1,
+          "duplicateRuntimeCount": 0,
+          "transientResourceCount": 0
+        }
+      },
+      "homeReturned": true
+    },
+    {
+      "schemaVersion": 1,
+      "runId": "03fab06c-14f6-46d3-b02d-399ed4657f0e",
+      "planHash": "fbef2984622899e1521dc9e6818102ef623af444472d2e929124074a1aff0eaf",
+      "attemptId": "warm-8-B",
+      "kind": "warm",
+      "ordinal": 13,
+      "project": "B",
+      "retry": 0,
+      "startedAt": "2026-08-14T00:04:43.670Z",
+      "host": {
+        "ubuntuVersion": "Ubuntu 24.04.4 LTS",
+        "hostname": "03f809395a5d",
+        "user": "vscode",
+        "uid": 1000,
+        "repository": "/workspaces/ascend",
+        "cgroup": {
+          "version": "v2",
+          "path": "/",
+          "cpuMax": "max 100000",
+          "cpusetEffective": "0-19",
+          "memoryMax": "max",
+          "memoryHigh": "max",
+          "swapMax": "max",
+          "pidsMax": "max"
+        }
+      },
+      "versions": {
+        "node": "v22.23.2",
+        "chromium": "151.0.7922.34",
+        "codeServer": "4.131.0"
+      },
+      "browser": {
+        "context": "retained",
+        "cache": "retained",
+        "originStorage": "retained",
+        "prewarmedRuntime": false
+      },
+      "precheck": {
+        "passed": true,
+        "load": [6.54, 4.26, 2.59],
+        "availableMemoryKiB": 19079140,
+        "runtimeAudit": {
+          "healthPassed": true,
+          "identityUnchanged": true,
+          "listenerCount": 1,
+          "duplicateRuntimeCount": 0,
+          "transientResourceCount": 0
+        }
+      },
+      "runtime": {
+        "projectToken": "project-0e1ab8bae4d31227",
+        "identityDigest": "3bdfd426c70d035c4e5cda21fa8e0952e49836c8a5ad6baf31bcd58f096698bc",
+        "pidDigest": "ab92f2c90e3337eed0b68b2ec1b56b6fa45a9461c711406b7ed01be7b29f75ee",
+        "startDigest": "ca4937093d9f925b7ea3e8ba71dbfa035b8a12dfd39d6071dd636a9fb85b3356",
+        "portToken": "8de37695d1b4cea1e8a18d3c"
+      },
+      "stableUrl": "/projects/bl014-b/workbench/",
+      "clock": "process.hrtime.bigint",
+      "eventsNs": {
+        "activation": "2481190381571",
+        "runtime-start-requested": "2481240255093",
+        "runtime-health-ready": "2481247562976",
+        "stable-document-ready": "2482703463164",
+        "explorer-sentinel-ready": "2482832303391",
+        "terminal-prompt-ready": "2488473787631",
+        "workbench-usable": "2488473787631"
+      },
+      "phasesNs": {
+        "activation-to-runtime-start-requested": "49873522",
+        "runtime-start-requested-to-runtime-health-ready": "7307883",
+        "runtime-health-ready-to-stable-document-ready": "1455900188",
+        "stable-document-ready-to-explorer-sentinel-ready": "128840227",
+        "explorer-sentinel-ready-to-terminal-prompt-ready": "5641484240",
+        "terminal-prompt-ready-to-workbench-usable": "0",
+        "total": "7283406060"
+      },
+      "observedTotalNs": "7283406060",
+      "statisticalTotalNs": "7283406060",
+      "status": "success",
+      "failureClass": null,
+      "targetMs": 2000,
+      "targetMet": false,
+      "artifacts": {
+        "screenshot": "captured",
+        "trace": "captured",
+        "network": "captured",
+        "manifestId": "02f5ecabb4d39b5ebfb32e229d61aae67de0207c2c253ddf8ba01935b82af4f8"
+      },
+      "boundary": {
+        "kind": "reuse",
+        "passed": true,
+        "measuredResiduals": 0,
+        "expectedIdentityCount": 1,
+        "runtimeAudit": {
+          "healthPassed": true,
+          "identityUnchanged": true,
+          "listenerCount": 1,
+          "duplicateRuntimeCount": 0,
+          "transientResourceCount": 0
+        }
+      },
+      "homeReturned": true
+    },
+    {
+      "schemaVersion": 1,
+      "runId": "03fab06c-14f6-46d3-b02d-399ed4657f0e",
+      "planHash": "fbef2984622899e1521dc9e6818102ef623af444472d2e929124074a1aff0eaf",
+      "attemptId": "warm-9-C",
+      "kind": "warm",
+      "ordinal": 14,
+      "project": "C",
+      "retry": 0,
+      "startedAt": "2026-08-14T00:04:49.125Z",
+      "host": {
+        "ubuntuVersion": "Ubuntu 24.04.4 LTS",
+        "hostname": "03f809395a5d",
+        "user": "vscode",
+        "uid": 1000,
+        "repository": "/workspaces/ascend",
+        "cgroup": {
+          "version": "v2",
+          "path": "/",
+          "cpuMax": "max 100000",
+          "cpusetEffective": "0-19",
+          "memoryMax": "max",
+          "memoryHigh": "max",
+          "swapMax": "max",
+          "pidsMax": "max"
+        }
+      },
+      "versions": {
+        "node": "v22.23.2",
+        "chromium": "151.0.7922.34",
+        "codeServer": "4.131.0"
+      },
+      "browser": {
+        "context": "retained",
+        "cache": "retained",
+        "originStorage": "retained",
+        "prewarmedRuntime": false
+      },
+      "precheck": {
+        "passed": true,
+        "load": [7.01, 4.43, 2.66],
+        "availableMemoryKiB": 19049136,
+        "runtimeAudit": {
+          "healthPassed": true,
+          "identityUnchanged": true,
+          "listenerCount": 1,
+          "duplicateRuntimeCount": 0,
+          "transientResourceCount": 0
+        }
+      },
+      "runtime": {
+        "projectToken": "project-83c7164485f4dd78",
+        "identityDigest": "3bf120f1038a4088890ab05668acbaec469d4eb6300bf8d28f8145563f553cc5",
+        "pidDigest": "13a78bc2a753fa5bbe28aa358efab5d95acd844c3a3467ebb5492c05f920b030",
+        "startDigest": "3edb39a342d7ffb205a78ae14ce2ce2a25a22af59e7cad5ee9d87c359979adc7",
+        "portToken": "2096126e01c67047fcf6497b"
+      },
+      "stableUrl": "/projects/bl014-c/workbench/",
+      "clock": "process.hrtime.bigint",
+      "eventsNs": {
+        "activation": "2488955598274",
+        "runtime-start-requested": "2489002379997",
+        "runtime-health-ready": "2489009910138",
+        "stable-document-ready": "2490600821965",
+        "explorer-sentinel-ready": "2491027584312",
+        "terminal-prompt-ready": "2493796109578",
+        "workbench-usable": "2493796109578"
+      },
+      "phasesNs": {
+        "activation-to-runtime-start-requested": "46781723",
+        "runtime-start-requested-to-runtime-health-ready": "7530141",
+        "runtime-health-ready-to-stable-document-ready": "1590911827",
+        "stable-document-ready-to-explorer-sentinel-ready": "426762347",
+        "explorer-sentinel-ready-to-terminal-prompt-ready": "2768525266",
+        "terminal-prompt-ready-to-workbench-usable": "0",
+        "total": "4840511304"
+      },
+      "observedTotalNs": "4840511304",
+      "statisticalTotalNs": "4840511304",
+      "status": "success",
+      "failureClass": null,
+      "targetMs": 2000,
+      "targetMet": false,
+      "artifacts": {
+        "screenshot": "captured",
+        "trace": "captured",
+        "network": "captured",
+        "manifestId": "f05cd82bc9cbe686617c7aef6c5e37806fa7e59b57d4e42201ec6e0641cd258e"
+      },
+      "boundary": {
+        "kind": "reuse",
+        "passed": true,
+        "measuredResiduals": 0,
+        "expectedIdentityCount": 1,
+        "runtimeAudit": {
+          "healthPassed": true,
+          "identityUnchanged": true,
+          "listenerCount": 1,
+          "duplicateRuntimeCount": 0,
+          "transientResourceCount": 0
+        }
+      },
+      "homeReturned": true
+    },
+    {
+      "schemaVersion": 1,
+      "runId": "03fab06c-14f6-46d3-b02d-399ed4657f0e",
+      "planHash": "fbef2984622899e1521dc9e6818102ef623af444472d2e929124074a1aff0eaf",
+      "attemptId": "warm-10-A",
+      "kind": "warm",
+      "ordinal": 15,
+      "project": "A",
+      "retry": 0,
+      "startedAt": "2026-08-14T00:04:54.556Z",
+      "host": {
+        "ubuntuVersion": "Ubuntu 24.04.4 LTS",
+        "hostname": "03f809395a5d",
+        "user": "vscode",
+        "uid": 1000,
+        "repository": "/workspaces/ascend",
+        "cgroup": {
+          "version": "v2",
+          "path": "/",
+          "cpuMax": "max 100000",
+          "cpusetEffective": "0-19",
+          "memoryMax": "max",
+          "memoryHigh": "max",
+          "swapMax": "max",
+          "pidsMax": "max"
+        }
+      },
+      "versions": {
+        "node": "v22.23.2",
+        "chromium": "151.0.7922.34",
+        "codeServer": "4.131.0"
+      },
+      "browser": {
+        "context": "retained",
+        "cache": "retained",
+        "originStorage": "retained",
+        "prewarmedRuntime": false
+      },
+      "precheck": {
+        "passed": true,
+        "load": [7.89, 4.66, 2.75],
+        "availableMemoryKiB": 19012076,
+        "runtimeAudit": {
+          "healthPassed": true,
+          "identityUnchanged": true,
+          "listenerCount": 1,
+          "duplicateRuntimeCount": 0,
+          "transientResourceCount": 0
+        }
+      },
+      "runtime": {
+        "projectToken": "project-e58bc3a045ecbcb2",
+        "identityDigest": "74e28a1d5690f39b046f842936f937bd0bd0861a1f3039763e54d56ad0a96ddc",
+        "pidDigest": "4a3689f56e53d1bbb18fb06fca0e3b90f97e57d6029782b83de681ef9af48532",
+        "startDigest": "d2f04b34e12c74de0da9ca8e712021089a4da6aaadef9de30af718c8372ad9ec",
+        "portToken": "395bcd28c66537742780e348"
+      },
+      "stableUrl": "/projects/bl014-a/workbench/",
+      "clock": "process.hrtime.bigint",
+      "eventsNs": {
+        "activation": "2494350524330",
+        "runtime-start-requested": "2494400800311",
+        "runtime-health-ready": "2494409245438",
+        "stable-document-ready": "2495877039033",
+        "explorer-sentinel-ready": "2496416192842",
+        "terminal-prompt-ready": "2499194382279",
+        "workbench-usable": "2499194382279"
+      },
+      "phasesNs": {
+        "activation-to-runtime-start-requested": "50275981",
+        "runtime-start-requested-to-runtime-health-ready": "8445127",
+        "runtime-health-ready-to-stable-document-ready": "1467793595",
+        "stable-document-ready-to-explorer-sentinel-ready": "539153809",
+        "explorer-sentinel-ready-to-terminal-prompt-ready": "2778189437",
+        "terminal-prompt-ready-to-workbench-usable": "0",
+        "total": "4843857949"
+      },
+      "observedTotalNs": "4843857949",
+      "statisticalTotalNs": "4843857949",
+      "status": "success",
+      "failureClass": null,
+      "targetMs": 2000,
+      "targetMet": false,
+      "artifacts": {
+        "screenshot": "captured",
+        "trace": "captured",
+        "network": "captured",
+        "manifestId": "7be1d35bed08a8c656a887a6cdeb5e3b99040095402992f3fd33f2959915d1cd"
+      },
+      "boundary": {
+        "kind": "reuse",
+        "passed": true,
+        "measuredResiduals": 0,
+        "expectedIdentityCount": 1,
+        "runtimeAudit": {
+          "healthPassed": true,
+          "identityUnchanged": true,
+          "listenerCount": 1,
+          "duplicateRuntimeCount": 0,
+          "transientResourceCount": 0
+        }
+      },
+      "homeReturned": true
+    }
+  ]
+}

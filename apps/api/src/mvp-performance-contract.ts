@@ -54,6 +54,15 @@ export const MVP_ARTIFACT_TIMEOUT_MS = 5_000
 export const MVP_COLD_CLEANUP_TIMEOUT_MS = 10_000
 export const MVP_WARM_REUSE_TIMEOUT_MS = 5_000
 export const MVP_OVERALL_TIMEOUT_MS = 2_400_000
+export const MVP_OVERALL_TOLERANCE_MS = 1_000
+export const MVP_SECTION_TIMEOUTS_MS = Object.freeze({
+  prerequisites: 60_000,
+  cold: 350_000,
+  warm: 500_000,
+  continuity: 720_000,
+  capacity: 650_000,
+  cleanupAndFinalization: 120_000,
+})
 export const MVP_COLD_TARGET_MS = 15_000
 export const MVP_WARM_TARGET_MS = 2_000
 export const MVP_EVENTS = Object.freeze([
@@ -65,6 +74,45 @@ export const MVP_EVENTS = Object.freeze([
   'terminal-prompt-ready',
   'workbench-usable',
 ] as const)
+export const MVP_PHASES = Object.freeze(
+  MVP_EVENTS.slice(0, -1).map(
+    (event, index) => event + '-to-' + MVP_EVENTS[index + 1]
+  )
+)
+export const MVP_DESIGNATED_HOST = Object.freeze({
+  ubuntuVersion: 'Ubuntu 24.04.4 LTS',
+  hostname: '03f809395a5d',
+  user: 'vscode',
+  uid: 1000,
+  repository: '/workspaces/ascend',
+  cgroup: {
+    version: 'v2',
+    path: '/',
+    cpuMax: 'max 100000',
+    cpusetEffective: '0-19',
+    memoryMax: 'max',
+    memoryHigh: 'max',
+    swapMax: 'max',
+    pidsMax: 'max',
+  },
+} as const)
+export interface MvpHostIdentity {
+  ubuntuVersion: string
+  hostname: string
+  user: string
+  uid: number
+  repository: string
+  cgroup: {
+    version: 'v2'
+    path: string
+    cpuMax: string
+    cpusetEffective: string
+    memoryMax: string
+    memoryHigh: string
+    swapMax: string
+    pidsMax: string
+  }
+}
 export type MvpAttemptKind = 'cold' | 'warm'
 export type MetricDisposition = 'met' | 'blocker' | 'miss-accepted'
 export type ReleaseDisposition = 'met' | 'blocker'
@@ -80,6 +128,7 @@ export interface MvpPlan {
     precision: 'integer'
     presentation: 'milliseconds-rounded-to-three-decimals'
   }
+  designatedHost: typeof MVP_DESIGNATED_HOST
   order: {
     sections: ['cold', 'warm', 'continuity', 'capacity']
     cold: readonly string[]
@@ -95,6 +144,8 @@ export interface MvpPlan {
     coldCleanup: number
     warmReuseAudit: number
     overall: number
+    overallTolerance: number
+    sections: typeof MVP_SECTION_TIMEOUTS_MS
   }
   targetsMs: { cold: number; warm: number }
   cache: {
@@ -107,6 +158,7 @@ export interface MvpPlan {
     p95: 'nearest-rank-ceil(0.95*n)'
     statisticalSet: 'successful-total-or-timeout-bound-only'
     metric2: 'continuity-passed/3'
+    phaseSumToleranceNs: '0'
   }
   failureRules: {
     retries: 0
@@ -135,6 +187,13 @@ export interface MvpPlan {
   }
   planHash: string
 }
+export interface MvpWarmRuntimeAudit {
+  healthPassed: boolean
+  identityUnchanged: boolean
+  listenerCount: number
+  duplicateRuntimeCount: number
+  transientResourceCount: number
+}
 export interface MvpRuntimeIdentity {
   projectToken: string
   identityDigest: string
@@ -160,7 +219,12 @@ export interface MvpAttempt {
     originStorage: 'cleared' | 'retained'
     prewarmedRuntime: boolean
   }
-  precheck: { passed: boolean; load: number[]; availableMemoryKiB: number }
+  precheck: {
+    passed: boolean
+    load: number[]
+    availableMemoryKiB: number
+    runtimeAudit: MvpWarmRuntimeAudit | null
+  }
   runtime: MvpRuntimeIdentity | null
   stableUrl: string
   clock: 'process.hrtime.bigint'
@@ -183,6 +247,7 @@ export interface MvpAttempt {
     passed: boolean
     measuredResiduals: number
     expectedIdentityCount: number
+    runtimeAudit: MvpWarmRuntimeAudit | null
   }
   homeReturned: boolean
 }
@@ -271,6 +336,7 @@ export const createMvpPlan = (
       precision: 'integer' as const,
       presentation: 'milliseconds-rounded-to-three-decimals' as const,
     },
+    designatedHost: MVP_DESIGNATED_HOST,
     order: {
       sections: ['cold', 'warm', 'continuity', 'capacity'] as [
         'cold',
@@ -291,6 +357,8 @@ export const createMvpPlan = (
       coldCleanup: MVP_COLD_CLEANUP_TIMEOUT_MS,
       warmReuseAudit: MVP_WARM_REUSE_TIMEOUT_MS,
       overall: MVP_OVERALL_TIMEOUT_MS,
+      overallTolerance: MVP_OVERALL_TOLERANCE_MS,
+      sections: MVP_SECTION_TIMEOUTS_MS,
     },
     targetsMs: { cold: MVP_COLD_TARGET_MS, warm: MVP_WARM_TARGET_MS },
     cache: {
@@ -303,6 +371,7 @@ export const createMvpPlan = (
       p95: 'nearest-rank-ceil(0.95*n)' as const,
       statisticalSet: 'successful-total-or-timeout-bound-only' as const,
       metric2: 'continuity-passed/3' as const,
+      phaseSumToleranceNs: '0' as const,
     },
     failureRules: {
       retries: 0 as const,
@@ -433,6 +502,21 @@ export const validateMvpPlan = (plan: MvpPlan): void => {
   )
   invalid(plan.failureRules.retries === 0, 'retry-detected')
   invalid(
+    JSON.stringify(plan.designatedHost) === JSON.stringify(MVP_DESIGNATED_HOST),
+    'missing-host-declaration'
+  )
+  invalid(
+    JSON.stringify(plan.timeoutsMs.sections) ===
+      JSON.stringify(MVP_SECTION_TIMEOUTS_MS) &&
+      Object.values(plan.timeoutsMs.sections).reduce(
+        (sum, value) => sum + value,
+        0
+      ) <= plan.timeoutsMs.overall &&
+      plan.timeoutsMs.overall === MVP_OVERALL_TIMEOUT_MS &&
+      plan.timeoutsMs.overallTolerance === MVP_OVERALL_TOLERANCE_MS,
+    'section-or-overall-bound-mismatch'
+  )
+  invalid(
     plan.controllerClock.source === 'process.hrtime.bigint',
     'mixed-clock'
   )
@@ -460,6 +544,10 @@ export const validateMvpAttempts = (
     )
     invalid(a.clock === 'process.hrtime.bigint', 'mixed-clock')
     invalid(
+      JSON.stringify(a.host) === JSON.stringify(plan.designatedHost),
+      'host-identity-mismatch'
+    )
+    invalid(
       a.targetMs ===
         (a.kind === 'cold' ? MVP_COLD_TARGET_MS : MVP_WARM_TARGET_MS),
       'threshold-substitution'
@@ -482,6 +570,50 @@ export const validateMvpAttempts = (
         )
       }
     }
+    const observedEvents = MVP_EVENTS.flatMap((name) => {
+      const value = a.eventsNs[name]
+      return value === undefined ? [] : [{ name, value }]
+    })
+    invalid(
+      observedEvents.every(({ value }) => validNs(value)) &&
+        observedEvents.every(
+          ({ value }, eventIndex) =>
+            eventIndex === 0 ||
+            BigInt(value) >= BigInt(observedEvents[eventIndex - 1]!.value)
+        ),
+      'phase-order-mismatch'
+    )
+    if (a.status === 'success')
+      invalid(observedEvents.length === MVP_EVENTS.length, 'phase-missing')
+    const expectedPhaseNames: string[] = []
+    let phaseSum = 0n
+    for (let eventIndex = 1; eventIndex < MVP_EVENTS.length; eventIndex += 1) {
+      const beforeName = MVP_EVENTS[eventIndex - 1]!,
+        afterName = MVP_EVENTS[eventIndex]!,
+        before = a.eventsNs[beforeName],
+        after = a.eventsNs[afterName]
+      if (before !== undefined && after !== undefined) {
+        const phaseName = beforeName + '-to-' + afterName
+        const expected = BigInt(after) - BigInt(before)
+        expectedPhaseNames.push(phaseName)
+        invalid(
+          a.phasesNs[phaseName] === expected.toString(),
+          'phase-duration-mismatch'
+        )
+        phaseSum += expected
+      }
+    }
+    if (validNs(start) && validNs(end)) {
+      const total = BigInt(end) - BigInt(start)
+      expectedPhaseNames.push('total')
+      invalid(a.phasesNs.total === total.toString(), 'phase-total-mismatch')
+      invalid(phaseSum === total, 'phase-sum-mismatch')
+    }
+    invalid(
+      JSON.stringify(Object.keys(a.phasesNs).sort()) ===
+        JSON.stringify(expectedPhaseNames.sort()),
+      'phase-duration-mismatch'
+    )
     if (a.status === 'timeout') {
       const bound =
         BigInt(a.kind === 'cold' ? MVP_COLD_TIMEOUT_MS : MVP_WARM_TIMEOUT_MS) *
@@ -505,12 +637,26 @@ export const validateMvpAttempts = (
         !a.browser.prewarmedRuntime && a.boundary.kind === 'absence',
         'cold-identity-violation'
       )
-    } else invalid(a.boundary.kind === 'reuse', 'warm-identity-violation')
+      invalid(
+        a.precheck.runtimeAudit === null && a.boundary.runtimeAudit === null,
+        'cold-identity-violation'
+      )
+    } else {
+      invalid(a.boundary.kind === 'reuse', 'warm-identity-violation')
+      for (const audit of [a.precheck.runtimeAudit, a.boundary.runtimeAudit]) {
+        invalid(audit !== null, 'warm-runtime-audit-missing')
+        invalid(audit?.healthPassed, 'warm-health-failed')
+        invalid(audit?.identityUnchanged, 'warm-identity-violation')
+        invalid(audit?.listenerCount === 1, 'warm-listener-mismatch')
+        invalid(audit?.duplicateRuntimeCount === 0, 'warm-duplicate-runtime')
+        invalid(audit?.transientResourceCount === 0, 'warm-transient-resource')
+      }
+    }
   }
 }
 export const assertPublicEvidenceSafe = (value: unknown): void => {
   invalid(
-    !/(?:127[.]0[.]0[.]1:[0-9]+|localhost:[0-9]+|canonicalPath|internalUrl|authorization|cookie|password|secret|token=)/iu.test(
+    !/(?:127[.]0[.]0[.]1:[0-9]+|localhost:[0-9]+|canonicalPath|internalUrl|authorization|password|secret|token=)/iu.test(
       JSON.stringify(value)
     ),
     'unsafe-disclosure'

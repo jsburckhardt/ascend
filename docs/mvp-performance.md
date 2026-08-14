@@ -8,7 +8,11 @@ Run once on the designated repository devcontainer:
 
 Required facts are Ubuntu 24.04.4, hostname 03f809395a5d, user vscode UID 1000, the /workspaces/ascend checkout, code-server 4.131.0, Node 22, repository Chromium, readable proc and cgroup v2 data, BL-001 and BL-014 fixtures, the retained BL-004 raw baseline, and owner-writable ignored artifact storage. Current load and memory are recorded without an invented eligibility threshold. A failed prerequisite returns nonzero with zero attempts.
 
-One mode-0600 guard rejects concurrent, malformed, or stale ownership. Stale ownership needs an exact zero-residual audit before removal. The overall bound is 2,400,000 ms. There are no automatic retries. Interruption retains completed and partial records under one unique run ID and later invocations never merge them.
+One mode-0600 guard rejects concurrent, malformed, or stale ownership. Stale ownership needs an exact zero-residual audit before removal. Each attempt is journaled atomically, and exact recovery ownership is persisted in ignored mode-0600 storage. A stale interrupted run is finalized without resuming or merging it; valid checkpoints remain, an incomplete or corrupt checkpoint is explicitly quarantined, and stale incomplete artifacts are removed only after their digest and size are recorded. When recovering evidence created before exact recovery ownership was available, pass the already-inspected fixture root explicitly:
+
+    just measure-mvp-performance --recover-interrupted RUN_ID --fixture-root /tmp/ascend-bl015-navigation-EXACT
+
+The recovery command requires the exact stale guard, zero same-run processes, and a zero-residual cleanup audit before guard removal. It returns a retained-partial/new-run-required disposition. The overall bound is 2,400,000 ms. There are no automatic retries. Interruption retains completed and partial records under one unique run ID and later invocations never merge them.
 
 ## Immutable order
 
@@ -57,16 +61,18 @@ The finite validator accepts the complete run and rejects missing/duplicate/orde
 
 ## Observed result
 
-The single no-retry run is `79479981-4b00-4596-a950-57dd9d2f53dd` (measurement hash `e1046427df028a35916ada79cf38dbae5d85c7e734a974d5f8db5a00920758df`). Cold completed 5/5 with median 10,222.644 ms, p95/maximum 11,702.568 ms, zero failures, and zero misses: met against 15,000 ms. Warm retained all 10 attempts; six successful values produced median 8,781.340 ms, p95/maximum 10,189.326 ms, while four later attempts retained bounded trace-capture failures. All ten warm attempts missed 2,000 ms, so NFR-001 Metric 3 is blocker. No approval or follow-up acceptance was supplied.
+The machine-restarted run `965db988-d727-464f-940e-0d276743c485` is retained as failed partial evidence, not merged into any later result. Cold attempts 1–4 remain complete. The zero-byte cold-5 checkpoint was classified `invalid-json` and quarantined; its zero-byte screenshot and trace were digest-recorded and removed. The recovery audit found no same-run process, removed only `/tmp/ascend-bl015-navigation-PyUl3L`, observed zero residuals, and cleared the exact stale guard. The controller is non-resumable, so a new run was required.
 
-Continuity completed 3/3 fresh BL-014 runs with zero crossing/loss and zero cleanup residuals: met. Capacity completed 3/3, 5/5, and 10/10 ready runtimes and workloads with complete samples, responsiveness, and cleanup. Cohort 3 met the NFR-003 gate; cohorts 5 and 10 remain findings. The independent residual audit checked 42 exact browser, continuity, and capacity identities plus API/web/guard ownership and found zero residuals. Overall disposition is blocker.
+The authoritative single no-retry run is `03fab06c-14f6-46d3-b02d-399ed4657f0e` (measurement hash `27bf78da25201a9033ea18369523d9dffef15d4b11e69e8026962bc432f09cc5`). It completed in 442,382 ms. Start and end host/cgroup identities both matched the immutable declaration. Cold completed 5/5 with median 7,261.495 ms, p95/maximum 7,406.816 ms, zero failures, and zero misses: met against 15,000 ms. Warm completed 10/10 with median 5,514.526 ms, p95/maximum 7,342.974 ms, zero failures and identity changes, but all ten attempts missed 2,000 ms, so NFR-001 Metric 3 is blocker. No approval or follow-up acceptance was supplied.
 
-The comparable deltas below are observed minus retained BL-004 run `853037e6-5dab-43cf-bcf8-61f1e8bbdb18`, calculated over the same ten host positions and all runtime-tree samples. CPU uses proc-tick percent and RSS/memory use KiB. Host totals include integrated product load; API/web attribution remains a separate directional-only comparison and is not presented as a runtime-tree delta.
+Continuity completed 3/3 fresh BL-014 runs with zero crossing/loss and zero cleanup residuals: met. Capacity completed 3/3, 5/5, and 10/10 ready runtimes and workloads with complete samples, responsiveness, and cleanup. Cohort 3 met the NFR-003 gate; cohorts 5 and 10 remain findings. The independent residual audit checked 42 exact browser, continuity, and capacity identities plus API/web/guard ownership, checked 42 restricted files at mode 0600, and found zero residuals. Overall disposition is blocker.
+
+The deltas below are observed minus retained BL-004 run `853037e6-5dab-43cf-bcf8-61f1e8bbdb18`, computed directly from raw source-run samples. Runtime CPU/RSS fields are comparable because method, schedule, units, formulas, and runtime-tree scope match. Host load and available-memory fields are directional-only because BL-015 includes integrated API/web service overhead. Historical cohort 1 is explicitly not-comparable because BL-015 has no fresh one-member cohort.
 
 | Cohort | Load-1 average BL-004 / BL-015 / delta | Minimum available KiB BL-004 / BL-015 / delta | Runtime CPU average % BL-004 / BL-015 / delta | Runtime RSS average KiB BL-004 / BL-015 / delta |
 |---:|---:|---:|---:|---:|
-| 3 | 3.185 / 5.135 / +1.950 | 18,952,508 / 12,558,236 / -6,394,272 | 0.150 / 0.129 / -0.021 | 196,565.73 / 198,167.60 / +1,601.87 |
-| 5 | 2.885 / 4.576 / +1.691 | 18,602,712 / 12,052,440 / -6,550,272 | 0.059 / 0.197 / +0.138 | 197,117.28 / 197,893.52 / +776.24 |
-| 10 | 2.513 / 3.963 / +1.450 | 18,467,380 / 12,029,992 / -6,437,388 | 0.030 / 0.078 / +0.048 | 196,899.64 / 198,117.80 / +1,218.16 |
+| 3 | 3.185 / 8.177 / +4.992 | 18,952,508 / 19,734,244 / +781,736 | 0.150369 / 0.066448 / -0.083921 | 196,565.733333 / 200,906.800000 / +4,341.066667 |
+| 5 | 2.885 / 8.023 / +5.138 | 18,602,712 / 19,244,132 / +641,420 | 0.059327 / 0.037745 / -0.021582 | 197,117.280000 / 199,740.960000 / +2,623.680000 |
+| 10 | 2.513 / 6.667 / +4.154 | 18,467,380 / 18,687,164 / +219,784 | 0.029937 / 0.070212 / +0.040275 | 196,899.640000 / 200,982.520000 / +4,082.880000 |
 
-The historical one-member row remains not-comparable. BL-015 performs no optimization and changes no target, API, migration, configuration default, or deployment topology.
+BL-015 performs no optimization and changes no target, API, migration, configuration default, or deployment topology.

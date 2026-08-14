@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "runId": "03fab06c-14f6-46d3-b02d-399ed4657f0e",
+  "overallBoundMs": 2400000,
+  "overallToleranceMs": 1000,
+  "sections": [
+    {
+      "name": "prerequisites",
+      "boundMs": 60000,
+      "startedElapsedMs": 20,
+      "endedElapsedMs": 314,
+      "status": "complete",
+      "partialEvidenceRetained": false
+    },
+    {
+      "name": "cold-warm",
+      "boundMs": 850000,
+      "startedElapsedMs": 317,
+      "endedElapsedMs": 109085,
+      "status": "complete",
+      "partialEvidenceRetained": false
+    },
+    {
+      "name": "continuity",
+      "boundMs": 720000,
+      "startedElapsedMs": 109099,
+      "endedElapsedMs": 380711,
+      "status": "complete",
+      "partialEvidenceRetained": false
+    },
+    {
+      "name": "capacity",
+      "boundMs": 650000,
+      "startedElapsedMs": 380712,
+      "endedElapsedMs": 442087,
+      "status": "complete",
+      "partialEvidenceRetained": false
+    },
+    {
+      "name": "cleanup-and-finalization",
+      "boundMs": 120000,
+      "startedElapsedMs": 442088,
+      "endedElapsedMs": 442381,
+      "status": "complete",
+      "partialEvidenceRetained": false
+    }
+  ]
+}

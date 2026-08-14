@@ -103,4 +103,58 @@ describe('BL-015 continuity coordinator', () => {
       )
     }
   })
+  it('classifies readable invalid evidence and nonzero controllers without cleanup success', async () => {
+    const runId = 'test-continuity-invalid-evidence'
+    const source = await mkdtemp(
+      path.join(os.tmpdir(), 'bl015-continuity-invalid-')
+    )
+    await writeFile(
+      path.join(source, 'switching-browser.json'),
+      JSON.stringify({
+        cleanup: { resources: [{ after: 1 }], projects: [{ residuals: 1 }] },
+      })
+    )
+    await writeFile(
+      path.join(source, 'restricted-authority.json'),
+      JSON.stringify({ executionId: 'invalid' }),
+      { mode: 0o600 }
+    )
+    const execute = vi
+      .fn()
+      .mockResolvedValueOnce({ code: 0, stdout: '', stderr: '' })
+      .mockResolvedValue({ code: 1, stdout: '', stderr: 'failed' })
+    const validator = vi
+      .spyOn(contract, 'validateSessionSwitchingEvidence')
+      .mockReturnValue(false)
+    try {
+      const result = await runMvpContinuitySection(runId, 'plan', {
+        execute,
+        sourceRoot: source,
+      })
+      expect(result.runs.map((row) => row.failure)).toEqual([
+        'continuity-evidence-invalid',
+        'continuity-controller-nonzero:1',
+        'continuity-controller-nonzero:1',
+      ])
+      expect(result.runs.every((row) => !row.cleanupPassed)).toBe(true)
+      expect(result.runs.every((row) => row.sourceExecutionId === null)).toBe(
+        true
+      )
+    } finally {
+      validator.mockRestore()
+      await rm(source, { recursive: true, force: true })
+      await rm(
+        path.join(
+          REPOSITORY_ROOT,
+          'project/work-items/35-bl-015-measure-mvp-navigation-and-startup-performance/implementation/evidence',
+          runId
+        ),
+        { recursive: true, force: true }
+      )
+      await rm(path.join(REPOSITORY_ROOT, 'test-results/bl-015', runId), {
+        recursive: true,
+        force: true,
+      })
+    }
+  })
 })

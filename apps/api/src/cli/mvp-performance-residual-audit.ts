@@ -14,25 +14,40 @@ const absent = async (target: string) =>
     () => false,
     () => true
   )
+const walkFiles = async (root: string): Promise<string[]> => {
+  const entries = await readdir(root, { withFileTypes: true })
+  const nested = await Promise.all(
+    entries.map((entry) => {
+      const target = path.join(root, entry.name)
+      return entry.isDirectory() ? walkFiles(target) : Promise.resolve([target])
+    })
+  )
+  return nested.flat()
+}
 const latest = async () => {
   const entries = (
     await readdir(MVP_PERFORMANCE_EVIDENCE_ROOT, { withFileTypes: true })
   )
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name)
-    .sort()
-    .reverse()
+  const complete: Array<{ runId: string; completedAt: string }> = []
   for (const runId of entries)
     try {
-      await readFile(
-        path.join(MVP_PERFORMANCE_EVIDENCE_ROOT, runId, 'summary.json')
-      )
-      return runId
+      const summary = JSON.parse(
+        await readFile(
+          path.join(MVP_PERFORMANCE_EVIDENCE_ROOT, runId, 'summary.json'),
+          'utf8'
+        )
+      ) as { completedAt: string }
+      complete.push({ runId, completedAt: summary.completedAt })
     } catch {
       /* incomplete */
     }
+  complete.sort((a, b) => b.completedAt.localeCompare(a.completedAt))
+  if (complete[0]) return complete[0].runId
   throw new Error('mvp-performance-complete-evidence-unavailable')
 }
+
 try {
   const runId = process.argv[2] ?? (await latest())
   const publicRoot = path.join(MVP_PERFORMANCE_EVIDENCE_ROOT, runId),
@@ -119,12 +134,9 @@ try {
       listenerAbsent: await loopbackListenerIsAbsent(row.port),
     }))
   )
+  const restrictedFiles = await walkFiles(restrictedRoot)
   const modes = await Promise.all(
-    [
-      path.join(restrictedRoot, 'restricted-authority.json'),
-      path.join(restrictedRoot, 'capacity-restricted.json'),
-      ...continuityFiles.map((name) => path.join(continuityDir, name)),
-    ].map(async (target) => (await lstat(target)).mode & 0o777)
+    restrictedFiles.map(async (target) => (await lstat(target)).mode & 0o777)
   )
   const host = {
     apiListenerAbsent: await loopbackListenerIsAbsent(browser.api.port),
@@ -148,6 +160,7 @@ try {
       runId,
       identities: probes.length,
       residual,
+      restrictedFiles: restrictedFiles.length,
       modes: modes.map((mode) => mode.toString(8)),
       host,
     }) + '\n'

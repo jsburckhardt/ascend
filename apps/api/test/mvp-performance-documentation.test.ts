@@ -43,9 +43,10 @@ describe('BL-015 command and operational documentation', () => {
       'not-comparable',
       'partial',
       'residual',
-      '79479981-4b00-4596-a950-57dd9d2f53dd',
-      '10222.644',
-      '8781.340',
+      '965db988-d727-464f-940e-0d276743c485',
+      '03fab06c-14f6-46d3-b02d-399ed4657f0e',
+      '7261.495',
+      '5514.526',
       '853037e6-5dab-43cf-bcf8-61f1e8bbdb18',
       '42 exact',
     ])
@@ -72,7 +73,7 @@ describe('BL-015 command and operational documentation', () => {
       'verify-home-workbench ',
       'verify-project-runtime-isolation:',
       'verify-session-switching:',
-      'measure-mvp-performance:',
+      'measure-mvp-performance *args:',
       'verify-mvp-performance:',
       'proof-mvp-performance-residual-audit:',
     ])

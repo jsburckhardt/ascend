@@ -39,7 +39,7 @@ const attempt = (
     project,
     retry: 0,
     startedAt: plan.declaredAt,
-    host: { cgroup: 'v2' },
+    host: plan.designatedHost,
     versions: { node: '22', chromium: '1', codeServer: '4.131.0' },
     browser: {
       context: kind === 'cold' ? 'fresh' : 'retained',
@@ -47,7 +47,21 @@ const attempt = (
       originStorage: kind === 'cold' ? 'cleared' : 'retained',
       prewarmedRuntime: false,
     },
-    precheck: { passed: true, load: [0, 0, 0], availableMemoryKiB: 1 },
+    precheck: {
+      passed: true,
+      load: [0, 0, 0],
+      availableMemoryKiB: 1,
+      runtimeAudit:
+        kind === 'warm'
+          ? {
+              healthPassed: true,
+              identityUnchanged: true,
+              listenerCount: 1,
+              duplicateRuntimeCount: 0,
+              transientResourceCount: 0,
+            }
+          : null,
+    },
     runtime: {
       projectToken: 'project-safe',
       identityDigest: 'identity-' + project,
@@ -66,7 +80,17 @@ const attempt = (
       'terminal-prompt-ready': (start + total).toString(),
       'workbench-usable': (start + total).toString(),
     },
-    phasesNs: { total: total.toString() },
+    phasesNs: {
+      'activation-to-runtime-start-requested': '1',
+      'runtime-start-requested-to-runtime-health-ready': '1',
+      'runtime-health-ready-to-stable-document-ready': '1',
+      'stable-document-ready-to-explorer-sentinel-ready': '1',
+      'explorer-sentinel-ready-to-terminal-prompt-ready': (
+        total - 4n
+      ).toString(),
+      'terminal-prompt-ready-to-workbench-usable': '0',
+      total: total.toString(),
+    },
     observedTotalNs: total.toString(),
     statisticalTotalNs: total.toString(),
     status: 'success',
@@ -84,6 +108,16 @@ const attempt = (
       passed: true,
       measuredResiduals: 0,
       expectedIdentityCount: kind === 'cold' ? 0 : 1,
+      runtimeAudit:
+        kind === 'warm'
+          ? {
+              healthPassed: true,
+              identityUnchanged: true,
+              listenerCount: 1,
+              duplicateRuntimeCount: 0,
+              transientResourceCount: 0,
+            }
+          : null,
     },
     homeReturned: kind === 'warm',
   }

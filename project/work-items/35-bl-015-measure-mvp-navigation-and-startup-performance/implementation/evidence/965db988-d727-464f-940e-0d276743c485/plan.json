@@ -1,0 +1,280 @@
+{
+  "schemaVersion": 1,
+  "runId": "965db988-d727-464f-940e-0d276743c485",
+  "declaredAt": "2026-08-13T17:33:21.708Z",
+  "declaredMonotonicNs": "172267558241584",
+  "controllerClock": {
+    "source": "process.hrtime.bigint",
+    "unit": "nanoseconds",
+    "precision": "integer",
+    "presentation": "milliseconds-rounded-to-three-decimals"
+  },
+  "designatedHost": {
+    "ubuntuVersion": "Ubuntu 24.04.4 LTS",
+    "hostname": "03f809395a5d",
+    "user": "vscode",
+    "uid": 1000,
+    "repository": "/workspaces/ascend",
+    "cgroup": {
+      "version": "v2",
+      "path": "/",
+      "cpuMax": "max 100000",
+      "cpusetEffective": "0-19",
+      "memoryMax": "max",
+      "memoryHigh": "max",
+      "swapMax": "max",
+      "pidsMax": "max"
+    }
+  },
+  "order": {
+    "sections": ["cold", "warm", "continuity", "capacity"],
+    "cold": ["A", "B", "C", "A", "B"],
+    "warm": ["A", "B", "C", "A", "B", "C", "A", "B", "C", "A"],
+    "continuity": 3,
+    "capacity": [3, 5, 10]
+  },
+  "events": [
+    "activation",
+    "runtime-start-requested",
+    "runtime-health-ready",
+    "stable-document-ready",
+    "explorer-sentinel-ready",
+    "terminal-prompt-ready",
+    "workbench-usable"
+  ],
+  "timeoutsMs": {
+    "coldAttempt": 45000,
+    "warmAttempt": 15000,
+    "artifactCapture": 5000,
+    "coldCleanup": 10000,
+    "warmReuseAudit": 5000,
+    "overall": 2400000,
+    "overallTolerance": 1000,
+    "sections": {
+      "prerequisites": 60000,
+      "cold": 350000,
+      "warm": 500000,
+      "continuity": 720000,
+      "capacity": 650000,
+      "cleanupAndFinalization": 120000
+    }
+  },
+  "targetsMs": {
+    "cold": 15000,
+    "warm": 2000
+  },
+  "cache": {
+    "cold": "fresh-context-cleared-cache-origin-storage-no-runtime-prestart",
+    "warm": "one-retained-cache-context-running-runtime"
+  },
+  "formulas": {
+    "duration": "(endNs-startNs)/1000000",
+    "median": "conventional-sorted-middle-average-for-even-count",
+    "p95": "nearest-rank-ceil(0.95*n)",
+    "statisticalSet": "successful-total-or-timeout-bound-only",
+    "metric2": "continuity-passed/3",
+    "phaseSumToleranceNs": "0"
+  },
+  "failureRules": {
+    "retries": 0,
+    "timeout": "configured-bound-enters-statistics",
+    "nonTimeout": "failure-and-miss-excluded-from-statistics",
+    "preStart": "failure-and-miss-no-duration",
+    "artifact": "evidence-failure-retained",
+    "defaultMiss": "blocker"
+  },
+  "fixtures": {
+    "projects": [
+      {
+        "key": "A",
+        "id": "bl014-a",
+        "name": "Session fixture A",
+        "branch": "session-a",
+        "fileName": "A-SESSION.txt",
+        "editorSentinel": "EDITOR_A_SESSION",
+        "dirtyFileName": "a-away-counter.log",
+        "gitSentinel": "git-session-a",
+        "terminalSentinel": "TERMINAL_A_SESSION"
+      },
+      {
+        "key": "B",
+        "id": "bl014-b",
+        "name": "Session fixture B",
+        "branch": "session-b",
+        "fileName": "B-SESSION.txt",
+        "editorSentinel": "EDITOR_B_SESSION",
+        "dirtyFileName": "b-project-state.txt",
+        "gitSentinel": "git-session-b",
+        "terminalSentinel": "TERMINAL_B_SESSION"
+      },
+      {
+        "key": "C",
+        "id": "bl014-c",
+        "name": "Session fixture C",
+        "branch": "session-c",
+        "fileName": "C-SESSION.txt",
+        "editorSentinel": "EDITOR_C_SESSION",
+        "dirtyFileName": "c-project-state.txt",
+        "gitSentinel": "git-session-c",
+        "terminalSentinel": "TERMINAL_C_SESSION"
+      }
+    ],
+    "bl014InitialStartOrder": ["B", "C", "A"],
+    "bl014Transitions": [
+      "initial-open-B",
+      "initial-home-B",
+      "initial-open-C",
+      "initial-home-C",
+      "initial-open-A",
+      "switch-home-A",
+      "switch-open-B",
+      "history-back-B",
+      "history-forward-B",
+      "switch-home-B",
+      "switch-open-C",
+      "switch-home-C",
+      "switch-open-A",
+      "revisit-home-A",
+      "revisit-open-B",
+      "revisit-home-B",
+      "revisit-open-C",
+      "direct-A",
+      "reload-A",
+      "fresh-B",
+      "close-B",
+      "probe-A",
+      "probe-C",
+      "reopen-B"
+    ],
+    "bl014Workflows": [
+      {
+        "id": "initial-B",
+        "project": "B",
+        "reconnection": false,
+        "management": 1,
+        "extensionHost": 1
+      },
+      {
+        "id": "initial-C",
+        "project": "C",
+        "reconnection": false,
+        "management": 1,
+        "extensionHost": 1
+      },
+      {
+        "id": "initial-A",
+        "project": "A",
+        "reconnection": false,
+        "management": 1,
+        "extensionHost": 1
+      },
+      {
+        "id": "open-B",
+        "project": "B",
+        "reconnection": true,
+        "management": 1,
+        "extensionHost": 1
+      },
+      {
+        "id": "history-forward-B",
+        "project": "B",
+        "reconnection": true,
+        "management": 1,
+        "extensionHost": 1
+      },
+      {
+        "id": "open-C",
+        "project": "C",
+        "reconnection": true,
+        "management": 1,
+        "extensionHost": 1
+      },
+      {
+        "id": "open-A",
+        "project": "A",
+        "reconnection": true,
+        "management": 1,
+        "extensionHost": 1
+      },
+      {
+        "id": "revisit-B",
+        "project": "B",
+        "reconnection": true,
+        "management": 1,
+        "extensionHost": 1
+      },
+      {
+        "id": "revisit-C",
+        "project": "C",
+        "reconnection": true,
+        "management": 1,
+        "extensionHost": 1
+      },
+      {
+        "id": "direct-A",
+        "project": "A",
+        "reconnection": true,
+        "management": 1,
+        "extensionHost": 1
+      },
+      {
+        "id": "reload-A",
+        "project": "A",
+        "reconnection": true,
+        "management": 1,
+        "extensionHost": 1
+      },
+      {
+        "id": "fresh-B",
+        "project": "B",
+        "reconnection": true,
+        "management": 1,
+        "extensionHost": 1
+      },
+      {
+        "id": "probe-C",
+        "project": "C",
+        "reconnection": true,
+        "management": 1,
+        "extensionHost": 1
+      },
+      {
+        "id": "reopen-B",
+        "project": "B",
+        "reconnection": true,
+        "management": 1,
+        "extensionHost": 1
+      }
+    ],
+    "bl014ResourceClasses": [
+      "terminal-commands",
+      "browser-contexts",
+      "browser-pages",
+      "proxy-operations",
+      "runtime-groups",
+      "listeners",
+      "sockets",
+      "web-service",
+      "api-service",
+      "database-files",
+      "fixtures",
+      "disposable-evidence-files"
+    ]
+  },
+  "capacityMethod": {
+    "baselineRunId": "853037e6-5dab-43cf-bcf8-61f1e8bbdb18",
+    "cohorts": [3, 5, 10],
+    "probe": {
+      "executable": "/usr/bin/true",
+      "args": [],
+      "command": "/usr/bin/true",
+      "timeoutMs": 1000
+    },
+    "sampleOffsetsMs": [0, 1000, 2000, 3000, 4000],
+    "workloadDurationMs": 7000,
+    "workloadTimeoutMs": 10000,
+    "workloadOutputLimitBytes": 4096,
+    "units": ["cpu-percent-proc-ticks", "rss-kib", "load-1-5-15", "memory-kib"]
+  },
+  "planHash": "f1dc0ef6226be83d2e378a5836898d2dbd7ca34034be7b5535567a039889e804"
+}

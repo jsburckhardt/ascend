@@ -57,6 +57,10 @@ Development Vite and deployed front doors must forward /projects HTTP and WebSoc
 
 Issue #33 proves that A/B/C memory-only runtimes survive keyboard Project Home switching without lifecycle calls. It separately exercises history, reload, a storage/cache/service-worker-cleared B context, B client close, and B reopen. The fresh-browser visible terminal/editor outcome is unsupported while runtime identity remains unchanged. Run just verify-session-switching and the independent residual audit; see [session-switching.md](session-switching.md) for exact sequence, bounds, evidence policy, cleanup, and exclusions.
 
+## MVP performance measurement
+
+Issue #35 measures five cold opens, ten warm reconnects, three exact BL-014 continuity runs, and fresh integrated capacity 3/5/10 through one serial command. It preserves unchanged targets and defaults misses to blocker, with exact failure, privacy, recomputation, and residual evidence. Use just measure-mvp-performance once on the designated host, then just verify-mvp-performance and just proof-mvp-performance-residual-audit. See [mvp-performance.md](mvp-performance.md).
+
 ## Source Documents
 
 - [`PRD.md`](../PRD.md) defines the MVP requirements and acceptance criteria.

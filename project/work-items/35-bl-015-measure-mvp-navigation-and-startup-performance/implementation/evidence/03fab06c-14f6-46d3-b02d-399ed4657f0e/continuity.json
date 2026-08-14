@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "runId": "03fab06c-14f6-46d3-b02d-399ed4657f0e",
+  "planHash": "fbef2984622899e1521dc9e6818102ef623af444472d2e929124074a1aff0eaf",
+  "exactController": "tests/e2e/session-switching.spec.ts",
+  "count": 3,
+  "runs": [
+    {
+      "ordinal": 1,
+      "attemptId": "continuity-1",
+      "retry": 0,
+      "sourceExecutionId": "98d86040-7dd1-43f0-9186-197272abe587",
+      "passed": true,
+      "failure": null,
+      "publicDigest": "a392fe0a0366f85cf7a0c8c8ab3ced3bf2dfe6664d229943d2560b148604cb3d",
+      "restrictedDigest": "c29928098b03a655f6ae2a4f475a0fa37485416b4ba64c88185662b8534d24da",
+      "stateCrossingOrLoss": false,
+      "cleanupPassed": true
+    },
+    {
+      "ordinal": 2,
+      "attemptId": "continuity-2",
+      "retry": 0,
+      "sourceExecutionId": "45a8afd1-5879-478b-a9e7-af6c4a8af691",
+      "passed": true,
+      "failure": null,
+      "publicDigest": "16fc855e2487609290aadae755a8e293cb0b86678578201c7013cc6ea0bd2a2a",
+      "restrictedDigest": "395887f003ebcc8c3342f9911544e15d1370619858df61560015570d77b517ca",
+      "stateCrossingOrLoss": false,
+      "cleanupPassed": true
+    },
+    {
+      "ordinal": 3,
+      "attemptId": "continuity-3",
+      "retry": 0,
+      "sourceExecutionId": "ba57feba-b70e-433e-a8b2-3e22fc6307bd",
+      "passed": true,
+      "failure": null,
+      "publicDigest": "d3528dc1a13be24ae1cfd1dde96f639ccad4728fe6ad4509ad39e7531ac18b44",
+      "restrictedDigest": "0ed3ddf6a8a8a9d0fea296926e02a83e347c129f269dc203e41e3bd63feda681",
+      "stateCrossingOrLoss": false,
+      "cleanupPassed": true
+    }
+  ]
+}

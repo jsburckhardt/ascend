@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "runId": "965db988-d727-464f-940e-0d276743c485",
+  "completedAttemptIds": ["cold-1-A", "cold-2-B", "cold-3-C", "cold-4-A"],
+  "inProgress": {
+    "schemaVersion": 1,
+    "state": "in-progress",
+    "runId": "965db988-d727-464f-940e-0d276743c485",
+    "planHash": "f1dc0ef6226be83d2e378a5836898d2dbd7ca34034be7b5535567a039889e804",
+    "attemptId": "cold-5-B",
+    "ordinal": 5
+  },
+  "invalidCheckpoints": [
+    {
+      "file": "005-cold-5-B.json",
+      "bytes": 0,
+      "digest": "f2fdf82740ddf66f28f1e790db05d1644868642906c7e86eb997f2534f3a7ab4",
+      "classification": "invalid-json"
+    }
+  ],
+  "fabricatedAttempts": 0,
+  "resumable": false,
+  "disposition": "retained-partial-new-run-required"
+}

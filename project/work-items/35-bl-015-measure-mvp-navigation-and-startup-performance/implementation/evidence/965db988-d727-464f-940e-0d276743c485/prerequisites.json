@@ -1,0 +1,122 @@
+{
+  "passed": true,
+  "records": [
+    {
+      "name": "ubuntu-24.04.4",
+      "passed": true,
+      "detail": "Ubuntu 24.04.4 LTS"
+    },
+    {
+      "name": "hostname-03f809395a5d",
+      "passed": true,
+      "detail": "03f809395a5d"
+    },
+    {
+      "name": "non-root-vscode-uid-1000",
+      "passed": true,
+      "detail": "vscode:1000"
+    },
+    {
+      "name": "repository-workspaces-ascend",
+      "passed": true,
+      "detail": "/workspaces/ascend"
+    },
+    {
+      "name": "code-server-4.131.0",
+      "passed": true,
+      "detail": "4.131.0"
+    },
+    {
+      "name": "fixture-readable",
+      "passed": true,
+      "detail": "/workspaces/ascend/tests/fixtures/bl-001/workbench project;BL-001"
+    },
+    {
+      "name": "proc-readable",
+      "passed": true,
+      "detail": "required /proc files readable"
+    },
+    {
+      "name": "cgroup-v2-readable",
+      "passed": true,
+      "detail": "{\"cpuMax\":\"max 100000\",\"cpusetEffective\":\"0-19\",\"memoryMax\":\"max\",\"memoryHigh\":\"max\",\"swapMax\":\"max\",\"pidsMax\":\"max\"}"
+    },
+    {
+      "name": "designated-host-declaration-match",
+      "passed": true,
+      "detail": "observed host and cgroup match immutable declaration"
+    },
+    {
+      "name": "bl004-baseline-raw-evidence",
+      "passed": true,
+      "detail": "retained designated raw baseline available"
+    },
+    {
+      "name": "bl001-and-bl014-fixtures",
+      "passed": true,
+      "detail": "required fixture and exact BL-014 controller available"
+    },
+    {
+      "name": "chromium-browser-artifact",
+      "passed": true,
+      "detail": "chromium-1234"
+    },
+    {
+      "name": "restricted-artifact-storage",
+      "passed": true,
+      "detail": "owner-writable ignored storage available"
+    },
+    {
+      "name": "host-load-memory-readable",
+      "passed": true,
+      "detail": "load and memory are recorded without eligibility threshold"
+    }
+  ],
+  "host": {
+    "designated": true,
+    "hostname": "03f809395a5d",
+    "user": "vscode",
+    "uid": 1000,
+    "platform": "linux",
+    "release": "6.18.33.2-microsoft-standard-WSL2",
+    "cgroup": {
+      "version": "v2",
+      "path": "/",
+      "cpuMax": "max 100000",
+      "cpusetEffective": "0-19",
+      "memoryMax": "max",
+      "memoryHigh": "max",
+      "swapMax": "max",
+      "pidsMax": "max"
+    },
+    "preAttemptLoad": {
+      "loadAverage": [2.85, 4.28, 4.57],
+      "availableMemoryKiB": 12588908
+    }
+  },
+  "hostIdentity": {
+    "ubuntuVersion": "Ubuntu 24.04.4 LTS",
+    "hostname": "03f809395a5d",
+    "user": "vscode",
+    "uid": 1000,
+    "repository": "/workspaces/ascend",
+    "cgroup": {
+      "version": "v2",
+      "path": "/",
+      "cpuMax": "max 100000",
+      "cpusetEffective": "0-19",
+      "memoryMax": "max",
+      "memoryHigh": "max",
+      "swapMax": "max",
+      "pidsMax": "max"
+    }
+  },
+  "hostIdentityDigest": "b85022815dffa92fdcffa449301b51877c95af6e8707de60adb3632d8b589057",
+  "versions": {
+    "node": "v22.23.2",
+    "chromium": "chromium-1234",
+    "codeServer": "4.131.0"
+  },
+  "failure": null,
+  "attempts": 0
+}

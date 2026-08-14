@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "runId": "03fab06c-14f6-46d3-b02d-399ed4657f0e",
+  "completedAttemptIds": [
+    "cold-1-A",
+    "cold-2-B",
+    "cold-3-C",
+    "cold-4-A",
+    "cold-5-B",
+    "warm-1-A",
+    "warm-2-B",
+    "warm-3-C",
+    "warm-4-A",
+    "warm-5-B",
+    "warm-6-C",
+    "warm-7-A",
+    "warm-8-B",
+    "warm-9-C",
+    "warm-10-A"
+  ],
+  "inProgress": null,
+  "invalidCheckpoints": [],
+  "fabricatedAttempts": 0
+}

@@ -1,0 +1,449 @@
+{
+  "schemaVersion": 1,
+  "runId": "03fab06c-14f6-46d3-b02d-399ed4657f0e",
+  "measurementHash": "27bf78da25201a9033ea18369523d9dffef15d4b11e69e8026962bc432f09cc5",
+  "sourceAttemptIds": [
+    "cold-1-A",
+    "cold-2-B",
+    "cold-3-C",
+    "cold-4-A",
+    "cold-5-B",
+    "warm-1-A",
+    "warm-2-B",
+    "warm-3-C",
+    "warm-4-A",
+    "warm-5-B",
+    "warm-6-C",
+    "warm-7-A",
+    "warm-8-B",
+    "warm-9-C",
+    "warm-10-A"
+  ],
+  "cold": {
+    "orderedAttemptIds": [
+      "cold-1-A",
+      "cold-2-B",
+      "cold-3-C",
+      "cold-4-A",
+      "cold-5-B"
+    ],
+    "sortedSourceAttemptIds": [
+      "cold-5-B",
+      "cold-3-C",
+      "cold-1-A",
+      "cold-2-B",
+      "cold-4-A"
+    ],
+    "sourceDurationsNs": [
+      "6726558693",
+      "6861184841",
+      "7261495265",
+      "7398416570",
+      "7406815820"
+    ],
+    "medianNs": "7261495265",
+    "p95Ns": "7406815820",
+    "maximumNs": "7406815820",
+    "failures": 0,
+    "preStartFailures": 0,
+    "identityChanges": 0,
+    "targetMisses": 0
+  },
+  "warm": {
+    "orderedAttemptIds": [
+      "warm-1-A",
+      "warm-2-B",
+      "warm-3-C",
+      "warm-4-A",
+      "warm-5-B",
+      "warm-6-C",
+      "warm-7-A",
+      "warm-8-B",
+      "warm-9-C",
+      "warm-10-A"
+    ],
+    "sortedSourceAttemptIds": [
+      "warm-7-A",
+      "warm-5-B",
+      "warm-6-C",
+      "warm-9-C",
+      "warm-10-A",
+      "warm-3-C",
+      "warm-2-B",
+      "warm-1-A",
+      "warm-8-B",
+      "warm-4-A"
+    ],
+    "sourceDurationsNs": [
+      "4371617274",
+      "4559622340",
+      "4730841068",
+      "4840511304",
+      "4843857949",
+      "6185193421",
+      "6379624571",
+      "6405780301",
+      "7283406060",
+      "7342974338"
+    ],
+    "medianNs": "5514525685",
+    "p95Ns": "7342974338",
+    "maximumNs": "7342974338",
+    "failures": 0,
+    "preStartFailures": 0,
+    "identityChanges": 0,
+    "targetMisses": 10
+  },
+  "continuitySuccesses": 3,
+  "capacity": [
+    {
+      "cohort": 3,
+      "ready": 3,
+      "workloadsPassed": 3,
+      "requiredSamplesComplete": true,
+      "responsivenessPassed": true,
+      "cleanupPassed": true,
+      "gate": "met"
+    },
+    {
+      "cohort": 5,
+      "ready": 5,
+      "workloadsPassed": 5,
+      "requiredSamplesComplete": true,
+      "responsivenessPassed": true,
+      "cleanupPassed": true,
+      "gate": "finding"
+    },
+    {
+      "cohort": 10,
+      "ready": 10,
+      "workloadsPassed": 10,
+      "requiredSamplesComplete": true,
+      "responsivenessPassed": true,
+      "cleanupPassed": true,
+      "gate": "finding"
+    }
+  ],
+  "capacityDeltas": [
+    {
+      "cohort": "historical-1",
+      "field": "load1Average",
+      "classification": "not-comparable",
+      "reason": "BL-015 has no fresh one-member cohort raw source",
+      "baseline": {
+        "runId": "853037e6-5dab-43cf-bcf8-61f1e8bbdb18",
+        "method": "Linux /proc process CPU-tick deltas at CLK_TCK=100 without logical-CPU normalization; summed VmRSS KiB; /proc/loadavg 1/5/15; MemAvailable and MemTotal minus MemAvailable",
+        "sourceFile": "project/work-items/11-bl-004-establish-the-workbench-capacity-baseline/implementation/evidence/853037e6-5dab-43cf-bcf8-61f1e8bbdb18/samples.json",
+        "sampleCount": 10,
+        "value": 2.485
+      },
+      "current": null,
+      "delta": null
+    },
+    {
+      "cohort": "historical-1",
+      "field": "minimumAvailableMemoryKiB",
+      "classification": "not-comparable",
+      "reason": "BL-015 has no fresh one-member cohort raw source",
+      "baseline": {
+        "runId": "853037e6-5dab-43cf-bcf8-61f1e8bbdb18",
+        "method": "Linux /proc process CPU-tick deltas at CLK_TCK=100 without logical-CPU normalization; summed VmRSS KiB; /proc/loadavg 1/5/15; MemAvailable and MemTotal minus MemAvailable",
+        "sourceFile": "project/work-items/11-bl-004-establish-the-workbench-capacity-baseline/implementation/evidence/853037e6-5dab-43cf-bcf8-61f1e8bbdb18/samples.json",
+        "sampleCount": 10,
+        "value": 19103172
+      },
+      "current": null,
+      "delta": null
+    },
+    {
+      "cohort": "historical-1",
+      "field": "runtimeCpuAveragePercent",
+      "classification": "not-comparable",
+      "reason": "BL-015 has no fresh one-member cohort raw source",
+      "baseline": {
+        "runId": "853037e6-5dab-43cf-bcf8-61f1e8bbdb18",
+        "method": "Linux /proc process CPU-tick deltas at CLK_TCK=100 without logical-CPU normalization; summed VmRSS KiB; /proc/loadavg 1/5/15; MemAvailable and MemTotal minus MemAvailable",
+        "sourceFile": "project/work-items/11-bl-004-establish-the-workbench-capacity-baseline/implementation/evidence/853037e6-5dab-43cf-bcf8-61f1e8bbdb18/samples.json",
+        "sampleCount": 10,
+        "value": 14.419989
+      },
+      "current": null,
+      "delta": null
+    },
+    {
+      "cohort": "historical-1",
+      "field": "runtimeRssAverageKiB",
+      "classification": "not-comparable",
+      "reason": "BL-015 has no fresh one-member cohort raw source",
+      "baseline": {
+        "runId": "853037e6-5dab-43cf-bcf8-61f1e8bbdb18",
+        "method": "Linux /proc process CPU-tick deltas at CLK_TCK=100 without logical-CPU normalization; summed VmRSS KiB; /proc/loadavg 1/5/15; MemAvailable and MemTotal minus MemAvailable",
+        "sourceFile": "project/work-items/11-bl-004-establish-the-workbench-capacity-baseline/implementation/evidence/853037e6-5dab-43cf-bcf8-61f1e8bbdb18/samples.json",
+        "sampleCount": 10,
+        "value": 197735.6
+      },
+      "current": null,
+      "delta": null
+    },
+    {
+      "cohort": 3,
+      "field": "load1Average",
+      "classification": "directional-only",
+      "reason": "same raw host field and schedule but BL-015 includes integrated API and web service load",
+      "baseline": {
+        "runId": "853037e6-5dab-43cf-bcf8-61f1e8bbdb18",
+        "method": "Linux /proc process CPU-tick deltas at CLK_TCK=100 without logical-CPU normalization; summed VmRSS KiB; /proc/loadavg 1/5/15; MemAvailable and MemTotal minus MemAvailable",
+        "sourceFile": "project/work-items/11-bl-004-establish-the-workbench-capacity-baseline/implementation/evidence/853037e6-5dab-43cf-bcf8-61f1e8bbdb18/samples.json",
+        "sampleCount": 10,
+        "value": 3.185
+      },
+      "current": {
+        "runId": "03fab06c-14f6-46d3-b02d-399ed4657f0e",
+        "method": "Linux /proc process CPU-tick deltas at CLK_TCK=100 without logical-CPU normalization; summed VmRSS KiB; /proc/loadavg 1/5/15; MemAvailable and MemTotal minus MemAvailable; integrated API and web services included in host totals",
+        "sourceFile": "project/work-items/35-bl-015-measure-mvp-navigation-and-startup-performance/implementation/evidence/03fab06c-14f6-46d3-b02d-399ed4657f0e/capacity.json",
+        "sampleCount": 10,
+        "value": 8.177
+      },
+      "delta": 4.992
+    },
+    {
+      "cohort": 3,
+      "field": "minimumAvailableMemoryKiB",
+      "classification": "directional-only",
+      "reason": "same raw host field and schedule but BL-015 includes integrated API and web service load",
+      "baseline": {
+        "runId": "853037e6-5dab-43cf-bcf8-61f1e8bbdb18",
+        "method": "Linux /proc process CPU-tick deltas at CLK_TCK=100 without logical-CPU normalization; summed VmRSS KiB; /proc/loadavg 1/5/15; MemAvailable and MemTotal minus MemAvailable",
+        "sourceFile": "project/work-items/11-bl-004-establish-the-workbench-capacity-baseline/implementation/evidence/853037e6-5dab-43cf-bcf8-61f1e8bbdb18/samples.json",
+        "sampleCount": 10,
+        "value": 18952508
+      },
+      "current": {
+        "runId": "03fab06c-14f6-46d3-b02d-399ed4657f0e",
+        "method": "Linux /proc process CPU-tick deltas at CLK_TCK=100 without logical-CPU normalization; summed VmRSS KiB; /proc/loadavg 1/5/15; MemAvailable and MemTotal minus MemAvailable; integrated API and web services included in host totals",
+        "sourceFile": "project/work-items/35-bl-015-measure-mvp-navigation-and-startup-performance/implementation/evidence/03fab06c-14f6-46d3-b02d-399ed4657f0e/capacity.json",
+        "sampleCount": 10,
+        "value": 19734244
+      },
+      "delta": 781736
+    },
+    {
+      "cohort": 3,
+      "field": "runtimeCpuAveragePercent",
+      "classification": "comparable",
+      "reason": "identical BL-004 proc sampling field formula schedule units and runtime-tree scope",
+      "baseline": {
+        "runId": "853037e6-5dab-43cf-bcf8-61f1e8bbdb18",
+        "method": "Linux /proc process CPU-tick deltas at CLK_TCK=100 without logical-CPU normalization; summed VmRSS KiB; /proc/loadavg 1/5/15; MemAvailable and MemTotal minus MemAvailable",
+        "sourceFile": "project/work-items/11-bl-004-establish-the-workbench-capacity-baseline/implementation/evidence/853037e6-5dab-43cf-bcf8-61f1e8bbdb18/samples.json",
+        "sampleCount": 30,
+        "value": 0.150369
+      },
+      "current": {
+        "runId": "03fab06c-14f6-46d3-b02d-399ed4657f0e",
+        "method": "Linux /proc process CPU-tick deltas at CLK_TCK=100 without logical-CPU normalization; summed VmRSS KiB; /proc/loadavg 1/5/15; MemAvailable and MemTotal minus MemAvailable",
+        "sourceFile": "project/work-items/35-bl-015-measure-mvp-navigation-and-startup-performance/implementation/evidence/03fab06c-14f6-46d3-b02d-399ed4657f0e/capacity.json",
+        "sampleCount": 30,
+        "value": 0.066448
+      },
+      "delta": -0.083921
+    },
+    {
+      "cohort": 3,
+      "field": "runtimeRssAverageKiB",
+      "classification": "comparable",
+      "reason": "identical BL-004 proc sampling field formula schedule units and runtime-tree scope",
+      "baseline": {
+        "runId": "853037e6-5dab-43cf-bcf8-61f1e8bbdb18",
+        "method": "Linux /proc process CPU-tick deltas at CLK_TCK=100 without logical-CPU normalization; summed VmRSS KiB; /proc/loadavg 1/5/15; MemAvailable and MemTotal minus MemAvailable",
+        "sourceFile": "project/work-items/11-bl-004-establish-the-workbench-capacity-baseline/implementation/evidence/853037e6-5dab-43cf-bcf8-61f1e8bbdb18/samples.json",
+        "sampleCount": 30,
+        "value": 196565.733333
+      },
+      "current": {
+        "runId": "03fab06c-14f6-46d3-b02d-399ed4657f0e",
+        "method": "Linux /proc process CPU-tick deltas at CLK_TCK=100 without logical-CPU normalization; summed VmRSS KiB; /proc/loadavg 1/5/15; MemAvailable and MemTotal minus MemAvailable",
+        "sourceFile": "project/work-items/35-bl-015-measure-mvp-navigation-and-startup-performance/implementation/evidence/03fab06c-14f6-46d3-b02d-399ed4657f0e/capacity.json",
+        "sampleCount": 30,
+        "value": 200906.8
+      },
+      "delta": 4341.066667
+    },
+    {
+      "cohort": 5,
+      "field": "load1Average",
+      "classification": "directional-only",
+      "reason": "same raw host field and schedule but BL-015 includes integrated API and web service load",
+      "baseline": {
+        "runId": "853037e6-5dab-43cf-bcf8-61f1e8bbdb18",
+        "method": "Linux /proc process CPU-tick deltas at CLK_TCK=100 without logical-CPU normalization; summed VmRSS KiB; /proc/loadavg 1/5/15; MemAvailable and MemTotal minus MemAvailable",
+        "sourceFile": "project/work-items/11-bl-004-establish-the-workbench-capacity-baseline/implementation/evidence/853037e6-5dab-43cf-bcf8-61f1e8bbdb18/samples.json",
+        "sampleCount": 10,
+        "value": 2.885
+      },
+      "current": {
+        "runId": "03fab06c-14f6-46d3-b02d-399ed4657f0e",
+        "method": "Linux /proc process CPU-tick deltas at CLK_TCK=100 without logical-CPU normalization; summed VmRSS KiB; /proc/loadavg 1/5/15; MemAvailable and MemTotal minus MemAvailable; integrated API and web services included in host totals",
+        "sourceFile": "project/work-items/35-bl-015-measure-mvp-navigation-and-startup-performance/implementation/evidence/03fab06c-14f6-46d3-b02d-399ed4657f0e/capacity.json",
+        "sampleCount": 10,
+        "value": 8.023
+      },
+      "delta": 5.138
+    },
+    {
+      "cohort": 5,
+      "field": "minimumAvailableMemoryKiB",
+      "classification": "directional-only",
+      "reason": "same raw host field and schedule but BL-015 includes integrated API and web service load",
+      "baseline": {
+        "runId": "853037e6-5dab-43cf-bcf8-61f1e8bbdb18",
+        "method": "Linux /proc process CPU-tick deltas at CLK_TCK=100 without logical-CPU normalization; summed VmRSS KiB; /proc/loadavg 1/5/15; MemAvailable and MemTotal minus MemAvailable",
+        "sourceFile": "project/work-items/11-bl-004-establish-the-workbench-capacity-baseline/implementation/evidence/853037e6-5dab-43cf-bcf8-61f1e8bbdb18/samples.json",
+        "sampleCount": 10,
+        "value": 18602712
+      },
+      "current": {
+        "runId": "03fab06c-14f6-46d3-b02d-399ed4657f0e",
+        "method": "Linux /proc process CPU-tick deltas at CLK_TCK=100 without logical-CPU normalization; summed VmRSS KiB; /proc/loadavg 1/5/15; MemAvailable and MemTotal minus MemAvailable; integrated API and web services included in host totals",
+        "sourceFile": "project/work-items/35-bl-015-measure-mvp-navigation-and-startup-performance/implementation/evidence/03fab06c-14f6-46d3-b02d-399ed4657f0e/capacity.json",
+        "sampleCount": 10,
+        "value": 19244132
+      },
+      "delta": 641420
+    },
+    {
+      "cohort": 5,
+      "field": "runtimeCpuAveragePercent",
+      "classification": "comparable",
+      "reason": "identical BL-004 proc sampling field formula schedule units and runtime-tree scope",
+      "baseline": {
+        "runId": "853037e6-5dab-43cf-bcf8-61f1e8bbdb18",
+        "method": "Linux /proc process CPU-tick deltas at CLK_TCK=100 without logical-CPU normalization; summed VmRSS KiB; /proc/loadavg 1/5/15; MemAvailable and MemTotal minus MemAvailable",
+        "sourceFile": "project/work-items/11-bl-004-establish-the-workbench-capacity-baseline/implementation/evidence/853037e6-5dab-43cf-bcf8-61f1e8bbdb18/samples.json",
+        "sampleCount": 50,
+        "value": 0.059327
+      },
+      "current": {
+        "runId": "03fab06c-14f6-46d3-b02d-399ed4657f0e",
+        "method": "Linux /proc process CPU-tick deltas at CLK_TCK=100 without logical-CPU normalization; summed VmRSS KiB; /proc/loadavg 1/5/15; MemAvailable and MemTotal minus MemAvailable",
+        "sourceFile": "project/work-items/35-bl-015-measure-mvp-navigation-and-startup-performance/implementation/evidence/03fab06c-14f6-46d3-b02d-399ed4657f0e/capacity.json",
+        "sampleCount": 50,
+        "value": 0.037745
+      },
+      "delta": -0.021582
+    },
+    {
+      "cohort": 5,
+      "field": "runtimeRssAverageKiB",
+      "classification": "comparable",
+      "reason": "identical BL-004 proc sampling field formula schedule units and runtime-tree scope",
+      "baseline": {
+        "runId": "853037e6-5dab-43cf-bcf8-61f1e8bbdb18",
+        "method": "Linux /proc process CPU-tick deltas at CLK_TCK=100 without logical-CPU normalization; summed VmRSS KiB; /proc/loadavg 1/5/15; MemAvailable and MemTotal minus MemAvailable",
+        "sourceFile": "project/work-items/11-bl-004-establish-the-workbench-capacity-baseline/implementation/evidence/853037e6-5dab-43cf-bcf8-61f1e8bbdb18/samples.json",
+        "sampleCount": 50,
+        "value": 197117.28
+      },
+      "current": {
+        "runId": "03fab06c-14f6-46d3-b02d-399ed4657f0e",
+        "method": "Linux /proc process CPU-tick deltas at CLK_TCK=100 without logical-CPU normalization; summed VmRSS KiB; /proc/loadavg 1/5/15; MemAvailable and MemTotal minus MemAvailable",
+        "sourceFile": "project/work-items/35-bl-015-measure-mvp-navigation-and-startup-performance/implementation/evidence/03fab06c-14f6-46d3-b02d-399ed4657f0e/capacity.json",
+        "sampleCount": 50,
+        "value": 199740.96
+      },
+      "delta": 2623.68
+    },
+    {
+      "cohort": 10,
+      "field": "load1Average",
+      "classification": "directional-only",
+      "reason": "same raw host field and schedule but BL-015 includes integrated API and web service load",
+      "baseline": {
+        "runId": "853037e6-5dab-43cf-bcf8-61f1e8bbdb18",
+        "method": "Linux /proc process CPU-tick deltas at CLK_TCK=100 without logical-CPU normalization; summed VmRSS KiB; /proc/loadavg 1/5/15; MemAvailable and MemTotal minus MemAvailable",
+        "sourceFile": "project/work-items/11-bl-004-establish-the-workbench-capacity-baseline/implementation/evidence/853037e6-5dab-43cf-bcf8-61f1e8bbdb18/samples.json",
+        "sampleCount": 10,
+        "value": 2.513
+      },
+      "current": {
+        "runId": "03fab06c-14f6-46d3-b02d-399ed4657f0e",
+        "method": "Linux /proc process CPU-tick deltas at CLK_TCK=100 without logical-CPU normalization; summed VmRSS KiB; /proc/loadavg 1/5/15; MemAvailable and MemTotal minus MemAvailable; integrated API and web services included in host totals",
+        "sourceFile": "project/work-items/35-bl-015-measure-mvp-navigation-and-startup-performance/implementation/evidence/03fab06c-14f6-46d3-b02d-399ed4657f0e/capacity.json",
+        "sampleCount": 10,
+        "value": 6.667
+      },
+      "delta": 4.154
+    },
+    {
+      "cohort": 10,
+      "field": "minimumAvailableMemoryKiB",
+      "classification": "directional-only",
+      "reason": "same raw host field and schedule but BL-015 includes integrated API and web service load",
+      "baseline": {
+        "runId": "853037e6-5dab-43cf-bcf8-61f1e8bbdb18",
+        "method": "Linux /proc process CPU-tick deltas at CLK_TCK=100 without logical-CPU normalization; summed VmRSS KiB; /proc/loadavg 1/5/15; MemAvailable and MemTotal minus MemAvailable",
+        "sourceFile": "project/work-items/11-bl-004-establish-the-workbench-capacity-baseline/implementation/evidence/853037e6-5dab-43cf-bcf8-61f1e8bbdb18/samples.json",
+        "sampleCount": 10,
+        "value": 18467380
+      },
+      "current": {
+        "runId": "03fab06c-14f6-46d3-b02d-399ed4657f0e",
+        "method": "Linux /proc process CPU-tick deltas at CLK_TCK=100 without logical-CPU normalization; summed VmRSS KiB; /proc/loadavg 1/5/15; MemAvailable and MemTotal minus MemAvailable; integrated API and web services included in host totals",
+        "sourceFile": "project/work-items/35-bl-015-measure-mvp-navigation-and-startup-performance/implementation/evidence/03fab06c-14f6-46d3-b02d-399ed4657f0e/capacity.json",
+        "sampleCount": 10,
+        "value": 18687164
+      },
+      "delta": 219784
+    },
+    {
+      "cohort": 10,
+      "field": "runtimeCpuAveragePercent",
+      "classification": "comparable",
+      "reason": "identical BL-004 proc sampling field formula schedule units and runtime-tree scope",
+      "baseline": {
+        "runId": "853037e6-5dab-43cf-bcf8-61f1e8bbdb18",
+        "method": "Linux /proc process CPU-tick deltas at CLK_TCK=100 without logical-CPU normalization; summed VmRSS KiB; /proc/loadavg 1/5/15; MemAvailable and MemTotal minus MemAvailable",
+        "sourceFile": "project/work-items/11-bl-004-establish-the-workbench-capacity-baseline/implementation/evidence/853037e6-5dab-43cf-bcf8-61f1e8bbdb18/samples.json",
+        "sampleCount": 100,
+        "value": 0.029937
+      },
+      "current": {
+        "runId": "03fab06c-14f6-46d3-b02d-399ed4657f0e",
+        "method": "Linux /proc process CPU-tick deltas at CLK_TCK=100 without logical-CPU normalization; summed VmRSS KiB; /proc/loadavg 1/5/15; MemAvailable and MemTotal minus MemAvailable",
+        "sourceFile": "project/work-items/35-bl-015-measure-mvp-navigation-and-startup-performance/implementation/evidence/03fab06c-14f6-46d3-b02d-399ed4657f0e/capacity.json",
+        "sampleCount": 100,
+        "value": 0.070212
+      },
+      "delta": 0.040275
+    },
+    {
+      "cohort": 10,
+      "field": "runtimeRssAverageKiB",
+      "classification": "comparable",
+      "reason": "identical BL-004 proc sampling field formula schedule units and runtime-tree scope",
+      "baseline": {
+        "runId": "853037e6-5dab-43cf-bcf8-61f1e8bbdb18",
+        "method": "Linux /proc process CPU-tick deltas at CLK_TCK=100 without logical-CPU normalization; summed VmRSS KiB; /proc/loadavg 1/5/15; MemAvailable and MemTotal minus MemAvailable",
+        "sourceFile": "project/work-items/11-bl-004-establish-the-workbench-capacity-baseline/implementation/evidence/853037e6-5dab-43cf-bcf8-61f1e8bbdb18/samples.json",
+        "sampleCount": 100,
+        "value": 196899.64
+      },
+      "current": {
+        "runId": "03fab06c-14f6-46d3-b02d-399ed4657f0e",
+        "method": "Linux /proc process CPU-tick deltas at CLK_TCK=100 without logical-CPU normalization; summed VmRSS KiB; /proc/loadavg 1/5/15; MemAvailable and MemTotal minus MemAvailable",
+        "sourceFile": "project/work-items/35-bl-015-measure-mvp-navigation-and-startup-performance/implementation/evidence/03fab06c-14f6-46d3-b02d-399ed4657f0e/capacity.json",
+        "sampleCount": 100,
+        "value": 200982.52
+      },
+      "delta": 4082.88
+    }
+  ],
+  "metrics": {
+    "nfr002Metric4": "met",
+    "nfr001Metric3": "blocker",
+    "continuityMetric2": "met",
+    "nfr003Capacity3": "met"
+  },
+  "overallDisposition": "blocker",
+  "matched": true
+}

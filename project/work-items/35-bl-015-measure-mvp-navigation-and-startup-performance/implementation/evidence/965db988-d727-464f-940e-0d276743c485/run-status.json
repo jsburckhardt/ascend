@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "runId": "965db988-d727-464f-940e-0d276743c485",
+  "status": "failed",
+  "stage": "cold-warm",
+  "failure": "controller-interrupted-machine-restart",
+  "overallBoundMs": 2400000,
+  "overallToleranceMs": 1000,
+  "partialEvidenceRetained": true,
+  "completedAttemptIds": ["cold-1-A", "cold-2-B", "cold-3-C", "cold-4-A"],
+  "inProgress": {
+    "schemaVersion": 1,
+    "state": "in-progress",
+    "runId": "965db988-d727-464f-940e-0d276743c485",
+    "planHash": "f1dc0ef6226be83d2e378a5836898d2dbd7ca34034be7b5535567a039889e804",
+    "attemptId": "cold-5-B",
+    "ordinal": 5
+  },
+  "invalidCheckpoints": [
+    {
+      "file": "005-cold-5-B.json",
+      "bytes": 0,
+      "digest": "f2fdf82740ddf66f28f1e790db05d1644868642906c7e86eb997f2534f3a7ab4",
+      "classification": "invalid-json"
+    }
+  ],
+  "invalidArtifacts": [
+    {
+      "file": "cold-5-B.png",
+      "bytes": 0,
+      "digest": "f2fdf82740ddf66f28f1e790db05d1644868642906c7e86eb997f2534f3a7ab4"
+    },
+    {
+      "file": "cold-5-B.zip",
+      "bytes": 0,
+      "digest": "f2fdf82740ddf66f28f1e790db05d1644868642906c7e86eb997f2534f3a7ab4"
+    }
+  ],
+  "fabricatedAttempts": 0,
+  "resumable": false,
+  "recoveryDecision": "retained-partial-new-run-required",
+  "sections": [
+    {
+      "name": "prerequisites",
+      "boundMs": 60000,
+      "startedElapsedMs": 24,
+      "endedElapsedMs": 407,
+      "status": "complete",
+      "partialEvidenceRetained": false
+    },
+    {
+      "name": "cold-warm",
+      "boundMs": 850000,
+      "startedElapsedMs": 422,
+      "endedElapsedMs": null,
+      "status": "failed",
+      "partialEvidenceRetained": true,
+      "recoveryEndedAt": "2026-08-14T00:02:31.303Z"
+    }
+  ]
+}

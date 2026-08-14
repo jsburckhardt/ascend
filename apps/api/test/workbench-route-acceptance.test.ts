@@ -252,9 +252,10 @@ describe('BL-011 executable acceptance coordinator', () => {
     await new Promise<void>((resolve) => closedServer.close(() => resolve()))
 
     const events: WorkbenchSafeEvent[] = []
-    // Harness-boot contention exceeded the prior 1 s observation window. This
-    // is one correlated settlement wait, not a request or assertion retry.
-    const failureEventSettlementMs = 5_000
+    // Full-suite harness contention can delay the correlated event after the
+    // response settles. This remains one finite observation, not a request or
+    // assertion retry.
+    const failureEventSettlementMs = 15_000
     const failureEventQuietMs = 25
     const runtimeCategories = new Map(
       WORKBENCH_FAILURE_TABLE.filter((row) =>

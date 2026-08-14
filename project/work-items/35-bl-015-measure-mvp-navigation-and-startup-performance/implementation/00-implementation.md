@@ -49,11 +49,11 @@ The authoritative run contains nonnegative, ordered adjacent phase durations fro
 - **AC-17:** The validator mutation matrix rejects order/retry, assigned timing, clock, plan/threshold, identity, failure treatment, artifact, privacy, formulas/source, approval, comparability, hash, recomputation, and cleanup mutations with stable classes.
 - **AC-18:** All 15 authoritative attempt boundaries, three continuity cleanups, three capacity cohort cleanups, and the final union audit report zero residuals. Independent checks cover browser, API/web, runtime/listener, continuity, capacity, restricted modes, and guard absence.
 - **AC-19:** Guard tests cover active, stale, absent, malformed, conflicting, wrong-owner, and insufficient-audit states. The machine-restart recovery retains four valid records, quarantines only the corrupt in-progress record, removes exact stale resources after audit, and requires a distinct new run ID.
-- **AC-20:** Focused positive/negative suites include formula, timeout, non-timeout, prestart, artifact-failure, approval, privacy, comparability, cleanup, renderer, and guard fixtures. Final API branch coverage is 80.27 percent.
+- **AC-20:** Focused positive/negative suites include formula, timeout, non-timeout, prestart, artifact-failure, approval, privacy, comparability, cleanup, renderer, and guard fixtures. The correction executes retained pre-start, cold/warm timeout, partial non-timeout, empty-statistic, pre-aborted continuity, and strict corrupt-journal branches; final API branch coverage is 80.44 percent.
 - **AC-21:** The fresh authoritative designated command produced 5 cold, 10 warm, 3 continuity, and 3/5/10 capacity records in exact plan order within its bound, then wrote summary, recomputation, and complete residual evidence.
 - **AC-22:** `recomputation.json` lists all 15 source attempt IDs and independently matched all phase totals, statistics, capacity raw-source deltas, metrics, dispositions, and measurement hash.
 - **AC-23:** `docs/mvp-performance.md` documents host, command, stale-run recovery, fixture/workload, events, order, clock/formulas, failure treatment, targets, artifacts/privacy, cleanup, interrupted and authoritative run IDs, raw-source BL-004 deltas, blocker disposition, and absent approval.
-- **AC-24:** The root `just verify` completed format, lint, type, coverage tests, build, E2E, BL-004, BL-010 through BL-014, BL-015 validator, and BL-015 residual gates without invoking the long measurement.
+- **AC-24:** Verify exposed a suite-order coverage failure at 79.99 percent and one BL-014 active-tab timeout. Later full-gate runs exposed BL-011 event-settlement contention and a BL-013 browser-reconnect race caused by terminating runtime B before closing its browser context. Implement added behavioral BL-015 failure coverage without changing thresholds, bounded the single BL-011 correlated-event observation without retry, and closed B's context before its external crash. The final root `just verify` passed with API branch coverage at 80.44 percent, BL-013 passing in 32.2 seconds with zero residuals, and BL-014 passing in 1.6 minutes with complete residual cleanup. The gate completed format, lint, type, coverage tests, build, E2E, BL-004, BL-010 through BL-014, BL-015 validator, and BL-015 residual checks without invoking the long measurement.
 
 ## Documentation evidence
 
@@ -69,15 +69,15 @@ The authoritative run contains nonnegative, ordered adjacent phase durations fro
 
 ## Validation evidence
 
-- Focused BL-015: `just verify-focused apps/api/test/mvp-performance*.test.ts` passed; the final BL-015 set includes 25 tests across nine files.
+- Focused BL-015 correction: contract, continuity, and evidence suites passed 17 tests across three files; the final BL-015 set includes 27 tests across nine files.
 - Evidence validator: `just verify-mvp-performance` returned `status: ok` for the retained run and hash.
 - Residual audit: `just proof-mvp-performance-residual-audit` returned `status: ok`, 42 identities, modes 600, and absent API/web/guard ownership.
 - Coverage preflight: `just test` passed with API branch coverage 80.20 percent in preflight.
-- Authoritative full gate: final `just verify` passed with 88 API files passed, one skipped, 447 tests passed, two skipped, API branch coverage 80.32 percent, and all configured E2E/regression/residual stages passing.
-- Governed boot: `harness boot` returned `status: ok`, readiness `ready`, and duration 407,457 ms without leaving development servers running.
+- Authoritative correction gate: final `just verify` passed with 88 API files passed, one skipped, 460 tests passed, two skipped, API branch coverage 80.44 percent, BL-013 passing under suite load in 32.2 seconds, BL-014 passing in 1.6 minutes, and all configured E2E/regression/residual stages passing.
+- Governed boot: `harness boot` returned `status: ok`, readiness `ready`, and duration 479,197 ms without leaving development servers running.
 
 ## Observation evidence
 
-Captured observations include DL-764 through DL-792 for unavailable tools, quoting/backtracking, focused/full failures, privacy correction, formatting, flaky timing, and coverage work; INS-148 through INS-152 for long measurement/full/boot waits; and WIN-054 for safe shell rejection. The observation buffer retained each successful capture. No pending failed observation attempt remains known.
+Captured observations include DL-764 through DL-792 for unavailable tools, quoting/backtracking, focused/full failures, privacy correction, formatting, flaky timing, and coverage work; INS-148 through INS-152 for long measurement/full/boot waits; and WIN-054 for safe shell rejection. The correction also captured CONF-002 for the documented-versus-installed observation-kind mismatch, DL-007 for the BL-013 context/termination race, and DL-008 for the large-history insights pipe failure. Ten correction observations were preserved in `.harness/records/retro/2026-08-14/002-bl-015-verification-correction.md`; the record parsed with zero malformed or unsupported entries, then the transient buffer cleared completely.
 
 Implementation evidence is recorded for Verify. Final acceptance remains owned by Verify.

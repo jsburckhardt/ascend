@@ -486,16 +486,13 @@ test('keeps three Git workbenches isolated and explicitly replaces only B', asyn
     const b = projects[1]
     const oldB = runtime.inspect(b.id)!
     expect(await readProcessStartTime(oldB.pid!)).toBe(oldB.processStartTime)
-    const bTermination = (async () => {
-      await terminateExactProcessGroup(oldB.pid!, 2_000)
-      await terminateExactProcessIdentity(
-        { pid: oldB.pid!, startTimeTicks: oldB.processStartTime! },
-        2_000
-      )
-    })()
     await pages[1].close()
     await contexts[1].close()
-    await bTermination
+    await terminateExactProcessGroup(oldB.pid!, 2_000)
+    await terminateExactProcessIdentity(
+      { pid: oldB.pid!, startTimeTicks: oldB.processStartTime! },
+      2_000
+    )
     await expect
       .poll(() => runtime.inspect(b.id)?.state, { timeout: operationMs })
       .toBe('failed')

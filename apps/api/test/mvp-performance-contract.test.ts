@@ -185,6 +185,41 @@ describe('BL-015 immutable measurement contract', () => {
       row.boundary.passed = false
     }, 'cleanup-leakage')
   })
+  it('accepts retained pre-start, timeout, and partial non-timeout failures', () => {
+    const rows = completeAttempts()
+    const preStart = rows[0]!
+    preStart.status = 'pre-start-failed'
+    preStart.failureClass = 'health-precheck'
+    preStart.eventsNs = {}
+    preStart.phasesNs = {}
+    preStart.observedTotalNs = null
+    preStart.statisticalTotalNs = null
+    preStart.targetMet = false
+
+    const timeout = rows[1]!
+    timeout.status = 'timeout'
+    timeout.failureClass = 'attempt-timeout'
+    timeout.statisticalTotalNs = String(45_000 * 1_000_000)
+    timeout.targetMet = false
+
+    const partial = rows[2]!
+    partial.status = 'failed'
+    partial.failureClass = 'artifact-capture'
+    delete partial.eventsNs['workbench-usable']
+    delete partial.phasesNs['terminal-prompt-ready-to-workbench-usable']
+    delete partial.phasesNs.total
+    partial.observedTotalNs = null
+    partial.statisticalTotalNs = null
+    partial.targetMet = false
+
+    const warmTimeout = rows[5]!
+    warmTimeout.status = 'timeout'
+    warmTimeout.failureClass = 'attempt-timeout'
+    warmTimeout.statisticalTotalNs = String(15_000 * 1_000_000)
+    warmTimeout.targetMet = false
+
+    expect(() => validateMvpAttempts(plan, rows)).not.toThrow()
+  })
 })
 
 describe('BL-015 monotonic calculations and disposition', () => {
@@ -198,6 +233,27 @@ describe('BL-015 monotonic calculations and disposition', () => {
       10n
     )
     expect(presentMilliseconds(1_234_567n)).toBe(1.235)
+    expect(calculateSectionStatistics([], 15_000)).toMatchObject({
+      medianNs: null,
+      p95Ns: null,
+      maximumNs: null,
+      identityChanges: 0,
+    })
+    const identified = attempt('warm', 1, 'A', 100)
+    expect(
+      calculateSectionStatistics(
+        [identified],
+        2_000,
+        new Map([['A', identified.runtime!.identityDigest]])
+      ).identityChanges
+    ).toBe(0)
+    expect(
+      calculateSectionStatistics(
+        [identified],
+        2_000,
+        new Map([['A', 'changed-identity']])
+      ).identityChanges
+    ).toBe(1)
   })
   it('includes timeout bounds, excludes other failures, retains source IDs, and counts misses', () => {
     const rows = [

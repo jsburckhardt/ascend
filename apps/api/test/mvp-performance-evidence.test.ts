@@ -250,6 +250,19 @@ describe('BL-015 comparison rendering', () => {
     } as MvpAttempt
     try {
       await mkdir(attemptRoot, { recursive: true })
+      await writeFile(target, '{')
+      await expect(
+        recoverMvpAttemptJournal(runId, plan.planHash)
+      ).rejects.toThrow()
+      const invalidJson = await recoverMvpAttemptJournal(runId, plan.planHash, {
+        tolerateInvalid: true,
+      })
+      expect(invalidJson.invalidCheckpoints).toEqual([
+        expect.objectContaining({
+          file: '001-cold-1-A.json',
+          classification: 'invalid-json',
+        }),
+      ])
       await writeFile(
         target,
         JSON.stringify({

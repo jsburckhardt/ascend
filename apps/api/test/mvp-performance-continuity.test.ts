@@ -7,6 +7,38 @@ import * as contract from '../src/session-switching-contract.js'
 import { REPOSITORY_ROOT } from '../src/workbench-proof-contract.js'
 
 describe('BL-015 continuity coordinator', () => {
+  it('stops before the first planned execution when its controller is aborted', async () => {
+    const runId = 'test-continuity-aborted'
+    const execute = vi.fn(async () => ({
+      code: 0,
+      stdout: '',
+      stderr: '',
+    }))
+    const controller = new AbortController()
+    controller.abort(new Error('continuity-controller-aborted'))
+    try {
+      await expect(
+        runMvpContinuitySection(runId, 'plan', {
+          execute,
+          signal: controller.signal,
+        })
+      ).rejects.toThrow('continuity-controller-aborted')
+      expect(execute).not.toHaveBeenCalled()
+    } finally {
+      await rm(
+        path.join(
+          REPOSITORY_ROOT,
+          'project/work-items/35-bl-015-measure-mvp-navigation-and-startup-performance/implementation/evidence',
+          runId
+        ),
+        { recursive: true, force: true }
+      )
+      await rm(path.join(REPOSITORY_ROOT, 'test-results/bl-015', runId), {
+        recursive: true,
+        force: true,
+      })
+    }
+  })
   it('executes the exact BL-014 controller three serial times without retry', async () => {
     const source = await mkdtemp(path.join(os.tmpdir(), 'bl015-continuity-'))
     await mkdir(source, { recursive: true })

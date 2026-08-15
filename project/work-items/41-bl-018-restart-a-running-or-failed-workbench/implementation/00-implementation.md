@@ -85,8 +85,8 @@ logging, filesystem-safety, and stable-proxy core-components.
   - `project/work-items/41-bl-018-restart-a-running-or-failed-workbench/plan/03-test-plan.md`
 - Revision-6 action-plan SHA-256:
   `95e9966ed8e6f513d6cf6a171dbba50763c38a3a04da0d65a585c6f651fea5f5`
-- Revision-6 implementation-handoff task-breakdown SHA-256:
-  `0178803b7c77fd43c176662f2ad991291e5147658ad66b109e76846d491e2b55`
+- Revision-6 completed task-breakdown SHA-256:
+  `d5c1e1b9dd85102ea62058015828509c9847fb8ed605d181c9efe14859c6d5bd`
 - Revision-6 test-plan SHA-256:
   `b7fe31160aed8833a156668cd2a6636c282a8215b782d0b0709cefd5f14bad5b`
 - Retained matrix:

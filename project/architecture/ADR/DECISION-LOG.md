@@ -12,6 +12,8 @@ This file is the single registry of all architectural decisions and core-compone
 | ADR-260812-in-process-workbench-reverse-proxy | In-Process Stable Workbench Reverse Proxy | Accepted | 2026-08-12 |
 | ADR-260812-browser-navigation-shell | Separate Browser Navigation Shell from Workbench Transport | Accepted | 2026-08-12 |
 | ADR-260815-public-runtime-state-projection | Report Public Runtime State Through a Read-Only Projection | Accepted | 2026-08-15 |
+| ADR-260815-selected-runtime-stop-control | Release One Selected Workbench Runtime Through a Manager-Owned Stop Control | Accepted | 2026-08-15 |
+| ADR-260815-termination-sequencer-boundary | Prove Termination Sequencing Through an Injectable Primitive Boundary | Accepted | 2026-08-15 |
 
 ## Core-Components
 
@@ -144,3 +146,49 @@ Short, actionable statements derived from ADRs and core-components. More than on
 | 105 | Route every running-to-failed transition through one guarded compare-and-set operation | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
 | 106 | Reject runtime reports that do not match the authoritative ordered project list revision | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
 | 107 | Request public runtime state exactly once per authoritative project-list revision | ADR-260815-public-runtime-state-projection | 2026-08-15 |
+| 108 | Release a selected project workbench only through one manager-owned stop operation | ADR-260815-selected-runtime-stop-control | 2026-08-15 |
+| 109 | Serve selected stop from POST /api/projects/{id}/runtime/stop with a bounded result vocabulary | ADR-260815-selected-runtime-stop-control | 2026-08-15 |
+| 110 | Claim the exact running generation synchronously before releasing a workbench runtime | ADR-260815-selected-runtime-stop-control | 2026-08-15 |
+| 111 | Report a stop that cannot confirm release as Failed instead of Stopped | ADR-260815-selected-runtime-stop-control | 2026-08-15 |
+| 112 | Refuse a workbench start while that project's selected stop is in flight | ADR-260815-selected-runtime-stop-control | 2026-08-15 |
+| 113 | Request public runtime state exactly once more after each settled stop, without polling | ADR-260815-selected-runtime-stop-control | 2026-08-15 |
+| 114 | Exclude release mode, termination audits, and process identity from every public stop result | ADR-260815-selected-runtime-stop-control | 2026-08-15 |
+| 115 | Reject a stop for a project with no manager-owned runtime as a bounded non-success | ADR-260815-selected-runtime-stop-control | 2026-08-15 |
+| 116 | Return an already-stopped success only for a project released by a confirmed stop | ADR-260815-selected-runtime-stop-control | 2026-08-15 |
+| 117 | Sequence graceful and force termination through one exported injectable sequencer | ADR-260815-termination-sequencer-boundary | 2026-08-15 |
+| 118 | Build the production process adapter over the default termination primitives | ADR-260815-termination-sequencer-boundary | 2026-08-15 |
+| 119 | Enforce the configured stop audit allowance and cancellation inside every termination | ADR-260815-termination-sequencer-boundary | 2026-08-15 |
+| 120 | Revalidate the exact owned root identity before every termination signal | ADR-260815-termination-sequencer-boundary | 2026-08-15 |
+| 121 | Report an unconfirmed release as its own termination outcome instead of escalated | ADR-260815-termination-sequencer-boundary | 2026-08-15 |
+| 122 | Limit owned-descendant attribution to the owned process group and record its ceiling | ADR-260815-termination-sequencer-boundary | 2026-08-15 |
+| 123 | Report an in-flight selected stop as Running until its release is confirmed | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
+| 124 | Join concurrent stops for one project into one in-flight release operation | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
+| 125 | Terminate only the exact claimed runtime generation and never its replacement or a peer | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
+| 126 | Confirm selected stop through exact process, owned process-group, and listener absence | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
+| 127 | Await every in-flight selected stop before manager shutdown audits ownership | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
+| 128 | Re-attempt shutdown cleanup unless a prior audit confirms that exact identity absent | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
+| 129 | Cancel and settle a selected stop whose termination exceeds its documented overall bound | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
+| 130 | Recheck the exact installed entry and generation after every awaited reuse observation | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
+| 131 | Surface a lost stop claim as an invariant fault without mutating, auditing, or emitting | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
+| 132 | Keep lifecycle transition targets separate from entry states and snapshot states | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
+| 133 | Emit exactly one runtime.stop.requested and one terminal catalog event per accepted stop | CORE-COMPONENT-260808-structured-runtime-logging | 2026-08-15 |
+| 134 | Prohibit runtime.stop.failed and every other non-catalog stop lifecycle event | CORE-COMPONENT-260808-structured-runtime-logging | 2026-08-15 |
+| 135 | Keep route-level stop records operational and never read them as lifecycle events | CORE-COMPONENT-260808-structured-runtime-logging | 2026-08-15 |
+| 136 | Retain project registration, metadata, and directory contents on every selected stop outcome | CORE-COMPONENT-260808-filesystem-path-safety | 2026-08-15 |
+| 137 | Limit the lifted lifecycle-control deferral to selected stop only | ADR-260815-public-runtime-state-projection | 2026-08-15 |
+| 138 | Bound every awaited termination primitive with the sequencer's own deadline signal | ADR-260815-termination-sequencer-boundary | 2026-08-15 |
+| 139 | Abandon any termination primitive still pending at the sequencer deadline | ADR-260815-termination-sequencer-boundary | 2026-08-15 |
+| 140 | Derive no absence, signal, or outcome from an abandoned primitive observation | ADR-260815-termination-sequencer-boundary | 2026-08-15 |
+| 141 | Allow one stop-phase termination and at most one stop-phase cleanup audit per generation | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
+| 142 | Re-attempt a retained unconfirmed generation exactly once in the manager shutdown sweep | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
+| 143 | Arm every termination deadline with a trusted synchronous scheduler primitive | ADR-260815-termination-sequencer-boundary | 2026-08-15 |
+| 144 | Exclude the deadline scheduler from the fallible awaited termination primitive contract | ADR-260815-termination-sequencer-boundary | 2026-08-15 |
+| 145 | Abort a termination on entry when its caller signal is already aborted | ADR-260815-termination-sequencer-boundary | 2026-08-15 |
+| 146 | Start the graceful and force windows at their own delivered termination signals | ADR-260815-termination-sequencer-boundary | 2026-08-15 |
+| 147 | Bound pre-signal termination observation with the audit allowance and never signal past it | ADR-260815-termination-sequencer-boundary | 2026-08-15 |
+| 148 | Report an unconfirmed release rather than shorten a selected stop's graceful opportunity | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
+| 149 | Return a delivered-or-refused result from every termination signal primitive | ADR-260815-termination-sequencer-boundary | 2026-08-15 |
+| 150 | Rethrow every termination signal error other than the expected target-gone race | ADR-260815-termination-sequencer-boundary | 2026-08-15 |
+| 151 | Open a termination phase window only from a confirmed delivered signal | ADR-260815-termination-sequencer-boundary | 2026-08-15 |
+| 152 | Measure every termination phase, deadline, and elapsed value on a monotonic clock | ADR-260815-termination-sequencer-boundary | 2026-08-15 |
+| 153 | Record no delivered signal or escalation for a refused termination signal | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |

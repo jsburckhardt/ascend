@@ -59,7 +59,8 @@ Reconcile every response against the revision that requested it. A response whos
 
 ### Neutral
 - The runtime manager remains the sole process owner; the proxy and navigation shell are unchanged.
-- Stop and restart controls, automatic recovery, restart reconciliation, background health checks, extra states, and dashboards remain deferred.
+- Stop and restart controls, automatic recovery, restart reconciliation, background health checks, extra states, and dashboards remain deferred by this decision.
+- Amended 2026-08-15: the stop-control portion of that deferral is spent by [ADR-260815-selected-runtime-stop-control](./ADR-260815-selected-runtime-stop-control.md), which delivers a selected single-project stop, adds the internal `stopping` entry state projected as `Running`, adds a separate lifecycle transition-target vocabulary whose terminal `stopped` target maps to public `Stopped` without becoming an installable entry or snapshot state, and permits exactly one additional on-demand runtime-state request per settled stop. The four-value public vocabulary, the single projection authority, the one-synchronous-pass contract, and the no-polling rule of this decision are unchanged, and restart, automatic recovery, restart reconciliation, persisted runtime state, background health monitoring, extra public states, and dashboards remain deferred.
 - Runtime identity, ports, and handles remain memory-only; no schema or migration change is required.
 
 ## Related Issues
@@ -71,5 +72,6 @@ Reconcile every response against the revision that requested it. A response whos
 - [TypeScript monorepo and host workbench stack](./ADR-260808-typescript-monorepo.md)
 - [In-process stable workbench reverse proxy](./ADR-260812-in-process-workbench-reverse-proxy.md)
 - [Separate browser navigation shell from workbench transport](./ADR-260812-browser-navigation-shell.md)
+- [Release one selected workbench runtime through a manager-owned stop control](./ADR-260815-selected-runtime-stop-control.md)
 - [Runtime lifecycle and error handling](../core-components/CORE-COMPONENT-260808-runtime-lifecycle-error-handling.md)
 - [Structured runtime logging](../core-components/CORE-COMPONENT-260808-structured-runtime-logging.md)

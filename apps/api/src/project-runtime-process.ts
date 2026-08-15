@@ -4,6 +4,7 @@ import { access, mkdir, readFile, readdir, rm } from 'node:fs/promises'
 import { createConnection, createServer } from 'node:net'
 import os from 'node:os'
 import path from 'node:path'
+import { performance } from 'node:perf_hooks'
 import {
   PROJECT_RUNTIME_DEFAULTS,
   RuntimeFailure,
@@ -21,7 +22,7 @@ export interface RuntimeExit {
 }
 
 export type RuntimeTerminationOutcome =
-  'already-absent' | 'graceful' | 'escalated'
+  'already-absent' | 'graceful' | 'escalated' | 'unconfirmed'
 
 export interface RuntimeResourceAudit {
   readonly pid: number
@@ -43,7 +44,8 @@ export interface OwnedRuntimeProcess {
   terminate(
     gracefulMs: number,
     forceMs: number,
-    port: number
+    port: number,
+    signal?: AbortSignal
   ): Promise<RuntimeTerminationAudit>
   audit(port: number): Promise<RuntimeResourceAudit>
   isAlive(): Promise<boolean>
@@ -98,124 +100,422 @@ export interface RuntimeOwnershipRecord {
   readonly port: number
 }
 
+export interface RuntimeTerminationPrimitives {
+  readProcessStartTime(pid: number, signal: AbortSignal): Promise<string | null>
+  readProcessGroupMembers(
+    processGroupId: number,
+    signal: AbortSignal
+  ): Promise<readonly number[]>
+  listenerIsAbsent(port: number, signal: AbortSignal): Promise<boolean>
+  delay(milliseconds: number, signal: AbortSignal): Promise<void>
+  signalProcessGroup(processGroupId: number, signal: NodeJS.Signals): boolean
+  now(): number
+  scheduleDeadline(milliseconds: number, onDeadline: () => void): () => void
+}
+
 export async function readProcessStartTime(
-  pid: number
+  pid: number,
+  signal?: AbortSignal
 ): Promise<string | null> {
   try {
-    const content = await readFile('/proc/' + String(pid) + '/stat', 'utf8')
+    const content = await readFile('/proc/' + String(pid) + '/stat', {
+      encoding: 'utf8',
+      ...(signal === undefined ? {} : { signal }),
+    })
     return content.slice(content.lastIndexOf(')') + 2).split(' ')[19] ?? null
-  } catch {
+  } catch (error) {
+    if (signal?.aborted) throw signal.reason ?? error
     return null
   }
 }
 
-async function delay(milliseconds: number): Promise<void> {
-  await new Promise<void>((resolve) => setTimeout(resolve, milliseconds))
+async function runtimeDelay(
+  milliseconds: number,
+  signal: AbortSignal
+): Promise<void> {
+  await new Promise<void>((resolve) => {
+    if (signal.aborted) {
+      resolve()
+      return
+    }
+    const finish = (): void => {
+      signal.removeEventListener('abort', cancel)
+      resolve()
+    }
+    const cancel = (): void => {
+      clearTimeout(timer)
+      resolve()
+    }
+    const timer = setTimeout(finish, milliseconds)
+    signal.addEventListener('abort', cancel, { once: true })
+  })
 }
 
-async function processGroupIsAbsent(processGroupId: number): Promise<boolean> {
+export async function readProcessGroupMembers(
+  processGroupId: number,
+  signal?: AbortSignal
+): Promise<readonly number[]> {
+  signal?.throwIfAborted()
   let entries: string[]
   try {
     entries = await readdir('/proc')
-  } catch {
-    return false
+  } catch (error) {
+    if (signal?.aborted) throw signal.reason ?? error
+    throw error
   }
+  const members: number[] = []
   for (const entry of entries) {
+    signal?.throwIfAborted()
     if (!/^\d+$/u.test(entry)) continue
     try {
-      const content = await readFile('/proc/' + entry + '/stat', 'utf8')
+      const content = await readFile('/proc/' + entry + '/stat', {
+        encoding: 'utf8',
+        ...(signal === undefined ? {} : { signal }),
+      })
       const fields = content.slice(content.lastIndexOf(')') + 2).split(' ')
-      if (Number(fields[2]) === processGroupId) return false
-    } catch {
+      if (Number(fields[2]) === processGroupId) members.push(Number(entry))
+    } catch (error) {
+      if (signal?.aborted) throw signal.reason ?? error
       // The process exited during the bounded scan.
     }
   }
-  return true
+  return Object.freeze(members)
 }
 
-async function auditRuntimeResource(
-  pid: number,
-  startTime: string,
-  port: number
-): Promise<RuntimeResourceAudit> {
-  return {
-    pid,
-    processStartTime: startTime,
-    port,
-    processAbsent: (await readProcessStartTime(pid)) !== startTime,
-    processGroupAbsent: await processGroupIsAbsent(pid),
-    listenerAbsent: await loopbackListenerIsAbsent(port),
-  }
-}
+type BoundedPrimitiveResult<T> =
+  Readonly<{ completed: true; value: T }> | Readonly<{ completed: false }>
 
-async function terminateGroup(
-  pid: number,
-  startTime: string,
-  port: number,
-  gracefulMs: number,
-  forceMs: number
-): Promise<RuntimeTerminationAudit> {
-  const alive = async () => (await readProcessStartTime(pid)) === startTime
-  const initial = await auditRuntimeResource(pid, startTime, port)
+async function runBoundedPrimitive<T>(input: {
+  readonly deadlineAt: number
+  readonly parentSignal: AbortSignal
+  readonly primitives: RuntimeTerminationPrimitives
+  readonly call: (signal: AbortSignal) => Promise<T>
+}): Promise<BoundedPrimitiveResult<T>> {
   if (
-    initial.processAbsent &&
-    initial.processGroupAbsent &&
-    initial.listenerAbsent
+    input.parentSignal.aborted ||
+    input.primitives.now() >= input.deadlineAt
   ) {
-    return { ...initial, outcome: 'already-absent' }
+    return Object.freeze({ completed: false })
   }
-  if (await alive()) {
-    try {
-      process.kill(-pid, 'SIGTERM')
-    } catch {
-      // The exact owner exited between identity validation and signalling.
+
+  const controller = new AbortController()
+  const abortFromParent = (): void =>
+    controller.abort(input.parentSignal.reason)
+  input.parentSignal.addEventListener('abort', abortFromParent, { once: true })
+  if (input.parentSignal.aborted) abortFromParent()
+  const cancelDeadline = input.primitives.scheduleDeadline(
+    Math.max(0, input.deadlineAt - input.primitives.now()),
+    () => controller.abort()
+  )
+  let settleAbort!: () => void
+  const aborted = new Promise<Readonly<{ completed: false }>>((resolve) => {
+    settleAbort = () => resolve(Object.freeze({ completed: false }))
+    controller.signal.addEventListener('abort', settleAbort, { once: true })
+    if (controller.signal.aborted) settleAbort()
+  })
+  const pending = Promise.resolve().then(() => input.call(controller.signal))
+  try {
+    const result = await Promise.race([
+      pending.then((value) =>
+        Object.freeze({ completed: true as const, value })
+      ),
+      aborted,
+    ])
+    if (!result.completed) {
+      void pending.then(
+        () => undefined,
+        () => undefined
+      )
     }
+    return result
+  } finally {
+    cancelDeadline()
+    input.parentSignal.removeEventListener('abort', abortFromParent)
+    controller.signal.removeEventListener('abort', settleAbort)
+    controller.abort()
   }
-  const gracefulDeadline = Date.now() + gracefulMs
-  let audit = await auditRuntimeResource(pid, startTime, port)
-  while (
-    Date.now() < gracefulDeadline &&
-    (!audit.processAbsent || !audit.processGroupAbsent || !audit.listenerAbsent)
-  ) {
-    await delay(20)
-    audit = await auditRuntimeResource(pid, startTime, port)
-  }
-  if (audit.processAbsent && audit.processGroupAbsent && audit.listenerAbsent) {
-    return { ...audit, outcome: 'graceful' }
-  }
-  if (!audit.processGroupAbsent) {
-    try {
-      process.kill(-pid, 'SIGKILL')
-    } catch {
-      // The exact owned group exited between audit and escalation.
-    }
-  }
-  const forceDeadline = Date.now() + forceMs
-  while (
-    Date.now() < forceDeadline &&
-    (!audit.processAbsent || !audit.processGroupAbsent || !audit.listenerAbsent)
-  ) {
-    await delay(20)
-    audit = await auditRuntimeResource(pid, startTime, port)
-  }
-  return { ...audit, outcome: 'escalated' }
 }
 
-export async function loopbackListenerIsAbsent(port: number): Promise<boolean> {
-  return new Promise<boolean>((resolve) => {
-    const socket = createConnection({ host: '127.0.0.1', port })
-    socket.setTimeout(250)
-    socket.once('connect', () => {
-      socket.destroy()
-      resolve(false)
-    })
-    socket.once('error', () => resolve(true))
-    socket.once('timeout', () => {
-      socket.destroy()
-      resolve(true)
-    })
+const nonConfirmingAudit = (
+  pid: number,
+  processStartTime: string,
+  port: number
+): RuntimeResourceAudit =>
+  Object.freeze({
+    pid,
+    processStartTime,
+    port,
+    processAbsent: false,
+    processGroupAbsent: false,
+    listenerAbsent: false,
+  })
+
+const confirmsRelease = (audit: RuntimeResourceAudit): boolean =>
+  audit.processAbsent && audit.processGroupAbsent && audit.listenerAbsent
+
+async function auditRuntimeResource(input: {
+  readonly pid: number
+  readonly processStartTime: string
+  readonly port: number
+  readonly deadlineAt: number
+  readonly parentSignal: AbortSignal
+  readonly primitives: RuntimeTerminationPrimitives
+}): Promise<RuntimeResourceAudit | undefined> {
+  const processStart = await runBoundedPrimitive({
+    deadlineAt: input.deadlineAt,
+    parentSignal: input.parentSignal,
+    primitives: input.primitives,
+    call: (signal) => input.primitives.readProcessStartTime(input.pid, signal),
+  })
+  if (!processStart.completed) return undefined
+  const members = await runBoundedPrimitive({
+    deadlineAt: input.deadlineAt,
+    parentSignal: input.parentSignal,
+    primitives: input.primitives,
+    call: (signal) =>
+      input.primitives.readProcessGroupMembers(input.pid, signal),
+  })
+  if (!members.completed) return undefined
+  const listener = await runBoundedPrimitive({
+    deadlineAt: input.deadlineAt,
+    parentSignal: input.parentSignal,
+    primitives: input.primitives,
+    call: (signal) => input.primitives.listenerIsAbsent(input.port, signal),
+  })
+  if (!listener.completed) return undefined
+  return Object.freeze({
+    pid: input.pid,
+    processStartTime: input.processStartTime,
+    port: input.port,
+    processAbsent: processStart.value !== input.processStartTime,
+    processGroupAbsent: members.value.length === 0,
+    listenerAbsent: listener.value,
   })
 }
+
+export interface RuntimeTerminationRequest {
+  readonly pid: number
+  readonly processStartTime: string
+  readonly port: number
+  readonly gracefulMs: number
+  readonly forceMs: number
+  readonly auditAllowanceMs: number
+  readonly signal?: AbortSignal
+  readonly primitives?: RuntimeTerminationPrimitives
+}
+
+export async function terminateOwnedRuntimeGroup(
+  request: RuntimeTerminationRequest
+): Promise<RuntimeTerminationAudit> {
+  const primitives = request.primitives ?? defaultRuntimeTerminationPrimitives
+  const startedAt = primitives.now()
+  const controller = new AbortController()
+  const fallback = nonConfirmingAudit(
+    request.pid,
+    request.processStartTime,
+    request.port
+  )
+  if (request.signal?.aborted) {
+    controller.abort(request.signal.reason)
+    return Object.freeze({ ...fallback, outcome: 'unconfirmed' })
+  }
+
+  const overallDeadlineAt =
+    startedAt + request.gracefulMs + request.forceMs + request.auditAllowanceMs
+  const deadlineReached = (): void => controller.abort()
+  const cancelOverallDeadline = primitives.scheduleDeadline(
+    Math.max(0, overallDeadlineAt - primitives.now()),
+    deadlineReached
+  )
+  const cancelFromCaller = (): void => controller.abort(request.signal?.reason)
+  request.signal?.addEventListener('abort', cancelFromCaller, { once: true })
+  let lastCompletedAudit: RuntimeResourceAudit | undefined
+  const settlementAllowanceMs = Math.max(
+    1,
+    Math.floor(request.auditAllowanceMs / 10)
+  )
+  const preSignalDeadlineAt =
+    startedAt + request.auditAllowanceMs - settlementAllowanceMs
+
+  const audit = async (
+    deadlineAt: number
+  ): Promise<RuntimeResourceAudit | undefined> => {
+    const result = await auditRuntimeResource({
+      pid: request.pid,
+      processStartTime: request.processStartTime,
+      port: request.port,
+      deadlineAt,
+      parentSignal: controller.signal,
+      primitives,
+    })
+    if (result !== undefined) lastCompletedAudit = result
+    return result
+  }
+  const unconfirmed = (): RuntimeTerminationAudit =>
+    Object.freeze({
+      ...(lastCompletedAudit ?? fallback),
+      outcome: 'unconfirmed',
+    })
+
+  try {
+    const initial = await audit(preSignalDeadlineAt)
+    if (initial === undefined) return unconfirmed()
+    if (confirmsRelease(initial))
+      return Object.freeze({ ...initial, outcome: 'already-absent' })
+
+    const identity = await runBoundedPrimitive({
+      deadlineAt: preSignalDeadlineAt,
+      parentSignal: controller.signal,
+      primitives,
+      call: (signal) => primitives.readProcessStartTime(request.pid, signal),
+    })
+    if (
+      !identity.completed ||
+      identity.value !== request.processStartTime ||
+      controller.signal.aborted ||
+      primitives.now() > preSignalDeadlineAt
+    ) {
+      return unconfirmed()
+    }
+
+    let attributable = true
+    const gracefulDelivered = primitives.signalProcessGroup(
+      request.pid,
+      'SIGTERM'
+    )
+    const gracefulSignalAt = primitives.now()
+    if (!gracefulDelivered) {
+      const refusedAudit = await audit(
+        Math.min(gracefulSignalAt + request.gracefulMs, overallDeadlineAt)
+      )
+      return Object.freeze({
+        ...(refusedAudit ?? lastCompletedAudit ?? fallback),
+        outcome:
+          refusedAudit !== undefined && confirmsRelease(refusedAudit)
+            ? 'already-absent'
+            : 'unconfirmed',
+      })
+    }
+
+    const gracefulDeadlineAt = gracefulSignalAt + request.gracefulMs
+    while (
+      !controller.signal.aborted &&
+      primitives.now() < gracefulDeadlineAt
+    ) {
+      const waited = await runBoundedPrimitive({
+        deadlineAt: gracefulDeadlineAt,
+        parentSignal: controller.signal,
+        primitives,
+        call: (signal) =>
+          primitives.delay(RUNTIME_TERMINATION_POLL_INTERVAL_MS, signal),
+      })
+      if (!waited.completed) break
+      const current = await audit(gracefulDeadlineAt)
+      if (current === undefined) break
+      if (confirmsRelease(current))
+        return Object.freeze({ ...current, outcome: 'graceful' })
+      if (!current.processAbsent) attributable = true
+      if (current.processAbsent && current.processGroupAbsent)
+        attributable = false
+    }
+    if (controller.signal.aborted || !attributable) return unconfirmed()
+
+    const forceIdentity = await runBoundedPrimitive({
+      deadlineAt: Math.min(
+        gracefulDeadlineAt + settlementAllowanceMs,
+        overallDeadlineAt
+      ),
+      parentSignal: controller.signal,
+      primitives,
+      call: (signal) => primitives.readProcessStartTime(request.pid, signal),
+    })
+    if (!forceIdentity.completed || controller.signal.aborted)
+      return unconfirmed()
+    if (forceIdentity.value === request.processStartTime) attributable = true
+    if (!attributable) return unconfirmed()
+
+    const forceDelivered = primitives.signalProcessGroup(request.pid, 'SIGKILL')
+    const forceSignalAt = primitives.now()
+    if (!forceDelivered) return unconfirmed()
+    const forceDeadlineAt = forceSignalAt + request.forceMs
+    while (!controller.signal.aborted && primitives.now() < forceDeadlineAt) {
+      const waited = await runBoundedPrimitive({
+        deadlineAt: forceDeadlineAt,
+        parentSignal: controller.signal,
+        primitives,
+        call: (signal) =>
+          primitives.delay(RUNTIME_TERMINATION_POLL_INTERVAL_MS, signal),
+      })
+      if (!waited.completed) break
+      const current = await audit(forceDeadlineAt)
+      if (current === undefined) break
+      if (confirmsRelease(current))
+        return Object.freeze({ ...current, outcome: 'escalated' })
+    }
+    return unconfirmed()
+  } finally {
+    cancelOverallDeadline()
+    request.signal?.removeEventListener('abort', cancelFromCaller)
+    controller.abort()
+  }
+}
+
+export async function loopbackListenerIsAbsent(
+  port: number,
+  signal?: AbortSignal
+): Promise<boolean> {
+  return new Promise<boolean>((resolve, reject) => {
+    const socket = createConnection({ host: '127.0.0.1', port })
+    let settled = false
+    const finish = (value: boolean): void => {
+      if (settled) return
+      settled = true
+      signal?.removeEventListener('abort', cancel)
+      socket.destroy()
+      resolve(value)
+    }
+    const cancel = (): void => {
+      if (settled) return
+      settled = true
+      socket.destroy()
+      reject(signal?.reason ?? new Error('Runtime listener audit aborted'))
+    }
+    if (signal?.aborted) {
+      cancel()
+      return
+    }
+    signal?.addEventListener('abort', cancel, { once: true })
+    socket.setTimeout(250)
+    socket.once('connect', () => finish(false))
+    socket.once('error', () => finish(true))
+    socket.once('timeout', () => finish(true))
+  })
+}
+
+export const defaultRuntimeTerminationPrimitives: RuntimeTerminationPrimitives =
+  Object.freeze<RuntimeTerminationPrimitives>({
+    readProcessStartTime: (pid, signal) => readProcessStartTime(pid, signal),
+    readProcessGroupMembers: (processGroupId, signal) =>
+      readProcessGroupMembers(processGroupId, signal),
+    listenerIsAbsent: (port, signal) => loopbackListenerIsAbsent(port, signal),
+    delay: runtimeDelay,
+    signalProcessGroup(processGroupId, signal) {
+      try {
+        process.kill(-processGroupId, signal)
+        return true
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === 'ESRCH') return false
+        throw error
+      }
+    },
+    now: () => performance.now(),
+    scheduleDeadline(milliseconds, onDeadline) {
+      const timer = setTimeout(onDeadline, Math.max(0, milliseconds))
+      return () => clearTimeout(timer)
+    },
+  })
+
+const RUNTIME_TERMINATION_POLL_INTERVAL_MS = 20
 
 export const nodeRuntimePortProvider: RuntimePortProvider = {
   acquire: async () =>
@@ -255,112 +555,150 @@ export function buildRuntimeArgv(
   ]
 }
 
-export const nodeRuntimeProcessAdapter: RuntimeProcessAdapter = {
-  async assertLaunchable(config) {
-    const user = os.userInfo()
-    if (user.username !== config.expectedUser || user.uid === 0) {
-      throw new RuntimeFailure('spawn-error')
-    }
-    try {
-      await access(config.executablePath, fsConstants.X_OK)
-    } catch {
-      throw new RuntimeFailure('executable-missing')
-    }
-  },
-  async launch({ config, canonicalPath, ownerToken, port }) {
-    const userDataPath = path.join(
-      os.tmpdir(),
-      'ascend-runtime-data',
-      ownerToken + '-' + String(port)
-    )
-    await mkdir(userDataPath, { recursive: true, mode: 0o700 })
-    const argv = buildRuntimeArgv(canonicalPath, port, userDataPath)
-    let child
-    try {
-      child = spawn(config.executablePath, argv, {
-        cwd: canonicalPath,
-        detached: true,
-        env: config.environment,
-        stdio: ['ignore', 'ignore', 'pipe'],
-      })
-    } catch {
-      throw new RuntimeFailure('spawn-error')
-    }
-    let diagnosticOutput = ''
-    child.stderr?.setEncoding('utf8')
-    child.stderr?.on('data', (chunk: string) => {
-      if (diagnosticOutput.length < 4_096) {
-        diagnosticOutput += chunk.slice(0, 4_096 - diagnosticOutput.length)
+export function createNodeRuntimeProcessAdapter(
+  primitives: RuntimeTerminationPrimitives = defaultRuntimeTerminationPrimitives
+): RuntimeProcessAdapter {
+  return {
+    async assertLaunchable(config) {
+      const user = os.userInfo()
+      if (user.username !== config.expectedUser || user.uid === 0) {
+        throw new RuntimeFailure('spawn-error')
       }
-    })
-    const spawnError = new Promise<never>((_, reject) => {
-      child.once('error', (error: NodeJS.ErrnoException) => {
-        reject(
-          new RuntimeFailure(
-            error.code === 'ENOENT' ? 'executable-missing' : 'spawn-error'
-          )
-        )
-      })
-    })
-    const pid = child.pid
-    if (pid === undefined) throw new RuntimeFailure('spawn-error')
-    const exit = new Promise<RuntimeExit>((resolve) => {
-      child.once('exit', (code, signal) =>
-        resolve({
-          code,
-          signal,
-          addressInUse: /EADDRINUSE|address already in use/iu.test(
-            diagnosticOutput
-          ),
+      try {
+        await access(config.executablePath, fsConstants.X_OK)
+      } catch {
+        throw new RuntimeFailure('executable-missing')
+      }
+    },
+    async launch({ config, canonicalPath, ownerToken, port }) {
+      const userDataPath = path.join(
+        os.tmpdir(),
+        'ascend-runtime-data',
+        ownerToken + '-' + String(port)
+      )
+      await mkdir(userDataPath, { recursive: true, mode: 0o700 })
+      const argv = buildRuntimeArgv(canonicalPath, port, userDataPath)
+      let child
+      try {
+        child = spawn(config.executablePath, argv, {
+          cwd: canonicalPath,
+          detached: true,
+          env: config.environment,
+          stdio: ['ignore', 'ignore', 'pipe'],
         })
-      )
-    })
-    let processStartTime: string | null = null
-    const identityDeadline = Date.now() + 1_000
-    while (processStartTime === null && Date.now() < identityDeadline) {
-      processStartTime = await Promise.race([
-        readProcessStartTime(pid),
-        spawnError,
-        exit.then(() => null),
-      ])
-      if (processStartTime === null && child.exitCode === null) await delay(10)
-      if (child.exitCode !== null || child.signalCode !== null) break
-    }
-    if (processStartTime === null) {
-      const early = await Promise.race([exit, spawnError])
-      if (early.addressInUse) {
-        throw new RuntimeAddressInUseError()
+      } catch {
+        throw new RuntimeFailure('spawn-error')
       }
-      throw new RuntimeFailure(
-        early.signal === null ? 'early-exit-code' : 'early-exit-signal',
-        early.signal === null
-          ? { exitCode: early.code ?? -1 }
-          : { signal: early.signal }
-      )
-    }
-    child.unref()
-    void exit.then(() => rm(userDataPath, { recursive: true, force: true }))
-    return {
-      pid,
-      processStartTime,
-      exit,
-      terminate: async (gracefulMs, forceMs, port) => {
-        const audit = await terminateGroup(
-          pid,
-          processStartTime,
-          port,
-          gracefulMs,
-          forceMs
+      let diagnosticOutput = ''
+      child.stderr?.setEncoding('utf8')
+      child.stderr?.on('data', (chunk: string) => {
+        if (diagnosticOutput.length < 4_096) {
+          diagnosticOutput += chunk.slice(0, 4_096 - diagnosticOutput.length)
+        }
+      })
+      const spawnError = new Promise<never>((_, reject) => {
+        child.once('error', (error: NodeJS.ErrnoException) => {
+          reject(
+            new RuntimeFailure(
+              error.code === 'ENOENT' ? 'executable-missing' : 'spawn-error'
+            )
+          )
+        })
+      })
+      const pid = child.pid
+      if (pid === undefined) throw new RuntimeFailure('spawn-error')
+      const exit = new Promise<RuntimeExit>((resolve) => {
+        child.once('exit', (code, signal) =>
+          resolve({
+            code,
+            signal,
+            addressInUse: /EADDRINUSE|address already in use/iu.test(
+              diagnosticOutput
+            ),
+          })
         )
-        await rm(userDataPath, { recursive: true, force: true })
-        return audit
-      },
-      audit: (port) => auditRuntimeResource(pid, processStartTime, port),
-      isAlive: async () =>
-        (await readProcessStartTime(pid)) === processStartTime,
-    }
-  },
+      })
+      let processStartTime: string | null = null
+      const identityDeadline = Date.now() + 1_000
+      while (processStartTime === null && Date.now() < identityDeadline) {
+        processStartTime = await Promise.race([
+          readProcessStartTime(pid),
+          spawnError,
+          exit.then(() => null),
+        ])
+        if (processStartTime === null && child.exitCode === null)
+          await runtimeDelay(10, new AbortController().signal)
+        if (child.exitCode !== null || child.signalCode !== null) break
+      }
+      if (processStartTime === null) {
+        const early = await Promise.race([exit, spawnError])
+        if (early.addressInUse) {
+          throw new RuntimeAddressInUseError()
+        }
+        throw new RuntimeFailure(
+          early.signal === null ? 'early-exit-code' : 'early-exit-signal',
+          early.signal === null
+            ? { exitCode: early.code ?? -1 }
+            : { signal: early.signal }
+        )
+      }
+      child.unref()
+      void exit.then(() => rm(userDataPath, { recursive: true, force: true }))
+      return {
+        pid,
+        processStartTime,
+        exit,
+        terminate: async (gracefulMs, forceMs, port, signal) => {
+          try {
+            return await terminateOwnedRuntimeGroup({
+              pid,
+              processStartTime,
+              port,
+              gracefulMs,
+              forceMs,
+              auditAllowanceMs: config.stopAuditAllowanceMs,
+              ...(signal === undefined ? {} : { signal }),
+              primitives,
+            })
+          } finally {
+            await rm(userDataPath, { recursive: true, force: true })
+          }
+        },
+        audit: async (port) => {
+          const controller = new AbortController()
+          const deadlineAt = primitives.now() + config.stopAuditAllowanceMs
+          const cancelDeadline = primitives.scheduleDeadline(
+            config.stopAuditAllowanceMs,
+            () => controller.abort()
+          )
+          try {
+            return (
+              (await auditRuntimeResource({
+                pid,
+                processStartTime,
+                port,
+                deadlineAt,
+                parentSignal: controller.signal,
+                primitives,
+              })) ?? nonConfirmingAudit(pid, processStartTime, port)
+            )
+          } finally {
+            cancelDeadline()
+            controller.abort()
+          }
+        },
+        isAlive: async () =>
+          (await primitives.readProcessStartTime(
+            pid,
+            new AbortController().signal
+          )) === processStartTime,
+      }
+    },
+  }
 }
+
+export const nodeRuntimeProcessAdapter: RuntimeProcessAdapter =
+  createNodeRuntimeProcessAdapter()
 
 export const fetchRuntimeHealthAdapter: RuntimeHealthAdapter = {
   async check(url, timeoutMs, signal) {

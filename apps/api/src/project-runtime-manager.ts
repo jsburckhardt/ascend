@@ -2,16 +2,20 @@ import type { Project } from './project-persistence.js'
 import {
   PROJECT_RUNTIME_DEFAULTS,
   RuntimeFailure,
+  RuntimeStopInvariantError,
   createProjectRuntimeConfig,
   deriveProjectOwnerToken,
   publicRuntimeState,
+  runtimeStopOverallBoundMs,
   serializeRuntimeEvent,
   stableProjectRoute,
   type PublicRuntimeReport,
   type ProjectRuntimeConfig,
+  type RuntimeEntryState,
   type RuntimeLifecycleEvent,
   type RuntimeSafeLifecycleEvent,
   type RuntimeSnapshot,
+  type RuntimeStopOutcome,
 } from './project-runtime-contract.js'
 import {
   defaultRuntimeProcessDependencies,
@@ -38,8 +42,7 @@ export interface RuntimeShutdownResult {
   readonly audits: readonly ProjectRuntimeTerminationAudit[]
 }
 
-export type ProjectRuntimeEntryState =
-  'registered' | 'starting' | 'running' | 'failed'
+export type ProjectRuntimeEntryState = RuntimeEntryState
 
 export interface ProjectRuntimeEntryInspection {
   readonly projectId: string
@@ -57,13 +60,16 @@ export interface ProjectRuntimeManagerAudit {
   readonly ownershipRecords: number
   readonly completionTasks: number
   readonly backgroundTasks: number
+  readonly stopTasks: number
   readonly completionTaskSettlements: number
   readonly backgroundTaskSettlements: number
+  readonly lateTerminationSettlements: number
 }
 
 export interface ProjectRuntimeManager {
   register(projectId: string, canonicalPath: string): void
   start(input: ProjectRuntimeStartInput): Promise<RuntimeSnapshot>
+  stop(input: { readonly projectId: string }): Promise<RuntimeStopOutcome>
   reportPublicStates(
     projectIds: readonly string[]
   ): readonly PublicRuntimeReport[]
@@ -98,6 +104,7 @@ interface RegisteredEntry {
   readonly state: 'registered'
   readonly projectId: string
   readonly canonicalPath: string
+  readonly released: boolean
 }
 
 interface StartingEntry {
@@ -120,6 +127,16 @@ interface RunningEntry {
   readonly snapshot: RuntimeSnapshot
 }
 
+interface StoppingEntry {
+  readonly state: 'stopping'
+  readonly projectId: string
+  readonly canonicalPath: string
+  readonly generation: symbol
+  readonly ready: ReadyRuntime
+  readonly snapshot: RuntimeSnapshot
+  readonly operation: Promise<RuntimeStopOutcome>
+}
+
 interface FailedEntry {
   readonly state: 'failed'
   readonly projectId: string
@@ -130,7 +147,7 @@ interface FailedEntry {
 }
 
 type ProjectRuntimeEntry =
-  RegisteredEntry | StartingEntry | RunningEntry | FailedEntry
+  RegisteredEntry | StartingEntry | RunningEntry | StoppingEntry | FailedEntry
 
 interface ManagedOwnership extends RuntimeOwnershipRecord {
   readonly projectId: string
@@ -154,8 +171,10 @@ export function createProjectRuntimeManager(
   const ownership = new Map<string, ManagedOwnership>()
   const completionTasks = new Set<Promise<RuntimeSnapshot>>()
   const backgroundTasks = new Set<Promise<void>>()
+  const stopTasks = new Set<Promise<RuntimeStopOutcome>>()
   let completionTaskSettlements = 0
   let backgroundTaskSettlements = 0
+  let lateTerminationSettlements = 0
   let shutdownPromise: Promise<RuntimeShutdownResult> | undefined
   let shutdownResult: RuntimeShutdownResult | undefined
   let shuttingDown = false
@@ -194,6 +213,7 @@ export function createProjectRuntimeManager(
       state: 'registered',
       projectId,
       canonicalPath,
+      released: false,
     })
   }
 
@@ -315,6 +335,220 @@ export function createProjectRuntimeManager(
     return Object.freeze({ claimed: true, failure })
   }
 
+  const reuseOwnershipFailure = (
+    current: RunningEntry
+  ): RuntimeFailure | undefined => {
+    if (shuttingDown) return new RuntimeFailure('manager-shutdown')
+    const installed = entries.get(current.projectId)
+    if (
+      installed === current &&
+      installed.state === 'running' &&
+      installed.generation === current.generation
+    ) {
+      return undefined
+    }
+    if (installed?.state === 'failed') return installed.failure
+    return new RuntimeFailure('runtime-stopping')
+  }
+
+  const stop = async (input: {
+    readonly projectId: string
+  }): Promise<RuntimeStopOutcome> => {
+    if (shuttingDown) {
+      return Object.freeze({
+        outcome: 'rejected',
+        projectId: input.projectId,
+        category: 'manager-shutdown',
+      })
+    }
+    const persisted = await dependencies.findProjectById(input.projectId)
+    if (persisted === undefined) {
+      return Object.freeze({
+        outcome: 'rejected',
+        projectId: input.projectId,
+        category: 'not-registered',
+      })
+    }
+    if (shuttingDown) {
+      return Object.freeze({
+        outcome: 'rejected',
+        projectId: input.projectId,
+        category: 'manager-shutdown',
+      })
+    }
+
+    const current = entries.get(input.projectId)
+    if (
+      current === undefined ||
+      (current.state === 'registered' && !current.released)
+    ) {
+      return Object.freeze({
+        outcome: 'rejected',
+        projectId: input.projectId,
+        category: 'no-managed-runtime',
+      })
+    }
+    if (current.state === 'registered') {
+      return Object.freeze({
+        outcome: 'already-stopped',
+        projectId: input.projectId,
+      })
+    }
+    if (current.state === 'starting') {
+      return Object.freeze({
+        outcome: 'rejected',
+        projectId: input.projectId,
+        category: 'start-in-progress',
+      })
+    }
+    if (current.state === 'failed') {
+      return Object.freeze({
+        outcome: 'rejected',
+        projectId: input.projectId,
+        category: 'failure-retained',
+      })
+    }
+    if (current.state === 'stopping') return current.operation
+
+    let stopping!: StoppingEntry
+    const terminationController = new AbortController()
+    const deadlineController = new AbortController()
+    const installUnconfirmedFailure = (): void => {
+      if (entries.get(input.projectId) !== stopping) {
+        throw new RuntimeStopInvariantError()
+      }
+      const failure = new RuntimeFailure('stop-unconfirmed')
+      failEntry(
+        stopping.projectId,
+        stopping.canonicalPath,
+        stopping.generation,
+        stopping.snapshot,
+        failure,
+        stopping.snapshot.startedAt
+      )
+      emit({
+        event: 'runtime.health.changed',
+        projectId: stopping.projectId,
+        from: 'stopping',
+        to: 'failed',
+        elapsedMs: Math.max(0, now() - stopping.snapshot.startedAt),
+        classification: failure.category,
+      })
+    }
+
+    const operation = Promise.resolve().then(
+      async (): Promise<RuntimeStopOutcome> => {
+        const termination = stopping.ready.process.terminate(
+          config.gracefulShutdownMs,
+          config.forceShutdownMs,
+          stopping.ready.port,
+          terminationController.signal
+        )
+        const boundedTermination = termination.then((audit) =>
+          Object.freeze({ kind: 'audit' as const, audit })
+        )
+        const deadline = processDependencies
+          .sleep(runtimeStopOverallBoundMs(config), deadlineController.signal)
+          .then(() => Object.freeze({ kind: 'deadline' as const }))
+
+        try {
+          const result = await Promise.race([boundedTermination, deadline])
+          if (result.kind === 'deadline') {
+            terminationController.abort()
+            void termination.then(
+              () => {
+                lateTerminationSettlements += 1
+              },
+              () => {
+                lateTerminationSettlements += 1
+              }
+            )
+            installUnconfirmedFailure()
+            return Object.freeze({
+              outcome: 'rejected',
+              projectId: stopping.projectId,
+              category: 'stop-unconfirmed',
+            })
+          }
+
+          deadlineController.abort()
+          if (entries.get(input.projectId) !== stopping) {
+            throw new RuntimeStopInvariantError()
+          }
+          recordCleanup(stopping.projectId, result.audit)
+          if (
+            result.audit.processAbsent &&
+            result.audit.processGroupAbsent &&
+            result.audit.listenerAbsent
+          ) {
+            const key = ownershipKey(stopping.ready)
+            const record = ownership.get(key)
+            if (record?.generation === stopping.generation)
+              ownership.delete(key)
+            entries.set(stopping.projectId, {
+              state: 'registered',
+              projectId: stopping.projectId,
+              canonicalPath: stopping.canonicalPath,
+              released: true,
+            })
+            emit({
+              event: 'runtime.stop.succeeded',
+              projectId: stopping.projectId,
+              from: 'stopping',
+              to: 'stopped',
+              elapsedMs: Math.max(0, now() - stopping.snapshot.startedAt),
+            })
+            return Object.freeze({
+              outcome: 'stopped',
+              projectId: stopping.projectId,
+              release: result.audit.outcome,
+              audit: result.audit,
+            })
+          }
+
+          installUnconfirmedFailure()
+          return Object.freeze({
+            outcome: 'rejected',
+            projectId: stopping.projectId,
+            category: 'stop-unconfirmed',
+            release: result.audit.outcome,
+            audit: result.audit,
+          })
+        } catch (error) {
+          deadlineController.abort()
+          terminationController.abort()
+          if (error instanceof RuntimeStopInvariantError) throw error
+          installUnconfirmedFailure()
+          throw error
+        }
+      }
+    )
+
+    stopping = {
+      state: 'stopping',
+      projectId: current.projectId,
+      canonicalPath: current.canonicalPath,
+      generation: current.generation,
+      ready: current.ready,
+      snapshot: current.snapshot,
+      operation,
+    }
+    entries.set(input.projectId, stopping)
+    emit({
+      event: 'runtime.stop.requested',
+      projectId: input.projectId,
+      from: 'running',
+      to: 'stopping',
+      elapsedMs: Math.max(0, now() - current.snapshot.startedAt),
+    })
+    stopTasks.add(operation)
+    void operation.then(
+      () => stopTasks.delete(operation),
+      () => stopTasks.delete(operation)
+    )
+    return operation
+  }
+
   const start = async (
     input: ProjectRuntimeStartInput
   ): Promise<RuntimeSnapshot> => {
@@ -333,6 +567,8 @@ export function createProjectRuntimeManager(
 
     if (current?.state === 'running') {
       const alive = await current.ready.process.isAlive()
+      const livenessOwnershipFailure = reuseOwnershipFailure(current)
+      if (livenessOwnershipFailure !== undefined) throw livenessOwnershipFailure
       if (alive) {
         const healthController = new AbortController()
         const verdict = await processDependencies.health.check(
@@ -340,6 +576,8 @@ export function createProjectRuntimeManager(
           config.healthAttemptTimeoutMs,
           healthController.signal
         )
+        const healthOwnershipFailure = reuseOwnershipFailure(current)
+        if (healthOwnershipFailure !== undefined) throw healthOwnershipFailure
         if (
           verdict.status === PROJECT_RUNTIME_DEFAULTS.healthStatus &&
           verdict.bodyStatus !== null &&
@@ -372,6 +610,8 @@ export function createProjectRuntimeManager(
       )
       throw result.failure
     }
+    if (current?.state === 'stopping')
+      throw new RuntimeFailure('runtime-stopping')
 
     const generation = Symbol(input.projectId)
     const controller = new AbortController()
@@ -552,13 +792,17 @@ export function createProjectRuntimeManager(
           .filter((entry): entry is StartingEntry => entry.state === 'starting')
           .map((entry) => entry.operation)
       )
+      await Promise.allSettled([...stopTasks])
       for (const record of ownership.values()) {
         const key = ownershipKey(record)
         if (terminationOutcomes.has(key)) continue
         const prior = cleanupOutcomes.get(record.projectId)
         if (
           prior !== undefined &&
-          [prior.pid, prior.processStartTime, prior.port].join(':') === key
+          [prior.pid, prior.processStartTime, prior.port].join(':') === key &&
+          prior.processAbsent &&
+          prior.processGroupAbsent &&
+          prior.listenerAbsent
         ) {
           terminationOutcomes.set(key, prior)
           continue
@@ -615,6 +859,7 @@ export function createProjectRuntimeManager(
   return {
     register,
     start,
+    stop,
     reportPublicStates(projectIds) {
       return Object.freeze(
         projectIds.map((projectId) => {
@@ -666,8 +911,10 @@ export function createProjectRuntimeManager(
         ownershipRecords: ownership.size,
         completionTasks: completionTasks.size,
         backgroundTasks: backgroundTasks.size,
+        stopTasks: stopTasks.size,
         completionTaskSettlements,
         backgroundTaskSettlements,
+        lateTerminationSettlements,
       })
     },
     lastFailure(projectId) {

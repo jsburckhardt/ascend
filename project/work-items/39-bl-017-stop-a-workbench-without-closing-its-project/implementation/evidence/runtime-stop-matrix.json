@@ -1,0 +1,3818 @@
+{
+  "schemaVersion": 1,
+  "declaredBounds": {
+    "gracefulMs": 120,
+    "forceMs": 120,
+    "auditAllowanceMs": 100,
+    "settlementAllowanceMs": 10,
+    "preSignalAllowanceMs": 90,
+    "overallMs": 340
+  },
+  "productionDefaultBounds": {
+    "gracefulMs": 2000,
+    "forceMs": 2000,
+    "auditAllowanceMs": 1000,
+    "settlementAllowanceMs": 100,
+    "preSignalAllowanceMs": 900,
+    "overallMs": 5000
+  },
+  "rows": [
+    {
+      "scenario": "graceful-stop",
+      "executionIds": {
+        "runtime": "bl017-runtime-graceful-stop",
+        "api": "bl017-api-graceful-stop",
+        "home": "bl017-home-graceful-stop"
+      },
+      "outcome": "stopped",
+      "rejectionCategory": null,
+      "releaseMode": "graceful",
+      "entryReleasedByConfirmedStop": true,
+      "auditTriple": {
+        "processAbsent": true,
+        "processGroupAbsent": true,
+        "listenerAbsent": true,
+        "complete": true
+      },
+      "attribution": {
+        "ownedGroupSampled": true,
+        "ceilingRecorded": true,
+        "claim": "process-group-membership"
+      },
+      "signalOrder": [
+        "graceful"
+      ],
+      "forceAfterGracefulBound": true,
+      "signalDelivery": {
+        "graceful": "delivered",
+        "force": "not-attempted",
+        "signalFault": "none",
+        "settlementAudits": 1
+      },
+      "signalTimeline": {
+        "preSignalMs": 0,
+        "sigtermAt": 0,
+        "sigkillAt": null,
+        "gracefulWindowMs": null,
+        "forceWindowMs": null
+      },
+      "primitiveBounding": {
+        "awaitedCallsBounded": true,
+        "abandonedCalls": 0,
+        "incompleteAuditsDiscarded": 0,
+        "deadlineSource": "trusted-scheduler",
+        "clockSource": "monotonic",
+        "callerPreAborted": false,
+        "signalsAfterDeadline": 0,
+        "timersSurvivingReturn": 0,
+        "unhandledRejections": 0
+      },
+      "elapsedClass": "within-graceful",
+      "withinDeclaredBound": true,
+      "runtimeState": "Stopped",
+      "apiState": "Stopped",
+      "homeState": "Stopped",
+      "failureCategory": null,
+      "events": [
+        {
+          "id": "bl017-event-graceful-stop-1",
+          "event": "runtime.start.requested",
+          "from": "stopped",
+          "to": "starting",
+          "publicState": "Starting",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-graceful-stop-2",
+          "event": "runtime.start.succeeded",
+          "from": "starting",
+          "to": "running",
+          "publicState": "Running",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-graceful-stop-3",
+          "event": "runtime.stop.requested",
+          "from": "running",
+          "to": "stopping",
+          "publicState": "Running",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-graceful-stop-4",
+          "event": "runtime.stop.succeeded",
+          "from": "stopping",
+          "to": "stopped",
+          "publicState": "Stopped",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        }
+      ],
+      "requestedEventCount": 1,
+      "terminalEventCount": 1,
+      "loserEventCount": 0,
+      "entryMutations": 0,
+      "terminateCallsByPhase": {
+        "stop": 1,
+        "shutdown": 0
+      },
+      "cleanupRecordsByPhase": {
+        "stop": 1,
+        "shutdown": 0,
+        "concurrent": 0,
+        "reusedPriorAudit": false
+      },
+      "identitiesCreated": 1,
+      "identitiesTerminated": 1,
+      "restarts": 0,
+      "registrationRowCount": 1,
+      "registrationDigests": {
+        "before": "cbd476c5ecd933503f8e2d843249fb27898c2f1249587e4275d36b801bc54857",
+        "after": "cbd476c5ecd933503f8e2d843249fb27898c2f1249587e4275d36b801bc54857"
+      },
+      "peerDigests": null,
+      "controlDigests": null,
+      "fixtureDigests": [
+        {
+          "fixture": "selected-project",
+          "before": "ead9dc1002d6d76c4bb78546c1cb3ad7e9f8342017782b6ce5e3737866308e07",
+          "after": "ead9dc1002d6d76c4bb78546c1cb3ad7e9f8342017782b6ce5e3737866308e07"
+        }
+      ],
+      "inventory": [
+        {
+          "item": "managed workbench runtime and its loopback listener",
+          "itemClass": "runtime-process-and-listener",
+          "ownership": "validation-owned-temporary"
+        },
+        {
+          "item": "project registration row and database sidecars",
+          "itemClass": "registration-resource",
+          "ownership": "product-registration-during-scenario"
+        },
+        {
+          "item": "disposable project fixture tree",
+          "itemClass": "disposable-fixture",
+          "ownership": "validation-owned-temporary"
+        }
+      ],
+      "residualCount": 0,
+      "assertionCount": 9
+    },
+    {
+      "scenario": "escalated-stop",
+      "executionIds": {
+        "runtime": "bl017-runtime-escalated-stop",
+        "api": "bl017-api-escalated-stop",
+        "home": "bl017-home-escalated-stop"
+      },
+      "outcome": "stopped",
+      "rejectionCategory": null,
+      "releaseMode": "escalated",
+      "entryReleasedByConfirmedStop": true,
+      "auditTriple": {
+        "processAbsent": true,
+        "processGroupAbsent": true,
+        "listenerAbsent": true,
+        "complete": true
+      },
+      "attribution": {
+        "ownedGroupSampled": true,
+        "ceilingRecorded": true,
+        "claim": "process-group-membership"
+      },
+      "signalOrder": [
+        "graceful",
+        "force"
+      ],
+      "forceAfterGracefulBound": true,
+      "signalDelivery": {
+        "graceful": "delivered",
+        "force": "delivered",
+        "signalFault": "none",
+        "settlementAudits": 1
+      },
+      "signalTimeline": {
+        "preSignalMs": 0,
+        "sigtermAt": 0,
+        "sigkillAt": 120,
+        "gracefulWindowMs": 120,
+        "forceWindowMs": 120
+      },
+      "primitiveBounding": {
+        "awaitedCallsBounded": true,
+        "abandonedCalls": 0,
+        "incompleteAuditsDiscarded": 0,
+        "deadlineSource": "trusted-scheduler",
+        "clockSource": "monotonic",
+        "callerPreAborted": false,
+        "signalsAfterDeadline": 0,
+        "timersSurvivingReturn": 0,
+        "unhandledRejections": 0
+      },
+      "elapsedClass": "within-overall",
+      "withinDeclaredBound": true,
+      "runtimeState": "Stopped",
+      "apiState": "Stopped",
+      "homeState": "Stopped",
+      "failureCategory": null,
+      "events": [
+        {
+          "id": "bl017-event-escalated-stop-1",
+          "event": "runtime.start.requested",
+          "from": "stopped",
+          "to": "starting",
+          "publicState": "Starting",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-escalated-stop-2",
+          "event": "runtime.start.succeeded",
+          "from": "starting",
+          "to": "running",
+          "publicState": "Running",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-escalated-stop-3",
+          "event": "runtime.stop.requested",
+          "from": "running",
+          "to": "stopping",
+          "publicState": "Running",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-escalated-stop-4",
+          "event": "runtime.stop.succeeded",
+          "from": "stopping",
+          "to": "stopped",
+          "publicState": "Stopped",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        }
+      ],
+      "requestedEventCount": 1,
+      "terminalEventCount": 1,
+      "loserEventCount": 0,
+      "entryMutations": 0,
+      "terminateCallsByPhase": {
+        "stop": 1,
+        "shutdown": 0
+      },
+      "cleanupRecordsByPhase": {
+        "stop": 1,
+        "shutdown": 0,
+        "concurrent": 0,
+        "reusedPriorAudit": false
+      },
+      "identitiesCreated": 1,
+      "identitiesTerminated": 1,
+      "restarts": 0,
+      "registrationRowCount": 1,
+      "registrationDigests": {
+        "before": "79c327704cdcb80bf2ed7a0eb41f99fb67370903767386b5e64b9d5390a75fbd",
+        "after": "79c327704cdcb80bf2ed7a0eb41f99fb67370903767386b5e64b9d5390a75fbd"
+      },
+      "peerDigests": null,
+      "controlDigests": null,
+      "fixtureDigests": [
+        {
+          "fixture": "selected-project",
+          "before": "25bddee781e781acbb88dbe0549ca89414f651ebba28b5207cb3488a0b169259",
+          "after": "25bddee781e781acbb88dbe0549ca89414f651ebba28b5207cb3488a0b169259"
+        }
+      ],
+      "inventory": [
+        {
+          "item": "managed workbench runtime and its loopback listener",
+          "itemClass": "runtime-process-and-listener",
+          "ownership": "validation-owned-temporary"
+        },
+        {
+          "item": "project registration row and database sidecars",
+          "itemClass": "registration-resource",
+          "ownership": "product-registration-during-scenario"
+        },
+        {
+          "item": "disposable project fixture tree",
+          "itemClass": "disposable-fixture",
+          "ownership": "validation-owned-temporary"
+        }
+      ],
+      "residualCount": 0,
+      "assertionCount": 10
+    },
+    {
+      "scenario": "escalation-unconfirmed",
+      "executionIds": {
+        "runtime": "bl017-runtime-escalation-unconfirmed",
+        "api": "bl017-api-escalation-unconfirmed",
+        "home": "bl017-home-escalation-unconfirmed"
+      },
+      "outcome": "rejected",
+      "rejectionCategory": "stop-unconfirmed",
+      "releaseMode": "unconfirmed",
+      "entryReleasedByConfirmedStop": false,
+      "auditTriple": {
+        "processAbsent": false,
+        "processGroupAbsent": false,
+        "listenerAbsent": false,
+        "complete": true
+      },
+      "attribution": {
+        "ownedGroupSampled": true,
+        "ceilingRecorded": true,
+        "claim": "process-group-membership"
+      },
+      "signalOrder": [
+        "graceful",
+        "force"
+      ],
+      "forceAfterGracefulBound": true,
+      "signalDelivery": {
+        "graceful": "delivered",
+        "force": "delivered",
+        "signalFault": "none",
+        "settlementAudits": 1
+      },
+      "signalTimeline": {
+        "preSignalMs": 0,
+        "sigtermAt": 0,
+        "sigkillAt": 120,
+        "gracefulWindowMs": 120,
+        "forceWindowMs": 120
+      },
+      "primitiveBounding": {
+        "awaitedCallsBounded": true,
+        "abandonedCalls": 0,
+        "incompleteAuditsDiscarded": 0,
+        "deadlineSource": "trusted-scheduler",
+        "clockSource": "monotonic",
+        "callerPreAborted": false,
+        "signalsAfterDeadline": 0,
+        "timersSurvivingReturn": 0,
+        "unhandledRejections": 0
+      },
+      "elapsedClass": "within-overall",
+      "withinDeclaredBound": true,
+      "runtimeState": "Failed",
+      "apiState": "Failed",
+      "homeState": "Failed",
+      "failureCategory": "stop-unconfirmed",
+      "events": [
+        {
+          "id": "bl017-event-escalation-unconfirmed-1",
+          "event": "runtime.start.requested",
+          "from": "stopped",
+          "to": "starting",
+          "publicState": "Starting",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-escalation-unconfirmed-2",
+          "event": "runtime.start.succeeded",
+          "from": "starting",
+          "to": "running",
+          "publicState": "Running",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-escalation-unconfirmed-3",
+          "event": "runtime.stop.requested",
+          "from": "running",
+          "to": "stopping",
+          "publicState": "Running",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-escalation-unconfirmed-4",
+          "event": "runtime.health.changed",
+          "from": "stopping",
+          "to": "failed",
+          "publicState": "Failed",
+          "classification": "stop-unconfirmed",
+          "elapsedClass": "within-overall"
+        }
+      ],
+      "requestedEventCount": 1,
+      "terminalEventCount": 1,
+      "loserEventCount": 0,
+      "entryMutations": 0,
+      "terminateCallsByPhase": {
+        "stop": 1,
+        "shutdown": 1
+      },
+      "cleanupRecordsByPhase": {
+        "stop": 1,
+        "shutdown": 1,
+        "concurrent": 0,
+        "reusedPriorAudit": false
+      },
+      "identitiesCreated": 1,
+      "identitiesTerminated": 0,
+      "restarts": 0,
+      "registrationRowCount": 1,
+      "registrationDigests": {
+        "before": "b39d893e2b3b37abe34b49c349ac4329d257641f6ccc3a6d2a4662557da29013",
+        "after": "b39d893e2b3b37abe34b49c349ac4329d257641f6ccc3a6d2a4662557da29013"
+      },
+      "peerDigests": null,
+      "controlDigests": null,
+      "fixtureDigests": [
+        {
+          "fixture": "selected-project",
+          "before": "080138cdf984549b1f25418ccb0776ea63c7cfc9c976fd68a16d9bdec9d0ff5b",
+          "after": "080138cdf984549b1f25418ccb0776ea63c7cfc9c976fd68a16d9bdec9d0ff5b"
+        }
+      ],
+      "inventory": [
+        {
+          "item": "managed workbench runtime and its loopback listener",
+          "itemClass": "runtime-process-and-listener",
+          "ownership": "validation-owned-temporary"
+        },
+        {
+          "item": "project registration row and database sidecars",
+          "itemClass": "registration-resource",
+          "ownership": "product-registration-during-scenario"
+        },
+        {
+          "item": "disposable project fixture tree",
+          "itemClass": "disposable-fixture",
+          "ownership": "validation-owned-temporary"
+        }
+      ],
+      "residualCount": 0,
+      "assertionCount": 11
+    },
+    {
+      "scenario": "termination-fault",
+      "executionIds": {
+        "runtime": "bl017-runtime-termination-fault",
+        "api": "bl017-api-termination-fault",
+        "home": "bl017-home-termination-fault"
+      },
+      "outcome": "rejected",
+      "rejectionCategory": "stop-unconfirmed",
+      "releaseMode": null,
+      "entryReleasedByConfirmedStop": false,
+      "auditTriple": null,
+      "attribution": {
+        "ownedGroupSampled": false,
+        "ceilingRecorded": true,
+        "claim": "process-group-membership"
+      },
+      "signalOrder": [],
+      "forceAfterGracefulBound": true,
+      "signalDelivery": {
+        "graceful": "not-attempted",
+        "force": "not-attempted",
+        "signalFault": "raised",
+        "settlementAudits": 0
+      },
+      "signalTimeline": null,
+      "primitiveBounding": null,
+      "elapsedClass": "within-overall",
+      "withinDeclaredBound": true,
+      "runtimeState": "Failed",
+      "apiState": "Failed",
+      "homeState": "Failed",
+      "failureCategory": "stop-unconfirmed",
+      "events": [
+        {
+          "id": "bl017-event-termination-fault-1",
+          "event": "runtime.start.requested",
+          "from": "stopped",
+          "to": "starting",
+          "publicState": "Starting",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-termination-fault-2",
+          "event": "runtime.start.succeeded",
+          "from": "starting",
+          "to": "running",
+          "publicState": "Running",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-termination-fault-3",
+          "event": "runtime.stop.requested",
+          "from": "running",
+          "to": "stopping",
+          "publicState": "Running",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-termination-fault-4",
+          "event": "runtime.health.changed",
+          "from": "stopping",
+          "to": "failed",
+          "publicState": "Failed",
+          "classification": "stop-unconfirmed",
+          "elapsedClass": "within-overall"
+        }
+      ],
+      "requestedEventCount": 1,
+      "terminalEventCount": 1,
+      "loserEventCount": 0,
+      "entryMutations": 0,
+      "terminateCallsByPhase": {
+        "stop": 1,
+        "shutdown": 1
+      },
+      "cleanupRecordsByPhase": {
+        "stop": 0,
+        "shutdown": 1,
+        "concurrent": 0,
+        "reusedPriorAudit": false
+      },
+      "identitiesCreated": 1,
+      "identitiesTerminated": 1,
+      "restarts": 0,
+      "registrationRowCount": 1,
+      "registrationDigests": {
+        "before": "b27c9e7e6f2e15101a9a7611ebc110a9ed587e03bb5b2ce96feaf5cb019b8b3c",
+        "after": "b27c9e7e6f2e15101a9a7611ebc110a9ed587e03bb5b2ce96feaf5cb019b8b3c"
+      },
+      "peerDigests": null,
+      "controlDigests": null,
+      "fixtureDigests": [
+        {
+          "fixture": "selected-project",
+          "before": "9c8518ea6983ec09b79e5cf5fc2d17600991dc5eb9d8febc2c96c70829bfc8f8",
+          "after": "9c8518ea6983ec09b79e5cf5fc2d17600991dc5eb9d8febc2c96c70829bfc8f8"
+        }
+      ],
+      "inventory": [
+        {
+          "item": "managed workbench runtime and its loopback listener",
+          "itemClass": "runtime-process-and-listener",
+          "ownership": "validation-owned-temporary"
+        },
+        {
+          "item": "project registration row and database sidecars",
+          "itemClass": "registration-resource",
+          "ownership": "product-registration-during-scenario"
+        },
+        {
+          "item": "disposable project fixture tree",
+          "itemClass": "disposable-fixture",
+          "ownership": "validation-owned-temporary"
+        }
+      ],
+      "residualCount": 0,
+      "assertionCount": 10
+    },
+    {
+      "scenario": "termination-deadline",
+      "executionIds": {
+        "runtime": "bl017-runtime-termination-deadline",
+        "api": "bl017-api-termination-deadline",
+        "home": "bl017-home-termination-deadline"
+      },
+      "outcome": "rejected",
+      "rejectionCategory": "stop-unconfirmed",
+      "releaseMode": null,
+      "entryReleasedByConfirmedStop": false,
+      "auditTriple": null,
+      "attribution": {
+        "ownedGroupSampled": false,
+        "ceilingRecorded": true,
+        "claim": "process-group-membership"
+      },
+      "signalOrder": [],
+      "forceAfterGracefulBound": true,
+      "signalDelivery": {
+        "graceful": "not-attempted",
+        "force": "not-attempted",
+        "signalFault": "none",
+        "settlementAudits": 0
+      },
+      "signalTimeline": null,
+      "primitiveBounding": null,
+      "elapsedClass": "within-overall",
+      "withinDeclaredBound": true,
+      "runtimeState": "Failed",
+      "apiState": "Failed",
+      "homeState": "Failed",
+      "failureCategory": "stop-unconfirmed",
+      "events": [
+        {
+          "id": "bl017-event-termination-deadline-1",
+          "event": "runtime.start.requested",
+          "from": "stopped",
+          "to": "starting",
+          "publicState": "Starting",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-termination-deadline-2",
+          "event": "runtime.start.succeeded",
+          "from": "starting",
+          "to": "running",
+          "publicState": "Running",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-termination-deadline-3",
+          "event": "runtime.stop.requested",
+          "from": "running",
+          "to": "stopping",
+          "publicState": "Running",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-termination-deadline-4",
+          "event": "runtime.health.changed",
+          "from": "stopping",
+          "to": "failed",
+          "publicState": "Failed",
+          "classification": "stop-unconfirmed",
+          "elapsedClass": "within-overall"
+        }
+      ],
+      "requestedEventCount": 1,
+      "terminalEventCount": 1,
+      "loserEventCount": 0,
+      "entryMutations": 0,
+      "terminateCallsByPhase": {
+        "stop": 1,
+        "shutdown": 1
+      },
+      "cleanupRecordsByPhase": {
+        "stop": 0,
+        "shutdown": 1,
+        "concurrent": 0,
+        "reusedPriorAudit": false
+      },
+      "identitiesCreated": 1,
+      "identitiesTerminated": 1,
+      "restarts": 0,
+      "registrationRowCount": 1,
+      "registrationDigests": {
+        "before": "dff2dbc51bc492189636d2a17a521584f44cc7a37e81bd2a4a500c29d0589ade",
+        "after": "dff2dbc51bc492189636d2a17a521584f44cc7a37e81bd2a4a500c29d0589ade"
+      },
+      "peerDigests": null,
+      "controlDigests": null,
+      "fixtureDigests": [
+        {
+          "fixture": "selected-project",
+          "before": "d9dbc4e6c29bc1d889222bf72e44249fb362ad6c046291e622dcbda0fe2f74b6",
+          "after": "d9dbc4e6c29bc1d889222bf72e44249fb362ad6c046291e622dcbda0fe2f74b6"
+        }
+      ],
+      "inventory": [
+        {
+          "item": "managed workbench runtime and its loopback listener",
+          "itemClass": "runtime-process-and-listener",
+          "ownership": "validation-owned-temporary"
+        },
+        {
+          "item": "project registration row and database sidecars",
+          "itemClass": "registration-resource",
+          "ownership": "product-registration-during-scenario"
+        },
+        {
+          "item": "disposable project fixture tree",
+          "itemClass": "disposable-fixture",
+          "ownership": "validation-owned-temporary"
+        }
+      ],
+      "residualCount": 0,
+      "assertionCount": 10
+    },
+    {
+      "scenario": "already-absent-generation",
+      "executionIds": {
+        "runtime": "bl017-runtime-already-absent-generation",
+        "api": "bl017-api-already-absent-generation",
+        "home": "bl017-home-already-absent-generation"
+      },
+      "outcome": "stopped",
+      "rejectionCategory": null,
+      "releaseMode": "already-absent",
+      "entryReleasedByConfirmedStop": true,
+      "auditTriple": {
+        "processAbsent": true,
+        "processGroupAbsent": true,
+        "listenerAbsent": true,
+        "complete": true
+      },
+      "attribution": {
+        "ownedGroupSampled": true,
+        "ceilingRecorded": true,
+        "claim": "process-group-membership"
+      },
+      "signalOrder": [],
+      "forceAfterGracefulBound": true,
+      "signalDelivery": {
+        "graceful": "not-attempted",
+        "force": "not-attempted",
+        "signalFault": "none",
+        "settlementAudits": 0
+      },
+      "signalTimeline": null,
+      "primitiveBounding": {
+        "awaitedCallsBounded": true,
+        "abandonedCalls": 0,
+        "incompleteAuditsDiscarded": 0,
+        "deadlineSource": "trusted-scheduler",
+        "clockSource": "monotonic",
+        "callerPreAborted": false,
+        "signalsAfterDeadline": 0,
+        "timersSurvivingReturn": 0,
+        "unhandledRejections": 0
+      },
+      "elapsedClass": "within-graceful",
+      "withinDeclaredBound": true,
+      "runtimeState": "Stopped",
+      "apiState": "Stopped",
+      "homeState": "Stopped",
+      "failureCategory": null,
+      "events": [
+        {
+          "id": "bl017-event-already-absent-generation-1",
+          "event": "runtime.start.requested",
+          "from": "stopped",
+          "to": "starting",
+          "publicState": "Starting",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-already-absent-generation-2",
+          "event": "runtime.start.succeeded",
+          "from": "starting",
+          "to": "running",
+          "publicState": "Running",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-already-absent-generation-3",
+          "event": "runtime.stop.requested",
+          "from": "running",
+          "to": "stopping",
+          "publicState": "Running",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-already-absent-generation-4",
+          "event": "runtime.stop.succeeded",
+          "from": "stopping",
+          "to": "stopped",
+          "publicState": "Stopped",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        }
+      ],
+      "requestedEventCount": 1,
+      "terminalEventCount": 1,
+      "loserEventCount": 0,
+      "entryMutations": 0,
+      "terminateCallsByPhase": {
+        "stop": 1,
+        "shutdown": 0
+      },
+      "cleanupRecordsByPhase": {
+        "stop": 1,
+        "shutdown": 0,
+        "concurrent": 0,
+        "reusedPriorAudit": false
+      },
+      "identitiesCreated": 1,
+      "identitiesTerminated": 1,
+      "restarts": 0,
+      "registrationRowCount": 1,
+      "registrationDigests": {
+        "before": "0b7df465dcb747b594a20254473404bba34f4fb43f4f12b6355ff89a378f9fdf",
+        "after": "0b7df465dcb747b594a20254473404bba34f4fb43f4f12b6355ff89a378f9fdf"
+      },
+      "peerDigests": null,
+      "controlDigests": null,
+      "fixtureDigests": [
+        {
+          "fixture": "selected-project",
+          "before": "2240a5e2fe6a52b86d1d156fc203940e010ccd0323616431988ef66381f78128",
+          "after": "2240a5e2fe6a52b86d1d156fc203940e010ccd0323616431988ef66381f78128"
+        }
+      ],
+      "inventory": [
+        {
+          "item": "managed workbench runtime and its loopback listener",
+          "itemClass": "runtime-process-and-listener",
+          "ownership": "validation-owned-temporary"
+        },
+        {
+          "item": "project registration row and database sidecars",
+          "itemClass": "registration-resource",
+          "ownership": "product-registration-during-scenario"
+        },
+        {
+          "item": "disposable project fixture tree",
+          "itemClass": "disposable-fixture",
+          "ownership": "validation-owned-temporary"
+        }
+      ],
+      "residualCount": 0,
+      "assertionCount": 8
+    },
+    {
+      "scenario": "no-managed-runtime",
+      "executionIds": {
+        "runtime": "bl017-runtime-no-managed-runtime",
+        "api": "bl017-api-no-managed-runtime",
+        "home": "bl017-home-no-managed-runtime"
+      },
+      "outcome": "rejected",
+      "rejectionCategory": "no-managed-runtime",
+      "releaseMode": null,
+      "entryReleasedByConfirmedStop": false,
+      "auditTriple": null,
+      "attribution": {
+        "ownedGroupSampled": false,
+        "ceilingRecorded": true,
+        "claim": "process-group-membership"
+      },
+      "signalOrder": [],
+      "forceAfterGracefulBound": true,
+      "signalDelivery": {
+        "graceful": "not-attempted",
+        "force": "not-attempted",
+        "signalFault": "none",
+        "settlementAudits": 0
+      },
+      "signalTimeline": null,
+      "primitiveBounding": null,
+      "elapsedClass": "zero",
+      "withinDeclaredBound": true,
+      "runtimeState": "Stopped",
+      "apiState": "Stopped",
+      "homeState": "Stopped",
+      "failureCategory": null,
+      "events": [],
+      "requestedEventCount": 0,
+      "terminalEventCount": 0,
+      "loserEventCount": 0,
+      "entryMutations": 0,
+      "terminateCallsByPhase": {
+        "stop": 0,
+        "shutdown": 0
+      },
+      "cleanupRecordsByPhase": {
+        "stop": 0,
+        "shutdown": 0,
+        "concurrent": 0,
+        "reusedPriorAudit": false
+      },
+      "identitiesCreated": 0,
+      "identitiesTerminated": 0,
+      "restarts": 0,
+      "registrationRowCount": 1,
+      "registrationDigests": {
+        "before": "1c14f0ae5d9c5bc2d23893644d8c5ea40825216fc15241e4a943ea67ba332bae",
+        "after": "1c14f0ae5d9c5bc2d23893644d8c5ea40825216fc15241e4a943ea67ba332bae"
+      },
+      "peerDigests": null,
+      "controlDigests": null,
+      "fixtureDigests": [
+        {
+          "fixture": "selected-project",
+          "before": "07da4a107973f5a90737aeb67f8e969e8dd972375a451353f463f5e8fc52f6b7",
+          "after": "07da4a107973f5a90737aeb67f8e969e8dd972375a451353f463f5e8fc52f6b7"
+        }
+      ],
+      "inventory": [
+        {
+          "item": "managed workbench runtime and its loopback listener",
+          "itemClass": "runtime-process-and-listener",
+          "ownership": "validation-owned-temporary"
+        },
+        {
+          "item": "project registration row and database sidecars",
+          "itemClass": "registration-resource",
+          "ownership": "product-registration-during-scenario"
+        },
+        {
+          "item": "disposable project fixture tree",
+          "itemClass": "disposable-fixture",
+          "ownership": "validation-owned-temporary"
+        }
+      ],
+      "residualCount": 0,
+      "assertionCount": 9
+    },
+    {
+      "scenario": "repeated-stop-idempotent",
+      "executionIds": {
+        "runtime": "bl017-runtime-repeated-stop-idempotent",
+        "api": "bl017-api-repeated-stop-idempotent",
+        "home": "bl017-home-repeated-stop-idempotent"
+      },
+      "outcome": "already-stopped",
+      "rejectionCategory": null,
+      "releaseMode": null,
+      "entryReleasedByConfirmedStop": true,
+      "auditTriple": {
+        "processAbsent": true,
+        "processGroupAbsent": true,
+        "listenerAbsent": true,
+        "complete": true
+      },
+      "attribution": {
+        "ownedGroupSampled": true,
+        "ceilingRecorded": true,
+        "claim": "process-group-membership"
+      },
+      "signalOrder": [],
+      "forceAfterGracefulBound": true,
+      "signalDelivery": {
+        "graceful": "not-attempted",
+        "force": "not-attempted",
+        "signalFault": "none",
+        "settlementAudits": 0
+      },
+      "signalTimeline": null,
+      "primitiveBounding": null,
+      "elapsedClass": "zero",
+      "withinDeclaredBound": true,
+      "runtimeState": "Stopped",
+      "apiState": "Stopped",
+      "homeState": "Stopped",
+      "failureCategory": null,
+      "events": [],
+      "requestedEventCount": 0,
+      "terminalEventCount": 0,
+      "loserEventCount": 0,
+      "entryMutations": 0,
+      "terminateCallsByPhase": {
+        "stop": 0,
+        "shutdown": 0
+      },
+      "cleanupRecordsByPhase": {
+        "stop": 0,
+        "shutdown": 0,
+        "concurrent": 0,
+        "reusedPriorAudit": false
+      },
+      "identitiesCreated": 0,
+      "identitiesTerminated": 0,
+      "restarts": 0,
+      "registrationRowCount": 1,
+      "registrationDigests": {
+        "before": "d6e3f0c679e89662519d279941658308e7ce3548ab6a4ce2c3cf9ac4eeae0ef2",
+        "after": "d6e3f0c679e89662519d279941658308e7ce3548ab6a4ce2c3cf9ac4eeae0ef2"
+      },
+      "peerDigests": null,
+      "controlDigests": null,
+      "fixtureDigests": [
+        {
+          "fixture": "selected-project",
+          "before": "a23c6d0cd19a23fcf25d25fe1522535d4a52513026e9ef3494e5465d69dbc44b",
+          "after": "a23c6d0cd19a23fcf25d25fe1522535d4a52513026e9ef3494e5465d69dbc44b"
+        }
+      ],
+      "inventory": [
+        {
+          "item": "managed workbench runtime and its loopback listener",
+          "itemClass": "runtime-process-and-listener",
+          "ownership": "validation-owned-temporary"
+        },
+        {
+          "item": "project registration row and database sidecars",
+          "itemClass": "registration-resource",
+          "ownership": "product-registration-during-scenario"
+        },
+        {
+          "item": "disposable project fixture tree",
+          "itemClass": "disposable-fixture",
+          "ownership": "validation-owned-temporary"
+        }
+      ],
+      "residualCount": 0,
+      "assertionCount": 11
+    },
+    {
+      "scenario": "unregistered-project",
+      "executionIds": {
+        "runtime": "bl017-runtime-unregistered-project",
+        "api": "bl017-api-unregistered-project",
+        "home": "bl017-home-unregistered-project"
+      },
+      "outcome": "rejected",
+      "rejectionCategory": "not-registered",
+      "releaseMode": null,
+      "entryReleasedByConfirmedStop": false,
+      "auditTriple": null,
+      "attribution": {
+        "ownedGroupSampled": false,
+        "ceilingRecorded": true,
+        "claim": "process-group-membership"
+      },
+      "signalOrder": [],
+      "forceAfterGracefulBound": true,
+      "signalDelivery": {
+        "graceful": "not-attempted",
+        "force": "not-attempted",
+        "signalFault": "none",
+        "settlementAudits": 0
+      },
+      "signalTimeline": null,
+      "primitiveBounding": null,
+      "elapsedClass": "zero",
+      "withinDeclaredBound": true,
+      "runtimeState": "Stopped",
+      "apiState": "Stopped",
+      "homeState": "Stopped",
+      "failureCategory": null,
+      "events": [],
+      "requestedEventCount": 0,
+      "terminalEventCount": 0,
+      "loserEventCount": 0,
+      "entryMutations": 0,
+      "terminateCallsByPhase": {
+        "stop": 0,
+        "shutdown": 0
+      },
+      "cleanupRecordsByPhase": {
+        "stop": 0,
+        "shutdown": 0,
+        "concurrent": 0,
+        "reusedPriorAudit": false
+      },
+      "identitiesCreated": 0,
+      "identitiesTerminated": 0,
+      "restarts": 0,
+      "registrationRowCount": 0,
+      "registrationDigests": {
+        "before": "5ad38304b535c2987dbd24657c1a11b884984ff600d9f389deb0d4e634fee792",
+        "after": "5ad38304b535c2987dbd24657c1a11b884984ff600d9f389deb0d4e634fee792"
+      },
+      "peerDigests": null,
+      "controlDigests": null,
+      "fixtureDigests": [
+        {
+          "fixture": "selected-project",
+          "before": "af49ec3d49db1f059700996c2b2f905901e57f2cbb8a09acf2436e0da6d1b7aa",
+          "after": "af49ec3d49db1f059700996c2b2f905901e57f2cbb8a09acf2436e0da6d1b7aa"
+        }
+      ],
+      "inventory": [
+        {
+          "item": "managed workbench runtime and its loopback listener",
+          "itemClass": "runtime-process-and-listener",
+          "ownership": "validation-owned-temporary"
+        },
+        {
+          "item": "project registration row and database sidecars",
+          "itemClass": "registration-resource",
+          "ownership": "product-registration-during-scenario"
+        },
+        {
+          "item": "disposable project fixture tree",
+          "itemClass": "disposable-fixture",
+          "ownership": "validation-owned-temporary"
+        }
+      ],
+      "residualCount": 0,
+      "assertionCount": 7
+    },
+    {
+      "scenario": "start-in-progress",
+      "executionIds": {
+        "runtime": "bl017-runtime-start-in-progress",
+        "api": "bl017-api-start-in-progress",
+        "home": "bl017-home-start-in-progress"
+      },
+      "outcome": "rejected",
+      "rejectionCategory": "start-in-progress",
+      "releaseMode": null,
+      "entryReleasedByConfirmedStop": false,
+      "auditTriple": null,
+      "attribution": {
+        "ownedGroupSampled": false,
+        "ceilingRecorded": true,
+        "claim": "process-group-membership"
+      },
+      "signalOrder": [],
+      "forceAfterGracefulBound": true,
+      "signalDelivery": {
+        "graceful": "not-attempted",
+        "force": "not-attempted",
+        "signalFault": "none",
+        "settlementAudits": 0
+      },
+      "signalTimeline": null,
+      "primitiveBounding": null,
+      "elapsedClass": "zero",
+      "withinDeclaredBound": true,
+      "runtimeState": "Running",
+      "apiState": "Running",
+      "homeState": "Running",
+      "failureCategory": null,
+      "events": [
+        {
+          "id": "bl017-event-start-in-progress-1",
+          "event": "runtime.start.requested",
+          "from": "stopped",
+          "to": "starting",
+          "publicState": "Starting",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-start-in-progress-2",
+          "event": "runtime.start.succeeded",
+          "from": "starting",
+          "to": "running",
+          "publicState": "Running",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        }
+      ],
+      "requestedEventCount": 0,
+      "terminalEventCount": 0,
+      "loserEventCount": 0,
+      "entryMutations": 0,
+      "terminateCallsByPhase": {
+        "stop": 0,
+        "shutdown": 0
+      },
+      "cleanupRecordsByPhase": {
+        "stop": 0,
+        "shutdown": 0,
+        "concurrent": 0,
+        "reusedPriorAudit": false
+      },
+      "identitiesCreated": 1,
+      "identitiesTerminated": 0,
+      "restarts": 0,
+      "registrationRowCount": 1,
+      "registrationDigests": {
+        "before": "fb098a023a3978f0f290ca988172e04d52f362e66d909a90699c59dadfcc38b1",
+        "after": "fb098a023a3978f0f290ca988172e04d52f362e66d909a90699c59dadfcc38b1"
+      },
+      "peerDigests": null,
+      "controlDigests": null,
+      "fixtureDigests": [
+        {
+          "fixture": "selected-project",
+          "before": "6e5906e79297cef9203dfd0d6aa1023670a18c9a5338e39553848009882c3ff5",
+          "after": "6e5906e79297cef9203dfd0d6aa1023670a18c9a5338e39553848009882c3ff5"
+        }
+      ],
+      "inventory": [
+        {
+          "item": "managed workbench runtime and its loopback listener",
+          "itemClass": "runtime-process-and-listener",
+          "ownership": "validation-owned-temporary"
+        },
+        {
+          "item": "project registration row and database sidecars",
+          "itemClass": "registration-resource",
+          "ownership": "product-registration-during-scenario"
+        },
+        {
+          "item": "disposable project fixture tree",
+          "itemClass": "disposable-fixture",
+          "ownership": "validation-owned-temporary"
+        }
+      ],
+      "residualCount": 0,
+      "assertionCount": 8
+    },
+    {
+      "scenario": "failure-retained",
+      "executionIds": {
+        "runtime": "bl017-runtime-failure-retained",
+        "api": "bl017-api-failure-retained",
+        "home": "bl017-home-failure-retained"
+      },
+      "outcome": "rejected",
+      "rejectionCategory": "failure-retained",
+      "releaseMode": null,
+      "entryReleasedByConfirmedStop": false,
+      "auditTriple": null,
+      "attribution": {
+        "ownedGroupSampled": false,
+        "ceilingRecorded": true,
+        "claim": "process-group-membership"
+      },
+      "signalOrder": [],
+      "forceAfterGracefulBound": true,
+      "signalDelivery": {
+        "graceful": "not-attempted",
+        "force": "not-attempted",
+        "signalFault": "none",
+        "settlementAudits": 0
+      },
+      "signalTimeline": null,
+      "primitiveBounding": null,
+      "elapsedClass": "zero",
+      "withinDeclaredBound": true,
+      "runtimeState": "Failed",
+      "apiState": "Failed",
+      "homeState": "Failed",
+      "failureCategory": "spawn-error",
+      "events": [
+        {
+          "id": "bl017-event-failure-retained-1",
+          "event": "runtime.start.requested",
+          "from": "stopped",
+          "to": "starting",
+          "publicState": "Starting",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-failure-retained-2",
+          "event": "runtime.start.failed",
+          "from": "starting",
+          "to": "failed",
+          "publicState": "Failed",
+          "classification": "spawn-error",
+          "elapsedClass": "within-overall"
+        }
+      ],
+      "requestedEventCount": 0,
+      "terminalEventCount": 0,
+      "loserEventCount": 0,
+      "entryMutations": 0,
+      "terminateCallsByPhase": {
+        "stop": 0,
+        "shutdown": 0
+      },
+      "cleanupRecordsByPhase": {
+        "stop": 0,
+        "shutdown": 0,
+        "concurrent": 0,
+        "reusedPriorAudit": false
+      },
+      "identitiesCreated": 0,
+      "identitiesTerminated": 0,
+      "restarts": 0,
+      "registrationRowCount": 1,
+      "registrationDigests": {
+        "before": "0d883c7e9ac735a81556fb060cc364945faf8c4b36952ce02ed99ecdadfe4e9a",
+        "after": "0d883c7e9ac735a81556fb060cc364945faf8c4b36952ce02ed99ecdadfe4e9a"
+      },
+      "peerDigests": null,
+      "controlDigests": null,
+      "fixtureDigests": [
+        {
+          "fixture": "selected-project",
+          "before": "59108accc0199ec198f4c005dc3b030298cd92b7dcb8ee233786cb3523bb2858",
+          "after": "59108accc0199ec198f4c005dc3b030298cd92b7dcb8ee233786cb3523bb2858"
+        }
+      ],
+      "inventory": [
+        {
+          "item": "managed workbench runtime and its loopback listener",
+          "itemClass": "runtime-process-and-listener",
+          "ownership": "validation-owned-temporary"
+        },
+        {
+          "item": "project registration row and database sidecars",
+          "itemClass": "registration-resource",
+          "ownership": "product-registration-during-scenario"
+        },
+        {
+          "item": "disposable project fixture tree",
+          "itemClass": "disposable-fixture",
+          "ownership": "validation-owned-temporary"
+        }
+      ],
+      "residualCount": 0,
+      "assertionCount": 8
+    },
+    {
+      "scenario": "concurrent-same-project-stop",
+      "executionIds": {
+        "runtime": "bl017-runtime-concurrent-same-project-stop",
+        "api": "bl017-api-concurrent-same-project-stop",
+        "home": "bl017-home-concurrent-same-project-stop"
+      },
+      "outcome": "stopped",
+      "rejectionCategory": null,
+      "releaseMode": "already-absent",
+      "entryReleasedByConfirmedStop": true,
+      "auditTriple": {
+        "processAbsent": true,
+        "processGroupAbsent": true,
+        "listenerAbsent": true,
+        "complete": true
+      },
+      "attribution": {
+        "ownedGroupSampled": true,
+        "ceilingRecorded": true,
+        "claim": "process-group-membership"
+      },
+      "signalOrder": [],
+      "forceAfterGracefulBound": true,
+      "signalDelivery": {
+        "graceful": "not-attempted",
+        "force": "not-attempted",
+        "signalFault": "none",
+        "settlementAudits": 0
+      },
+      "signalTimeline": null,
+      "primitiveBounding": null,
+      "elapsedClass": "within-graceful",
+      "withinDeclaredBound": true,
+      "runtimeState": "Stopped",
+      "apiState": "Stopped",
+      "homeState": "Stopped",
+      "failureCategory": null,
+      "events": [
+        {
+          "id": "bl017-event-concurrent-same-project-stop-1",
+          "event": "runtime.start.requested",
+          "from": "stopped",
+          "to": "starting",
+          "publicState": "Starting",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-concurrent-same-project-stop-2",
+          "event": "runtime.start.succeeded",
+          "from": "starting",
+          "to": "running",
+          "publicState": "Running",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-concurrent-same-project-stop-3",
+          "event": "runtime.stop.requested",
+          "from": "running",
+          "to": "stopping",
+          "publicState": "Running",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-concurrent-same-project-stop-4",
+          "event": "runtime.stop.succeeded",
+          "from": "stopping",
+          "to": "stopped",
+          "publicState": "Stopped",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        }
+      ],
+      "requestedEventCount": 1,
+      "terminalEventCount": 1,
+      "loserEventCount": 0,
+      "entryMutations": 0,
+      "terminateCallsByPhase": {
+        "stop": 1,
+        "shutdown": 0
+      },
+      "cleanupRecordsByPhase": {
+        "stop": 1,
+        "shutdown": 0,
+        "concurrent": 0,
+        "reusedPriorAudit": false
+      },
+      "identitiesCreated": 1,
+      "identitiesTerminated": 1,
+      "restarts": 0,
+      "registrationRowCount": 1,
+      "registrationDigests": {
+        "before": "c8c8551d16dd95997ed0d518a7be669149d7c70ebb097d82004267ee83c7989e",
+        "after": "c8c8551d16dd95997ed0d518a7be669149d7c70ebb097d82004267ee83c7989e"
+      },
+      "peerDigests": null,
+      "controlDigests": null,
+      "fixtureDigests": [
+        {
+          "fixture": "selected-project",
+          "before": "ff51083566d83e8f79be3b22cc601b244cd99585665f6695d28bad2914f275d6",
+          "after": "ff51083566d83e8f79be3b22cc601b244cd99585665f6695d28bad2914f275d6"
+        }
+      ],
+      "inventory": [
+        {
+          "item": "managed workbench runtime and its loopback listener",
+          "itemClass": "runtime-process-and-listener",
+          "ownership": "validation-owned-temporary"
+        },
+        {
+          "item": "project registration row and database sidecars",
+          "itemClass": "registration-resource",
+          "ownership": "product-registration-during-scenario"
+        },
+        {
+          "item": "disposable project fixture tree",
+          "itemClass": "disposable-fixture",
+          "ownership": "validation-owned-temporary"
+        }
+      ],
+      "residualCount": 0,
+      "assertionCount": 12
+    },
+    {
+      "scenario": "stop-versus-start",
+      "executionIds": {
+        "runtime": "bl017-runtime-stop-versus-start",
+        "api": "bl017-api-stop-versus-start",
+        "home": "bl017-home-stop-versus-start"
+      },
+      "outcome": "stopped",
+      "rejectionCategory": null,
+      "releaseMode": "already-absent",
+      "entryReleasedByConfirmedStop": true,
+      "auditTriple": {
+        "processAbsent": true,
+        "processGroupAbsent": true,
+        "listenerAbsent": true,
+        "complete": true
+      },
+      "attribution": {
+        "ownedGroupSampled": true,
+        "ceilingRecorded": true,
+        "claim": "process-group-membership"
+      },
+      "signalOrder": [],
+      "forceAfterGracefulBound": true,
+      "signalDelivery": {
+        "graceful": "not-attempted",
+        "force": "not-attempted",
+        "signalFault": "none",
+        "settlementAudits": 0
+      },
+      "signalTimeline": null,
+      "primitiveBounding": null,
+      "elapsedClass": "within-overall",
+      "withinDeclaredBound": true,
+      "runtimeState": "Stopped",
+      "apiState": "Stopped",
+      "homeState": "Stopped",
+      "failureCategory": null,
+      "events": [
+        {
+          "id": "bl017-event-stop-versus-start-1",
+          "event": "runtime.start.requested",
+          "from": "stopped",
+          "to": "starting",
+          "publicState": "Starting",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-stop-versus-start-2",
+          "event": "runtime.start.succeeded",
+          "from": "starting",
+          "to": "running",
+          "publicState": "Running",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-stop-versus-start-3",
+          "event": "runtime.stop.requested",
+          "from": "running",
+          "to": "stopping",
+          "publicState": "Running",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-stop-versus-start-4",
+          "event": "runtime.stop.succeeded",
+          "from": "stopping",
+          "to": "stopped",
+          "publicState": "Stopped",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        }
+      ],
+      "requestedEventCount": 1,
+      "terminalEventCount": 1,
+      "loserEventCount": 0,
+      "entryMutations": 0,
+      "terminateCallsByPhase": {
+        "stop": 1,
+        "shutdown": 0
+      },
+      "cleanupRecordsByPhase": {
+        "stop": 1,
+        "shutdown": 0,
+        "concurrent": 0,
+        "reusedPriorAudit": false
+      },
+      "identitiesCreated": 2,
+      "identitiesTerminated": 2,
+      "restarts": 0,
+      "registrationRowCount": 1,
+      "registrationDigests": {
+        "before": "c6298318a69057f503d1a7ae9e519ccd755a152707478078dd8dfe942cb6d11b",
+        "after": "c6298318a69057f503d1a7ae9e519ccd755a152707478078dd8dfe942cb6d11b"
+      },
+      "peerDigests": null,
+      "controlDigests": null,
+      "fixtureDigests": [
+        {
+          "fixture": "selected-project",
+          "before": "3ab4e7e8a0570401c8242f11b9595587612b750865a0ca8fd497f65bceadc2c8",
+          "after": "3ab4e7e8a0570401c8242f11b9595587612b750865a0ca8fd497f65bceadc2c8"
+        }
+      ],
+      "inventory": [
+        {
+          "item": "managed workbench runtime and its loopback listener",
+          "itemClass": "runtime-process-and-listener",
+          "ownership": "validation-owned-temporary"
+        },
+        {
+          "item": "project registration row and database sidecars",
+          "itemClass": "registration-resource",
+          "ownership": "product-registration-during-scenario"
+        },
+        {
+          "item": "disposable project fixture tree",
+          "itemClass": "disposable-fixture",
+          "ownership": "validation-owned-temporary"
+        }
+      ],
+      "residualCount": 0,
+      "assertionCount": 12
+    },
+    {
+      "scenario": "stop-versus-proxy-acquisition",
+      "executionIds": {
+        "runtime": "bl017-runtime-stop-versus-proxy-acquisition",
+        "api": "bl017-api-stop-versus-proxy-acquisition",
+        "home": "bl017-home-stop-versus-proxy-acquisition"
+      },
+      "outcome": "stopped",
+      "rejectionCategory": null,
+      "releaseMode": "already-absent",
+      "entryReleasedByConfirmedStop": true,
+      "auditTriple": {
+        "processAbsent": true,
+        "processGroupAbsent": true,
+        "listenerAbsent": true,
+        "complete": true
+      },
+      "attribution": {
+        "ownedGroupSampled": true,
+        "ceilingRecorded": true,
+        "claim": "process-group-membership"
+      },
+      "signalOrder": [],
+      "forceAfterGracefulBound": true,
+      "signalDelivery": {
+        "graceful": "not-attempted",
+        "force": "not-attempted",
+        "signalFault": "none",
+        "settlementAudits": 0
+      },
+      "signalTimeline": null,
+      "primitiveBounding": null,
+      "elapsedClass": "within-overall",
+      "withinDeclaredBound": true,
+      "runtimeState": "Stopped",
+      "apiState": "Stopped",
+      "homeState": "Stopped",
+      "failureCategory": null,
+      "events": [
+        {
+          "id": "bl017-event-stop-versus-proxy-acquisition-1",
+          "event": "runtime.start.requested",
+          "from": "stopped",
+          "to": "starting",
+          "publicState": "Starting",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-stop-versus-proxy-acquisition-2",
+          "event": "runtime.start.succeeded",
+          "from": "starting",
+          "to": "running",
+          "publicState": "Running",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-stop-versus-proxy-acquisition-3",
+          "event": "runtime.stop.requested",
+          "from": "running",
+          "to": "stopping",
+          "publicState": "Running",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-stop-versus-proxy-acquisition-4",
+          "event": "runtime.stop.succeeded",
+          "from": "stopping",
+          "to": "stopped",
+          "publicState": "Stopped",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        }
+      ],
+      "requestedEventCount": 1,
+      "terminalEventCount": 1,
+      "loserEventCount": 0,
+      "entryMutations": 0,
+      "terminateCallsByPhase": {
+        "stop": 1,
+        "shutdown": 0
+      },
+      "cleanupRecordsByPhase": {
+        "stop": 1,
+        "shutdown": 0,
+        "concurrent": 0,
+        "reusedPriorAudit": false
+      },
+      "identitiesCreated": 1,
+      "identitiesTerminated": 1,
+      "restarts": 0,
+      "registrationRowCount": 1,
+      "registrationDigests": {
+        "before": "32df5d7297ca2a4cdcfcfb8cdd82490ac3a050ccf3c7447cc7d79755f0f0f355",
+        "after": "32df5d7297ca2a4cdcfcfb8cdd82490ac3a050ccf3c7447cc7d79755f0f0f355"
+      },
+      "peerDigests": null,
+      "controlDigests": null,
+      "fixtureDigests": [
+        {
+          "fixture": "selected-project",
+          "before": "3806596358832ba0b8c680d9ce5114d61f045e43188a92bbfdf441d7625ec08f",
+          "after": "3806596358832ba0b8c680d9ce5114d61f045e43188a92bbfdf441d7625ec08f"
+        }
+      ],
+      "inventory": [
+        {
+          "item": "managed workbench runtime and its loopback listener",
+          "itemClass": "runtime-process-and-listener",
+          "ownership": "validation-owned-temporary"
+        },
+        {
+          "item": "project registration row and database sidecars",
+          "itemClass": "registration-resource",
+          "ownership": "product-registration-during-scenario"
+        },
+        {
+          "item": "disposable project fixture tree",
+          "itemClass": "disposable-fixture",
+          "ownership": "validation-owned-temporary"
+        }
+      ],
+      "residualCount": 0,
+      "assertionCount": 12
+    },
+    {
+      "scenario": "stop-versus-exit",
+      "executionIds": {
+        "runtime": "bl017-runtime-stop-versus-exit",
+        "api": "bl017-api-stop-versus-exit",
+        "home": "bl017-home-stop-versus-exit"
+      },
+      "outcome": "stopped",
+      "rejectionCategory": null,
+      "releaseMode": "already-absent",
+      "entryReleasedByConfirmedStop": true,
+      "auditTriple": {
+        "processAbsent": true,
+        "processGroupAbsent": true,
+        "listenerAbsent": true,
+        "complete": true
+      },
+      "attribution": {
+        "ownedGroupSampled": true,
+        "ceilingRecorded": true,
+        "claim": "process-group-membership"
+      },
+      "signalOrder": [],
+      "forceAfterGracefulBound": true,
+      "signalDelivery": {
+        "graceful": "not-attempted",
+        "force": "not-attempted",
+        "signalFault": "none",
+        "settlementAudits": 0
+      },
+      "signalTimeline": null,
+      "primitiveBounding": null,
+      "elapsedClass": "within-overall",
+      "withinDeclaredBound": true,
+      "runtimeState": "Stopped",
+      "apiState": "Stopped",
+      "homeState": "Stopped",
+      "failureCategory": null,
+      "events": [
+        {
+          "id": "bl017-event-stop-versus-exit-1",
+          "event": "runtime.stop.requested",
+          "from": "running",
+          "to": "stopping",
+          "publicState": "Running",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-stop-versus-exit-2",
+          "event": "runtime.stop.succeeded",
+          "from": "stopping",
+          "to": "stopped",
+          "publicState": "Stopped",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        }
+      ],
+      "requestedEventCount": 1,
+      "terminalEventCount": 1,
+      "loserEventCount": 0,
+      "entryMutations": 0,
+      "terminateCallsByPhase": {
+        "stop": 1,
+        "shutdown": 0
+      },
+      "cleanupRecordsByPhase": {
+        "stop": 1,
+        "shutdown": 0,
+        "concurrent": 0,
+        "reusedPriorAudit": false
+      },
+      "identitiesCreated": 2,
+      "identitiesTerminated": 2,
+      "restarts": 0,
+      "registrationRowCount": 1,
+      "registrationDigests": {
+        "before": "c4fceffe04d04c3a94498e358f0f2f7a88e72e3625769c6499b56260ef6a7f2c",
+        "after": "c4fceffe04d04c3a94498e358f0f2f7a88e72e3625769c6499b56260ef6a7f2c"
+      },
+      "peerDigests": null,
+      "controlDigests": null,
+      "fixtureDigests": [
+        {
+          "fixture": "selected-project",
+          "before": "fa3a4e780e1cfdff397b482d2acec06456860b3f072ab350877bbb2a6190ef7e",
+          "after": "fa3a4e780e1cfdff397b482d2acec06456860b3f072ab350877bbb2a6190ef7e"
+        }
+      ],
+      "inventory": [
+        {
+          "item": "managed workbench runtime and its loopback listener",
+          "itemClass": "runtime-process-and-listener",
+          "ownership": "validation-owned-temporary"
+        },
+        {
+          "item": "project registration row and database sidecars",
+          "itemClass": "registration-resource",
+          "ownership": "product-registration-during-scenario"
+        },
+        {
+          "item": "disposable project fixture tree",
+          "itemClass": "disposable-fixture",
+          "ownership": "validation-owned-temporary"
+        }
+      ],
+      "residualCount": 0,
+      "assertionCount": 13
+    },
+    {
+      "scenario": "stop-versus-health",
+      "executionIds": {
+        "runtime": "bl017-runtime-stop-versus-health",
+        "api": "bl017-api-stop-versus-health",
+        "home": "bl017-home-stop-versus-health"
+      },
+      "outcome": "stopped",
+      "rejectionCategory": null,
+      "releaseMode": "already-absent",
+      "entryReleasedByConfirmedStop": true,
+      "auditTriple": {
+        "processAbsent": true,
+        "processGroupAbsent": true,
+        "listenerAbsent": true,
+        "complete": true
+      },
+      "attribution": {
+        "ownedGroupSampled": true,
+        "ceilingRecorded": true,
+        "claim": "process-group-membership"
+      },
+      "signalOrder": [],
+      "forceAfterGracefulBound": true,
+      "signalDelivery": {
+        "graceful": "not-attempted",
+        "force": "not-attempted",
+        "signalFault": "none",
+        "settlementAudits": 0
+      },
+      "signalTimeline": null,
+      "primitiveBounding": null,
+      "elapsedClass": "within-overall",
+      "withinDeclaredBound": true,
+      "runtimeState": "Stopped",
+      "apiState": "Stopped",
+      "homeState": "Stopped",
+      "failureCategory": null,
+      "events": [
+        {
+          "id": "bl017-event-stop-versus-health-1",
+          "event": "runtime.stop.requested",
+          "from": "running",
+          "to": "stopping",
+          "publicState": "Running",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-stop-versus-health-2",
+          "event": "runtime.stop.succeeded",
+          "from": "stopping",
+          "to": "stopped",
+          "publicState": "Stopped",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        }
+      ],
+      "requestedEventCount": 1,
+      "terminalEventCount": 1,
+      "loserEventCount": 0,
+      "entryMutations": 0,
+      "terminateCallsByPhase": {
+        "stop": 1,
+        "shutdown": 0
+      },
+      "cleanupRecordsByPhase": {
+        "stop": 1,
+        "shutdown": 0,
+        "concurrent": 0,
+        "reusedPriorAudit": false
+      },
+      "identitiesCreated": 2,
+      "identitiesTerminated": 2,
+      "restarts": 0,
+      "registrationRowCount": 1,
+      "registrationDigests": {
+        "before": "2b679cad596bba364a392cac9eb06b24ee64d3b9bec36eb3c7efbcc0f371611d",
+        "after": "2b679cad596bba364a392cac9eb06b24ee64d3b9bec36eb3c7efbcc0f371611d"
+      },
+      "peerDigests": null,
+      "controlDigests": null,
+      "fixtureDigests": [
+        {
+          "fixture": "selected-project",
+          "before": "0446f1d13f99d1600b839f6f538d0358459cb9a99b991970661e42df794e3f75",
+          "after": "0446f1d13f99d1600b839f6f538d0358459cb9a99b991970661e42df794e3f75"
+        }
+      ],
+      "inventory": [
+        {
+          "item": "managed workbench runtime and its loopback listener",
+          "itemClass": "runtime-process-and-listener",
+          "ownership": "validation-owned-temporary"
+        },
+        {
+          "item": "project registration row and database sidecars",
+          "itemClass": "registration-resource",
+          "ownership": "product-registration-during-scenario"
+        },
+        {
+          "item": "disposable project fixture tree",
+          "itemClass": "disposable-fixture",
+          "ownership": "validation-owned-temporary"
+        }
+      ],
+      "residualCount": 0,
+      "assertionCount": 14
+    },
+    {
+      "scenario": "reuse-success-after-stop-claim",
+      "executionIds": {
+        "runtime": "bl017-runtime-reuse-success-after-stop-claim",
+        "api": "bl017-api-reuse-success-after-stop-claim",
+        "home": "bl017-home-reuse-success-after-stop-claim"
+      },
+      "outcome": "stopped",
+      "rejectionCategory": null,
+      "releaseMode": "already-absent",
+      "entryReleasedByConfirmedStop": true,
+      "auditTriple": {
+        "processAbsent": true,
+        "processGroupAbsent": true,
+        "listenerAbsent": true,
+        "complete": true
+      },
+      "attribution": {
+        "ownedGroupSampled": true,
+        "ceilingRecorded": true,
+        "claim": "process-group-membership"
+      },
+      "signalOrder": [],
+      "forceAfterGracefulBound": true,
+      "signalDelivery": {
+        "graceful": "not-attempted",
+        "force": "not-attempted",
+        "signalFault": "none",
+        "settlementAudits": 0
+      },
+      "signalTimeline": null,
+      "primitiveBounding": null,
+      "elapsedClass": "within-overall",
+      "withinDeclaredBound": true,
+      "runtimeState": "Stopped",
+      "apiState": "Stopped",
+      "homeState": "Stopped",
+      "failureCategory": null,
+      "events": [
+        {
+          "id": "bl017-event-reuse-success-after-stop-claim-1",
+          "event": "runtime.stop.requested",
+          "from": "running",
+          "to": "stopping",
+          "publicState": "Running",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-reuse-success-after-stop-claim-2",
+          "event": "runtime.stop.succeeded",
+          "from": "stopping",
+          "to": "stopped",
+          "publicState": "Stopped",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        }
+      ],
+      "requestedEventCount": 1,
+      "terminalEventCount": 1,
+      "loserEventCount": 0,
+      "entryMutations": 0,
+      "terminateCallsByPhase": {
+        "stop": 1,
+        "shutdown": 0
+      },
+      "cleanupRecordsByPhase": {
+        "stop": 1,
+        "shutdown": 0,
+        "concurrent": 0,
+        "reusedPriorAudit": false
+      },
+      "identitiesCreated": 1,
+      "identitiesTerminated": 1,
+      "restarts": 0,
+      "registrationRowCount": 1,
+      "registrationDigests": {
+        "before": "353f32537b61eae4235e9f704be44856071038bb17238a2283d0f33c5c6b5ca1",
+        "after": "353f32537b61eae4235e9f704be44856071038bb17238a2283d0f33c5c6b5ca1"
+      },
+      "peerDigests": null,
+      "controlDigests": null,
+      "fixtureDigests": [
+        {
+          "fixture": "selected-project",
+          "before": "73f8672128dd4094386f37432f3148a7b47f2ac95fc39c5a513b15c4f93d29e3",
+          "after": "73f8672128dd4094386f37432f3148a7b47f2ac95fc39c5a513b15c4f93d29e3"
+        }
+      ],
+      "inventory": [
+        {
+          "item": "managed workbench runtime and its loopback listener",
+          "itemClass": "runtime-process-and-listener",
+          "ownership": "validation-owned-temporary"
+        },
+        {
+          "item": "project registration row and database sidecars",
+          "itemClass": "registration-resource",
+          "ownership": "product-registration-during-scenario"
+        },
+        {
+          "item": "disposable project fixture tree",
+          "itemClass": "disposable-fixture",
+          "ownership": "validation-owned-temporary"
+        }
+      ],
+      "residualCount": 0,
+      "assertionCount": 13
+    },
+    {
+      "scenario": "reuse-failure-after-stop-claim",
+      "executionIds": {
+        "runtime": "bl017-runtime-reuse-failure-after-stop-claim",
+        "api": "bl017-api-reuse-failure-after-stop-claim",
+        "home": "bl017-home-reuse-failure-after-stop-claim"
+      },
+      "outcome": "stopped",
+      "rejectionCategory": null,
+      "releaseMode": "already-absent",
+      "entryReleasedByConfirmedStop": true,
+      "auditTriple": {
+        "processAbsent": true,
+        "processGroupAbsent": true,
+        "listenerAbsent": true,
+        "complete": true
+      },
+      "attribution": {
+        "ownedGroupSampled": true,
+        "ceilingRecorded": true,
+        "claim": "process-group-membership"
+      },
+      "signalOrder": [],
+      "forceAfterGracefulBound": true,
+      "signalDelivery": {
+        "graceful": "not-attempted",
+        "force": "not-attempted",
+        "signalFault": "none",
+        "settlementAudits": 0
+      },
+      "signalTimeline": null,
+      "primitiveBounding": null,
+      "elapsedClass": "within-overall",
+      "withinDeclaredBound": true,
+      "runtimeState": "Stopped",
+      "apiState": "Stopped",
+      "homeState": "Stopped",
+      "failureCategory": null,
+      "events": [
+        {
+          "id": "bl017-event-reuse-failure-after-stop-claim-1",
+          "event": "runtime.stop.requested",
+          "from": "running",
+          "to": "stopping",
+          "publicState": "Running",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-reuse-failure-after-stop-claim-2",
+          "event": "runtime.stop.succeeded",
+          "from": "stopping",
+          "to": "stopped",
+          "publicState": "Stopped",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        }
+      ],
+      "requestedEventCount": 1,
+      "terminalEventCount": 1,
+      "loserEventCount": 0,
+      "entryMutations": 0,
+      "terminateCallsByPhase": {
+        "stop": 1,
+        "shutdown": 0
+      },
+      "cleanupRecordsByPhase": {
+        "stop": 1,
+        "shutdown": 0,
+        "concurrent": 0,
+        "reusedPriorAudit": false
+      },
+      "identitiesCreated": 1,
+      "identitiesTerminated": 1,
+      "restarts": 0,
+      "registrationRowCount": 1,
+      "registrationDigests": {
+        "before": "9200ce9a9c7e639594ba88a13faf3cb328bfc4d91675149b27a3c42fe26cf3f3",
+        "after": "9200ce9a9c7e639594ba88a13faf3cb328bfc4d91675149b27a3c42fe26cf3f3"
+      },
+      "peerDigests": null,
+      "controlDigests": null,
+      "fixtureDigests": [
+        {
+          "fixture": "selected-project",
+          "before": "760858640081e97b1075105f9af16759e7e1cd3b00a7b925a99d60b50d0cbb58",
+          "after": "760858640081e97b1075105f9af16759e7e1cd3b00a7b925a99d60b50d0cbb58"
+        }
+      ],
+      "inventory": [
+        {
+          "item": "managed workbench runtime and its loopback listener",
+          "itemClass": "runtime-process-and-listener",
+          "ownership": "validation-owned-temporary"
+        },
+        {
+          "item": "project registration row and database sidecars",
+          "itemClass": "registration-resource",
+          "ownership": "product-registration-during-scenario"
+        },
+        {
+          "item": "disposable project fixture tree",
+          "itemClass": "disposable-fixture",
+          "ownership": "validation-owned-temporary"
+        }
+      ],
+      "residualCount": 0,
+      "assertionCount": 13
+    },
+    {
+      "scenario": "stop-settlement-ownership-invariant",
+      "executionIds": {
+        "runtime": "bl017-runtime-stop-settlement-ownership-invariant",
+        "api": "bl017-api-stop-settlement-ownership-invariant",
+        "home": "bl017-home-stop-settlement-ownership-invariant"
+      },
+      "outcome": "invariant-fault",
+      "rejectionCategory": null,
+      "releaseMode": null,
+      "entryReleasedByConfirmedStop": false,
+      "auditTriple": null,
+      "attribution": {
+        "ownedGroupSampled": false,
+        "ceilingRecorded": true,
+        "claim": "process-group-membership"
+      },
+      "signalOrder": [],
+      "forceAfterGracefulBound": true,
+      "signalDelivery": {
+        "graceful": "not-attempted",
+        "force": "not-attempted",
+        "signalFault": "none",
+        "settlementAudits": 0
+      },
+      "signalTimeline": null,
+      "primitiveBounding": null,
+      "elapsedClass": "within-overall",
+      "withinDeclaredBound": true,
+      "runtimeState": "Running",
+      "apiState": "Running",
+      "homeState": "Running",
+      "failureCategory": null,
+      "events": [
+        {
+          "id": "bl017-event-stop-settlement-ownership-invariant-1",
+          "event": "runtime.start.requested",
+          "from": "stopped",
+          "to": "starting",
+          "publicState": "Starting",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-stop-settlement-ownership-invariant-2",
+          "event": "runtime.start.succeeded",
+          "from": "starting",
+          "to": "running",
+          "publicState": "Running",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-stop-settlement-ownership-invariant-3",
+          "event": "runtime.stop.requested",
+          "from": "running",
+          "to": "stopping",
+          "publicState": "Running",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        }
+      ],
+      "requestedEventCount": 1,
+      "terminalEventCount": 0,
+      "loserEventCount": 0,
+      "entryMutations": 0,
+      "terminateCallsByPhase": {
+        "stop": 1,
+        "shutdown": 0
+      },
+      "cleanupRecordsByPhase": {
+        "stop": 0,
+        "shutdown": 0,
+        "concurrent": 0,
+        "reusedPriorAudit": false
+      },
+      "identitiesCreated": 1,
+      "identitiesTerminated": 0,
+      "restarts": 0,
+      "registrationRowCount": 1,
+      "registrationDigests": {
+        "before": "19ac01da116f772253fb211b39c95469b369a45ff374645e1b34b162a6aa49b1",
+        "after": "19ac01da116f772253fb211b39c95469b369a45ff374645e1b34b162a6aa49b1"
+      },
+      "peerDigests": null,
+      "controlDigests": null,
+      "fixtureDigests": [
+        {
+          "fixture": "selected-project",
+          "before": "320fab5bb6e1595535c222a6d701ed8732d82a970decd0e6db84d4cd45fb032c",
+          "after": "320fab5bb6e1595535c222a6d701ed8732d82a970decd0e6db84d4cd45fb032c"
+        }
+      ],
+      "inventory": [
+        {
+          "item": "managed workbench runtime and its loopback listener",
+          "itemClass": "runtime-process-and-listener",
+          "ownership": "validation-owned-temporary"
+        },
+        {
+          "item": "project registration row and database sidecars",
+          "itemClass": "registration-resource",
+          "ownership": "product-registration-during-scenario"
+        },
+        {
+          "item": "disposable project fixture tree",
+          "itemClass": "disposable-fixture",
+          "ownership": "validation-owned-temporary"
+        }
+      ],
+      "residualCount": 0,
+      "assertionCount": 14
+    },
+    {
+      "scenario": "graceful-sequencer-bound",
+      "executionIds": {
+        "runtime": "bl017-runtime-graceful-sequencer-bound",
+        "api": "bl017-api-graceful-sequencer-bound",
+        "home": "bl017-home-graceful-sequencer-bound"
+      },
+      "outcome": "not-attempted",
+      "rejectionCategory": null,
+      "releaseMode": "graceful",
+      "entryReleasedByConfirmedStop": false,
+      "auditTriple": {
+        "processAbsent": true,
+        "processGroupAbsent": true,
+        "listenerAbsent": true,
+        "complete": true
+      },
+      "attribution": {
+        "ownedGroupSampled": true,
+        "ceilingRecorded": true,
+        "claim": "process-group-membership"
+      },
+      "signalOrder": [
+        "graceful"
+      ],
+      "forceAfterGracefulBound": true,
+      "signalDelivery": {
+        "graceful": "delivered",
+        "force": "not-attempted",
+        "signalFault": "none",
+        "settlementAudits": 1
+      },
+      "signalTimeline": {
+        "preSignalMs": 0,
+        "sigtermAt": 0,
+        "sigkillAt": null,
+        "gracefulWindowMs": null,
+        "forceWindowMs": null
+      },
+      "primitiveBounding": {
+        "awaitedCallsBounded": true,
+        "abandonedCalls": 0,
+        "incompleteAuditsDiscarded": 0,
+        "deadlineSource": "trusted-scheduler",
+        "clockSource": "monotonic",
+        "callerPreAborted": false,
+        "signalsAfterDeadline": 0,
+        "timersSurvivingReturn": 0,
+        "unhandledRejections": 0
+      },
+      "elapsedClass": "within-graceful",
+      "withinDeclaredBound": true,
+      "runtimeState": "Stopped",
+      "apiState": "Stopped",
+      "homeState": "Stopped",
+      "failureCategory": null,
+      "events": [],
+      "requestedEventCount": 0,
+      "terminalEventCount": 0,
+      "loserEventCount": 0,
+      "entryMutations": 0,
+      "terminateCallsByPhase": {
+        "stop": 0,
+        "shutdown": 0
+      },
+      "cleanupRecordsByPhase": {
+        "stop": 0,
+        "shutdown": 0,
+        "concurrent": 0,
+        "reusedPriorAudit": false
+      },
+      "identitiesCreated": 0,
+      "identitiesTerminated": 0,
+      "restarts": 0,
+      "registrationRowCount": 1,
+      "registrationDigests": {
+        "before": "39298ca77d1af542e38a8cba6ec0496f0a3d2b9db8470ac8d1a5dfe2c2dfa18e",
+        "after": "39298ca77d1af542e38a8cba6ec0496f0a3d2b9db8470ac8d1a5dfe2c2dfa18e"
+      },
+      "peerDigests": null,
+      "controlDigests": null,
+      "fixtureDigests": [
+        {
+          "fixture": "selected-project",
+          "before": "04e889d8ffd6638682bcb2f89f1c4e13bf4be03d988dc2dd034b9583d1fe4272",
+          "after": "04e889d8ffd6638682bcb2f89f1c4e13bf4be03d988dc2dd034b9583d1fe4272"
+        }
+      ],
+      "inventory": [
+        {
+          "item": "managed workbench runtime and its loopback listener",
+          "itemClass": "runtime-process-and-listener",
+          "ownership": "validation-owned-temporary"
+        },
+        {
+          "item": "project registration row and database sidecars",
+          "itemClass": "registration-resource",
+          "ownership": "product-registration-during-scenario"
+        },
+        {
+          "item": "disposable project fixture tree",
+          "itemClass": "disposable-fixture",
+          "ownership": "validation-owned-temporary"
+        }
+      ],
+      "residualCount": 0,
+      "assertionCount": 10
+    },
+    {
+      "scenario": "force-escalation-sequencer",
+      "executionIds": {
+        "runtime": "bl017-runtime-force-escalation-sequencer",
+        "api": "bl017-api-force-escalation-sequencer",
+        "home": "bl017-home-force-escalation-sequencer"
+      },
+      "outcome": "not-attempted",
+      "rejectionCategory": null,
+      "releaseMode": "escalated",
+      "entryReleasedByConfirmedStop": false,
+      "auditTriple": {
+        "processAbsent": true,
+        "processGroupAbsent": true,
+        "listenerAbsent": true,
+        "complete": true
+      },
+      "attribution": {
+        "ownedGroupSampled": true,
+        "ceilingRecorded": true,
+        "claim": "process-group-membership"
+      },
+      "signalOrder": [
+        "graceful",
+        "force"
+      ],
+      "forceAfterGracefulBound": true,
+      "signalDelivery": {
+        "graceful": "delivered",
+        "force": "delivered",
+        "signalFault": "none",
+        "settlementAudits": 1
+      },
+      "signalTimeline": {
+        "preSignalMs": 0,
+        "sigtermAt": 0,
+        "sigkillAt": 120,
+        "gracefulWindowMs": 120,
+        "forceWindowMs": 120
+      },
+      "primitiveBounding": {
+        "awaitedCallsBounded": true,
+        "abandonedCalls": 0,
+        "incompleteAuditsDiscarded": 0,
+        "deadlineSource": "trusted-scheduler",
+        "clockSource": "monotonic",
+        "callerPreAborted": false,
+        "signalsAfterDeadline": 0,
+        "timersSurvivingReturn": 0,
+        "unhandledRejections": 0
+      },
+      "elapsedClass": "within-overall",
+      "withinDeclaredBound": true,
+      "runtimeState": "Stopped",
+      "apiState": "Stopped",
+      "homeState": "Stopped",
+      "failureCategory": null,
+      "events": [],
+      "requestedEventCount": 0,
+      "terminalEventCount": 0,
+      "loserEventCount": 0,
+      "entryMutations": 0,
+      "terminateCallsByPhase": {
+        "stop": 0,
+        "shutdown": 0
+      },
+      "cleanupRecordsByPhase": {
+        "stop": 0,
+        "shutdown": 0,
+        "concurrent": 0,
+        "reusedPriorAudit": false
+      },
+      "identitiesCreated": 0,
+      "identitiesTerminated": 0,
+      "restarts": 0,
+      "registrationRowCount": 1,
+      "registrationDigests": {
+        "before": "767f2bd6d9329f72220e3bb167f233344e13ee76a87d9c5b8456a1e75ca05bc4",
+        "after": "767f2bd6d9329f72220e3bb167f233344e13ee76a87d9c5b8456a1e75ca05bc4"
+      },
+      "peerDigests": null,
+      "controlDigests": null,
+      "fixtureDigests": [
+        {
+          "fixture": "selected-project",
+          "before": "b8d5f22f2aad0cd967d7fae49cb415223382d25ceb200e2dcb27d9006f8ad782",
+          "after": "b8d5f22f2aad0cd967d7fae49cb415223382d25ceb200e2dcb27d9006f8ad782"
+        }
+      ],
+      "inventory": [
+        {
+          "item": "managed workbench runtime and its loopback listener",
+          "itemClass": "runtime-process-and-listener",
+          "ownership": "validation-owned-temporary"
+        },
+        {
+          "item": "project registration row and database sidecars",
+          "itemClass": "registration-resource",
+          "ownership": "product-registration-during-scenario"
+        },
+        {
+          "item": "disposable project fixture tree",
+          "itemClass": "disposable-fixture",
+          "ownership": "validation-owned-temporary"
+        }
+      ],
+      "residualCount": 0,
+      "assertionCount": 12
+    },
+    {
+      "scenario": "sequencer-deadline-cancellation",
+      "executionIds": {
+        "runtime": "bl017-runtime-sequencer-deadline-cancellation",
+        "api": "bl017-api-sequencer-deadline-cancellation",
+        "home": "bl017-home-sequencer-deadline-cancellation"
+      },
+      "outcome": "not-attempted",
+      "rejectionCategory": null,
+      "releaseMode": "unconfirmed",
+      "entryReleasedByConfirmedStop": false,
+      "auditTriple": {
+        "processAbsent": false,
+        "processGroupAbsent": false,
+        "listenerAbsent": false,
+        "complete": false
+      },
+      "attribution": {
+        "ownedGroupSampled": false,
+        "ceilingRecorded": true,
+        "claim": "process-group-membership"
+      },
+      "signalOrder": [],
+      "forceAfterGracefulBound": true,
+      "signalDelivery": {
+        "graceful": "not-attempted",
+        "force": "not-attempted",
+        "signalFault": "none",
+        "settlementAudits": 0
+      },
+      "signalTimeline": null,
+      "primitiveBounding": {
+        "awaitedCallsBounded": true,
+        "abandonedCalls": 1,
+        "incompleteAuditsDiscarded": 1,
+        "deadlineSource": "trusted-scheduler",
+        "clockSource": "monotonic",
+        "callerPreAborted": false,
+        "signalsAfterDeadline": 0,
+        "timersSurvivingReturn": 0,
+        "unhandledRejections": 0
+      },
+      "elapsedClass": "within-overall",
+      "withinDeclaredBound": true,
+      "runtimeState": "Stopped",
+      "apiState": "Stopped",
+      "homeState": "Stopped",
+      "failureCategory": null,
+      "events": [],
+      "requestedEventCount": 0,
+      "terminalEventCount": 0,
+      "loserEventCount": 0,
+      "entryMutations": 0,
+      "terminateCallsByPhase": {
+        "stop": 0,
+        "shutdown": 0
+      },
+      "cleanupRecordsByPhase": {
+        "stop": 0,
+        "shutdown": 0,
+        "concurrent": 0,
+        "reusedPriorAudit": false
+      },
+      "identitiesCreated": 0,
+      "identitiesTerminated": 0,
+      "restarts": 0,
+      "registrationRowCount": 1,
+      "registrationDigests": {
+        "before": "f9a9f5f9e08d6ec8541e40ff8f2996521940e41e64b3a092d4866f3a4c0ed62a",
+        "after": "f9a9f5f9e08d6ec8541e40ff8f2996521940e41e64b3a092d4866f3a4c0ed62a"
+      },
+      "peerDigests": null,
+      "controlDigests": null,
+      "fixtureDigests": [
+        {
+          "fixture": "selected-project",
+          "before": "8f076fcb579db9f93b29bca2a456a9e2f89f0fa7ff60fe7747f1191e12363d02",
+          "after": "8f076fcb579db9f93b29bca2a456a9e2f89f0fa7ff60fe7747f1191e12363d02"
+        }
+      ],
+      "inventory": [
+        {
+          "item": "managed workbench runtime and its loopback listener",
+          "itemClass": "runtime-process-and-listener",
+          "ownership": "validation-owned-temporary"
+        },
+        {
+          "item": "project registration row and database sidecars",
+          "itemClass": "registration-resource",
+          "ownership": "product-registration-during-scenario"
+        },
+        {
+          "item": "disposable project fixture tree",
+          "itemClass": "disposable-fixture",
+          "ownership": "validation-owned-temporary"
+        }
+      ],
+      "residualCount": 0,
+      "assertionCount": 20
+    },
+    {
+      "scenario": "owned-descendant-attribution",
+      "executionIds": {
+        "runtime": "bl017-runtime-owned-descendant-attribution",
+        "api": "bl017-api-owned-descendant-attribution",
+        "home": "bl017-home-owned-descendant-attribution"
+      },
+      "outcome": "stopped",
+      "rejectionCategory": null,
+      "releaseMode": "graceful",
+      "entryReleasedByConfirmedStop": true,
+      "auditTriple": {
+        "processAbsent": true,
+        "processGroupAbsent": true,
+        "listenerAbsent": true,
+        "complete": true
+      },
+      "attribution": {
+        "ownedGroupSampled": true,
+        "ceilingRecorded": true,
+        "claim": "process-group-membership"
+      },
+      "signalOrder": [
+        "graceful"
+      ],
+      "forceAfterGracefulBound": true,
+      "signalDelivery": {
+        "graceful": "delivered",
+        "force": "not-attempted",
+        "signalFault": "none",
+        "settlementAudits": 1
+      },
+      "signalTimeline": {
+        "preSignalMs": 0,
+        "sigtermAt": 0,
+        "sigkillAt": null,
+        "gracefulWindowMs": null,
+        "forceWindowMs": null
+      },
+      "primitiveBounding": {
+        "awaitedCallsBounded": true,
+        "abandonedCalls": 0,
+        "incompleteAuditsDiscarded": 0,
+        "deadlineSource": "trusted-scheduler",
+        "clockSource": "monotonic",
+        "callerPreAborted": false,
+        "signalsAfterDeadline": 0,
+        "timersSurvivingReturn": 0,
+        "unhandledRejections": 0
+      },
+      "elapsedClass": "within-graceful",
+      "withinDeclaredBound": true,
+      "runtimeState": "Stopped",
+      "apiState": "Stopped",
+      "homeState": "Stopped",
+      "failureCategory": null,
+      "events": [
+        {
+          "id": "bl017-event-owned-descendant-attribution-1",
+          "event": "runtime.start.requested",
+          "from": "stopped",
+          "to": "starting",
+          "publicState": "Starting",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-owned-descendant-attribution-2",
+          "event": "runtime.start.succeeded",
+          "from": "starting",
+          "to": "running",
+          "publicState": "Running",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-owned-descendant-attribution-3",
+          "event": "runtime.stop.requested",
+          "from": "running",
+          "to": "stopping",
+          "publicState": "Running",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-owned-descendant-attribution-4",
+          "event": "runtime.stop.succeeded",
+          "from": "stopping",
+          "to": "stopped",
+          "publicState": "Stopped",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        }
+      ],
+      "requestedEventCount": 1,
+      "terminalEventCount": 1,
+      "loserEventCount": 0,
+      "entryMutations": 0,
+      "terminateCallsByPhase": {
+        "stop": 1,
+        "shutdown": 0
+      },
+      "cleanupRecordsByPhase": {
+        "stop": 1,
+        "shutdown": 0,
+        "concurrent": 0,
+        "reusedPriorAudit": false
+      },
+      "identitiesCreated": 1,
+      "identitiesTerminated": 1,
+      "restarts": 0,
+      "registrationRowCount": 1,
+      "registrationDigests": {
+        "before": "5a3bd1e3214cab2664e845152bcbe84b18fc94e970b819dc26c851504188bb26",
+        "after": "5a3bd1e3214cab2664e845152bcbe84b18fc94e970b819dc26c851504188bb26"
+      },
+      "peerDigests": null,
+      "controlDigests": null,
+      "fixtureDigests": [
+        {
+          "fixture": "selected-project",
+          "before": "c1391329d35d4c3084d7c952d75968cb6bef131e5acc8e131399999ed22a99f3",
+          "after": "c1391329d35d4c3084d7c952d75968cb6bef131e5acc8e131399999ed22a99f3"
+        }
+      ],
+      "inventory": [
+        {
+          "item": "managed workbench runtime and its loopback listener",
+          "itemClass": "runtime-process-and-listener",
+          "ownership": "validation-owned-temporary"
+        },
+        {
+          "item": "project registration row and database sidecars",
+          "itemClass": "registration-resource",
+          "ownership": "product-registration-during-scenario"
+        },
+        {
+          "item": "disposable project fixture tree",
+          "itemClass": "disposable-fixture",
+          "ownership": "validation-owned-temporary"
+        }
+      ],
+      "residualCount": 0,
+      "assertionCount": 12
+    },
+    {
+      "scenario": "global-shutdown-during-stop",
+      "executionIds": {
+        "runtime": "bl017-runtime-global-shutdown-during-stop",
+        "api": "bl017-api-global-shutdown-during-stop",
+        "home": "bl017-home-global-shutdown-during-stop"
+      },
+      "outcome": "stopped",
+      "rejectionCategory": null,
+      "releaseMode": "already-absent",
+      "entryReleasedByConfirmedStop": true,
+      "auditTriple": {
+        "processAbsent": true,
+        "processGroupAbsent": true,
+        "listenerAbsent": true,
+        "complete": true
+      },
+      "attribution": {
+        "ownedGroupSampled": true,
+        "ceilingRecorded": true,
+        "claim": "process-group-membership"
+      },
+      "signalOrder": [],
+      "forceAfterGracefulBound": true,
+      "signalDelivery": {
+        "graceful": "not-attempted",
+        "force": "not-attempted",
+        "signalFault": "none",
+        "settlementAudits": 0
+      },
+      "signalTimeline": null,
+      "primitiveBounding": null,
+      "elapsedClass": "within-overall",
+      "withinDeclaredBound": true,
+      "runtimeState": "Stopped",
+      "apiState": "Stopped",
+      "homeState": "Stopped",
+      "failureCategory": null,
+      "events": [
+        {
+          "id": "bl017-event-global-shutdown-during-stop-1",
+          "event": "runtime.start.requested",
+          "from": "stopped",
+          "to": "starting",
+          "publicState": "Starting",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-global-shutdown-during-stop-2",
+          "event": "runtime.start.succeeded",
+          "from": "starting",
+          "to": "running",
+          "publicState": "Running",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-global-shutdown-during-stop-3",
+          "event": "runtime.stop.requested",
+          "from": "running",
+          "to": "stopping",
+          "publicState": "Running",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-global-shutdown-during-stop-4",
+          "event": "runtime.stop.succeeded",
+          "from": "stopping",
+          "to": "stopped",
+          "publicState": "Stopped",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        }
+      ],
+      "requestedEventCount": 1,
+      "terminalEventCount": 1,
+      "loserEventCount": 0,
+      "entryMutations": 0,
+      "terminateCallsByPhase": {
+        "stop": 1,
+        "shutdown": 0
+      },
+      "cleanupRecordsByPhase": {
+        "stop": 1,
+        "shutdown": 0,
+        "concurrent": 0,
+        "reusedPriorAudit": false
+      },
+      "identitiesCreated": 1,
+      "identitiesTerminated": 1,
+      "restarts": 0,
+      "registrationRowCount": 1,
+      "registrationDigests": {
+        "before": "8e7508e61f0892c3572fdea805f3fb9a2faf9ef801ce5bc285795cb5e72434c8",
+        "after": "8e7508e61f0892c3572fdea805f3fb9a2faf9ef801ce5bc285795cb5e72434c8"
+      },
+      "peerDigests": null,
+      "controlDigests": null,
+      "fixtureDigests": [
+        {
+          "fixture": "selected-project",
+          "before": "1988a814016aff49dc8c5c1b8db3ec9d3c5f58ff6863d2a9d08184971649420f",
+          "after": "1988a814016aff49dc8c5c1b8db3ec9d3c5f58ff6863d2a9d08184971649420f"
+        }
+      ],
+      "inventory": [
+        {
+          "item": "managed workbench runtime and its loopback listener",
+          "itemClass": "runtime-process-and-listener",
+          "ownership": "validation-owned-temporary"
+        },
+        {
+          "item": "project registration row and database sidecars",
+          "itemClass": "registration-resource",
+          "ownership": "product-registration-during-scenario"
+        },
+        {
+          "item": "disposable project fixture tree",
+          "itemClass": "disposable-fixture",
+          "ownership": "validation-owned-temporary"
+        }
+      ],
+      "residualCount": 0,
+      "assertionCount": 13
+    },
+    {
+      "scenario": "shutdown-after-unconfirmed",
+      "executionIds": {
+        "runtime": "bl017-runtime-shutdown-after-unconfirmed",
+        "api": "bl017-api-shutdown-after-unconfirmed",
+        "home": "bl017-home-shutdown-after-unconfirmed"
+      },
+      "outcome": "rejected",
+      "rejectionCategory": "stop-unconfirmed",
+      "releaseMode": "unconfirmed",
+      "entryReleasedByConfirmedStop": false,
+      "auditTriple": {
+        "processAbsent": false,
+        "processGroupAbsent": false,
+        "listenerAbsent": false,
+        "complete": false
+      },
+      "attribution": {
+        "ownedGroupSampled": true,
+        "ceilingRecorded": true,
+        "claim": "process-group-membership"
+      },
+      "signalOrder": [],
+      "forceAfterGracefulBound": true,
+      "signalDelivery": {
+        "graceful": "not-attempted",
+        "force": "not-attempted",
+        "signalFault": "none",
+        "settlementAudits": 0
+      },
+      "signalTimeline": null,
+      "primitiveBounding": null,
+      "elapsedClass": "within-overall",
+      "withinDeclaredBound": true,
+      "runtimeState": "Failed",
+      "apiState": "Failed",
+      "homeState": "Failed",
+      "failureCategory": "stop-unconfirmed",
+      "events": [
+        {
+          "id": "bl017-event-shutdown-after-unconfirmed-1",
+          "event": "runtime.start.requested",
+          "from": "stopped",
+          "to": "starting",
+          "publicState": "Starting",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-shutdown-after-unconfirmed-2",
+          "event": "runtime.start.succeeded",
+          "from": "starting",
+          "to": "running",
+          "publicState": "Running",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-shutdown-after-unconfirmed-3",
+          "event": "runtime.stop.requested",
+          "from": "running",
+          "to": "stopping",
+          "publicState": "Running",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-shutdown-after-unconfirmed-4",
+          "event": "runtime.health.changed",
+          "from": "stopping",
+          "to": "failed",
+          "publicState": "Failed",
+          "classification": "stop-unconfirmed",
+          "elapsedClass": "within-overall"
+        }
+      ],
+      "requestedEventCount": 1,
+      "terminalEventCount": 1,
+      "loserEventCount": 0,
+      "entryMutations": 0,
+      "terminateCallsByPhase": {
+        "stop": 1,
+        "shutdown": 1
+      },
+      "cleanupRecordsByPhase": {
+        "stop": 1,
+        "shutdown": 1,
+        "concurrent": 0,
+        "reusedPriorAudit": false
+      },
+      "identitiesCreated": 2,
+      "identitiesTerminated": 2,
+      "restarts": 0,
+      "registrationRowCount": 1,
+      "registrationDigests": {
+        "before": "d3fc58961025c9817ec6db2ef35f37f735814449251a84b93127381a90a0fb7e",
+        "after": "d3fc58961025c9817ec6db2ef35f37f735814449251a84b93127381a90a0fb7e"
+      },
+      "peerDigests": null,
+      "controlDigests": null,
+      "fixtureDigests": [
+        {
+          "fixture": "selected-project",
+          "before": "cee3fa3cd0e1ddb495080860b7b8ac6335ffe152d1fcb69f1e13002238a682d3",
+          "after": "cee3fa3cd0e1ddb495080860b7b8ac6335ffe152d1fcb69f1e13002238a682d3"
+        }
+      ],
+      "inventory": [
+        {
+          "item": "managed workbench runtime and its loopback listener",
+          "itemClass": "runtime-process-and-listener",
+          "ownership": "validation-owned-temporary"
+        },
+        {
+          "item": "project registration row and database sidecars",
+          "itemClass": "registration-resource",
+          "ownership": "product-registration-during-scenario"
+        },
+        {
+          "item": "disposable project fixture tree",
+          "itemClass": "disposable-fixture",
+          "ownership": "validation-owned-temporary"
+        }
+      ],
+      "residualCount": 0,
+      "assertionCount": 13
+    },
+    {
+      "scenario": "shutdown-after-termination-fault",
+      "executionIds": {
+        "runtime": "bl017-runtime-shutdown-after-termination-fault",
+        "api": "bl017-api-shutdown-after-termination-fault",
+        "home": "bl017-home-shutdown-after-termination-fault"
+      },
+      "outcome": "rejected",
+      "rejectionCategory": "stop-unconfirmed",
+      "releaseMode": null,
+      "entryReleasedByConfirmedStop": false,
+      "auditTriple": null,
+      "attribution": {
+        "ownedGroupSampled": false,
+        "ceilingRecorded": true,
+        "claim": "process-group-membership"
+      },
+      "signalOrder": [],
+      "forceAfterGracefulBound": true,
+      "signalDelivery": {
+        "graceful": "not-attempted",
+        "force": "not-attempted",
+        "signalFault": "none",
+        "settlementAudits": 0
+      },
+      "signalTimeline": null,
+      "primitiveBounding": null,
+      "elapsedClass": "within-overall",
+      "withinDeclaredBound": true,
+      "runtimeState": "Failed",
+      "apiState": "Failed",
+      "homeState": "Failed",
+      "failureCategory": "stop-unconfirmed",
+      "events": [
+        {
+          "id": "bl017-event-shutdown-after-termination-fault-1",
+          "event": "runtime.start.requested",
+          "from": "stopped",
+          "to": "starting",
+          "publicState": "Starting",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-shutdown-after-termination-fault-2",
+          "event": "runtime.start.succeeded",
+          "from": "starting",
+          "to": "running",
+          "publicState": "Running",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-shutdown-after-termination-fault-3",
+          "event": "runtime.stop.requested",
+          "from": "running",
+          "to": "stopping",
+          "publicState": "Running",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-shutdown-after-termination-fault-4",
+          "event": "runtime.health.changed",
+          "from": "stopping",
+          "to": "failed",
+          "publicState": "Failed",
+          "classification": "stop-unconfirmed",
+          "elapsedClass": "within-overall"
+        }
+      ],
+      "requestedEventCount": 1,
+      "terminalEventCount": 1,
+      "loserEventCount": 0,
+      "entryMutations": 0,
+      "terminateCallsByPhase": {
+        "stop": 1,
+        "shutdown": 1
+      },
+      "cleanupRecordsByPhase": {
+        "stop": 0,
+        "shutdown": 1,
+        "concurrent": 0,
+        "reusedPriorAudit": false
+      },
+      "identitiesCreated": 1,
+      "identitiesTerminated": 1,
+      "restarts": 0,
+      "registrationRowCount": 1,
+      "registrationDigests": {
+        "before": "95d5448339e1011c4b80e271b9c7dfdc56d2e411205496adb6ce52e0ff3c934a",
+        "after": "95d5448339e1011c4b80e271b9c7dfdc56d2e411205496adb6ce52e0ff3c934a"
+      },
+      "peerDigests": null,
+      "controlDigests": null,
+      "fixtureDigests": [
+        {
+          "fixture": "selected-project",
+          "before": "8527b72b45e64ceeda67c938ab40e581d8479a139aa5dde1a7604bf651803de0",
+          "after": "8527b72b45e64ceeda67c938ab40e581d8479a139aa5dde1a7604bf651803de0"
+        }
+      ],
+      "inventory": [
+        {
+          "item": "managed workbench runtime and its loopback listener",
+          "itemClass": "runtime-process-and-listener",
+          "ownership": "validation-owned-temporary"
+        },
+        {
+          "item": "project registration row and database sidecars",
+          "itemClass": "registration-resource",
+          "ownership": "product-registration-during-scenario"
+        },
+        {
+          "item": "disposable project fixture tree",
+          "itemClass": "disposable-fixture",
+          "ownership": "validation-owned-temporary"
+        }
+      ],
+      "residualCount": 0,
+      "assertionCount": 11
+    },
+    {
+      "scenario": "two-ready-runtime-isolation",
+      "executionIds": {
+        "runtime": "bl017-runtime-two-ready-runtime-isolation",
+        "api": "bl017-api-two-ready-runtime-isolation",
+        "home": "bl017-home-two-ready-runtime-isolation"
+      },
+      "outcome": "stopped",
+      "rejectionCategory": null,
+      "releaseMode": "graceful",
+      "entryReleasedByConfirmedStop": true,
+      "auditTriple": {
+        "processAbsent": true,
+        "processGroupAbsent": true,
+        "listenerAbsent": true,
+        "complete": true
+      },
+      "attribution": {
+        "ownedGroupSampled": true,
+        "ceilingRecorded": true,
+        "claim": "process-group-membership"
+      },
+      "signalOrder": [
+        "graceful"
+      ],
+      "forceAfterGracefulBound": true,
+      "signalDelivery": {
+        "graceful": "delivered",
+        "force": "not-attempted",
+        "signalFault": "none",
+        "settlementAudits": 1
+      },
+      "signalTimeline": {
+        "preSignalMs": 0,
+        "sigtermAt": 0,
+        "sigkillAt": null,
+        "gracefulWindowMs": null,
+        "forceWindowMs": null
+      },
+      "primitiveBounding": {
+        "awaitedCallsBounded": true,
+        "abandonedCalls": 0,
+        "incompleteAuditsDiscarded": 0,
+        "deadlineSource": "trusted-scheduler",
+        "clockSource": "monotonic",
+        "callerPreAborted": false,
+        "signalsAfterDeadline": 0,
+        "timersSurvivingReturn": 0,
+        "unhandledRejections": 0
+      },
+      "elapsedClass": "within-graceful",
+      "withinDeclaredBound": true,
+      "runtimeState": "Stopped",
+      "apiState": "Stopped",
+      "homeState": "Stopped",
+      "failureCategory": null,
+      "events": [
+        {
+          "id": "bl017-event-two-ready-runtime-isolation-1",
+          "event": "runtime.start.requested",
+          "from": "stopped",
+          "to": "starting",
+          "publicState": "Starting",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-two-ready-runtime-isolation-2",
+          "event": "runtime.start.succeeded",
+          "from": "starting",
+          "to": "running",
+          "publicState": "Running",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-two-ready-runtime-isolation-3",
+          "event": "runtime.stop.requested",
+          "from": "running",
+          "to": "stopping",
+          "publicState": "Running",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-two-ready-runtime-isolation-4",
+          "event": "runtime.stop.succeeded",
+          "from": "stopping",
+          "to": "stopped",
+          "publicState": "Stopped",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        }
+      ],
+      "requestedEventCount": 1,
+      "terminalEventCount": 1,
+      "loserEventCount": 0,
+      "entryMutations": 0,
+      "terminateCallsByPhase": {
+        "stop": 1,
+        "shutdown": 0
+      },
+      "cleanupRecordsByPhase": {
+        "stop": 1,
+        "shutdown": 0,
+        "concurrent": 0,
+        "reusedPriorAudit": false
+      },
+      "identitiesCreated": 2,
+      "identitiesTerminated": 2,
+      "restarts": 0,
+      "registrationRowCount": 1,
+      "registrationDigests": {
+        "before": "36036d9fc169ff97010341a128b94478584262777e48cd8e6287251df780318f",
+        "after": "36036d9fc169ff97010341a128b94478584262777e48cd8e6287251df780318f"
+      },
+      "peerDigests": {
+        "before": "ffd74583213bf45bcefd63f9d15917aed4aa3799361cdaf62d40e3252cf73e30",
+        "after": "ffd74583213bf45bcefd63f9d15917aed4aa3799361cdaf62d40e3252cf73e30"
+      },
+      "controlDigests": {
+        "before": "71e3bd924977bf2e5902271c8db7f45fd86f25e3c370a0da1b3cca9797d6792f",
+        "after": "71e3bd924977bf2e5902271c8db7f45fd86f25e3c370a0da1b3cca9797d6792f"
+      },
+      "fixtureDigests": [
+        {
+          "fixture": "selected-project",
+          "before": "5112f95eadfc109704cdbb426f57c876fe322d3a2c539d4dcba3ce0a6b07361f",
+          "after": "5112f95eadfc109704cdbb426f57c876fe322d3a2c539d4dcba3ce0a6b07361f"
+        },
+        {
+          "fixture": "peer-project",
+          "before": "701e8885146bd3bd25c3c10a8a940c34679d006d3e8ae3fc4d5c83afdc2fdf26",
+          "after": "701e8885146bd3bd25c3c10a8a940c34679d006d3e8ae3fc4d5c83afdc2fdf26"
+        }
+      ],
+      "inventory": [
+        {
+          "item": "managed workbench runtime and its loopback listener",
+          "itemClass": "runtime-process-and-listener",
+          "ownership": "validation-owned-temporary"
+        },
+        {
+          "item": "project registration row and database sidecars",
+          "itemClass": "registration-resource",
+          "ownership": "product-registration-during-scenario"
+        },
+        {
+          "item": "disposable project fixture tree",
+          "itemClass": "disposable-fixture",
+          "ownership": "validation-owned-temporary"
+        },
+        {
+          "item": "declared unrelated control process and its listener",
+          "itemClass": "unrelated-control",
+          "ownership": "validation-owned-temporary"
+        }
+      ],
+      "residualCount": 0,
+      "assertionCount": 16
+    },
+    {
+      "scenario": "registration-metadata-retention",
+      "executionIds": {
+        "runtime": "bl017-runtime-registration-metadata-retention",
+        "api": "bl017-api-registration-metadata-retention",
+        "home": "bl017-home-registration-metadata-retention"
+      },
+      "outcome": "stopped",
+      "rejectionCategory": null,
+      "releaseMode": "graceful",
+      "entryReleasedByConfirmedStop": true,
+      "auditTriple": {
+        "processAbsent": true,
+        "processGroupAbsent": true,
+        "listenerAbsent": true,
+        "complete": true
+      },
+      "attribution": {
+        "ownedGroupSampled": true,
+        "ceilingRecorded": true,
+        "claim": "process-group-membership"
+      },
+      "signalOrder": [
+        "graceful"
+      ],
+      "forceAfterGracefulBound": true,
+      "signalDelivery": {
+        "graceful": "delivered",
+        "force": "not-attempted",
+        "signalFault": "none",
+        "settlementAudits": 1
+      },
+      "signalTimeline": {
+        "preSignalMs": 0,
+        "sigtermAt": 0,
+        "sigkillAt": null,
+        "gracefulWindowMs": null,
+        "forceWindowMs": null
+      },
+      "primitiveBounding": {
+        "awaitedCallsBounded": true,
+        "abandonedCalls": 0,
+        "incompleteAuditsDiscarded": 0,
+        "deadlineSource": "trusted-scheduler",
+        "clockSource": "monotonic",
+        "callerPreAborted": false,
+        "signalsAfterDeadline": 0,
+        "timersSurvivingReturn": 0,
+        "unhandledRejections": 0
+      },
+      "elapsedClass": "within-graceful",
+      "withinDeclaredBound": true,
+      "runtimeState": "Stopped",
+      "apiState": "Stopped",
+      "homeState": "Stopped",
+      "failureCategory": null,
+      "events": [
+        {
+          "id": "bl017-event-registration-metadata-retention-1",
+          "event": "runtime.start.requested",
+          "from": "stopped",
+          "to": "starting",
+          "publicState": "Starting",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-registration-metadata-retention-2",
+          "event": "runtime.start.succeeded",
+          "from": "starting",
+          "to": "running",
+          "publicState": "Running",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-registration-metadata-retention-3",
+          "event": "runtime.stop.requested",
+          "from": "running",
+          "to": "stopping",
+          "publicState": "Running",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-registration-metadata-retention-4",
+          "event": "runtime.stop.succeeded",
+          "from": "stopping",
+          "to": "stopped",
+          "publicState": "Stopped",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        }
+      ],
+      "requestedEventCount": 1,
+      "terminalEventCount": 1,
+      "loserEventCount": 0,
+      "entryMutations": 0,
+      "terminateCallsByPhase": {
+        "stop": 1,
+        "shutdown": 0
+      },
+      "cleanupRecordsByPhase": {
+        "stop": 1,
+        "shutdown": 0,
+        "concurrent": 0,
+        "reusedPriorAudit": false
+      },
+      "identitiesCreated": 1,
+      "identitiesTerminated": 1,
+      "restarts": 0,
+      "registrationRowCount": 1,
+      "registrationDigests": {
+        "before": "ca7f53dbeee72be0eb528825dc25146b6b6134406ea82dc19edf125523dfa61c",
+        "after": "ca7f53dbeee72be0eb528825dc25146b6b6134406ea82dc19edf125523dfa61c"
+      },
+      "peerDigests": null,
+      "controlDigests": null,
+      "fixtureDigests": [
+        {
+          "fixture": "selected-project",
+          "before": "28598d81d263bd54ba8820ea5a1147d9ddaa3ec8c820f65c002d83d204c3a194",
+          "after": "28598d81d263bd54ba8820ea5a1147d9ddaa3ec8c820f65c002d83d204c3a194"
+        }
+      ],
+      "inventory": [
+        {
+          "item": "managed workbench runtime and its loopback listener",
+          "itemClass": "runtime-process-and-listener",
+          "ownership": "validation-owned-temporary"
+        },
+        {
+          "item": "project registration row and database sidecars",
+          "itemClass": "registration-resource",
+          "ownership": "product-registration-during-scenario"
+        },
+        {
+          "item": "disposable project fixture tree",
+          "itemClass": "disposable-fixture",
+          "ownership": "validation-owned-temporary"
+        }
+      ],
+      "residualCount": 0,
+      "assertionCount": 14
+    },
+    {
+      "scenario": "event-state-consistency",
+      "executionIds": {
+        "runtime": "bl017-runtime-event-state-consistency",
+        "api": "bl017-api-event-state-consistency",
+        "home": "bl017-home-event-state-consistency"
+      },
+      "outcome": "stopped",
+      "rejectionCategory": null,
+      "releaseMode": "escalated",
+      "entryReleasedByConfirmedStop": true,
+      "auditTriple": {
+        "processAbsent": true,
+        "processGroupAbsent": true,
+        "listenerAbsent": true,
+        "complete": true
+      },
+      "attribution": {
+        "ownedGroupSampled": true,
+        "ceilingRecorded": true,
+        "claim": "process-group-membership"
+      },
+      "signalOrder": [
+        "graceful",
+        "force"
+      ],
+      "forceAfterGracefulBound": true,
+      "signalDelivery": {
+        "graceful": "delivered",
+        "force": "delivered",
+        "signalFault": "none",
+        "settlementAudits": 1
+      },
+      "signalTimeline": {
+        "preSignalMs": 0,
+        "sigtermAt": 0,
+        "sigkillAt": 120,
+        "gracefulWindowMs": 120,
+        "forceWindowMs": 120
+      },
+      "primitiveBounding": {
+        "awaitedCallsBounded": true,
+        "abandonedCalls": 0,
+        "incompleteAuditsDiscarded": 0,
+        "deadlineSource": "trusted-scheduler",
+        "clockSource": "monotonic",
+        "callerPreAborted": false,
+        "signalsAfterDeadline": 0,
+        "timersSurvivingReturn": 0,
+        "unhandledRejections": 0
+      },
+      "elapsedClass": "within-overall",
+      "withinDeclaredBound": true,
+      "runtimeState": "Stopped",
+      "apiState": "Stopped",
+      "homeState": "Stopped",
+      "failureCategory": null,
+      "events": [
+        {
+          "id": "bl017-event-event-state-consistency-1",
+          "event": "runtime.start.requested",
+          "from": "stopped",
+          "to": "starting",
+          "publicState": "Starting",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-event-state-consistency-2",
+          "event": "runtime.start.succeeded",
+          "from": "starting",
+          "to": "running",
+          "publicState": "Running",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-event-state-consistency-3",
+          "event": "runtime.stop.requested",
+          "from": "running",
+          "to": "stopping",
+          "publicState": "Running",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-event-state-consistency-4",
+          "event": "runtime.stop.succeeded",
+          "from": "stopping",
+          "to": "stopped",
+          "publicState": "Stopped",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        }
+      ],
+      "requestedEventCount": 1,
+      "terminalEventCount": 1,
+      "loserEventCount": 0,
+      "entryMutations": 0,
+      "terminateCallsByPhase": {
+        "stop": 1,
+        "shutdown": 0
+      },
+      "cleanupRecordsByPhase": {
+        "stop": 1,
+        "shutdown": 0,
+        "concurrent": 0,
+        "reusedPriorAudit": false
+      },
+      "identitiesCreated": 1,
+      "identitiesTerminated": 1,
+      "restarts": 0,
+      "registrationRowCount": 1,
+      "registrationDigests": {
+        "before": "79046dacc582434b2781286d4191b2a8c425de0fdcf492f95eb8ff92f7bc1093",
+        "after": "79046dacc582434b2781286d4191b2a8c425de0fdcf492f95eb8ff92f7bc1093"
+      },
+      "peerDigests": null,
+      "controlDigests": null,
+      "fixtureDigests": [
+        {
+          "fixture": "selected-project",
+          "before": "5f6d63d7334fe597e494547e3f2ad510ea30e2f5be6031ef6f82de563412eb8a",
+          "after": "5f6d63d7334fe597e494547e3f2ad510ea30e2f5be6031ef6f82de563412eb8a"
+        }
+      ],
+      "inventory": [
+        {
+          "item": "managed workbench runtime and its loopback listener",
+          "itemClass": "runtime-process-and-listener",
+          "ownership": "validation-owned-temporary"
+        },
+        {
+          "item": "project registration row and database sidecars",
+          "itemClass": "registration-resource",
+          "ownership": "product-registration-during-scenario"
+        },
+        {
+          "item": "disposable project fixture tree",
+          "itemClass": "disposable-fixture",
+          "ownership": "validation-owned-temporary"
+        }
+      ],
+      "residualCount": 0,
+      "assertionCount": 14
+    },
+    {
+      "scenario": "failure-safe-disclosure",
+      "executionIds": {
+        "runtime": "bl017-runtime-failure-safe-disclosure",
+        "api": "bl017-api-failure-safe-disclosure",
+        "home": "bl017-home-failure-safe-disclosure"
+      },
+      "outcome": "rejected",
+      "rejectionCategory": "stop-unconfirmed",
+      "releaseMode": "unconfirmed",
+      "entryReleasedByConfirmedStop": false,
+      "auditTriple": {
+        "processAbsent": false,
+        "processGroupAbsent": false,
+        "listenerAbsent": false,
+        "complete": false
+      },
+      "attribution": {
+        "ownedGroupSampled": true,
+        "ceilingRecorded": true,
+        "claim": "process-group-membership"
+      },
+      "signalOrder": [
+        "graceful",
+        "force"
+      ],
+      "forceAfterGracefulBound": true,
+      "signalDelivery": {
+        "graceful": "delivered",
+        "force": "delivered",
+        "signalFault": "none",
+        "settlementAudits": 1
+      },
+      "signalTimeline": {
+        "preSignalMs": 0,
+        "sigtermAt": 0,
+        "sigkillAt": 120,
+        "gracefulWindowMs": 120,
+        "forceWindowMs": 120
+      },
+      "primitiveBounding": {
+        "awaitedCallsBounded": true,
+        "abandonedCalls": 0,
+        "incompleteAuditsDiscarded": 0,
+        "deadlineSource": "trusted-scheduler",
+        "clockSource": "monotonic",
+        "callerPreAborted": false,
+        "signalsAfterDeadline": 0,
+        "timersSurvivingReturn": 0,
+        "unhandledRejections": 0
+      },
+      "elapsedClass": "within-overall",
+      "withinDeclaredBound": true,
+      "runtimeState": "Failed",
+      "apiState": "Failed",
+      "homeState": "Failed",
+      "failureCategory": "stop-unconfirmed",
+      "events": [
+        {
+          "id": "bl017-event-failure-safe-disclosure-1",
+          "event": "runtime.start.requested",
+          "from": "stopped",
+          "to": "starting",
+          "publicState": "Starting",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-failure-safe-disclosure-2",
+          "event": "runtime.start.succeeded",
+          "from": "starting",
+          "to": "running",
+          "publicState": "Running",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-failure-safe-disclosure-3",
+          "event": "runtime.stop.requested",
+          "from": "running",
+          "to": "stopping",
+          "publicState": "Running",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-failure-safe-disclosure-4",
+          "event": "runtime.health.changed",
+          "from": "stopping",
+          "to": "failed",
+          "publicState": "Failed",
+          "classification": "stop-unconfirmed",
+          "elapsedClass": "within-overall"
+        }
+      ],
+      "requestedEventCount": 1,
+      "terminalEventCount": 1,
+      "loserEventCount": 0,
+      "entryMutations": 0,
+      "terminateCallsByPhase": {
+        "stop": 1,
+        "shutdown": 1
+      },
+      "cleanupRecordsByPhase": {
+        "stop": 1,
+        "shutdown": 0,
+        "concurrent": 0,
+        "reusedPriorAudit": false
+      },
+      "identitiesCreated": 1,
+      "identitiesTerminated": 0,
+      "restarts": 0,
+      "registrationRowCount": 1,
+      "registrationDigests": {
+        "before": "063927dac6ef6ba6970c4f9577a49e19c664c8158bcbd31ebd35a21a7996c260",
+        "after": "063927dac6ef6ba6970c4f9577a49e19c664c8158bcbd31ebd35a21a7996c260"
+      },
+      "peerDigests": null,
+      "controlDigests": null,
+      "fixtureDigests": [
+        {
+          "fixture": "selected-project",
+          "before": "a8d5ad70acf910807d1e2c09fcd8157482bed5c1549cfc4c2855564e541ac6d7",
+          "after": "a8d5ad70acf910807d1e2c09fcd8157482bed5c1549cfc4c2855564e541ac6d7"
+        }
+      ],
+      "inventory": [
+        {
+          "item": "managed workbench runtime and its loopback listener",
+          "itemClass": "runtime-process-and-listener",
+          "ownership": "validation-owned-temporary"
+        },
+        {
+          "item": "project registration row and database sidecars",
+          "itemClass": "registration-resource",
+          "ownership": "product-registration-during-scenario"
+        },
+        {
+          "item": "disposable project fixture tree",
+          "itemClass": "disposable-fixture",
+          "ownership": "validation-owned-temporary"
+        }
+      ],
+      "residualCount": 0,
+      "assertionCount": 12
+    },
+    {
+      "scenario": "final-cleanup",
+      "executionIds": {
+        "runtime": "bl017-runtime-final-cleanup",
+        "api": "bl017-api-final-cleanup",
+        "home": "bl017-home-final-cleanup"
+      },
+      "outcome": "stopped",
+      "rejectionCategory": null,
+      "releaseMode": "graceful",
+      "entryReleasedByConfirmedStop": true,
+      "auditTriple": {
+        "processAbsent": true,
+        "processGroupAbsent": true,
+        "listenerAbsent": true,
+        "complete": true
+      },
+      "attribution": {
+        "ownedGroupSampled": true,
+        "ceilingRecorded": true,
+        "claim": "process-group-membership"
+      },
+      "signalOrder": [
+        "graceful"
+      ],
+      "forceAfterGracefulBound": true,
+      "signalDelivery": {
+        "graceful": "delivered",
+        "force": "not-attempted",
+        "signalFault": "none",
+        "settlementAudits": 1
+      },
+      "signalTimeline": {
+        "preSignalMs": 0,
+        "sigtermAt": 0,
+        "sigkillAt": null,
+        "gracefulWindowMs": null,
+        "forceWindowMs": null
+      },
+      "primitiveBounding": {
+        "awaitedCallsBounded": true,
+        "abandonedCalls": 0,
+        "incompleteAuditsDiscarded": 0,
+        "deadlineSource": "trusted-scheduler",
+        "clockSource": "monotonic",
+        "callerPreAborted": false,
+        "signalsAfterDeadline": 0,
+        "timersSurvivingReturn": 0,
+        "unhandledRejections": 0
+      },
+      "elapsedClass": "within-graceful",
+      "withinDeclaredBound": true,
+      "runtimeState": "Stopped",
+      "apiState": "Stopped",
+      "homeState": "Stopped",
+      "failureCategory": null,
+      "events": [
+        {
+          "id": "bl017-event-final-cleanup-1",
+          "event": "runtime.start.requested",
+          "from": "stopped",
+          "to": "starting",
+          "publicState": "Starting",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-final-cleanup-2",
+          "event": "runtime.start.succeeded",
+          "from": "starting",
+          "to": "running",
+          "publicState": "Running",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-final-cleanup-3",
+          "event": "runtime.stop.requested",
+          "from": "running",
+          "to": "stopping",
+          "publicState": "Running",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        },
+        {
+          "id": "bl017-event-final-cleanup-4",
+          "event": "runtime.stop.succeeded",
+          "from": "stopping",
+          "to": "stopped",
+          "publicState": "Stopped",
+          "classification": null,
+          "elapsedClass": "within-overall"
+        }
+      ],
+      "requestedEventCount": 1,
+      "terminalEventCount": 1,
+      "loserEventCount": 0,
+      "entryMutations": 0,
+      "terminateCallsByPhase": {
+        "stop": 1,
+        "shutdown": 0
+      },
+      "cleanupRecordsByPhase": {
+        "stop": 1,
+        "shutdown": 0,
+        "concurrent": 0,
+        "reusedPriorAudit": false
+      },
+      "identitiesCreated": 1,
+      "identitiesTerminated": 1,
+      "restarts": 0,
+      "registrationRowCount": 1,
+      "registrationDigests": {
+        "before": "c3a4fa9244d676096117e9dcab946aa78f5df8ceed75841bfa4dad18f1ebf532",
+        "after": "c3a4fa9244d676096117e9dcab946aa78f5df8ceed75841bfa4dad18f1ebf532"
+      },
+      "peerDigests": null,
+      "controlDigests": null,
+      "fixtureDigests": [
+        {
+          "fixture": "selected-project",
+          "before": "7cac6dadd4974de06cf1c32c572a44ae1685319a91abda56b000a982e9b8b97e",
+          "after": "7cac6dadd4974de06cf1c32c572a44ae1685319a91abda56b000a982e9b8b97e"
+        }
+      ],
+      "inventory": [
+        {
+          "item": "managed workbench runtime and its loopback listener",
+          "itemClass": "runtime-process-and-listener",
+          "ownership": "validation-owned-temporary"
+        },
+        {
+          "item": "project registration row and database sidecars",
+          "itemClass": "registration-resource",
+          "ownership": "product-registration-during-scenario"
+        },
+        {
+          "item": "disposable project fixture tree",
+          "itemClass": "disposable-fixture",
+          "ownership": "validation-owned-temporary"
+        }
+      ],
+      "residualCount": 0,
+      "assertionCount": 16
+    }
+  ]
+}

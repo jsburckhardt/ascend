@@ -31,7 +31,7 @@ describe('BL-013 application documentation contract', () => {
       'just proof-project-runtime-isolation-residual-audit',
       'BL-014',
       'BL-015',
-      'no public Stop',
+      'selected Stop',
       'ownsSnapshot',
       'schema-version-2',
       '12 independently executed scenarios',

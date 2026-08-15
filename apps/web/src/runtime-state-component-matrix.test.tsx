@@ -16,6 +16,15 @@ const project: Project = {
   createdAt: 1,
 }
 
+/**
+ * The first render of a coverage-instrumented file under parallel workers can
+ * be starved past Testing Library's 1,000 ms default while the projection
+ * settles. Both bounds stay finite: each wait fails inside SETTLED_WAIT_MS and
+ * every scenario still fails inside SCENARIO_TIMEOUT_MS.
+ */
+const SETTLED_WAIT_MS = 5_000
+const SCENARIO_TIMEOUT_MS = 15_000
+
 const expectedStates: Readonly<Record<Bl016Scenario, PublicRuntimeState>> = {
   'stopped-registered': 'Stopped',
   'starting-delayed-readiness': 'Starting',
@@ -62,7 +71,9 @@ describe('BL-016 Project Home surface matrix', () => {
         />
       )
 
-      await screen.findByLabelText('Runtime state summary')
+      await screen.findByLabelText('Runtime state summary', undefined, {
+        timeout: SETTLED_WAIT_MS,
+      })
       const stateElement = document.querySelector(
         `[data-runtime-state="${report.state}"]`
       )
@@ -78,35 +89,45 @@ describe('BL-016 Project Home surface matrix', () => {
         expect(document.querySelector('[data-runtime-failure]')).toBeNull()
       }
       expect(
-        screen.queryByRole('button', { name: /stop|restart/iu })
-      ).toBeNull()
-    }
+        screen.getByRole('button', {
+          name: 'Stop Matrix project workbench',
+        })
+      ).toBeVisible()
+      expect(screen.queryByRole('button', { name: /restart/iu })).toBeNull()
+    },
+    SCENARIO_TIMEOUT_MS
   )
 
-  it('preserves an independently Running peer when the matrix project is Failed', async () => {
-    const peer: Project = {
-      id: 'peer-project',
-      name: 'Peer project',
-      canonicalPath: '/matrix/peer',
-      createdAt: 2,
-    }
-    render(
-      <App
-        loadProjectList={async () => [project, peer]}
-        loadRuntimeStates={async () => [
-          reportFor('failed-post-readiness-exit'),
-          { id: peer.id, state: 'Running' },
-        ]}
-      />
-    )
+  it(
+    'preserves an independently Running peer when the matrix project is Failed',
+    async () => {
+      const peer: Project = {
+        id: 'peer-project',
+        name: 'Peer project',
+        canonicalPath: '/matrix/peer',
+        createdAt: 2,
+      }
+      render(
+        <App
+          loadProjectList={async () => [project, peer]}
+          loadRuntimeStates={async () => [
+            reportFor('failed-post-readiness-exit'),
+            { id: peer.id, state: 'Running' },
+          ]}
+        />
+      )
 
-    await screen.findByLabelText('Runtime state summary')
-    const peerCard = screen
-      .getByRole('button', { name: 'Open Peer project' })
-      .closest('li')!
-    expect(
-      peerCard.querySelector('[data-runtime-state="Running"]')
-    ).not.toBeNull()
-    expect(peerCard.querySelector('[data-runtime-failure]')).toBeNull()
-  })
+      await screen.findByLabelText('Runtime state summary', undefined, {
+        timeout: SETTLED_WAIT_MS,
+      })
+      const peerCard = screen
+        .getByRole('button', { name: 'Open Peer project' })
+        .closest('li')!
+      expect(
+        peerCard.querySelector('[data-runtime-state="Running"]')
+      ).not.toBeNull()
+      expect(peerCard.querySelector('[data-runtime-failure]')).toBeNull()
+    },
+    SCENARIO_TIMEOUT_MS
+  )
 })

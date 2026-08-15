@@ -12,4 +12,5 @@ pnpm-lock.yaml
 .agents
 .harness
 project/work-items/11-bl-004-establish-the-workbench-capacity-baseline/implementation/evidence
+project/work-items/39-bl-017-stop-a-workbench-without-closing-its-project/implementation/evidence
 .trees

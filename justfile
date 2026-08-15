@@ -128,6 +128,15 @@ verify-session-switching:
 verify-runtime-state:
     BL016_ACCEPTANCE=1 pnpm exec vitest run apps/api/test/runtime-state-contract.test.ts apps/api/test/runtime-state-manager.test.ts apps/api/test/runtime-state-events.test.ts apps/api/test/runtime-state-route.test.ts apps/api/test/runtime-state-matrix.test.ts apps/api/test/runtime-state-documentation.test.ts apps/web/test/runtime-state-client.test.ts apps/web/test/use-runtime-state.test.tsx apps/web/src/runtime-state-component-matrix.test.tsx apps/web/src/App.test.tsx --reporter=verbose
 
+verify-runtime-stop:
+    BL017_ACCEPTANCE=1 pnpm exec vitest run apps/api/test/runtime-stop-contract.test.ts apps/api/test/runtime-stop-manager.test.ts apps/api/test/runtime-stop-sequencer.test.ts apps/api/test/runtime-stop-route.test.ts apps/api/test/runtime-stop-evidence.test.ts apps/api/test/runtime-stop-matrix.test.ts apps/api/test/runtime-stop-residual-audit.test.ts apps/api/test/runtime-stop-documentation.test.ts apps/web/test/runtime-stop-client.test.ts apps/web/test/use-project-home-stop.test.tsx apps/web/src/runtime-stop-component-matrix.test.tsx apps/web/src/App.test.tsx --reporter=verbose
+
+proof-runtime-stop:
+    BL017_DESIGNATED=1 pnpm exec vitest run apps/api/test/runtime-stop-designated.test.ts --reporter=verbose
+
+proof-runtime-stop-residual-audit:
+    pnpm --filter @ascend/api exec tsx src/cli/runtime-stop-residual-audit.ts
+
 proof-session-switching-residual-audit:
     pnpm --filter @ascend/api exec tsx src/cli/session-switching-residual-audit.ts
 
@@ -157,5 +166,8 @@ verify:
     just verify-project-runtime-isolation
     just verify-session-switching
     just verify-runtime-state
+    just verify-runtime-stop
+    just proof-runtime-stop
+    just proof-runtime-stop-residual-audit
     just verify-mvp-performance
     just proof-mvp-performance-residual-audit

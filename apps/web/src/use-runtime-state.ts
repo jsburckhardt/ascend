@@ -34,6 +34,7 @@ interface RuntimeStateOptions {
 export interface RuntimeStateController {
   readonly view: RuntimeStateView
   readonly retry: () => void
+  readonly refresh: () => void
 }
 
 const IDLE_VIEW = Object.freeze({ kind: 'idle' } satisfies RuntimeStateView)
@@ -47,9 +48,9 @@ export function useRuntimeState(
 ): RuntimeStateController {
   const loader = options.loader ?? loadRuntimeStates
   const timeoutMs = options.timeoutMs ?? RUNTIME_STATE_TIMEOUT_MS
-  const [retryId, setRetryId] = useState(0)
+  const [requestId, setRequestId] = useState(0)
   const [view, setView] = useState<RuntimeStateView>(IDLE_VIEW)
-  const retry = useCallback(() => setRetryId((id) => id + 1), [])
+  const requestAgain = useCallback(() => setRequestId((id) => id + 1), [])
   const revisionId = revision?.id
 
   useEffect(() => {
@@ -109,7 +110,7 @@ export function useRuntimeState(
     }
     // The revision ID, not transient object identity, owns request issuance.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loader, retryId, revisionId, timeoutMs])
+  }, [loader, requestId, revisionId, timeoutMs])
 
-  return { view, retry }
+  return { view, retry: requestAgain, refresh: requestAgain }
 }

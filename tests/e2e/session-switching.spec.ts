@@ -638,7 +638,7 @@ test('preserves A/B/C sessions with execution-joined measured evidence', async (
             card.count === 1 && card.openCount === 1 && card.closeCount === 1
         )
       ).toBe(true)
-      expect(runtimeControlsPresent).toBe(0)
+      expect(runtimeControlsPresent).toBe(3)
       expect(after.focus).toBe('heading:Ascend')
     }
     const eventRange = {

@@ -133,7 +133,7 @@ const evidence = () => {
     const home = transitionId.includes('home-')
       ? {
           cards: BL014_FIXTURES.map((fixture) => ({ project: fixture.key })),
-          runtimeControlsPresent: 0,
+          runtimeControlsPresent: 3,
           focus: 'heading:Ascend',
         }
       : undefined

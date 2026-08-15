@@ -13,6 +13,13 @@ import {
   type ProjectLoader,
   type RegistrationTransport,
 } from './projects'
+import {
+  RUNTIME_STOP_NOTICES,
+  stopRuntime,
+  type RuntimeStopErrorCategory,
+  type RuntimeStopSuccessOutcome,
+  type RuntimeStopTransport,
+} from './runtime-stop'
 
 export type ProjectHomeMode =
   'editing' | 'ordinary-pending' | 'unknown' | 'recovery-pending' | 'ambiguous'
@@ -24,6 +31,13 @@ export interface ProjectCloseState {
   readonly phase: 'confirming' | 'pending' | 'retry' | 'unknown' | 'refreshing'
   readonly transmitted: boolean
   readonly message?: string
+}
+
+export interface ProjectStopState {
+  readonly id: string
+  readonly phase: 'pending' | 'retry' | 'unknown'
+  readonly outcome?: RuntimeStopSuccessOutcome
+  readonly category?: RuntimeStopErrorCategory
 }
 
 export interface ProjectHomeState {
@@ -38,10 +52,18 @@ export interface ProjectHomeState {
   readonly focusProjectId?: string
   readonly focusVersion: number
   readonly activeKind?:
-    'ordinary' | 'retry' | 'refresh' | 'close' | 'close-retry' | 'close-refresh'
+    | 'ordinary'
+    | 'retry'
+    | 'refresh'
+    | 'close'
+    | 'close-retry'
+    | 'close-refresh'
+    | 'stop'
   readonly inputFocusVersion: number
   readonly close?: ProjectCloseState
-  readonly focusTarget?: 'open' | 'close' | 'heading'
+  readonly stop?: ProjectStopState
+  readonly stopSettlementVersion: number
+  readonly focusTarget?: 'open' | 'close' | 'stop' | 'heading'
 }
 
 interface Owner {
@@ -54,6 +76,7 @@ interface Owner {
     | 'close'
     | 'close-retry'
     | 'close-refresh'
+    | 'stop'
   readonly controller: AbortController
   timer?: ReturnType<typeof setTimeout>
   active: boolean
@@ -73,12 +96,14 @@ export interface ProjectHomeController {
   confirmClose(): void
   retryClose(): void
   refreshClose(): void
+  stop(projectId: string): void
 }
 
 export interface ProjectHomeDependencies {
   readonly load?: ProjectLoader
   readonly register?: RegistrationTransport
   readonly close?: CloseTransport
+  readonly stop?: RuntimeStopTransport
   readonly listTimeoutMs?: number
 }
 
@@ -91,6 +116,7 @@ const initialState: ProjectHomeState = {
   announcement: '',
   focusVersion: 0,
   inputFocusVersion: 0,
+  stopSettlementVersion: 0,
 }
 
 function upsert(projects: readonly Project[], project: Project): Project[] {
@@ -129,6 +155,7 @@ export function useProjectHome(
   const loader = dependencies.load ?? loadProjects
   const registration = dependencies.register ?? registerProject
   const closeTransport = dependencies.close ?? closeProject
+  const stopTransport = dependencies.stop ?? stopRuntime
   const listTimeoutMs = dependencies.listTimeoutMs ?? PROJECT_LIST_TIMEOUT_MS
   const [state, setState] = useState<ProjectHomeState>(initialState)
   const latest = useRef(state)
@@ -732,6 +759,87 @@ export function useProjectHome(
     }, failed)
   }, [finish, invalidate, listTimeoutMs, loader, owns])
 
+  const stop = useCallback(
+    (projectId: string) => {
+      const value = latest.current
+      const retrying =
+        value.stop?.id === projectId && value.stop.phase === 'retry'
+      if (
+        value.listStatus !== 'success' ||
+        value.mode !== 'editing' ||
+        value.close !== undefined ||
+        owner.current !== undefined ||
+        (value.stop !== undefined && !retrying)
+      ) {
+        return
+      }
+      const project = value.projects.find(({ id }) => id === projectId)
+      if (project === undefined) return
+      invalidate()
+      const controller = new AbortController()
+      const current: Owner = {
+        generation: generation.current,
+        kind: 'stop',
+        controller,
+        active: true,
+      }
+      owner.current = current
+      setState((currentState) => ({
+        ...currentState,
+        stop: { id: projectId, phase: 'pending' },
+        activeKind: 'stop',
+        announcement: `${project.name}: Stopping workbench.`,
+      }))
+      void stopTransport(projectId, controller.signal).then((result) => {
+        if (!owns(current)) return
+        finish(current)
+        generation.current += 1
+        setState((currentState) => {
+          if (currentState.stop?.id !== projectId) return currentState
+          const focus = {
+            focusProjectId: projectId,
+            focusTarget: 'stop' as const,
+            focusVersion: currentState.focusVersion + 1,
+          }
+          if (result.kind === 'success' && result.id === projectId) {
+            return {
+              ...currentState,
+              ...focus,
+              stop: undefined,
+              activeKind: undefined,
+              stopSettlementVersion: currentState.stopSettlementVersion + 1,
+              announcement:
+                result.outcome === 'stopped'
+                  ? `${project.name}: Workbench stopped. The project remains registered.`
+                  : `${project.name}: Workbench was already stopped.`,
+            }
+          }
+          if (result.kind === 'failure') {
+            return {
+              ...currentState,
+              ...focus,
+              stop: {
+                id: projectId,
+                phase: 'retry',
+                category: result.category,
+              },
+              activeKind: undefined,
+              announcement: RUNTIME_STOP_NOTICES[result.category],
+            }
+          }
+          return {
+            ...currentState,
+            ...focus,
+            stop: { id: projectId, phase: 'unknown' },
+            activeKind: undefined,
+            announcement: `${project.name}: Stop outcome unknown. Refresh runtime state.`,
+          }
+        })
+      })
+    },
+    [finish, invalidate, owns, stopTransport]
+  )
+
   return {
     state,
     setInput,
@@ -746,5 +854,6 @@ export function useProjectHome(
     confirmClose,
     retryClose,
     refreshClose,
+    stop,
   }
 }

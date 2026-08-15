@@ -372,7 +372,10 @@ describe('project runtime process boundary', () => {
         PATH: '/usr/local/bin:/usr/bin:/bin',
         BL001_FAKE_MODE: 'project-runtime',
       },
-      readinessTimeoutMs: 5_000,
+      // Real spawn plus readiness polling under the full suite's
+      // coverage-instrumented parallel workers can outlast a 5,000 ms
+      // fixture budget; this is the production default and stays finite.
+      readinessTimeoutMs: 15_000,
     })
     const ready = await launchReadyRuntime({
       config: runtimeConfig,
@@ -401,11 +404,15 @@ describe('project runtime process boundary', () => {
         timedOut: false,
       })
     } finally {
-      await ready.process.terminate(500, 500, ready.port)
+      await ready.process.terminate(
+        runtimeConfig.gracefulShutdownMs,
+        runtimeConfig.forceShutdownMs,
+        ready.port
+      )
     }
     await expect(ready.process.isAlive()).resolves.toBe(false)
     await expect(loopbackListenerIsAbsent(ready.port)).resolves.toBe(true)
-  })
+  }, 30_000)
 
   it('executes isolated A/B/C argv, cwd, user, and environment allowlists through real processes', async () => {
     const fixtureRoot = await mkdtemp(
@@ -438,7 +445,7 @@ describe('project runtime process boundary', () => {
         .pathname,
       expectedUser: user.username,
       environment,
-      readinessTimeoutMs: 5_000,
+      readinessTimeoutMs: 15_000,
     })
     const runtimes = await Promise.all(
       projects.map((project) =>
@@ -500,7 +507,11 @@ describe('project runtime process boundary', () => {
     } finally {
       await Promise.all(
         runtimes.map((runtime) =>
-          runtime.process.terminate(500, 500, runtime.port)
+          runtime.process.terminate(
+            config.gracefulShutdownMs,
+            config.forceShutdownMs,
+            runtime.port
+          )
         )
       )
       await rm(fixtureRoot, { recursive: true, force: true })
@@ -509,7 +520,7 @@ describe('project runtime process boundary', () => {
       runtimes.map(async (runtime) => {
         await expect(runtime.process.isAlive()).resolves.toBe(false)
         await expect(loopbackListenerIsAbsent(runtime.port)).resolves.toBe(true)
-      })
+      }, 30_000)
     )
   })
 

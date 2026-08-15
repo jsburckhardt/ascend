@@ -303,6 +303,12 @@ test('uses only the keyboard to register, reconcile, correct, and open Workbench
     await expect(page.getByRole('listitem')).toHaveCount(2)
     summary.corrected = true
     await page.keyboard.press('Tab')
+    await expect(
+      page.getByRole('button', {
+        name: 'Stop second <script> project workbench',
+      })
+    ).toBeFocused()
+    await page.keyboard.press('Tab')
     const secondClose = page.getByRole('button', {
       name: 'Close second <script> project',
     })
@@ -486,6 +492,10 @@ test('recovers from a controlled close persistence fault in real Chromium', asyn
     await keyboardSubmit(page, projectPath)
     await expect(
       page.getByRole('button', { name: 'Open fault project' })
+    ).toBeFocused()
+    await page.keyboard.press('Tab')
+    await expect(
+      page.getByRole('button', { name: 'Stop fault project workbench' })
     ).toBeFocused()
     await page.keyboard.press('Tab')
     await expect(

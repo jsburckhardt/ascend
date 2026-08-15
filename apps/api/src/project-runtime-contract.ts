@@ -1,8 +1,30 @@
 import { createHash } from 'node:crypto'
 import os from 'node:os'
+import type {
+  RuntimeTerminationAudit,
+  RuntimeTerminationOutcome,
+} from './project-runtime-process.js'
 
 export const RUNTIME_STATES = ['starting', 'running', 'failed'] as const
 export type RuntimeState = (typeof RUNTIME_STATES)[number]
+
+export const RUNTIME_ENTRY_STATES = [
+  'registered',
+  'starting',
+  'running',
+  'stopping',
+  'failed',
+] as const
+export type RuntimeEntryState = (typeof RUNTIME_ENTRY_STATES)[number]
+
+export const RUNTIME_LIFECYCLE_TARGETS = [
+  'starting',
+  'running',
+  'failed',
+  'stopping',
+  'stopped',
+] as const
+export type RuntimeLifecycleTarget = (typeof RUNTIME_LIFECYCLE_TARGETS)[number]
 
 export const PUBLIC_RUNTIME_STATES = Object.freeze([
   'Stopped',
@@ -39,6 +61,8 @@ export const RUNTIME_FAILURE_CATEGORIES = [
   'health-body-unexpected',
   'caller-cancelled',
   'manager-shutdown',
+  'stop-unconfirmed',
+  'runtime-stopping',
 ] as const
 export type RuntimeFailureCategory = (typeof RUNTIME_FAILURE_CATEGORIES)[number]
 
@@ -49,7 +73,7 @@ export interface PublicRuntimeReport {
 }
 
 export function publicRuntimeState(
-  state: RuntimeState | 'registered' | undefined
+  state: RuntimeEntryState | undefined
 ): PublicRuntimeState {
   switch (state) {
     case undefined:
@@ -58,6 +82,7 @@ export function publicRuntimeState(
     case 'starting':
       return 'Starting'
     case 'running':
+    case 'stopping':
       return 'Running'
     case 'failed':
       return 'Failed'
@@ -90,6 +115,10 @@ export const RUNTIME_FAILURE_MESSAGES: Readonly<
   'caller-cancelled': 'Workbench wait was cancelled; start again when ready.',
   'manager-shutdown':
     'Runtime manager is shutting down; restart Ascend before retrying.',
+  'stop-unconfirmed':
+    'Workbench release could not be confirmed; retry after the runtime manager reconciles it.',
+  'runtime-stopping':
+    'Workbench is stopping; wait for the current operation to settle before retrying.',
 })
 
 export interface RuntimeFailureDiagnostics {
@@ -151,9 +180,11 @@ export interface RuntimeLifecycleEvent {
     | 'runtime.start.succeeded'
     | 'runtime.start.failed'
     | 'runtime.health.changed'
+    | 'runtime.stop.requested'
+    | 'runtime.stop.succeeded'
   readonly projectId: string
-  readonly from: 'stopped' | RuntimeState
-  readonly to: RuntimeState
+  readonly from: RuntimeLifecycleTarget
+  readonly to: RuntimeLifecycleTarget
   readonly elapsedMs: number
   readonly classification?: RuntimeFailureCategory
 }
@@ -165,13 +196,30 @@ const PUBLIC_STATE_BY_LIFECYCLE_EVENT: Readonly<
   'runtime.start.succeeded': 'Running',
   'runtime.start.failed': 'Failed',
   'runtime.health.changed': 'Failed',
+  'runtime.stop.requested': 'Running',
+  'runtime.stop.succeeded': 'Stopped',
 })
+
+export function publicRuntimeStateForLifecycleTarget(
+  target: RuntimeLifecycleTarget
+): PublicRuntimeState {
+  switch (target) {
+    case 'stopped':
+      return 'Stopped'
+    case 'stopping':
+      return 'Running'
+    case 'starting':
+    case 'running':
+    case 'failed':
+      return publicRuntimeState(target)
+  }
+}
 
 export function publicRuntimeStateForLifecycleEvent(
   event: RuntimeLifecycleEvent['event'],
   to: RuntimeLifecycleEvent['to']
 ): PublicRuntimeState {
-  const state = publicRuntimeState(to)
+  const state = publicRuntimeStateForLifecycleTarget(to)
   if (PUBLIC_STATE_BY_LIFECYCLE_EVENT[event] !== state) {
     throw new Error('Runtime lifecycle event does not match its target state')
   }
@@ -190,6 +238,7 @@ export const PROJECT_RUNTIME_DEFAULTS = Object.freeze({
   pollIntervalMs: 50,
   gracefulShutdownMs: 2_000,
   forceShutdownMs: 2_000,
+  stopAuditAllowanceMs: 1_000,
 })
 
 export interface ProjectRuntimeConfig {
@@ -202,6 +251,7 @@ export interface ProjectRuntimeConfig {
   readonly pollIntervalMs: number
   readonly gracefulShutdownMs: number
   readonly forceShutdownMs: number
+  readonly stopAuditAllowanceMs: number
 }
 
 export function createProjectRuntimeConfig(
@@ -245,6 +295,9 @@ export function createProjectRuntimeConfig(
       PROJECT_RUNTIME_DEFAULTS.gracefulShutdownMs,
     forceShutdownMs:
       overrides.forceShutdownMs ?? PROJECT_RUNTIME_DEFAULTS.forceShutdownMs,
+    stopAuditAllowanceMs:
+      overrides.stopAuditAllowanceMs ??
+      PROJECT_RUNTIME_DEFAULTS.stopAuditAllowanceMs,
   }
   for (const value of [
     config.collisionAttempts,
@@ -253,12 +306,68 @@ export function createProjectRuntimeConfig(
     config.pollIntervalMs,
     config.gracefulShutdownMs,
     config.forceShutdownMs,
+    config.stopAuditAllowanceMs,
   ]) {
     if (!Number.isSafeInteger(value) || value <= 0) {
       throw new Error('Runtime bounds must be positive integers')
     }
   }
   return Object.freeze(config)
+}
+
+export function runtimeStopOverallBoundMs(
+  config: ProjectRuntimeConfig
+): number {
+  return (
+    config.gracefulShutdownMs +
+    config.forceShutdownMs +
+    config.stopAuditAllowanceMs
+  )
+}
+
+export const RUNTIME_STOP_OUTCOMES = Object.freeze([
+  'stopped',
+  'already-stopped',
+  'rejected',
+] as const)
+export type RuntimeStopOutcomeName = (typeof RUNTIME_STOP_OUTCOMES)[number]
+
+export const RUNTIME_STOP_REJECTION_CATEGORIES = Object.freeze([
+  'not-registered',
+  'no-managed-runtime',
+  'start-in-progress',
+  'failure-retained',
+  'stop-unconfirmed',
+  'manager-shutdown',
+] as const)
+export type RuntimeStopRejectionCategory =
+  (typeof RUNTIME_STOP_REJECTION_CATEGORIES)[number]
+
+export type RuntimeStopOutcome =
+  | Readonly<{
+      outcome: 'stopped'
+      projectId: string
+      release: RuntimeTerminationOutcome
+      audit: RuntimeTerminationAudit
+    }>
+  | Readonly<{
+      outcome: 'already-stopped'
+      projectId: string
+    }>
+  | Readonly<{
+      outcome: 'rejected'
+      projectId: string
+      category: RuntimeStopRejectionCategory
+      release?: RuntimeTerminationOutcome
+      audit?: RuntimeTerminationAudit
+    }>
+
+export class RuntimeStopInvariantError extends Error {
+  constructor() {
+    super('Runtime stop ownership invariant failed')
+    this.name = 'RuntimeStopInvariantError'
+    delete this.stack
+  }
 }
 
 export interface RuntimeSafeLifecycleEvent {

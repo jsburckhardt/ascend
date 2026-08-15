@@ -16,6 +16,7 @@ import {
   reconcileRuntimeReports,
   type RuntimeStateLoader,
 } from './runtime-state'
+import { RUNTIME_STOP_NOTICES, type RuntimeStopTransport } from './runtime-stop'
 import { useProjectHome } from './use-project-home'
 import {
   useRuntimeState,
@@ -32,6 +33,7 @@ export interface AppProperties {
   readonly loadProjectList?: ProjectLoader
   readonly registerProject?: RegistrationTransport
   readonly closeProject?: CloseTransport
+  readonly stopRuntime?: RuntimeStopTransport
   readonly loadRuntimeStates?: RuntimeStateLoader
   readonly runtimeStateTimeoutMs?: number
   readonly navigateToWorkbench?: WorkbenchNavigator
@@ -60,6 +62,7 @@ export function App({
   loadProjectList,
   registerProject,
   closeProject,
+  stopRuntime,
   loadRuntimeStates,
   runtimeStateTimeoutMs,
   navigateToWorkbench = browserWorkbenchNavigator,
@@ -68,6 +71,7 @@ export function App({
     load: loadProjectList,
     register: registerProject,
     close: closeProject,
+    stop: stopRuntime,
   })
   const { state } = home
   const [projectListRevision, setProjectListRevision] =
@@ -87,6 +91,8 @@ export function App({
   const dialogRef = useRef<HTMLDivElement>(null)
   const projectActions = useRef(new Map<string, HTMLButtonElement>())
   const closeActions = useRef(new Map<string, HTMLButtonElement>())
+  const stopActions = useRef(new Map<string, HTMLButtonElement>())
+  const refreshedStopSettlement = useRef(0)
 
   useEffect(() => {
     if (state.listStatus !== 'success') return
@@ -111,7 +117,9 @@ export function App({
     const action =
       state.focusTarget === 'close'
         ? closeActions.current.get(state.focusProjectId)
-        : projectActions.current.get(state.focusProjectId)
+        : state.focusTarget === 'stop'
+          ? stopActions.current.get(state.focusProjectId)
+          : projectActions.current.get(state.focusProjectId)
     action?.scrollIntoView({ block: 'nearest' })
     action?.focus()
   }, [state.focusProjectId, state.focusTarget, state.focusVersion])
@@ -119,6 +127,17 @@ export function App({
   useEffect(() => {
     if (state.inputFocusVersion > 0) inputRef.current?.focus()
   }, [state.inputFocusVersion])
+
+  useEffect(() => {
+    if (
+      state.stopSettlementVersion === 0 ||
+      refreshedStopSettlement.current === state.stopSettlementVersion
+    ) {
+      return
+    }
+    refreshedStopSettlement.current = state.stopSettlementVersion
+    runtime.refresh()
+  }, [runtime, state.stopSettlementVersion])
 
   const closeCanCancel =
     state.close?.phase === 'confirming' ||
@@ -370,6 +389,9 @@ export function App({
           <h2 className="text-2xl font-semibold" id="registered-projects">
             Registered projects
           </h2>
+          <p className="sr-only" id="stop-workbench-description">
+            Stopping releases the workbench and keeps the project registered.
+          </p>
           {runtimeSummary === undefined ? null : (
             <p
               aria-label="Runtime state summary"
@@ -381,7 +403,16 @@ export function App({
           )}
           <ul aria-label="Registered projects" className="mt-6 grid gap-4">
             {state.projects.map((project, index) => (
-              <li className="rounded-xl border bg-white p-6" key={project.id}>
+              <li
+                aria-busy={
+                  state.stop?.id === project.id &&
+                  state.stop.phase === 'pending'
+                    ? true
+                    : undefined
+                }
+                className="rounded-xl border bg-white p-6"
+                key={project.id}
+              >
                 <h3 className="text-lg font-semibold">{project.name}</h3>
                 <p
                   className="mt-2 whitespace-pre-wrap text-sm text-slate-600 [overflow-wrap:anywhere]"
@@ -446,6 +477,24 @@ export function App({
                   Open
                 </button>
                 <button
+                  aria-describedby="stop-workbench-description"
+                  aria-label={'Stop ' + project.name + ' workbench'}
+                  className="ml-3 mt-5 rounded-md border px-4 py-2 text-sm font-medium"
+                  data-stop-project-id={project.id}
+                  disabled={state.stop?.phase === 'pending'}
+                  onClick={() => {
+                    setOpenAnnouncement('')
+                    home.stop(project.id)
+                  }}
+                  ref={(element) => {
+                    if (element === null) stopActions.current.delete(project.id)
+                    else stopActions.current.set(project.id, element)
+                  }}
+                  type="button"
+                >
+                  Stop
+                </button>
+                <button
                   aria-label={'Close ' + project.name}
                   className={
                     'ml-3 mt-5 rounded-md border border-red-700 px-4 py-2 text-sm font-medium text-red-800'
@@ -464,6 +513,33 @@ export function App({
                 >
                   Close
                 </button>
+                {state.stop?.id === project.id &&
+                state.stop.phase === 'retry' &&
+                state.stop.category !== undefined ? (
+                  <div className="mt-4" role="alert">
+                    <p>{RUNTIME_STOP_NOTICES[state.stop.category]}</p>
+                    <button
+                      className="mt-2 rounded-md border px-3 py-1 text-sm font-medium"
+                      onClick={() => home.stop(project.id)}
+                      type="button"
+                    >
+                      Retry stop
+                    </button>
+                  </div>
+                ) : null}
+                {state.stop?.id === project.id &&
+                state.stop.phase === 'unknown' ? (
+                  <div className="mt-4">
+                    <p>Stop outcome unknown. Refresh the runtime state.</p>
+                    <button
+                      className="mt-2 rounded-md border px-3 py-1 text-sm font-medium"
+                      onClick={runtime.refresh}
+                      type="button"
+                    >
+                      Refresh runtime state
+                    </button>
+                  </div>
+                ) : null}
               </li>
             ))}
           </ul>

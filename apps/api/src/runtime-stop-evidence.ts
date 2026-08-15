@@ -679,7 +679,7 @@ function validateRouteSource(route: string): readonly string[] {
     violations.push('route-category-list')
   } else if (
     countMatches(route.slice(categoriesStart, categoriesEnd), /'[a-z_]+'/gu) !==
-    9
+    10
   ) {
     violations.push('route-category-count')
   }

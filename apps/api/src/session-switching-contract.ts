@@ -358,13 +358,21 @@ function validateSessionSwitchingEvidenceBase(value: unknown): boolean {
     if (String(row.transitionId).includes('home-')) {
       if (expected.stop !== 0 || expected.shutdown !== 0) return false
       const home = object(row.home)
+      const restartControlsPresent =
+        row.transitionId === 'initial-home-B'
+          ? 1
+          : row.transitionId === 'initial-home-C'
+            ? 2
+            : 3
       if (
         !home ||
         !Array.isArray(home.cards) ||
         home.cards.length !== 3 ||
         JSON.stringify(home.cards.map((card) => object(card)?.project)) !==
           JSON.stringify(['A', 'B', 'C']) ||
-        home.runtimeControlsPresent !== 3 ||
+        home.stopControlsPresent !== 3 ||
+        home.restartControlsPresent !== restartControlsPresent ||
+        home.runtimeControlsPresent !== 3 + restartControlsPresent ||
         home.focus !== 'heading:Ascend'
       )
         return false

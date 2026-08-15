@@ -13,6 +13,7 @@ export const RUNTIME_ENTRY_STATES = [
   'starting',
   'running',
   'stopping',
+  'restarting',
   'failed',
 ] as const
 export type RuntimeEntryState = (typeof RUNTIME_ENTRY_STATES)[number]
@@ -23,6 +24,7 @@ export const RUNTIME_LIFECYCLE_TARGETS = [
   'failed',
   'stopping',
   'stopped',
+  'restarting',
 ] as const
 export type RuntimeLifecycleTarget = (typeof RUNTIME_LIFECYCLE_TARGETS)[number]
 
@@ -48,6 +50,58 @@ export interface RuntimeSnapshot {
   readonly elapsedMs: number
 }
 
+export const RUNTIME_RESTART_OUTCOMES = Object.freeze([
+  'restarted',
+  'rejected',
+] as const)
+export type RuntimeRestartOutcomeName =
+  (typeof RUNTIME_RESTART_OUTCOMES)[number]
+
+export const RUNTIME_RESTART_REJECTION_CATEGORIES = Object.freeze([
+  'not-registered',
+  'no-managed-runtime',
+  'start-in-progress',
+  'stop-in-progress',
+  'release-unconfirmed',
+  'replacement-failed',
+  'manager-shutdown',
+] as const)
+export type RuntimeRestartRejectionCategory =
+  (typeof RUNTIME_RESTART_REJECTION_CATEGORIES)[number]
+
+export interface RuntimeRestartIdentity {
+  readonly pid: number
+  readonly processStartTime: string
+  readonly port: number
+}
+
+export type RuntimeRestartOutcome =
+  | Readonly<{
+      outcome: 'restarted'
+      projectId: string
+      priorIdentity?: RuntimeRestartIdentity
+      replacementIdentity: RuntimeRestartIdentity
+      release?: RuntimeTerminationOutcome
+      audit?: RuntimeTerminationAudit
+    }>
+  | Readonly<{
+      outcome: 'rejected'
+      projectId: string
+      category: RuntimeRestartRejectionCategory
+      failureCategory?: RuntimeFailureCategory
+      release?: RuntimeTerminationOutcome
+      audit?: RuntimeTerminationAudit
+      replacementAudit?: RuntimeTerminationAudit
+    }>
+
+export class RuntimeRestartInvariantError extends Error {
+  constructor() {
+    super('Runtime restart ownership invariant failed')
+    this.name = 'RuntimeRestartInvariantError'
+    delete this.stack
+  }
+}
+
 export const RUNTIME_FAILURE_CATEGORIES = [
   'unknown-project',
   'canonical-path-invariant',
@@ -63,6 +117,10 @@ export const RUNTIME_FAILURE_CATEGORIES = [
   'manager-shutdown',
   'stop-unconfirmed',
   'runtime-stopping',
+  'restart-release-unconfirmed',
+  'restart-deadline-exceeded',
+  'runtime-restarting',
+  'restart-replacement-unconfirmed',
 ] as const
 export type RuntimeFailureCategory = (typeof RUNTIME_FAILURE_CATEGORIES)[number]
 
@@ -80,6 +138,7 @@ export function publicRuntimeState(
     case 'registered':
       return 'Stopped'
     case 'starting':
+    case 'restarting':
       return 'Starting'
     case 'running':
     case 'stopping':
@@ -119,6 +178,14 @@ export const RUNTIME_FAILURE_MESSAGES: Readonly<
     'Workbench release could not be confirmed; retry after the runtime manager reconciles it.',
   'runtime-stopping':
     'Workbench is stopping; wait for the current operation to settle before retrying.',
+  'restart-release-unconfirmed':
+    'Workbench restart could not release the previous session; retry after the runtime manager reconciles it.',
+  'restart-deadline-exceeded':
+    'Workbench restart did not finish in time; retry after the runtime manager reconciles it.',
+  'runtime-restarting':
+    'Workbench is restarting; wait for the current operation to settle before retrying.',
+  'restart-replacement-unconfirmed':
+    'Workbench restart could not confirm replacement cleanup; retry after the runtime manager reconciles it.',
 })
 
 export interface RuntimeFailureDiagnostics {
@@ -174,6 +241,74 @@ export function deriveProjectOwnerToken(projectId: string): string {
   )
 }
 
+function checkedRuntimeBound(value: number): number {
+  if (!Number.isSafeInteger(value) || value <= 0) {
+    throw new Error('Runtime bounds must be positive integers')
+  }
+  return value
+}
+
+export function runtimeReplacementBoundMs(
+  config: ProjectRuntimeConfig
+): number {
+  return checkedRuntimeBound(
+    config.collisionAttempts *
+      (config.readinessTimeoutMs + runtimeStopOverallBoundMs(config))
+  )
+}
+
+export function restartQuarantineReleaseBoundMs(
+  config: ProjectRuntimeConfig
+): number {
+  return checkedRuntimeBound(
+    config.collisionAttempts * runtimeStopOverallBoundMs(config)
+  )
+}
+
+export function runtimeRestartReleaseBoundMs(
+  config: ProjectRuntimeConfig
+): number {
+  return checkedRuntimeBound(
+    runtimeStopOverallBoundMs(config) + restartQuarantineReleaseBoundMs(config)
+  )
+}
+
+export function runtimeRestartOverallBoundMs(
+  config: ProjectRuntimeConfig,
+  requiresQuarantineResolution: boolean
+): number {
+  return checkedRuntimeBound(
+    (requiresQuarantineResolution
+      ? runtimeRestartReleaseBoundMs(config)
+      : runtimeStopOverallBoundMs(config)) +
+      runtimeReplacementBoundMs(config) +
+      config.restartSettlementAllowanceMs
+  )
+}
+
+export const RESTART_ADMISSION_PHASES = Object.freeze([
+  'launch-pending',
+  'materialized-quarantined',
+  'absent-confirmed',
+  'audited-absent',
+] as const)
+export type RestartAdmissionPhase = (typeof RESTART_ADMISSION_PHASES)[number]
+
+export const RESTART_QUARANTINE_AUDIT_STATES = Object.freeze([
+  'unaudited',
+  'reclaiming',
+  'audited-absent',
+  'audited-unconfirmed',
+] as const)
+export type RestartQuarantineAuditState =
+  (typeof RESTART_QUARANTINE_AUDIT_STATES)[number]
+
+export interface RuntimeUnresolvedAdmission {
+  readonly projectToken: string
+  readonly admissionId: string
+  readonly phase: RestartAdmissionPhase
+}
+
 export interface RuntimeLifecycleEvent {
   readonly event:
     | 'runtime.start.requested'
@@ -182,6 +317,9 @@ export interface RuntimeLifecycleEvent {
     | 'runtime.health.changed'
     | 'runtime.stop.requested'
     | 'runtime.stop.succeeded'
+    | 'runtime.restart.requested'
+    | 'runtime.restart.succeeded'
+    | 'runtime.restart.failed'
   readonly projectId: string
   readonly from: RuntimeLifecycleTarget
   readonly to: RuntimeLifecycleTarget
@@ -198,6 +336,9 @@ const PUBLIC_STATE_BY_LIFECYCLE_EVENT: Readonly<
   'runtime.health.changed': 'Failed',
   'runtime.stop.requested': 'Running',
   'runtime.stop.succeeded': 'Stopped',
+  'runtime.restart.requested': 'Starting',
+  'runtime.restart.succeeded': 'Running',
+  'runtime.restart.failed': 'Failed',
 })
 
 export function publicRuntimeStateForLifecycleTarget(
@@ -209,6 +350,7 @@ export function publicRuntimeStateForLifecycleTarget(
     case 'stopping':
       return 'Running'
     case 'starting':
+    case 'restarting':
     case 'running':
     case 'failed':
       return publicRuntimeState(target)
@@ -239,6 +381,7 @@ export const PROJECT_RUNTIME_DEFAULTS = Object.freeze({
   gracefulShutdownMs: 2_000,
   forceShutdownMs: 2_000,
   stopAuditAllowanceMs: 1_000,
+  restartSettlementAllowanceMs: 1_000,
 })
 
 export interface ProjectRuntimeConfig {
@@ -252,6 +395,7 @@ export interface ProjectRuntimeConfig {
   readonly gracefulShutdownMs: number
   readonly forceShutdownMs: number
   readonly stopAuditAllowanceMs: number
+  readonly restartSettlementAllowanceMs: number
 }
 
 export function createProjectRuntimeConfig(
@@ -298,6 +442,9 @@ export function createProjectRuntimeConfig(
     stopAuditAllowanceMs:
       overrides.stopAuditAllowanceMs ??
       PROJECT_RUNTIME_DEFAULTS.stopAuditAllowanceMs,
+    restartSettlementAllowanceMs:
+      overrides.restartSettlementAllowanceMs ??
+      PROJECT_RUNTIME_DEFAULTS.restartSettlementAllowanceMs,
   }
   for (const value of [
     config.collisionAttempts,
@@ -307,6 +454,7 @@ export function createProjectRuntimeConfig(
     config.gracefulShutdownMs,
     config.forceShutdownMs,
     config.stopAuditAllowanceMs,
+    config.restartSettlementAllowanceMs,
   ]) {
     if (!Number.isSafeInteger(value) || value <= 0) {
       throw new Error('Runtime bounds must be positive integers')
@@ -336,6 +484,7 @@ export const RUNTIME_STOP_REJECTION_CATEGORIES = Object.freeze([
   'not-registered',
   'no-managed-runtime',
   'start-in-progress',
+  'restart-in-progress',
   'failure-retained',
   'stop-unconfirmed',
   'manager-shutdown',

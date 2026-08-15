@@ -14,6 +14,8 @@ This file is the single registry of all architectural decisions and core-compone
 | ADR-260815-public-runtime-state-projection | Report Public Runtime State Through a Read-Only Projection | Accepted | 2026-08-15 |
 | ADR-260815-selected-runtime-stop-control | Release One Selected Workbench Runtime Through a Manager-Owned Stop Control | Accepted | 2026-08-15 |
 | ADR-260815-termination-sequencer-boundary | Prove Termination Sequencing Through an Injectable Primitive Boundary | Accepted | 2026-08-15 |
+| ADR-260815-explicit-workbench-restart-control | Replace One Selected Workbench Runtime Through a Manager-Owned Restart Control | Accepted | 2026-08-15 |
+| ADR-260815-per-project-lifecycle-activation | Serialize Project Home Lifecycle Activation Per Project | Accepted | 2026-08-15 |
 
 ## Core-Components
 
@@ -192,3 +194,86 @@ Short, actionable statements derived from ADRs and core-components. More than on
 | 151 | Open a termination phase window only from a confirmed delivered signal | ADR-260815-termination-sequencer-boundary | 2026-08-15 |
 | 152 | Measure every termination phase, deadline, and elapsed value on a monotonic clock | ADR-260815-termination-sequencer-boundary | 2026-08-15 |
 | 153 | Record no delivered signal or escalation for a refused termination signal | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
+| 154 | Replace a selected workbench runtime only through one manager-owned restart operation | ADR-260815-explicit-workbench-restart-control | 2026-08-15 |
+| 155 | Restrict restart eligibility to a running or current-process retained-failed entry | ADR-260815-explicit-workbench-restart-control | 2026-08-15 |
+| 156 | Reject restart for a stopped, unmanaged, starting, stopping, or shutting-down project | ADR-260815-explicit-workbench-restart-control | 2026-08-15 |
+| 157 | Claim the restart generation synchronously and join concurrent same-project restarts | ADR-260815-explicit-workbench-restart-control | 2026-08-15 |
+| 158 | Confirm complete pre-restart absence before creating any replacement process | ADR-260815-explicit-workbench-restart-control | 2026-08-15 |
+| 159 | Install one restarting entry spanning release and replacement, projected as Starting | ADR-260815-explicit-workbench-restart-control | 2026-08-15 |
+| 160 | Prohibit any Stopped projection or released registered entry between restart generations | ADR-260815-explicit-workbench-restart-control | 2026-08-15 |
+| 161 | Bound a restart by release, readiness, and settlement allowances armed at acceptance | ADR-260815-explicit-workbench-restart-control | 2026-08-15 |
+| 162 | Retain a failed restart as Failed and keep it eligible for another explicit restart | ADR-260815-explicit-workbench-restart-control | 2026-08-15 |
+| 163 | Terminate and audit a replacement whose startup or readiness fails, leaving zero residuals | ADR-260815-explicit-workbench-restart-control | 2026-08-15 |
+| 164 | Serve restart from POST /api/projects/:id/runtime/restart with a bounded outcome vocabulary | ADR-260815-explicit-workbench-restart-control | 2026-08-15 |
+| 165 | Emit only the three NFR-015 restart events from an accepted restart | ADR-260815-explicit-workbench-restart-control | 2026-08-15 |
+| 166 | Add no proxy-side restart coordination and claim no session continuity across replacement | ADR-260815-explicit-workbench-restart-control | 2026-08-15 |
+| 167 | Refuse a start during a restart with the bounded runtime-restarting failure | ADR-260815-explicit-workbench-restart-control | 2026-08-15 |
+| 168 | Serialize Project Home restart activation per stable project ID | ADR-260815-per-project-lifecycle-activation | 2026-08-15 |
+| 169 | Keep every other project's lifecycle controls enabled during a selected restart | ADR-260815-per-project-lifecycle-activation | 2026-08-15 |
+| 170 | Discard a restart settlement whose per-project owner or project is no longer installed | ADR-260815-per-project-lifecycle-activation | 2026-08-15 |
+| 171 | Offer Restart only for a project the authoritative projection reports Running or Failed | ADR-260815-per-project-lifecycle-activation | 2026-08-15 |
+| 172 | Issue exactly one read-only runtime-state request per settled successful restart | ADR-260815-per-project-lifecycle-activation | 2026-08-15 |
+| 173 | Present an explicit unknown restart outcome without retrying or assuming success | ADR-260815-per-project-lifecycle-activation | 2026-08-15 |
+| 174 | Spend the remaining lifecycle-control deferral on explicit restart only | ADR-260815-public-runtime-state-projection | 2026-08-15 |
+| 175 | Reject a selected stop during a restart with the bounded restart-in-progress category | ADR-260815-selected-runtime-stop-control | 2026-08-15 |
+| 176 | Await every in-flight restart before the manager shutdown ownership sweep | ADR-260815-selected-runtime-stop-control | 2026-08-15 |
+| 177 | Reuse the single termination sequencer unchanged for the restart release phase | ADR-260815-termination-sequencer-boundary | 2026-08-15 |
+| 178 | Project the restarting entry state as Starting without widening the public vocabulary | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
+| 179 | Treat absent prior ownership records as an already-absent restart release | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
+| 180 | Allow one restart-release termination and at most one replacement-failure cleanup per restart | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
+| 181 | Prevent every stale prior-generation settlement from changing a successful replacement | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
+| 182 | Surface a lost restart claim as an invariant fault without mutating, auditing, or emitting | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
+| 183 | Prohibit every automatic restart retry, trigger, and recovery loop | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
+| 184 | Emit exactly one runtime.restart.requested and one terminal restart event per accepted restart | CORE-COMPONENT-260808-structured-runtime-logging | 2026-08-15 |
+| 185 | Prohibit stop, start, and health events from an explicit restart's internal phases | CORE-COMPONENT-260808-structured-runtime-logging | 2026-08-15 |
+| 186 | Emit no restart lifecycle event for a restart request rejected before acceptance | CORE-COMPONENT-260808-structured-runtime-logging | 2026-08-15 |
+| 187 | Fail a proxy-path start during a restart with the bounded restart-in-progress failure | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-15 |
+| 188 | Keep the stable workbench route unchanged across a runtime replacement | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-15 |
+| 189 | Retain project registration and directory contents on every restart outcome | CORE-COMPONENT-260808-filesystem-path-safety | 2026-08-15 |
+| 190 | Publish runtime:runtime-restarting as a 503 workbench_restarting row in the workbench failure table | ADR-260815-explicit-workbench-restart-control | 2026-08-15 |
+| 191 | Require every proxy-reachable runtime failure category to have a workbench failure table row | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-15 |
+| 192 | Arm every restart deadline with the trusted synchronous scheduler, never a fallible sleep | ADR-260815-explicit-workbench-restart-control | 2026-08-15 |
+| 193 | Abort a restart phase with a typed runtime failure so no deadline reports manager shutdown | ADR-260815-explicit-workbench-restart-control | 2026-08-15 |
+| 194 | Settle a post-gate restart deadline as replacement-failed retaining restart-deadline-exceeded | ADR-260815-explicit-workbench-restart-control | 2026-08-15 |
+| 195 | Keep a pre-gate restart deadline release-unconfirmed and launch no replacement | ADR-260815-explicit-workbench-restart-control | 2026-08-15 |
+| 196 | Bound the restart replacement allowance by every configured collision attempt and its cleanup | ADR-260815-explicit-workbench-restart-control | 2026-08-15 |
+| 197 | Keep the delivered launch configuration for restart replacements, including collision attempts | ADR-260815-explicit-workbench-restart-control | 2026-08-15 |
+| 198 | Expose the trusted monotonic clock and deadline scheduler as one manager-injectable boundary | ADR-260815-termination-sequencer-boundary | 2026-08-15 |
+| 199 | Prohibit any fallible awaited primitive from bounding a restart phase, gate, or settlement | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
+| 200 | Record an unaudited replacement as retained rather than claiming an unobserved absence | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
+| 201 | Publish one workbench failure row for every proxied runtime category, closing the stopping and stop-unconfirmed gaps | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-15 |
+| 202 | Enforce workbench failure table exhaustiveness with a mechanical union check, not prose | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-15 |
+| 203 | Set the Project Home restart transport bound above the manager restart overall bound | ADR-260815-per-project-lifecycle-activation | 2026-08-15 |
+| 204 | Create a pending replacement admission before every restart launch call | ADR-260815-explicit-workbench-restart-control | 2026-08-15 |
+| 205 | Classify a retained failure holding an unresolved admission as pending, never as absent | ADR-260815-explicit-workbench-restart-control | 2026-08-15 |
+| 206 | Block a retry's replacement gate until every pending predecessor admission resolves | ADR-260815-explicit-workbench-restart-control | 2026-08-15 |
+| 207 | Settle a retry release-unconfirmed when a predecessor admission stays unresolved in the release bound | ADR-260815-explicit-workbench-restart-control | 2026-08-15 |
+| 208 | Bound a pending-admission restart release phase by one quarantine termination per launch attempt | ADR-260815-explicit-workbench-restart-control | 2026-08-15 |
+| 209 | Wrap restart launch callbacks so a post-settlement callback writes only quarantine state | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
+| 210 | Key late restart ownership and cleanup records by exact identity and admission, not project ID | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
+| 211 | Prohibit a late restart cleanup from overwriting the project's current cleanup evidence | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
+| 212 | Observe an abandoned restart launch only through one detached late-settlement continuation | ADR-260815-explicit-workbench-restart-control | 2026-08-15 |
+| 213 | Exclude every abandoned launch promise from the task sets manager shutdown drains | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
+| 214 | Report unresolved restart admissions in the shutdown result instead of waiting on them | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
+| 215 | Terminate each quarantined identity once and re-attempt it at most once under a claim | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
+| 216 | Refine decision 163: claim a residual-free replacement only from a completed exact audit | ADR-260815-explicit-workbench-restart-control | 2026-08-15 |
+| 217 | Refine decision 179: treat missing ownership as absent only when no admission is unresolved | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
+| 218 | Refine decision 180: add quarantine termination cardinality to restart cleanup cardinality | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
+| 219 | Raise the Project Home restart transport bound above the pending-admission restart ceiling | ADR-260815-per-project-lifecycle-activation | 2026-08-15 |
+| 220 | Delete a restart ownership record by the exact identity its own cleanup audit names | ADR-260815-explicit-workbench-restart-control | 2026-08-15 |
+| 221 | Leave exactly one ownership record for a project after a successful restart | ADR-260815-explicit-workbench-restart-control | 2026-08-15 |
+| 222 | Abort a restart when a launch collision cleanup cannot confirm all three absences | ADR-260815-explicit-workbench-restart-control | 2026-08-15 |
+| 223 | Publish restart-replacement-unconfirmed as a bounded failure category and a 503 workbench row | ADR-260815-explicit-workbench-restart-control | 2026-08-15 |
+| 224 | Refine decision 210: key installed restart cleanup deletions by exact identity too | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
+| 225 | Quarantine an unconfirmed replacement identity as audited-unconfirmed under the existing model | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
+| 226 | Refine decision 216: prohibit a zero-residual claim while a quarantined identity stands | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
+| 227 | Refine decision 180: write one project-keyed replacement cleanup record per phase | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
+| 228 | Classify a project holding a quarantined residual and arm the release bound for reclaiming it | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
+| 229 | Publish a 503 row for a restart failure retained from an unconfirmed replacement cleanup | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-15 |
+| 230 | Classify a blocked restart replacement from its own typed phase-abort reason, never the launch error | ADR-260815-explicit-workbench-restart-control | 2026-08-15 |
+| 231 | Record a self-quarantined replacement as quarantined-unconfirmed on every settlement branch | ADR-260815-explicit-workbench-restart-control | 2026-08-15 |
+| 232 | Refine decision 222: block every replacement branch, not only the collision retry path | ADR-260815-explicit-workbench-restart-control | 2026-08-15 |
+| 233 | Represent a withheld residual claim as null and a proven absence as integer zero | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
+| 234 | Refine decision 226: encode the prohibited zero-residual claim as an explicit null residual value | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
+| 235 | Refine decision 179: identify a retained failed entry's prior owned resources as one live handle | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
+| 236 | Record validation-owned fixture teardown in its own field, separate from settlement residual knowledge | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |

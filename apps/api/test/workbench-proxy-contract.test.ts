@@ -45,10 +45,10 @@ describe('stable workbench proxy contract', () => {
   })
 
   it('freezes one complete exact failure table', () => {
-    expect(WORKBENCH_FAILURE_TABLE).toHaveLength(23)
+    expect(WORKBENCH_FAILURE_TABLE).toHaveLength(29)
     expect(
       new Set(WORKBENCH_FAILURE_TABLE.map((entry) => entry.category)).size
-    ).toBe(23)
+    ).toBe(29)
     expect(WORKBENCH_FAILURE_TABLE_SHA256).toMatch(/^[a-f0-9]{64}$/u)
     expect(
       workbenchFailureEnvelope(workbenchFailure('websocket-timeout'))

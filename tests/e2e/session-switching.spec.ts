@@ -628,17 +628,33 @@ test('preserves A/B/C sessions with execution-joined measured evidence', async (
             .getByRole('button', { name: 'Close ' + project.name })
             .count(),
         })
-      const runtimeControlsPresent = await page
-        .getByRole('button', { name: /Stop|Restart/u })
+      const stopControlsPresent = await page
+        .getByRole('button', { name: /^Stop .+ workbench$/u })
         .count()
-      home = { cards, runtimeControlsPresent, focus: after.focus }
+      const restartControlsPresent = await page
+        .getByRole('button', { name: /^Restart .+ workbench$/u })
+        .count()
+      const runtimeControlsPresent =
+        stopControlsPresent + restartControlsPresent
+      home = {
+        cards,
+        stopControlsPresent,
+        restartControlsPresent,
+        runtimeControlsPresent,
+        focus: after.focus,
+      }
       expect(
         cards.every(
           (card) =>
             card.count === 1 && card.openCount === 1 && card.closeCount === 1
         )
       ).toBe(true)
-      expect(runtimeControlsPresent).toBe(3)
+      const runningProjects = runtime
+        .reportPublicStates(projects.map((project) => project.id))
+        .filter((report) => report.state === 'Running').length
+      expect(stopControlsPresent).toBe(3)
+      expect(restartControlsPresent).toBe(runningProjects)
+      expect(runtimeControlsPresent).toBe(3 + runningProjects)
       expect(after.focus).toBe('heading:Ascend')
     }
     const eventRange = {
@@ -1779,24 +1795,27 @@ test('preserves A/B/C sessions with execution-joined measured evidence', async (
       identityDigest: digestSessionEvidence([counterPid, counterStart]),
       commandDigest: counterCommandDigest,
     }
-    const artifactEntries = await Promise.all(
-      [
-        ['counterOutput', counterOutput],
-        ['counterIdentity', counterIdentity],
-      ].map(async ([kind, artifactPath]) => {
-        const content = await readFile(artifactPath!)
-        return {
-          kind,
-          path: artifactPath,
-          pathDigest: digestSessionEvidence(artifactPath),
-          contentDigest: digestSessionEvidence(content.toString('utf8')),
-          ownerIdentityDigest: counterOwner.identityDigest,
-          executionId,
-          declarationObservationId: id(),
-          preCleanupProbeObservationId: id(),
-        }
-      })
-    )
+    const artifactEntries =
+      counterPid === undefined
+        ? []
+        : await Promise.all(
+            [
+              ['counterOutput', counterOutput],
+              ['counterIdentity', counterIdentity],
+            ].map(async ([kind, artifactPath]) => {
+              const content = await readFile(artifactPath!)
+              return {
+                kind,
+                path: artifactPath,
+                pathDigest: digestSessionEvidence(artifactPath),
+                contentDigest: digestSessionEvidence(content.toString('utf8')),
+                ownerIdentityDigest: counterOwner.identityDigest,
+                executionId,
+                declarationObservationId: id(),
+                preCleanupProbeObservationId: id(),
+              }
+            })
+          )
     const artifactManifest = {
       manifestId: id(),
       executionId,

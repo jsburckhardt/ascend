@@ -22,6 +22,7 @@ Project path input, canonicalization, duplicate detection, workbench launch path
 - Closing a project MUST stop managed resources and remove metadata only.
 - Closing a project MUST NOT delete, move, rename, copy, or otherwise modify its directory.
 - Stopping a selected project runtime MUST release only Ascend-owned runtime resources. It MUST retain that project's registration exactly once with its stable ID, display name, canonical path, and created-at value unchanged, and MUST NOT delete, move, rename, copy, or otherwise modify its directory, another project's directory, or any declared unrelated resource, on any outcome, including a confirmed release, an already-stopped no-op, a request that resolves to no manager-owned runtime, an unconfirmed release, a termination fault, and every other bounded non-success.
+- Restarting a selected project runtime MUST release and relaunch only Ascend-owned runtime resources against the same stored canonical directory. Every restart outcome — success, unconfirmed prior release, and failed replacement alike — MUST retain that project's registration, its stable ID, display name, canonical path, and created-at value, and MUST NOT delete, move, rename, copy, create, or otherwise modify any file, directory, permission mode, or recorded timestamp inside the project directory.
 - Filesystem operations MUST reject traversal outside the configured project-opening policy.
 
 ### Interfaces
@@ -31,6 +32,7 @@ Project path input, canonicalization, duplicate detection, workbench launch path
 ### Expectations
 - Validation errors are safe to display and actionable.
 - Non-destructive close behavior has automated regression coverage.
+- Non-destructive selected runtime restart has automated regression coverage that compares before-and-after project fixture manifests for every restart outcome in a scenario that declares no in-project writer.
 - Non-destructive selected runtime stop has automated regression coverage that compares before-and-after project fixture manifests across success and failure outcomes.
 
 ## Rationale
@@ -62,3 +64,4 @@ const canonicalPath = await projectPaths.validate(inputPath)
 
 - [ADR-260808-typescript-monorepo](../ADR/ADR-260808-typescript-monorepo.md)
 - [ADR-260815-selected-runtime-stop-control](../ADR/ADR-260815-selected-runtime-stop-control.md)
+- [ADR-260815-explicit-workbench-restart-control](../ADR/ADR-260815-explicit-workbench-restart-control.md)

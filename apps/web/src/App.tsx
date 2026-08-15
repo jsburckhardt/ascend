@@ -16,6 +16,10 @@ import {
   reconcileRuntimeReports,
   type RuntimeStateLoader,
 } from './runtime-state'
+import {
+  RUNTIME_RESTART_NOTICES,
+  type RuntimeRestartTransport,
+} from './runtime-restart'
 import { RUNTIME_STOP_NOTICES, type RuntimeStopTransport } from './runtime-stop'
 import { useProjectHome } from './use-project-home'
 import {
@@ -34,6 +38,7 @@ export interface AppProperties {
   readonly registerProject?: RegistrationTransport
   readonly closeProject?: CloseTransport
   readonly stopRuntime?: RuntimeStopTransport
+  readonly restartRuntime?: RuntimeRestartTransport
   readonly loadRuntimeStates?: RuntimeStateLoader
   readonly runtimeStateTimeoutMs?: number
   readonly navigateToWorkbench?: WorkbenchNavigator
@@ -63,6 +68,7 @@ export function App({
   registerProject,
   closeProject,
   stopRuntime,
+  restartRuntime,
   loadRuntimeStates,
   runtimeStateTimeoutMs,
   navigateToWorkbench = browserWorkbenchNavigator,
@@ -72,6 +78,7 @@ export function App({
     register: registerProject,
     close: closeProject,
     stop: stopRuntime,
+    restart: restartRuntime,
   })
   const { state } = home
   const [projectListRevision, setProjectListRevision] =
@@ -92,7 +99,17 @@ export function App({
   const projectActions = useRef(new Map<string, HTMLButtonElement>())
   const closeActions = useRef(new Map<string, HTMLButtonElement>())
   const stopActions = useRef(new Map<string, HTMLButtonElement>())
+  const restartActions = useRef(new Map<string, HTMLButtonElement>())
   const refreshedStopSettlement = useRef(0)
+  const refreshedRestartSettlement = useRef(0)
+  const pendingRestartFocus = useRef<
+    | {
+        version: number
+        projectId: string
+        observedLoading: boolean
+      }
+    | undefined
+  >(undefined)
 
   useEffect(() => {
     if (state.listStatus !== 'success') return
@@ -119,7 +136,9 @@ export function App({
         ? closeActions.current.get(state.focusProjectId)
         : state.focusTarget === 'stop'
           ? stopActions.current.get(state.focusProjectId)
-          : projectActions.current.get(state.focusProjectId)
+          : state.focusTarget === 'restart'
+            ? restartActions.current.get(state.focusProjectId)
+            : projectActions.current.get(state.focusProjectId)
     action?.scrollIntoView({ block: 'nearest' })
     action?.focus()
   }, [state.focusProjectId, state.focusTarget, state.focusVersion])
@@ -138,6 +157,43 @@ export function App({
     refreshedStopSettlement.current = state.stopSettlementVersion
     runtime.refresh()
   }, [runtime, state.stopSettlementVersion])
+
+  useEffect(() => {
+    if (
+      state.restartSettlementVersion === 0 ||
+      refreshedRestartSettlement.current === state.restartSettlementVersion
+    ) {
+      return
+    }
+    refreshedRestartSettlement.current = state.restartSettlementVersion
+    if (state.focusTarget === 'restart' && state.focusProjectId !== undefined) {
+      pendingRestartFocus.current = {
+        version: state.restartSettlementVersion,
+        projectId: state.focusProjectId,
+        observedLoading: false,
+      }
+    }
+    runtime.refresh()
+  }, [
+    runtime,
+    state.focusProjectId,
+    state.focusTarget,
+    state.restartSettlementVersion,
+  ])
+
+  useEffect(() => {
+    const pending = pendingRestartFocus.current
+    if (pending === undefined) return
+    if (runtime.view.kind === 'loading') {
+      pending.observedLoading = true
+      return
+    }
+    if (runtime.view.kind !== 'success' || !pending.observedLoading) return
+    const action = restartActions.current.get(pending.projectId)
+    action?.scrollIntoView({ block: 'nearest' })
+    action?.focus()
+    pendingRestartFocus.current = undefined
+  }, [runtime.view])
 
   const closeCanCancel =
     state.close?.phase === 'confirming' ||
@@ -392,6 +448,10 @@ export function App({
           <p className="sr-only" id="stop-workbench-description">
             Stopping releases the workbench and keeps the project registered.
           </p>
+          <p className="sr-only" id="restart-workbench-description">
+            Restarting replaces the current workbench session and keeps the
+            project registered.
+          </p>
           {runtimeSummary === undefined ? null : (
             <p
               aria-label="Runtime state summary"
@@ -405,8 +465,9 @@ export function App({
             {state.projects.map((project, index) => (
               <li
                 aria-busy={
-                  state.stop?.id === project.id &&
-                  state.stop.phase === 'pending'
+                  (state.stop?.id === project.id &&
+                    state.stop.phase === 'pending') ||
+                  state.restarts.get(project.id)?.phase === 'pending'
                     ? true
                     : undefined
                 }
@@ -463,8 +524,9 @@ export function App({
                       : undefined
                   }
                   disabled={
-                    openingProjectId !== undefined &&
-                    openingProjectId !== project.id
+                    (openingProjectId !== undefined &&
+                      openingProjectId !== project.id) ||
+                    state.restarts.get(project.id)?.phase === 'pending'
                   }
                   onClick={() => openWorkbench(project.id, project.name)}
                   ref={(element) => {
@@ -481,7 +543,10 @@ export function App({
                   aria-label={'Stop ' + project.name + ' workbench'}
                   className="ml-3 mt-5 rounded-md border px-4 py-2 text-sm font-medium"
                   data-stop-project-id={project.id}
-                  disabled={state.stop?.phase === 'pending'}
+                  disabled={
+                    state.stop?.phase === 'pending' ||
+                    state.restarts.get(project.id)?.phase === 'pending'
+                  }
                   onClick={() => {
                     setOpenAnnouncement('')
                     home.stop(project.id)
@@ -494,12 +559,38 @@ export function App({
                 >
                   Stop
                 </button>
+                {currentRuntimeReports !== undefined &&
+                (currentRuntimeReports[index]!.state === 'Running' ||
+                  currentRuntimeReports[index]!.state === 'Failed') ? (
+                  <button
+                    aria-describedby="restart-workbench-description"
+                    aria-label={'Restart ' + project.name + ' workbench'}
+                    className="ml-3 mt-5 rounded-md border px-4 py-2 text-sm font-medium"
+                    data-restart-project-id={project.id}
+                    disabled={
+                      state.restarts.get(project.id)?.phase === 'pending'
+                    }
+                    onClick={() => {
+                      setOpenAnnouncement('')
+                      home.restart(project.id)
+                    }}
+                    ref={(element) => {
+                      if (element === null)
+                        restartActions.current.delete(project.id)
+                      else restartActions.current.set(project.id, element)
+                    }}
+                    type="button"
+                  >
+                    Restart
+                  </button>
+                ) : null}
                 <button
                   aria-label={'Close ' + project.name}
                   className={
                     'ml-3 mt-5 rounded-md border border-red-700 px-4 py-2 text-sm font-medium text-red-800'
                   }
                   data-close-project-id={project.id}
+                  disabled={state.restarts.get(project.id)?.phase === 'pending'}
                   onClick={() => {
                     setOpenAnnouncement('')
                     home.openClose(project.id)
@@ -524,6 +615,37 @@ export function App({
                       type="button"
                     >
                       Retry stop
+                    </button>
+                  </div>
+                ) : null}
+                {state.restarts.get(project.id)?.phase === 'retry' &&
+                state.restarts.get(project.id)?.category !== undefined ? (
+                  <div className="mt-4" role="alert">
+                    <p>
+                      {
+                        RUNTIME_RESTART_NOTICES[
+                          state.restarts.get(project.id)!.category!
+                        ]
+                      }
+                    </p>
+                    <button
+                      className="mt-2 rounded-md border px-3 py-1 text-sm font-medium"
+                      onClick={() => home.restart(project.id)}
+                      type="button"
+                    >
+                      Retry restart
+                    </button>
+                  </div>
+                ) : null}
+                {state.restarts.get(project.id)?.phase === 'unknown' ? (
+                  <div className="mt-4">
+                    <p>Restart outcome unknown. Refresh the runtime state.</p>
+                    <button
+                      className="mt-2 rounded-md border px-3 py-1 text-sm font-medium"
+                      onClick={runtime.refresh}
+                      type="button"
+                    >
+                      Refresh runtime state
                     </button>
                   </div>
                 ) : null}

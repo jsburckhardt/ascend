@@ -130,10 +130,18 @@ const evidence = () => {
     }
     focusObservations.push(focusObservation)
     lifecycleObservations.push(lifecycleObservation)
+    const restartControlsPresent =
+      transitionId === 'initial-home-B'
+        ? 1
+        : transitionId === 'initial-home-C'
+          ? 2
+          : 3
     const home = transitionId.includes('home-')
       ? {
           cards: BL014_FIXTURES.map((fixture) => ({ project: fixture.key })),
-          runtimeControlsPresent: 3,
+          stopControlsPresent: 3,
+          restartControlsPresent,
+          runtimeControlsPresent: 3 + restartControlsPresent,
           focus: 'heading:Ascend',
         }
       : undefined
@@ -541,6 +549,21 @@ describe('BL-014 fixture and evidence contracts', () => {
         transitions: valid.transitions.map((row, index) =>
           index === 0
             ? { ...row, eventDeltas: { ...row.eventDeltas, request: 99 } }
+            : row
+        ),
+      },
+      {
+        ...valid,
+        transitions: valid.transitions.map((row) =>
+          row.transitionId === 'initial-home-B'
+            ? {
+                ...row,
+                home: {
+                  ...row.home!,
+                  restartControlsPresent: 0,
+                  runtimeControlsPresent: 3,
+                },
+              }
             : row
         ),
       },

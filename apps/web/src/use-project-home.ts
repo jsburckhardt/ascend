@@ -14,6 +14,12 @@ import {
   type RegistrationTransport,
 } from './projects'
 import {
+  restartRuntime,
+  RUNTIME_RESTART_NOTICES,
+  type RuntimeRestartErrorCategory,
+  type RuntimeRestartTransport,
+} from './runtime-restart'
+import {
   RUNTIME_STOP_NOTICES,
   stopRuntime,
   type RuntimeStopErrorCategory,
@@ -40,6 +46,12 @@ export interface ProjectStopState {
   readonly category?: RuntimeStopErrorCategory
 }
 
+export interface ProjectRestartState {
+  readonly id: string
+  readonly phase: 'pending' | 'retry' | 'unknown'
+  readonly category?: RuntimeRestartErrorCategory
+}
+
 export interface ProjectHomeState {
   readonly listStatus: 'loading' | 'failure' | 'success'
   readonly projects: readonly Project[]
@@ -63,7 +75,9 @@ export interface ProjectHomeState {
   readonly close?: ProjectCloseState
   readonly stop?: ProjectStopState
   readonly stopSettlementVersion: number
-  readonly focusTarget?: 'open' | 'close' | 'stop' | 'heading'
+  readonly restarts: ReadonlyMap<string, ProjectRestartState>
+  readonly restartSettlementVersion: number
+  readonly focusTarget?: 'open' | 'close' | 'stop' | 'restart' | 'heading'
 }
 
 interface Owner {
@@ -82,6 +96,13 @@ interface Owner {
   active: boolean
 }
 
+interface RestartOwner {
+  readonly projectId: string
+  readonly generation: number
+  readonly controller: AbortController
+  active: boolean
+}
+
 export interface ProjectHomeController {
   readonly state: ProjectHomeState
   setInput(value: string): void
@@ -97,6 +118,7 @@ export interface ProjectHomeController {
   retryClose(): void
   refreshClose(): void
   stop(projectId: string): void
+  restart(projectId: string): void
 }
 
 export interface ProjectHomeDependencies {
@@ -104,6 +126,7 @@ export interface ProjectHomeDependencies {
   readonly register?: RegistrationTransport
   readonly close?: CloseTransport
   readonly stop?: RuntimeStopTransport
+  readonly restart?: RuntimeRestartTransport
   readonly listTimeoutMs?: number
 }
 
@@ -117,6 +140,8 @@ const initialState: ProjectHomeState = {
   focusVersion: 0,
   inputFocusVersion: 0,
   stopSettlementVersion: 0,
+  restarts: new Map(),
+  restartSettlementVersion: 0,
 }
 
 function upsert(projects: readonly Project[], project: Project): Project[] {
@@ -156,6 +181,7 @@ export function useProjectHome(
   const registration = dependencies.register ?? registerProject
   const closeTransport = dependencies.close ?? closeProject
   const stopTransport = dependencies.stop ?? stopRuntime
+  const restartTransport = dependencies.restart ?? restartRuntime
   const listTimeoutMs = dependencies.listTimeoutMs ?? PROJECT_LIST_TIMEOUT_MS
   const [state, setState] = useState<ProjectHomeState>(initialState)
   const latest = useRef(state)
@@ -163,6 +189,8 @@ export function useProjectHome(
   const mounted = useRef(false)
   const generation = useRef(0)
   const owner = useRef<Owner | undefined>(undefined)
+  const restartGeneration = useRef(0)
+  const restartOwners = useRef(new Map<string, RestartOwner>())
 
   const invalidate = useCallback(() => {
     const current = owner.current
@@ -319,6 +347,11 @@ export function useProjectHome(
     return () => {
       mounted.current = false
       invalidate()
+      for (const restartOwner of restartOwners.current.values()) {
+        restartOwner.active = false
+        restartOwner.controller.abort()
+      }
+      restartOwners.current.clear()
     }
   }, [invalidate, runList])
 
@@ -521,6 +554,7 @@ export function useProjectHome(
       value.listStatus !== 'success' ||
       value.mode !== 'editing' ||
       value.close !== undefined ||
+      restartOwners.current.has(id) ||
       owner.current !== undefined
     )
       return
@@ -768,6 +802,7 @@ export function useProjectHome(
         value.listStatus !== 'success' ||
         value.mode !== 'editing' ||
         value.close !== undefined ||
+        restartOwners.current.has(projectId) ||
         owner.current !== undefined ||
         (value.stop !== undefined && !retrying)
       ) {
@@ -840,6 +875,92 @@ export function useProjectHome(
     [finish, invalidate, owns, stopTransport]
   )
 
+  const restart = useCallback(
+    (projectId: string) => {
+      const value = latest.current
+      const restartState = value.restarts.get(projectId)
+      const retrying = restartState?.phase === 'retry'
+      if (
+        value.listStatus !== 'success' ||
+        value.mode !== 'editing' ||
+        value.close !== undefined ||
+        value.stop?.id === projectId ||
+        restartOwners.current.has(projectId) ||
+        (restartState !== undefined && !retrying)
+      ) {
+        return
+      }
+      const project = value.projects.find(({ id }) => id === projectId)
+      if (project === undefined) return
+      const controller = new AbortController()
+      const current: RestartOwner = {
+        projectId,
+        generation: ++restartGeneration.current,
+        controller,
+        active: true,
+      }
+      restartOwners.current.set(projectId, current)
+      const ownsRestart = (): boolean =>
+        mounted.current &&
+        current.active &&
+        restartOwners.current.get(projectId) === current
+      setState((currentState) => {
+        const restarts = new Map(currentState.restarts)
+        restarts.set(projectId, { id: projectId, phase: 'pending' })
+        return {
+          ...currentState,
+          restarts,
+          announcement: `${project.name}: Restarting workbench.`,
+        }
+      })
+      void restartTransport(projectId, controller.signal).then((result) => {
+        if (!ownsRestart()) return
+        current.active = false
+        restartOwners.current.delete(projectId)
+        setState((currentState) => {
+          const restarts = new Map(currentState.restarts)
+          const focus = {
+            focusProjectId: projectId,
+            focusTarget: 'restart' as const,
+            focusVersion: currentState.focusVersion + 1,
+          }
+          if (result.kind === 'success' && result.id === projectId) {
+            restarts.delete(projectId)
+            return {
+              ...currentState,
+              ...focus,
+              restarts,
+              restartSettlementVersion:
+                currentState.restartSettlementVersion + 1,
+              announcement: `${project.name}: Workbench restarted.`,
+            }
+          }
+          if (result.kind === 'failure') {
+            restarts.set(projectId, {
+              id: projectId,
+              phase: 'retry',
+              category: result.category,
+            })
+            return {
+              ...currentState,
+              ...focus,
+              restarts,
+              announcement: RUNTIME_RESTART_NOTICES[result.category],
+            }
+          }
+          restarts.set(projectId, { id: projectId, phase: 'unknown' })
+          return {
+            ...currentState,
+            ...focus,
+            restarts,
+            announcement: `${project.name}: Restart outcome unknown. Refresh runtime state.`,
+          }
+        })
+      })
+    },
+    [restartTransport]
+  )
+
   return {
     state,
     setInput,
@@ -855,5 +976,6 @@ export function useProjectHome(
     retryClose,
     refreshClose,
     stop,
+    restart,
   }
 }

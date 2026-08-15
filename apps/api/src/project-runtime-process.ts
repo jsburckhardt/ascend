@@ -100,7 +100,12 @@ export interface RuntimeOwnershipRecord {
   readonly port: number
 }
 
-export interface RuntimeTerminationPrimitives {
+export interface RuntimeDeadlineScheduler {
+  now(): number
+  scheduleDeadline(milliseconds: number, onDeadline: () => void): () => void
+}
+
+export interface RuntimeTerminationPrimitives extends RuntimeDeadlineScheduler {
   readProcessStartTime(pid: number, signal: AbortSignal): Promise<string | null>
   readProcessGroupMembers(
     processGroupId: number,
@@ -109,8 +114,6 @@ export interface RuntimeTerminationPrimitives {
   listenerIsAbsent(port: number, signal: AbortSignal): Promise<boolean>
   delay(milliseconds: number, signal: AbortSignal): Promise<void>
   signalProcessGroup(processGroupId: number, signal: NodeJS.Signals): boolean
-  now(): number
-  scheduleDeadline(milliseconds: number, onDeadline: () => void): () => void
 }
 
 export async function readProcessStartTime(
@@ -514,6 +517,9 @@ export const defaultRuntimeTerminationPrimitives: RuntimeTerminationPrimitives =
       return () => clearTimeout(timer)
     },
   })
+
+export const defaultRuntimeDeadlineScheduler: RuntimeDeadlineScheduler =
+  defaultRuntimeTerminationPrimitives
 
 const RUNTIME_TERMINATION_POLL_INTERVAL_MS = 20
 

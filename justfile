@@ -137,6 +137,15 @@ proof-runtime-stop:
 proof-runtime-stop-residual-audit:
     pnpm --filter @ascend/api exec tsx src/cli/runtime-stop-residual-audit.ts
 
+verify-runtime-restart:
+    BL018_ACCEPTANCE=1 pnpm exec vitest run apps/api/test/runtime-restart-manager.test.ts apps/api/test/runtime-restart-route.test.ts apps/api/test/runtime-restart-evidence.test.ts apps/api/test/runtime-restart-matrix.test.ts apps/api/test/runtime-restart-residual-audit.test.ts apps/api/test/runtime-restart-documentation.test.ts apps/web/test/runtime-restart-client.test.ts apps/web/test/use-project-home-restart.test.tsx apps/web/src/runtime-restart-component.test.tsx apps/web/src/runtime-restart-component-matrix.test.tsx apps/web/src/App.test.tsx --reporter=verbose
+
+proof-runtime-restart:
+    BL018_DESIGNATED=1 pnpm exec vitest run apps/api/test/runtime-restart-designated.test.ts --reporter=verbose
+
+proof-runtime-restart-residual-audit:
+    pnpm --filter @ascend/api exec tsx src/cli/runtime-restart-residual-audit.ts
+
 proof-session-switching-residual-audit:
     pnpm --filter @ascend/api exec tsx src/cli/session-switching-residual-audit.ts
 
@@ -169,5 +178,8 @@ verify:
     just verify-runtime-stop
     just proof-runtime-stop
     just proof-runtime-stop-residual-audit
+    just verify-runtime-restart
+    just proof-runtime-restart
+    just proof-runtime-restart-residual-audit
     just verify-mvp-performance
     just proof-mvp-performance-residual-audit

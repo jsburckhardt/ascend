@@ -1,0 +1,40 @@
+{
+  "schema_version": "2.7",
+  "command": "checks",
+  "harness": "copilot-cli",
+  "harness_version": "unknown",
+  "harness_session_id": "9287aec0-1a20-42d1-accb-c966b98c7485",
+  "timecode": "2026-08-08T07:41:41.512Z",
+  "window": {
+    "since": "session-start",
+    "from": 0,
+    "to": 0
+  },
+  "branch": null,
+  "tokens": null,
+  "effort": null,
+  "event_stream": [
+    {
+      "t": "2026-08-08T07:41:41.512Z",
+      "kind": "checks",
+      "status": "error"
+    }
+  ],
+  "rollup": {
+    "activity": {
+      "wall_s": 0,
+      "agent_working_s": 0,
+      "human_s": 0,
+      "idle_s": 0,
+      "working_ratio": 0
+    },
+    "flow_stage_time_s": {},
+    "skills": {},
+    "tokens": null,
+    "tools": {},
+    "outcomes": {
+      "checks": "error",
+      "exits": {}
+    }
+  }
+}

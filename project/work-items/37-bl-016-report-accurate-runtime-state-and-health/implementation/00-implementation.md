@@ -80,6 +80,28 @@ Focused construction also passed the T-1/T-2 manager contract (3 files, 20 tests
 
 Captured through the real `harness observe` executable: DL-011 (missing `rg`), DL-012 (missing `apply_patch`), DL-013 (fallback patch hunk counts), DL-014 (Fastify autoload source resolution), DL-015 (revision object identity), DL-016 (Home focus order), DL-017 (mutation/report revision race), DL-018 (async source-guard signature), INS-001 (live peer watcher semantics), DL-019 (format backpressure), DL-020 (one BL-012 cleanup-bound retry), and DL-021 (over-specific final task-status guard). No lifecycle hook was invoked by Implement.
 
+## AC-7 Verify correction
+
+Independent Verify returned AC-7 because the superseded non-catalog exit-event identifier remained as a contiguous token in two negative assertions and one mutation fixture. The correction changes tests only:
+
+- The shipped-document contract now allowlists every documented `runtime.*` token, so any unknown runtime token fails the contract.
+- The event contract retains its exact four-event NFR-015 catalog assertion without a redundant literal-specific check.
+- The validator still rejects the non-catalog mutation class through the generic `runtime.legacy` token.
+
+Correction evidence:
+
+- The accepted action-plan SHA-256 remains `90591007249502c27782e0d49b9703767977fbf9374d911c7b53a14c6d474011`; no Plan or architecture divergence was found.
+- A governed-surface scan returned zero superseded-identifier matches across `apps/`, `tests/`, `docs/`, and `README.md`, excluding generated caches.
+- Current `runtime.health.changed` coverage remains in application source, API and matrix tests, the BL-013 browser regression, and shipped documentation.
+- Focused validation passed all three corrected files: 3 files, 18 passed, 1 acceptance-gated evidence test skipped.
+- `just verify-runtime-state` passed 10 files and 105 tests, including all ten scenarios, source guards, catalog mutation rejection, and retained evidence regeneration.
+- `just verify` passed the complete root validation sequence, including the BL-013 and BL-016 gates.
+- Regenerated BL-013 evidence contains 12 scenarios and exactly 70 expected plus 70 executed catalog records.
+- Retained and disposable BL-016 evidence are byte-identical at SHA-256 `8473b4afc9b5aa2da1c5ba769bfa6929f4c2bb219a016f80a199f4d25c504485`.
+- Application source and shipped documentation are unchanged. Configuration, migration, architecture, operations, and deployment remain unaffected.
+
+Correction-stage observations captured through real `harness observe` calls: DL-004 (missing `rg`), DL-005 (missing `apply_patch`), DL-006 (fallback hunk recount), DL-007 (format backpressure), and CONF-001 (BL-013 evidence shape). No lifecycle hook was invoked.
+
 ## Known limitations and handoff boundary
 
 The feature intentionally adds no polling, event stream, browser health probe, host process, listener, Stop/Restart control, persisted runtime state, or automatic recovery. The matrix uses deterministic fakes only. Final acceptance, GitHub acceptance-checkbox updates, push, and PR creation remain owned by Verify.

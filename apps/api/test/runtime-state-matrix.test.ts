@@ -806,7 +806,7 @@ describe('BL-016 runtime state evidence', () => {
         'non-catalog event',
         updateRow(matrix, failed.scenario, (row) => ({
           ...row,
-          events: [{ ...row.events[0]!, event: 'runtime.exited' }],
+          events: [{ ...row.events[0]!, event: 'runtime.legacy' }],
         })),
       ],
       [

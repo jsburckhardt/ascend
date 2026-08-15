@@ -98,7 +98,18 @@ describe('BL-016 application documentation contract', () => {
     ]) {
       expect(combined).toContain(phrase)
     }
-    expect(combined).not.toContain('runtime.exited')
+    expect(
+      [
+        ...new Set(combined.match(/\bruntime\.[a-z]+(?:\.[a-z]+)*\b/gu) ?? []),
+      ].sort()
+    ).toEqual([
+      'runtime.health.changed',
+      'runtime.md',
+      'runtime.start.failed',
+      'runtime.start.requested',
+      'runtime.start.succeeded',
+      'runtime.state.failed',
+    ])
     expect(justfile.match(/^verify-runtime-state:/gmu)).toHaveLength(1)
     expect(justfile.match(/^    just verify-runtime-state$/gmu)).toHaveLength(1)
     await expect(

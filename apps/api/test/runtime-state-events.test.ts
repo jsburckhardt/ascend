@@ -46,9 +46,6 @@ describe('runtime public state event consistency', () => {
       'runtime.start.failed',
       'runtime.health.changed',
     ])
-    expect(
-      catalog.some(({ event }) => event === ('runtime.exited' as string))
-    ).toBe(false)
   })
 
   it('rejects success and healthy outcomes while the public state is Failed', () => {

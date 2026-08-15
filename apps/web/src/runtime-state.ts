@@ -23,6 +23,8 @@ export const RUNTIME_FAILURE_CATEGORIES = [
   'health-body-unexpected',
   'caller-cancelled',
   'manager-shutdown',
+  'stop-unconfirmed',
+  'runtime-stopping',
 ] as const
 export type RuntimeFailureCategory = (typeof RUNTIME_FAILURE_CATEGORIES)[number]
 
@@ -42,6 +44,8 @@ export const RUNTIME_FAILURE_NOTICES: Readonly<
   'health-body-unexpected': 'The workbench health response was invalid.',
   'caller-cancelled': 'Workbench startup was cancelled.',
   'manager-shutdown': 'Runtime management is shutting down.',
+  'stop-unconfirmed': 'Ascend could not confirm that the workbench stopped.',
+  'runtime-stopping': 'The workbench is currently stopping.',
 })
 
 const PUBLIC_STATE_SET = new Set<string>(PUBLIC_RUNTIME_STATES)

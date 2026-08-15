@@ -109,6 +109,10 @@ describe('BL-016 application documentation contract', () => {
       'runtime.start.requested',
       'runtime.start.succeeded',
       'runtime.state.failed',
+      'runtime.stop.failed',
+      'runtime.stop.rejected',
+      'runtime.stop.requested',
+      'runtime.stop.succeeded',
     ])
     expect(justfile.match(/^verify-runtime-state:/gmu)).toHaveLength(1)
     expect(justfile.match(/^    just verify-runtime-state$/gmu)).toHaveLength(1)

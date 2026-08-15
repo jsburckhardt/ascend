@@ -48,9 +48,17 @@ Issue #25 adds one internal manager that starts and reuses a persisted project's
 
 `GET /api/projects/runtime` reports one ordered row per registered project with exactly `Stopped`, `Starting`, `Running`, or `Failed`; only `Failed` includes a bounded `failureCategory`. It uses the same order as `GET /api/projects`. The existing project-list record remains exactly `id`, `name`, `canonicalPath`, and `createdAt`. A list or projection failure is the exact non-partial `500 {"error":{"category":"runtime_state_failed"}}` envelope.
 
-Project Home requests runtime state once per authoritative project-list revision and once per explicit Retry. Exact ID-set and order reconciliation is required; loading, timeout, transport failure, and mismatch render whole-list unavailability rather than partial state. `Running` requires observed readiness. Start failure, post-readiness exit, failed health, and false liveness retain `Failed`; the guarded transition emits one `runtime.health.changed` with one category and one cleanup. No runtime state is persisted, and no polling, stream, browser health probe, Stop, or Restart control is added.
+Project Home requests runtime state once per authoritative project-list revision, once per explicit Retry, and once after each settled successful or already-stopped Stop. Exact ID-set and order reconciliation is required; loading, timeout, transport failure, and mismatch render whole-list unavailability rather than partial state. `Running` requires observed readiness. Start failure, post-readiness exit, failed health, false liveness, and an unconfirmed stop retain `Failed`; guarded transitions emit one terminal event with one category and bounded cleanup. No runtime state is persisted, and no polling, stream, browser health probe, or Restart control is added.
 
 Run `just verify-runtime-state`. The retained matrix is `project/work-items/37-bl-016-report-accurate-runtime-state-and-health/implementation/evidence/runtime-state-matrix.json`. BL-016 changes no configuration default, environment variable, migration, deployment topology, or operational process.
+
+## Selected workbench stop
+
+Issue #39 adds a non-destructive Stop action to each Project Home card and `POST /api/projects/{id}/runtime/stop`. A confirmed stop releases only the selected manager-owned runtime while keeping the four persisted project fields and project filesystem unchanged. Success is exactly `stopped` or the current-manager idempotent `already-stopped`; a persisted project with no managed runtime is the distinct `409 runtime_not_managed` rejection. Home displays state only after one fresh runtime projection, uses client-owned text for all nine route categories, serializes Stop with other Home mutations, and keeps an indeterminate transport result explicitly unknown.
+
+The manager's internal entry states are `registered`, `starting`, `running`, `stopping`, and `failed`; lifecycle transition targets add `stopping` and `stopped` without adding a fifth public state. Graceful and force windows use a monotonic termination clock and begin only after their respective signals report delivered. An independent trusted scheduler enforces the overall deadline even if a fallible awaited identity, group, listener, or delay primitive hangs or ignores cancellation. Release is confirmed only when the exact root identity, owned process group, and listener are absent. Process-group membership is the attribution boundary; the proof does not claim arbitrary descendants that escaped that group.
+
+Use `just verify-runtime-stop` for the deterministic 31-scenario gate, `just proof-runtime-stop` for the designated real-host episode, and `just proof-runtime-stop-residual-audit` for the independent residual audit. The committed matrix is `project/work-items/39-bl-017-stop-a-workbench-without-closing-its-project/implementation/evidence/runtime-stop-matrix.json`; measured timing and host identities stay in ignored `test-results/bl-017/` artifacts. See [project-runtime.md](project-runtime.md) for the complete state machine, bounds, route table, cleanup re-attempt, event rules, and proof ceiling.
 
 ## Stable workbench routing
 
@@ -151,7 +159,7 @@ One active owner and monotonic generation govern ordinary, retry, refresh, cance
 
 ### Scope and validation
 
-Native pickers, scanning, clone/import, repository detection, running or failed workbench close, search, user sorting, tags, path mutation, runtime-status UI, and lifecycle controls remain deferred. Run root commands only: `just verify-open-project`, targeted `just verify-focused <test-path>`, and `just verify`.
+Native pickers, scanning, clone/import, repository detection, running or failed workbench close, search, user sorting, tags, path mutation, and Restart remain deferred. Runtime status and selected Stop are now delivered by BL-016 and BL-017. Run root commands only: `just verify-open-project`, targeted `just verify-focused <test-path>`, and `just verify`.
 
 The real desktop Chromium episode is keyboard-only and uses disposable loopback listeners, an isolated refused-default database, and content-bearing host fixtures below `test-results/bl-008/open-project`. It proves created, equivalent existing, invalid/corrected, stable identity, and no list reload; BL-012 separately proves Open navigation. Recursive manifests prove fixture membership, bytes, links, modes, and timestamps unchanged. Harness boot remains non-persistent and test-backed.
 
@@ -183,7 +191,7 @@ The recursive BL-009 matrix executes Cancel, success, unknown, persistence failu
 
 Component/client text-safety checks execute one-character and 4,096-character bounded project name/path fixtures as inert text. That 4,096-character fixture is not a new product name/path maximum; the existing finite request contract remains 4,096 encoded registration-body bytes and rejects byte 4,097. Malformed IDs are rejected before DELETE transmission.
 
-Use just verify-close-project, targeted just verify-focused paths, and just verify. Generated evidence lives at test-results/bl-009/close-project/manifest-matrix.json, test-results/bl-008/open-project/episode.json, and test-results/bl-008/open-project/close-fault-episode.json. Running or failed workbench close, stop/restart, runtime state, archive, undo, bulk close, and product cleanup remain BL-020 or later.
+Use just verify-close-project, targeted just verify-focused paths, and just verify. Generated evidence lives at test-results/bl-009/close-project/manifest-matrix.json, test-results/bl-008/open-project/episode.json, and test-results/bl-008/open-project/close-fault-episode.json. Running or failed workbench close, Restart, archive, undo, bulk close, and product cleanup remain BL-020 or later. Runtime state and selected Stop are separate delivered behaviors that preserve registration.
 
 
 Exact DELETE wire examples are:

@@ -364,7 +364,7 @@ function validateSessionSwitchingEvidenceBase(value: unknown): boolean {
         home.cards.length !== 3 ||
         JSON.stringify(home.cards.map((card) => object(card)?.project)) !==
           JSON.stringify(['A', 'B', 'C']) ||
-        home.runtimeControlsPresent !== 0 ||
+        home.runtimeControlsPresent !== 3 ||
         home.focus !== 'heading:Ascend'
       )
         return false

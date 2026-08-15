@@ -52,17 +52,19 @@ describe('BL-014 application documentation contract', () => {
     expect(runbook).toContain('FIFO handshake')
     expect(runbook).toContain('no duplicate root `just harness-boot` recipe')
     expect(runbook).toContain(
-      'BL-015 performance benchmarking remains deferred'
+      "BL-017 selected Stop does not change BL-014's continuity result"
     )
     expect(runbook).toContain(
-      'no public API payload, SQLite schema, configuration default, deployment topology, or migration requirement'
+      'Stop changes no SQLite schema or persisted field, configuration default, deployment topology, or migration requirement'
     )
     expect(readme).toContain('Preserve sessions while switching (BL-014)')
     expect(index).toContain('[session-switching.md](session-switching.md)')
     expect(runtime).toContain('BL-014 session reuse proof')
     expect(routing).toContain('BL-014 switching transport')
     expect(harness).toContain('BL-014 session-switching signal')
-    expect(routes).toContain('adds no endpoint or payload')
+    expect(routes).toContain(
+      'BL-014 validates switching/session reuse through the stable route'
+    )
     expect(proof).toContain('dispatched once behind its lock')
     expect(justfile).toContain('verify-session-switching:')
     expect(justfile).toContain('proof-session-switching-residual-audit:')

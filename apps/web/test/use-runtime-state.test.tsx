@@ -32,7 +32,7 @@ describe('useRuntimeState', () => {
     expect(loader).not.toHaveBeenCalled()
   })
 
-  it('makes one request per revision and one per explicit retry', async () => {
+  it('makes one request per revision and one per explicit retry or refresh', async () => {
     const firstRevision: ProjectListRevision = {
       id: 1,
       projectIds: ['a'],
@@ -43,6 +43,7 @@ describe('useRuntimeState', () => {
     }
     const loader = vi
       .fn<RuntimeStateLoader>()
+      .mockResolvedValueOnce([stopped('a')])
       .mockResolvedValueOnce([stopped('a')])
       .mockResolvedValueOnce([stopped('a')])
       .mockResolvedValueOnce([stopped('a'), stopped('b')])
@@ -62,8 +63,12 @@ describe('useRuntimeState', () => {
     await waitFor(() => expect(loader).toHaveBeenCalledTimes(2))
     await waitFor(() => expect(result.current.view.kind).toBe('success'))
 
-    rerender({ revision: secondRevision })
+    act(() => result.current.refresh())
     await waitFor(() => expect(loader).toHaveBeenCalledTimes(3))
+    await waitFor(() => expect(result.current.view.kind).toBe('success'))
+
+    rerender({ revision: secondRevision })
+    await waitFor(() => expect(loader).toHaveBeenCalledTimes(4))
     await waitFor(() =>
       expect(result.current.view).toEqual({
         kind: 'success',

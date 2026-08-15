@@ -21,7 +21,7 @@ afterEach(() => {
 })
 
 describe('BL-014 keyboard Home and history matrix', () => {
-  it('lists A/B/C once, exposes Open/Close only, and executes five keyboard Opens', async () => {
+  it('lists A/B/C once, exposes project actions, and executes five keyboard Opens', async () => {
     const urls: string[] = []
     const focus: string[] = []
     for (const key of BL014_OPEN_REENTRY_ORDER) {
@@ -65,10 +65,13 @@ describe('BL-014 keyboard Home and history matrix', () => {
       expect(
         screen.getByRole('button', { name: 'Close ' + project.name })
       ).toBeVisible()
+      expect(
+        screen.getByRole('button', {
+          name: 'Stop ' + project.name + ' workbench',
+        })
+      ).toBeVisible()
     }
-    expect(
-      screen.queryByRole('button', { name: /Stop|Restart/u })
-    ).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Restart/u })).toBeNull()
   }, 15_000)
 
   it('keeps one native Back/Forward pair separate from Open counts', () => {

@@ -21,8 +21,12 @@ export function sendSafeBadUrl(
     response.end(body)
     return
   }
+  const runtimeStopRequest =
+    request.method === 'POST' &&
+    (request.url ?? '').startsWith('/api/projects/') &&
+    (request.url ?? '').includes('/runtime/stop')
   const category =
-    request.method === 'DELETE'
+    request.method === 'DELETE' || runtimeStopRequest
       ? 'invalid_project_id'
       : 'invalid_registration_request'
   const body = JSON.stringify({ error: { category } })

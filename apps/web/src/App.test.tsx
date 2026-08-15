@@ -528,7 +528,10 @@ describe('Project Home runtime state', () => {
       screen.getByText('The workbench did not become ready in time.')
     ).toHaveAttribute('data-runtime-failure', 'readiness-timeout')
     expect(loadRuntimeState).toHaveBeenCalledOnce()
-    expect(screen.queryByRole('button', { name: /stop|restart/iu })).toBeNull()
+    expect(
+      screen.getAllByRole('button', { name: /^Stop .* workbench$/u })
+    ).toHaveLength(projects.length)
+    expect(screen.queryByRole('button', { name: /restart/iu })).toBeNull()
   })
 
   it('shows whole-list loading without inventing Stopped state', async () => {

@@ -49,7 +49,7 @@ describe('project runtime documentation contract', () => {
       'runtime.start.requested',
       'Raw canonical paths',
       '2,000 ms SIGKILL escalation',
-      'graceful, escalated, or already-absent',
+      'graceful, escalated, already-absent, or unconfirmed',
       'timing.observedElapsedMs',
       'zero residuals',
     ]) {
@@ -83,7 +83,7 @@ describe('project runtime documentation contract', () => {
     }
     for (const deferred of [
       'multi-project coordination',
-      'user Stop or Restart UI',
+      'Restart',
       'API-restart reconciliation',
       'persisted runtime handles or state',
       'auto-sleep',
@@ -93,7 +93,7 @@ describe('project runtime documentation contract', () => {
       expect(document).toContain(deferred)
     }
     expect(document).toContain(
-      'Project Home navigation and Open wiring are now delivered'
+      'Project Home navigation and Open wiring are delivered'
     )
     expect(document).toContain('BL-012 marked top-level acquisition')
     expect(docsIndex).toContain('project-runtime.md')

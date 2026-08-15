@@ -4,8 +4,10 @@ import {
   RuntimeFailure,
   createProjectRuntimeConfig,
   deriveProjectOwnerToken,
+  publicRuntimeState,
   serializeRuntimeEvent,
   stableProjectRoute,
+  type PublicRuntimeReport,
   type ProjectRuntimeConfig,
   type RuntimeLifecycleEvent,
   type RuntimeSafeLifecycleEvent,
@@ -62,6 +64,9 @@ export interface ProjectRuntimeManagerAudit {
 export interface ProjectRuntimeManager {
   register(projectId: string, canonicalPath: string): void
   start(input: ProjectRuntimeStartInput): Promise<RuntimeSnapshot>
+  reportPublicStates(
+    projectIds: readonly string[]
+  ): readonly PublicRuntimeReport[]
   inspect(projectId: string): RuntimeSnapshot | undefined
   ownsSnapshot(snapshot: RuntimeSnapshot): boolean
   inspectEntries(): readonly ProjectRuntimeEntryInspection[]
@@ -252,6 +257,64 @@ export function createProjectRuntimeManager(
     })
   }
 
+  const transitionRunningToFailed = async (
+    entry: RunningEntry,
+    failure: RuntimeFailure,
+    cleanup: 'terminate' | 'audit'
+  ): Promise<Readonly<{ claimed: boolean; failure: RuntimeFailure }>> => {
+    if (shuttingDown) {
+      return Object.freeze({
+        claimed: false,
+        failure: new RuntimeFailure('manager-shutdown'),
+      })
+    }
+    const installed = entries.get(entry.projectId)
+    if (
+      installed !== entry ||
+      installed.state !== 'running' ||
+      installed.generation !== entry.generation
+    ) {
+      return Object.freeze({
+        claimed: false,
+        failure:
+          installed?.state === 'failed' &&
+          installed.generation === entry.generation
+            ? installed.failure
+            : failure,
+      })
+    }
+
+    failEntry(
+      entry.projectId,
+      entry.canonicalPath,
+      entry.generation,
+      entry.snapshot,
+      failure,
+      entry.snapshot.startedAt
+    )
+    emit({
+      event: 'runtime.health.changed',
+      projectId: entry.projectId,
+      from: 'running',
+      to: 'failed',
+      elapsedMs: Math.max(0, now() - entry.snapshot.startedAt),
+      classification: failure.category,
+    })
+    const audit =
+      cleanup === 'terminate'
+        ? await entry.ready.process.terminate(
+            config.gracefulShutdownMs,
+            config.forceShutdownMs,
+            entry.ready.port
+          )
+        : {
+            ...(await entry.ready.process.audit(entry.ready.port)),
+            outcome: 'already-absent' as const,
+          }
+    recordCleanup(entry.projectId, audit)
+    return Object.freeze({ claimed: true, failure })
+  }
+
   const start = async (
     input: ProjectRuntimeStartInput
   ): Promise<RuntimeSnapshot> => {
@@ -294,50 +357,20 @@ export function createProjectRuntimeManager(
             : 'health-body-unexpected',
           verdict.status === null ? {} : { healthStatus: verdict.status }
         )
-        failEntry(
-          input.projectId,
-          input.canonicalPath,
-          current.generation,
-          current.snapshot,
+        const result = await transitionRunningToFailed(
+          current,
           failure,
-          current.snapshot.startedAt
+          'terminate'
         )
-        recordCleanup(
-          input.projectId,
-          await current.ready.process.terminate(
-            config.gracefulShutdownMs,
-            config.forceShutdownMs,
-            current.ready.port
-          )
-        )
-        emit({
-          event: 'runtime.health.changed',
-          projectId: input.projectId,
-          from: 'running',
-          to: 'failed',
-          elapsedMs: Math.max(0, now() - current.snapshot.startedAt),
-          classification: failure.category,
-        })
-        throw failure
+        throw result.failure
       }
       const failure = new RuntimeFailure('early-exit-code', { exitCode: -1 })
-      recordCleanup(
-        input.projectId,
-        await current.ready.process.terminate(
-          config.gracefulShutdownMs,
-          config.forceShutdownMs,
-          current.ready.port
-        )
-      )
-      failEntry(
-        input.projectId,
-        input.canonicalPath,
-        current.generation,
-        current.snapshot,
+      const result = await transitionRunningToFailed(
+        current,
         failure,
-        current.snapshot.startedAt
+        'terminate'
       )
-      throw failure
+      throw result.failure
     }
 
     const generation = Symbol(input.projectId)
@@ -423,34 +456,13 @@ export function createProjectRuntimeManager(
           elapsedMs: snapshot.elapsedMs,
         })
         const exitTask = ready.process.exit.then(async (exit) => {
-          if (shuttingDown || entries.get(input.projectId) !== entry) return
           const failure = new RuntimeFailure(
             exit.signal === null ? 'early-exit-code' : 'early-exit-signal',
             exit.signal === null
               ? { exitCode: exit.code ?? -1 }
               : { signal: exit.signal }
           )
-          failEntry(
-            input.projectId,
-            input.canonicalPath,
-            generation,
-            snapshot,
-            failure,
-            startedAt
-          )
-          const audit = await ready.process.audit(ready.port)
-          recordCleanup(input.projectId, {
-            ...audit,
-            outcome: 'already-absent',
-          })
-          emit({
-            event: 'runtime.exited',
-            projectId: input.projectId,
-            from: 'running',
-            to: 'failed',
-            elapsedMs: Math.max(0, now() - startedAt),
-            classification: failure.category,
-          })
+          await transitionRunningToFailed(entry, failure, 'audit')
         })
         backgroundTasks.add(exitTask)
         void exitTask.then(
@@ -603,6 +615,21 @@ export function createProjectRuntimeManager(
   return {
     register,
     start,
+    reportPublicStates(projectIds) {
+      return Object.freeze(
+        projectIds.map((projectId) => {
+          const entry = entries.get(projectId)
+          const state = publicRuntimeState(entry?.state)
+          return Object.freeze({
+            projectId,
+            state,
+            ...(state === 'Failed' && entry?.state === 'failed'
+              ? { failureCategory: entry.failure.category }
+              : {}),
+          })
+        })
+      )
+    },
     inspect(projectId) {
       const entry = entries.get(projectId)
       return entry !== undefined && entry.state !== 'registered'

@@ -193,7 +193,6 @@ const allowedEvents = new Set([
   'runtime.start.succeeded',
   'runtime.start.failed',
   'runtime.health.changed',
-  'runtime.exited',
   'workbench.proxy.started',
   'workbench.proxy.completed',
   'workbench.proxy.failed',
@@ -234,7 +233,7 @@ const runtimeRunning = (project: ProjectRole): ExpectedEvent =>
   })
 const runtimeFailure = (
   project: ProjectRole,
-  event: 'runtime.start.failed' | 'runtime.health.changed' | 'runtime.exited',
+  event: 'runtime.start.failed' | 'runtime.health.changed',
   from: 'starting' | 'running',
   classification: string
 ): ExpectedEvent =>
@@ -305,7 +304,7 @@ export const BL013_EVENT_EXPECTATIONS: Readonly<
   crash: Object.freeze([
     ...threeStarts,
     ...threeRunning,
-    runtimeFailure('b', 'runtime.exited', 'running', 'early-exit-code'),
+    runtimeFailure('b', 'runtime.health.changed', 'running', 'early-exit-code'),
   ]),
   'readiness-failure': Object.freeze([
     ...threeStarts,

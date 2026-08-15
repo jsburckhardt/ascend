@@ -41,11 +41,11 @@ const REGISTRATION_FAILURES = new Set<string>(
   Object.keys(REGISTRATION_FAILURE_MESSAGES)
 )
 
-function isRecord(value: unknown): value is Record<string, unknown> {
+export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
-function exactKeys(
+export function exactKeys(
   value: Record<string, unknown>,
   keys: readonly string[]
 ): boolean {

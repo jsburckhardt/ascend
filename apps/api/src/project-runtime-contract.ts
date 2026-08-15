@@ -4,6 +4,14 @@ import os from 'node:os'
 export const RUNTIME_STATES = ['starting', 'running', 'failed'] as const
 export type RuntimeState = (typeof RUNTIME_STATES)[number]
 
+export const PUBLIC_RUNTIME_STATES = Object.freeze([
+  'Stopped',
+  'Starting',
+  'Running',
+  'Failed',
+] as const)
+export type PublicRuntimeState = (typeof PUBLIC_RUNTIME_STATES)[number]
+
 export interface RuntimeSnapshot {
   readonly projectId: string
   readonly state: RuntimeState
@@ -33,6 +41,28 @@ export const RUNTIME_FAILURE_CATEGORIES = [
   'manager-shutdown',
 ] as const
 export type RuntimeFailureCategory = (typeof RUNTIME_FAILURE_CATEGORIES)[number]
+
+export interface PublicRuntimeReport {
+  readonly projectId: string
+  readonly state: PublicRuntimeState
+  readonly failureCategory?: RuntimeFailureCategory
+}
+
+export function publicRuntimeState(
+  state: RuntimeState | 'registered' | undefined
+): PublicRuntimeState {
+  switch (state) {
+    case undefined:
+    case 'registered':
+      return 'Stopped'
+    case 'starting':
+      return 'Starting'
+    case 'running':
+      return 'Running'
+    case 'failed':
+      return 'Failed'
+  }
+}
 
 export const RUNTIME_FAILURE_MESSAGES: Readonly<
   Record<RuntimeFailureCategory, string>
@@ -121,12 +151,31 @@ export interface RuntimeLifecycleEvent {
     | 'runtime.start.succeeded'
     | 'runtime.start.failed'
     | 'runtime.health.changed'
-    | 'runtime.exited'
   readonly projectId: string
   readonly from: 'stopped' | RuntimeState
   readonly to: RuntimeState
   readonly elapsedMs: number
   readonly classification?: RuntimeFailureCategory
+}
+
+const PUBLIC_STATE_BY_LIFECYCLE_EVENT: Readonly<
+  Record<RuntimeLifecycleEvent['event'], PublicRuntimeState>
+> = Object.freeze({
+  'runtime.start.requested': 'Starting',
+  'runtime.start.succeeded': 'Running',
+  'runtime.start.failed': 'Failed',
+  'runtime.health.changed': 'Failed',
+})
+
+export function publicRuntimeStateForLifecycleEvent(
+  event: RuntimeLifecycleEvent['event'],
+  to: RuntimeLifecycleEvent['to']
+): PublicRuntimeState {
+  const state = publicRuntimeState(to)
+  if (PUBLIC_STATE_BY_LIFECYCLE_EVENT[event] !== state) {
+    throw new Error('Runtime lifecycle event does not match its target state')
+  }
+  return state
 }
 
 export const PROJECT_RUNTIME_DEFAULTS = Object.freeze({

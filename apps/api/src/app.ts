@@ -39,6 +39,7 @@ import {
   createProjectRegistrationService,
   type ProjectRegistrationService,
 } from './project-registration.js'
+import projectRuntimeStateRoute from './routes/project-runtime-state.js'
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -184,8 +185,11 @@ const app: FastifyPluginAsync<AppOptions> = async (
     options: opts,
   })
 
+  await fastify.register(projectRuntimeStateRoute)
+
   await fastify.register(AutoLoad, {
     dir: join(import.meta.dirname, 'routes'),
+    ignorePattern: /project-runtime-state\.(?:js|ts)$/u,
     options: opts,
   })
 }

@@ -652,7 +652,7 @@ test('keeps three Git workbenches isolated and explicitly replaces only B', asyn
         oldIdentityDigest: digestIdentity(initial.b),
         eventObserved: lifecycleEvents.some(
           (event) =>
-            event.event === 'runtime.exited' &&
+            event.event === 'runtime.health.changed' &&
             event.projectToken === deriveProjectOwnerToken(b.id)
         ),
       },

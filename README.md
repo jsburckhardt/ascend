@@ -42,6 +42,7 @@ just proof-project-runtime-isolation-residual-audit
 just verify-session-switching-phase0
 just verify-session-switching
 just proof-session-switching-residual-audit
+just verify-runtime-state
 just measure-mvp-performance
 just verify-mvp-performance
 just proof-mvp-performance-residual-audit
@@ -61,6 +62,16 @@ On the designated Ubuntu devcontainer, `just proof-start` starts one isolated co
 ## Project Runtime Manager
 
 The API now owns one internal in-memory manager that can start or health-check and reuse a persisted project's code-server. It validates the stable ID and exact canonical path, uses direct non-root loopback launch, coalesces concurrent calls, reports typed bounded failures, and returns graceful or escalated shutdown audits for every exact owned PID/start identity, process group, port, and listener before SQLite closes. Browser workbench traffic reaches this manager through the stable `/projects/{projectId}/workbench/` proxy route, and Project Home Open now navigates to that route by stable ID. Runtime identity and state remain unpersisted. The retained designated episode is the single source for the observed startup timing versus the 15-second target, PID/port reuse, recursive BL-001 manifest, exact shutdown audit, unrelated-control survival, and zero residuals. See [the project runtime runbook](docs/project-runtime.md).
+
+### Public runtime state
+
+Project Home reports each registered project as exactly `Stopped`, `Starting`, `Running`, or `Failed`. `Running` is health-gated: process existence alone is insufficient. A start failure, post-readiness exit, failed completed health observation, or false-liveness observation is `Failed`; a safe client-owned notice identifies only the bounded category. While a revision is loading, unavailable, timed out, or inconsistent with the authoritative project list, every card says runtime state is unavailable instead of showing partial data or inventing `Stopped`. Retry performs one finite refresh. Home adds no polling, event stream, health probe, Stop, or Restart control.
+
+`GET /api/projects/runtime` returns `{"runtimes":[{"id":"stable-id","state":"Stopped|Starting|Running|Failed"}]}` in the same `createdAt ASC, id ASC` order as `GET /api/projects`; only a `Failed` row also has one of the 12 bounded `failureCategory` values. List or projection failure returns exactly `500 {"error":{"category":"runtime_state_failed"}}` and never a partial success. The existing `GET /api/projects` payload remains exactly the four persisted fields `id`, `name`, `canonicalPath`, and `createdAt`; registration and close contracts are unchanged.
+
+The manager projection is one synchronous read-only pass. Competing false-liveness, failed-health, and exit settlements share one guarded `running -> failed` transition: the winner retains one category, performs one cleanup audit, and emits one `runtime.health.changed`; losers do not mutate, clean up, or emit. `runtime.health.changed` is the terminal post-readiness event; the non-catalog exit event name is not used.
+
+Run `just verify-runtime-state` for the finite fake-driven BL-016 gate. Its committed evidence is `project/work-items/37-bl-016-report-accurate-runtime-state-and-health/implementation/evidence/runtime-state-matrix.json`. This reporting surface adds no environment variable, configuration default, SQLite/data/schema migration, deployment topology, or new operational daemon; it reuses the existing API and Home origins.
 
 ## MVP performance measurement
 

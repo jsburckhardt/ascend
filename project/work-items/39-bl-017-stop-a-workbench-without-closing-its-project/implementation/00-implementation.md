@@ -165,3 +165,16 @@ tree. Final acceptance, independent `just verify`, GitHub acceptance-checkbox
 updates, push, PR creation, and merge remain owned by Verify. BL-018
 reconciliation after API restart, Restart, bulk stop, idle shutdown, and
 arbitrary-process adoption remain out of scope.
+
+## Verify correction 1
+
+Verify returned one application-documentation accuracy defect: `README.md` and `apps/api/src/routes/README.md` attributed registration/fixture checks to the standalone residual audit, although the executable checks only exact root/member identities, the owned process group, and the loopback listener.
+
+- Corrected both documents to assign the real selected-stop episode to registration/fixture retention and recorded ownership evidence, and the standalone residual audit to exact identity, process-group, and listener residual absence only.
+- Added a deterministic documentation assertion that rejects any renewed claim that the residual-audit command audits registration or fixtures.
+- The accepted plan, architecture artifacts, product code, tests outside this documentation contract, and runtime behavior are unchanged; no Plan-stage or architecture divergence occurred.
+- Focused correction gate: `just verify-focused apps/api/test/runtime-stop-documentation.test.ts --reporter=verbose` passed all 15 tests.
+- Canonical correction gate: `just verify` passed.
+- Accepted action-plan SHA-256: `9ef68b5ae7f45a7d2e3bcebabf8168a5591ecd2f832f969593547c8b2f2bace0`.
+- Retained matrix SHA-256: `c96b1a060205ef91d9ca1ba96a491fd5343cf9a944a0fa39a2390909a4ffcfd3`.
+- Retained and disposable matrices were byte-identical by `cmp`; no disposable `test-results/bl-017` file is tracked.

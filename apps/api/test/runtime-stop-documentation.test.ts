@@ -202,6 +202,58 @@ describe('BL-017 command interface contract', () => {
   })
 })
 
+describe('BL-017 proof responsibility documentation contract', () => {
+  it('keeps the designated episode and residual audit responsibilities distinct', async () => {
+    const documents = await Promise.all(
+      [ROOT_README, ROUTE_README].map((document) => text(document))
+    )
+
+    for (const document of documents) {
+      const lines = document.split('\n')
+      const designatedClaim = lines.find(
+        (line) =>
+          line.includes('selected-stop episode') &&
+          line.includes('including registration/fixture retention')
+      )
+      const residualClaim = lines.find((line) =>
+        line.includes('independent exact root/member identities')
+      )
+
+      if (designatedClaim === undefined || residualClaim === undefined) {
+        throw new Error('Stop proof responsibility claims are missing')
+      }
+
+      expect(designatedClaim).toContain(
+        'including registration/fixture retention and its recorded ownership evidence'
+      )
+      const residualStart = residualClaim.indexOf(
+        'Run `just proof-runtime-stop-residual-audit`'
+      )
+      const residualEnd = residualClaim.indexOf(
+        ' It does not audit registration or fixtures',
+        residualStart
+      )
+      if (residualStart < 0 || residualEnd < 0) {
+        throw new Error('Residual audit responsibility claim is incomplete')
+      }
+      const residualResponsibility = residualClaim.slice(
+        residualStart,
+        residualEnd
+      )
+
+      expect(residualResponsibility).toContain('owned process group')
+      expect(residualResponsibility).toContain(
+        'loopback listener residual-absence audit only'
+      )
+      expect(residualClaim).toContain(
+        'It does not audit registration or fixtures'
+      )
+      expect(residualResponsibility).not.toMatch(
+        /\b(?:audit|check|verify|retain)(?:s|ed)?\b.{0,30}\b(?:registration|fixtures?)\b/iu
+      )
+    }
+  })
+})
 describe('BL-017 application documentation contract', () => {
   it('documents the strict stop route, exact envelopes, and all nine categories', async () => {
     const rows: readonly (readonly [

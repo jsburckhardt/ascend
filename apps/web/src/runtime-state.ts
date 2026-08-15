@@ -25,6 +25,10 @@ export const RUNTIME_FAILURE_CATEGORIES = [
   'manager-shutdown',
   'stop-unconfirmed',
   'runtime-stopping',
+  'restart-release-unconfirmed',
+  'restart-deadline-exceeded',
+  'runtime-restarting',
+  'restart-replacement-unconfirmed',
 ] as const
 export type RuntimeFailureCategory = (typeof RUNTIME_FAILURE_CATEGORIES)[number]
 
@@ -46,6 +50,12 @@ export const RUNTIME_FAILURE_NOTICES: Readonly<
   'manager-shutdown': 'Runtime management is shutting down.',
   'stop-unconfirmed': 'Ascend could not confirm that the workbench stopped.',
   'runtime-stopping': 'The workbench is currently stopping.',
+  'restart-release-unconfirmed':
+    'Ascend could not release the previous workbench session.',
+  'restart-deadline-exceeded': 'The workbench restart did not finish in time.',
+  'runtime-restarting': 'The workbench is currently restarting.',
+  'restart-replacement-unconfirmed':
+    'Ascend could not confirm replacement workbench cleanup.',
 })
 
 const PUBLIC_STATE_SET = new Set<string>(PUBLIC_RUNTIME_STATES)

@@ -255,7 +255,7 @@ describe('BL-017 proof responsibility documentation contract', () => {
   })
 })
 describe('BL-017 application documentation contract', () => {
-  it('documents the strict stop route, exact envelopes, and all nine categories', async () => {
+  it('documents the strict stop route, exact envelopes, and all ten categories', async () => {
     const rows: readonly (readonly [
       RuntimeStopRouteErrorCategory,
       number,
@@ -270,6 +270,7 @@ describe('BL-017 application documentation contract', () => {
         'persisted project has no manager-owned runtime',
       ],
       ['runtime_start_in_progress', 409, 'start is in progress'],
+      ['runtime_restart_in_progress', 409, 'restart is in progress'],
       ['runtime_failure_retained', 409, 'runtime failure is retained'],
       [
         'runtime_stop_unconfirmed',
@@ -282,7 +283,7 @@ describe('BL-017 application documentation contract', () => {
     expect(rows.map(([category]) => category)).toEqual([
       ...RUNTIME_STOP_ROUTE_ERROR_CATEGORIES,
     ])
-    expect(RUNTIME_STOP_ROUTE_ERROR_CATEGORIES).toHaveLength(9)
+    expect(RUNTIME_STOP_ROUTE_ERROR_CATEGORIES).toHaveLength(10)
     expect(RUNTIME_STOP_BODY_LIMIT_BYTES).toBe(1_024)
 
     await expectDocumented([
@@ -297,7 +298,7 @@ describe('BL-017 application documentation contract', () => {
           '{"id":"stable-id","outcome":"stopped"}',
           '{"id":"stable-id","outcome":"already-stopped"}',
           'Errors are exactly `{"error":{"category":"<category>"}}`.',
-          'The nine-category route vocabulary is fixed.',
+          'The ten-category route vocabulary is fixed.',
           'No response includes public runtime state, release mode, audit, PID, process identity, group membership, port, listener, path, authority, diagnostic, or server message.',
           ...rows.map(
             ([category, status, condition]) =>
@@ -311,7 +312,7 @@ describe('BL-017 application documentation contract', () => {
           '## Selected runtime Stop (BL-017)',
           '`POST /api/projects/{id}/runtime/stop` validates the decoded ID and empty action request, then delegates once.',
           'A confirmed release returns exactly HTTP 200 `{"id":"stable-id","outcome":"stopped"}`; repeating that Stop in the same manager returns `already-stopped`.',
-          'The nine route error categories and statuses are 400 `invalid_project_id` or `invalid_stop_request`; 404 `project_not_found`; 409 `runtime_not_managed`, `runtime_start_in_progress`, or `runtime_failure_retained`; 500 `runtime_stop_unconfirmed` or `runtime_stop_failed`; and 503 `runtime_manager_shutdown`.',
+          'The ten route error categories and statuses are 400 `invalid_project_id` or `invalid_stop_request`; 404 `project_not_found`; 409 `runtime_not_managed`, `runtime_start_in_progress`, `runtime_restart_in_progress`, or `runtime_failure_retained`; 500 `runtime_stop_unconfirmed` or `runtime_stop_failed`; and 503 `runtime_manager_shutdown`.',
           'Error bodies contain exactly the category.',
           'No response carries state, release mode, audit, PID, process-start identity, process group, listener, port, canonical path, authority, or server message.',
         ],
@@ -338,28 +339,28 @@ describe('BL-017 application documentation contract', () => {
         [
           'The public Stop route accepts an absent body or empty JSON object, rejects operation fields, and has a 1,024-byte body limit.',
           'Success is exactly `{"id":"stable-id","outcome":"stopped"}` or `{"id":"stable-id","outcome":"already-stopped"}`.',
-          'Nine bounded error categories cover invalid ID/request, project not found, runtime not managed, start in progress, retained failure, unconfirmed stop, manager shutdown, and unexpected stop failure.',
+          'Ten bounded error categories cover invalid ID/request, project not found, runtime not managed, start or restart in progress, retained failure, unconfirmed stop, manager shutdown, and unexpected stop failure.',
           'Responses contain no public runtime state, release/audit data, PID, port, path, authority, process identity, or server message.',
         ],
       ],
     ])
   })
 
-  it('documents five entry states, five transition targets, four public states, and 14 failure categories', async () => {
-    expect(RUNTIME_ENTRY_STATES).toHaveLength(5)
-    expect(RUNTIME_LIFECYCLE_TARGETS).toHaveLength(5)
+  it('documents six entry states, six transition targets, four public states, and 18 failure categories', async () => {
+    expect(RUNTIME_ENTRY_STATES).toHaveLength(6)
+    expect(RUNTIME_LIFECYCLE_TARGETS).toHaveLength(6)
     expect(PUBLIC_RUNTIME_STATES).toHaveLength(4)
-    expect(RUNTIME_FAILURE_CATEGORIES).toHaveLength(14)
+    expect(RUNTIME_FAILURE_CATEGORIES).toHaveLength(18)
 
     await expectDocumented([
       [
         RUNBOOK,
         [
           '## Selected-runtime stop state machine',
-          'The internal five-state entry vocabulary is `registered`, `starting`, `running`, `stopping`, and `failed`.',
-          'The lifecycle transition targets are `starting`, `running`, `failed`, `stopping`, and `stopped`; `stopped` is a transition target, not a persisted entry or fifth public state.',
+          'The internal six-state entry vocabulary is `registered`, `starting`, `running`, `stopping`, `restarting`, and `failed`.',
+          'The six lifecycle transition targets are `starting`, `running`, `failed`, `stopping`, `stopped`, and `restarting`; `stopped` is a transition target, not a persisted entry or fifth public state.',
           'The public vocabulary is exactly `Stopped`, `Starting`, `Running`, and `Failed`.',
-          'The 14 closed categories are',
+          'The 18 closed categories are',
           ...RUNTIME_FAILURE_CATEGORIES,
           ...RUNTIME_STOP_REJECTION_CATEGORIES.map(
             (category) => `rejected/${category}`
@@ -371,17 +372,17 @@ describe('BL-017 application documentation contract', () => {
       [
         DOCS_INDEX,
         [
-          "The manager's internal entry states are `registered`, `starting`, `running`, `stopping`, and `failed`; lifecycle transition targets add `stopping` and `stopped` without adding a fifth public state.",
+          "The manager's internal entry states are `registered`, `starting`, `running`, `stopping`, `restarting`, and `failed`; lifecycle transition targets add `stopping`, `stopped`, and `restarting` without adding a fifth public state.",
         ],
       ],
       [
         API_README,
         [
-          'The manager uses internal `registered`, `starting`, `running`, `stopping`, and `failed` entries.',
+          'The manager uses internal `registered`, `starting`, `running`, `stopping`, `restarting`, and `failed` entries.',
         ],
       ],
-      [ROOT_README, ['14 bounded `failureCategory` values']],
-      [ROUTE_README, ['14 bounded runtime categories']],
+      [ROOT_README, ['18 bounded `failureCategory` values']],
+      [ROUTE_README, ['18 bounded runtime categories']],
     ])
   })
 
@@ -528,7 +529,7 @@ describe('BL-017 application documentation contract', () => {
       [
         RUNBOOK,
         [
-          'Structured lifecycle events are `runtime.start.requested`, `runtime.start.succeeded`, `runtime.start.failed`, `runtime.health.changed`, `runtime.stop.requested`, and `runtime.stop.succeeded`.',
+          'The Stop subset is `runtime.start.requested`, `runtime.start.succeeded`, `runtime.start.failed`, `runtime.health.changed`, `runtime.stop.requested`, and `runtime.stop.succeeded`.',
           'An accepted selected stop emits exactly one requested event from running to stopping.',
           'Confirmed release emits exactly one succeeded event from stopping to stopped; unconfirmed, deadline, and termination-fault settlements emit one health-changed event from stopping to failed with `stop-unconfirmed`.',
           'Rejections, already-stopped, joined callers, race losers, and unowned settlements emit no additional event.',
@@ -560,14 +561,14 @@ describe('BL-017 application documentation contract', () => {
         [
           'While one stop owns the Home request slot, every Stop action is disabled and the selected card is busy.',
           'Confirmed `stopped` and `already-stopped` outcomes are announced, focus returns to the selected Stop action, and exactly one fresh `GET /api/projects/runtime` request supplies the displayed `Stopped` state.',
-          'A classified rejection uses one of nine client-owned notices with Retry.',
+          'A classified rejection uses one of ten client-owned notices with Retry.',
           'An indeterminate transport result remains explicitly unknown and offers an authoritative runtime-state refresh; the browser never substitutes an optimistic state.',
         ],
       ],
       [
         DOCS_INDEX,
         [
-          'Home displays state only after one fresh runtime projection, uses client-owned text for all nine route categories, serializes Stop with other Home mutations, and keeps an indeterminate transport result explicitly unknown.',
+          'Home displays state only after one fresh runtime projection, uses client-owned text for all ten route categories, serializes Stop with other Home mutations, and keeps an indeterminate transport result explicitly unknown.',
         ],
       ],
       [
@@ -721,41 +722,41 @@ describe('BL-017 application documentation contract', () => {
     ])
   })
 
-  it('documents the Restart and API-restart-reconciliation deferrals with explicit configuration, migration, and deployment no-impact', async () => {
+  it('documents delivered Restart and the remaining reconciliation boundary without persistence impact', async () => {
     await expectDocumented([
       [
         RUNBOOK,
         [
-          'API-restart reconciliation, Restart, persisted runtime handles or state, auto-sleep, scheduling, quotas, and containers remain deferred.',
-          'BL-016 and BL-017 add no environment variable or configuration default, no SQLite/data/schema/API-payload migration, no deployment-topology change, and no daemon.',
-          'Existing API and Home deployments acquire the read-only and selected-stop routes with the application update.',
+          'selected Restart by BL-018',
+          'API-process restart reconciliation, running/failed Close, persisted runtime handles or state, automatic recovery, auto-sleep, scheduling, quotas, and containers remain deferred.',
         ],
       ],
       [
         API_README,
         [
-          'This feature adds no configuration variable/default, SQLite/data/schema/API-payload migration, deployment topology, daemon, or separate process.',
-          'Running or failed workbench close and Restart remain BL-020',
+          '## Selected runtime Restart (BL-018)',
+          'Restart adds no environment variable, SQLite/data/schema/API-payload migration, persisted runtime handle, deployment topology, daemon, or separate process.',
         ],
       ],
       [
         SWITCHING,
         [
-          'Close-on-running behavior, Restart, auto-sleep, API-restart reconciliation, scheduling, quotas, multi-user, and multi-host operation remain out of scope.',
-          'Stop changes no SQLite schema or persisted field, configuration default, deployment topology, or migration requirement.',
+          'Close-on-running behavior, auto-sleep, API-restart reconciliation, scheduling, quotas, multi-user, and multi-host operation remain out of scope.',
+          'Stop and Restart change no SQLite schema or persisted field, environment configuration, deployment topology, or migration requirement.',
         ],
       ],
-      [ROOT_README, ['Restart remains deferred.']],
+      [ROOT_README, ['### Restart a workbench']],
       [
         ROUTE_README,
         [
-          'The selected Stop route and global application shutdown are the only exposed runtime shutdown paths; the proxy remains a pure consumer and Restart is not exposed.',
+          '### Selected runtime restart',
+          'The selected Stop and Restart routes plus global application shutdown are the exposed runtime lifecycle paths; the proxy remains a pure consumer and never invokes them.',
         ],
       ],
       [
         ROUTING,
         [
-          'No client health probe, polling, event stream, Restart, or proxy lifecycle message is added.',
+          'No client health probe, polling, event stream, or proxy lifecycle message is added.',
         ],
       ],
       [

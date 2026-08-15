@@ -101,6 +101,7 @@ Announce settled stops only through the `PRD.md` NFR-015 catalog. An accepted st
 - The proxy remains a consumer of an exact manager-owned running snapshot; its ownership check already rejects a released generation, and no proxy-side stop coordination is added.
 - Runtime identity, ports, handles, and state remain memory-only; no schema, migration, configuration variable, or deployment topology changes.
 - Restart, automatic recovery, API-restart reconciliation, persisted runtime state, background health monitoring, automatic idle shutdown, bulk operations, arbitrary-process adoption, and running/failed project close remain deferred.
+- Amended 2026-08-15: the restart deferral above is spent by [ADR-260815-explicit-workbench-restart-control](./ADR-260815-explicit-workbench-restart-control.md). Three delivered surfaces of this decision change, and nothing else does. `stop()` gains one bounded rejection category, `restart-in-progress`, for a project whose entry is `restarting`, and the stop route gains the matching bounded `runtime_restart_in_progress` 409 category, taking the stop rejection vocabulary to seven members and the stop route error vocabulary to ten. Manager shutdown now awaits every in-flight restart as well as every in-flight stop before it audits ownership, so no owned identity is ever terminated or audited concurrently by a restart and by the sweep. The `stopping` entry, its `Running` projection, the exact synchronous claim, the confirmation rule, the retained-ownership re-attempt rule, the per-phase cleanup cardinality, the two enforcement points, the stop result vocabulary, the stop event pair, and the `failure-retained` rejection of a stop for a retained failure are all unchanged; an explicit restart, not a stop, is what a retained failure is eligible for. A restart never emits `runtime.stop.requested` or `runtime.stop.succeeded`, because it consumes the termination sequencer and the launch primitive directly rather than calling `stop()` and `start()`. API-restart reconciliation (BL-019), running-or-failed project close (BL-020), automatic recovery, persisted runtime state, background health monitoring, automatic idle shutdown, bulk operations, and arbitrary-process adoption remain deferred.
 
 ## Related Issues
 
@@ -110,6 +111,8 @@ Announce settled stops only through the `PRD.md` NFR-015 catalog. An accepted st
 
 - [Report public runtime state through a read-only projection](./ADR-260815-public-runtime-state-projection.md)
 - [Prove termination sequencing through an injectable primitive boundary](./ADR-260815-termination-sequencer-boundary.md)
+- [Replace one selected workbench runtime through a manager-owned restart control](./ADR-260815-explicit-workbench-restart-control.md)
+- [Serialize Project Home lifecycle activation per project](./ADR-260815-per-project-lifecycle-activation.md)
 - [TypeScript monorepo and host workbench stack](./ADR-260808-typescript-monorepo.md)
 - [In-process stable workbench reverse proxy](./ADR-260812-in-process-workbench-reverse-proxy.md)
 - [Runtime lifecycle and error handling](../core-components/CORE-COMPONENT-260808-runtime-lifecycle-error-handling.md)

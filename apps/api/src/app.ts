@@ -40,6 +40,7 @@ import {
   type ProjectRegistrationService,
 } from './project-registration.js'
 import projectRuntimeStateRoute from './routes/project-runtime-state.js'
+import projectRuntimeRestartRoute from './routes/project-runtime-restart.js'
 import projectRuntimeStopRoute from './routes/project-runtime-stop.js'
 
 declare module 'fastify' {
@@ -188,10 +189,11 @@ const app: FastifyPluginAsync<AppOptions> = async (
 
   await fastify.register(projectRuntimeStateRoute)
   await fastify.register(projectRuntimeStopRoute)
+  await fastify.register(projectRuntimeRestartRoute)
 
   await fastify.register(AutoLoad, {
     dir: join(import.meta.dirname, 'routes'),
-    ignorePattern: /project-runtime-(?:state|stop)\.(?:js|ts)$/u,
+    ignorePattern: /project-runtime-(?:state|stop|restart)\.(?:js|ts)$/u,
     options: opts,
   })
 }

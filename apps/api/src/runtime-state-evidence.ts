@@ -137,13 +137,13 @@ export function validatePublicReportingSource(
     violations.push('guarded-transition-definition')
   const transitionCalls =
     source.match(/(?:await\s+)?transitionRunningToFailed\s*\(/gu)?.length ?? 0
-  if (transitionCalls !== 3)
+  if (transitionCalls !== 4)
     violations.push('guarded-transition-contender-coverage')
   if (
     (source.match(/transitionRunningToFailed\s*\(\s*current/gu)?.length ??
       0) !== 2 ||
     (source.match(/transitionRunningToFailed\s*\(\s*entry/gu)?.length ?? 0) !==
-      1
+      2
   ) {
     violations.push('guarded-transition-call-sites')
   }

@@ -82,9 +82,8 @@ describe('project runtime documentation contract', () => {
       expect(document).toContain(command)
     }
     for (const deferred of [
-      'multi-project coordination',
-      'Restart',
-      'API-restart reconciliation',
+      'selected Restart by BL-018',
+      'API-process restart reconciliation',
       'persisted runtime handles or state',
       'auto-sleep',
       'scheduling',

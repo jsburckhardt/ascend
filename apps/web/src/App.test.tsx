@@ -531,7 +531,19 @@ describe('Project Home runtime state', () => {
     expect(
       screen.getAllByRole('button', { name: /^Stop .* workbench$/u })
     ).toHaveLength(projects.length)
-    expect(screen.queryByRole('button', { name: /restart/iu })).toBeNull()
+    expect(
+      screen.getAllByRole('button', { name: /^Restart .* workbench$/u })
+    ).toHaveLength(2)
+    expect(
+      screen.getByRole('button', {
+        name: 'Restart Gamma Project workbench',
+      })
+    ).toBeVisible()
+    expect(
+      screen.getByRole('button', {
+        name: 'Restart Delta Project workbench',
+      })
+    ).toBeVisible()
   })
 
   it('shows whole-list loading without inventing Stopped state', async () => {

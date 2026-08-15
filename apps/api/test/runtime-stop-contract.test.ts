@@ -28,6 +28,7 @@ describe('runtime stop contract', () => {
       'starting',
       'running',
       'stopping',
+      'restarting',
       'failed',
     ])
     expect(RUNTIME_LIFECYCLE_TARGETS).toEqual([
@@ -36,12 +37,14 @@ describe('runtime stop contract', () => {
       'failed',
       'stopping',
       'stopped',
+      'restarting',
     ])
     expect(RUNTIME_ENTRY_STATES.map(publicRuntimeState)).toEqual([
       'Stopped',
       'Starting',
       'Running',
       'Running',
+      'Starting',
       'Failed',
     ])
     expect(publicRuntimeStateForLifecycleTarget('stopped')).toBe('Stopped')
@@ -67,11 +70,12 @@ describe('runtime stop contract', () => {
       'not-registered',
       'no-managed-runtime',
       'start-in-progress',
+      'restart-in-progress',
       'failure-retained',
       'stop-unconfirmed',
       'manager-shutdown',
     ])
-    expect(RUNTIME_FAILURE_CATEGORIES).toHaveLength(14)
+    expect(RUNTIME_FAILURE_CATEGORIES).toHaveLength(18)
     expect(Object.isFrozen(RUNTIME_STOP_OUTCOMES)).toBe(true)
     expect(Object.isFrozen(RUNTIME_STOP_REJECTION_CATEGORIES)).toBe(true)
     const config = createProjectRuntimeConfig({

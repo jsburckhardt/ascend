@@ -37,15 +37,27 @@ export interface WorkbenchPublicFailure {
   readonly message: string
 }
 
-const row = (
-  category: WorkbenchFailureCategory,
+const row = <const Category extends WorkbenchFailureCategory>(
+  category: Category,
   status: number,
   code: string,
   message: string
-): WorkbenchPublicFailure => Object.freeze({ category, status, code, message })
+): WorkbenchPublicFailure & { readonly category: Category } =>
+  Object.freeze({ category, status, code, message })
+
+type CompleteFailureRows<Rows extends readonly WorkbenchPublicFailure[]> =
+  Exclude<WorkbenchFailureCategory, Rows[number]['category']> extends never
+    ? Rows
+    : never
+
+const completeFailureRows = <
+  const Rows extends readonly WorkbenchPublicFailure[],
+>(
+  rows: CompleteFailureRows<Rows>
+): Rows => Object.freeze(rows) as Rows
 
 export const WORKBENCH_FAILURE_TABLE: readonly WorkbenchPublicFailure[] =
-  Object.freeze([
+  completeFailureRows([
     row(
       'malformed-project-id',
       400,
@@ -129,6 +141,42 @@ export const WORKBENCH_FAILURE_TABLE: readonly WorkbenchPublicFailure[] =
       502,
       'workbench_start_cancelled',
       'Workbench startup was cancelled.'
+    ),
+    row(
+      'runtime:stop-unconfirmed',
+      503,
+      'workbench_stop_unconfirmed',
+      'Workbench stop could not be confirmed.'
+    ),
+    row(
+      'runtime:runtime-stopping',
+      503,
+      'workbench_runtime_stopping',
+      'Workbench is currently stopping.'
+    ),
+    row(
+      'runtime:restart-release-unconfirmed',
+      503,
+      'workbench_restart_release_unconfirmed',
+      'Workbench restart could not release the previous session.'
+    ),
+    row(
+      'runtime:restart-deadline-exceeded',
+      503,
+      'workbench_restart_deadline_exceeded',
+      'Workbench restart timed out.'
+    ),
+    row(
+      'runtime:runtime-restarting',
+      503,
+      'workbench_runtime_restarting',
+      'Workbench is currently restarting.'
+    ),
+    row(
+      'runtime:restart-replacement-unconfirmed',
+      503,
+      'workbench_restart_replacement_unconfirmed',
+      'Workbench restart replacement cleanup could not be confirmed.'
     ),
     row(
       'upstream-dns',

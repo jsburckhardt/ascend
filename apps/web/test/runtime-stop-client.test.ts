@@ -20,6 +20,7 @@ const errorStatus: Readonly<Record<RuntimeStopErrorCategory, number>> = {
   project_not_found: 404,
   runtime_not_managed: 409,
   runtime_start_in_progress: 409,
+  runtime_restart_in_progress: 409,
   runtime_failure_retained: 409,
   runtime_stop_unconfirmed: 500,
   runtime_manager_shutdown: 503,

@@ -2,7 +2,7 @@
 
 ## Delivered behavior and ownership
 
-Ascend keeps one healthy memory-only runtime per active stable project ID. Home navigation and browser-client disconnection do not stop it. code-server owns server-side workbench and terminal sessions; the browser owns local editor restoration and client storage. BL-014 added no persisted runtime field or lifecycle action; BL-017 now adds an explicit selected Stop on Project Home while Restart and automatic stopping remain absent.
+Ascend keeps one healthy memory-only runtime per active stable project ID. Home navigation and browser-client disconnection do not stop it. code-server owns server-side workbench and terminal sessions; the browser owns local editor restoration and client storage. BL-014 added no persisted runtime field or lifecycle action; BL-017 adds explicit selected Stop and BL-018 adds explicit selected Restart on Project Home while automatic stopping remains absent.
 
 The zero-retry desktop Chromium proof creates exactly three disposable Git repositories A, B, and C, starts them once in B, C, A order, then executes keyboard A → Home → B → Home → C → Home → A followed by B and C revisits. The exactly five Projects/Open re-entries are B, C, A, B, C and all reuse the original runtime identities. Every historical BL-014 Home row measures its before/after URL, surface and focus, three one-count cards, the then-current Open/Close controls, and event-window start/reuse/stop/shutdown deltas. BL-017 adds Stop without changing those retained runtime-continuity observations.
 
@@ -44,4 +44,4 @@ The residual command derives project partitions from the artifact rather than a 
 
 ## Scope and migration
 
-BL-015 performance benchmarking is now delivered, and BL-017 selected Stop does not change BL-014's continuity result. Close-on-running behavior, Restart, auto-sleep, API-restart reconciliation, scheduling, quotas, multi-user, and multi-host operation remain out of scope. Stop changes no SQLite schema or persisted field, configuration default, deployment topology, or migration requirement. The Plan and harness contracts keep `harness boot` as the governed wrapper, so no duplicate root `just harness-boot` recipe is added.
+BL-015 performance benchmarking is now delivered. BL-017 selected Stop does not change BL-014's continuity result, and BL-018 selected Restart does not change it either. Close-on-running behavior, auto-sleep, API-restart reconciliation, scheduling, quotas, multi-user, and multi-host operation remain out of scope. Stop changes no SQLite schema or persisted field, configuration default, deployment topology, or migration requirement. Stop and Restart change no SQLite schema or persisted field, environment configuration, deployment topology, or migration requirement. The Plan and harness contracts keep `harness boot` as the governed wrapper, so no duplicate root `just harness-boot` recipe is added.

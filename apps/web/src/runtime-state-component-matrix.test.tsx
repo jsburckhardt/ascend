@@ -93,7 +93,14 @@ describe('BL-016 Project Home surface matrix', () => {
           name: 'Stop Matrix project workbench',
         })
       ).toBeVisible()
-      expect(screen.queryByRole('button', { name: /restart/iu })).toBeNull()
+      const restart = screen.queryByRole('button', {
+        name: 'Restart Matrix project workbench',
+      })
+      if (report.state === 'Running' || report.state === 'Failed') {
+        expect(restart).toBeVisible()
+      } else {
+        expect(restart).toBeNull()
+      }
     },
     SCENARIO_TIMEOUT_MS
   )

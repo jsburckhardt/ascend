@@ -61,7 +61,7 @@ logging, filesystem-safety, and stable-proxy core-components.
 | AC-3 | The internal `restarting` entry maps only to public `Starting`; no settlement reports `Stopped` between generations, and `Running` is installed only from a health-gated `ReadyRuntime`. Public states remain exactly four. |
 | AC-4 | The designated episode held real HTTP and WebSocket connections against the prior listener; both were severed after release, the old listener was absent, and the unchanged stable route reached each replacement. Documentation explicitly makes no session-continuity claim. |
 | AC-5 | Matrix and designated fixtures preserve stable ID, display name, canonical path, created-at value, file membership, content digests, modes, and timestamps. Registration and fixture snapshots were unchanged after all three real restarts. |
-| AC-6 | Home renders Restart only for `Running` and retained `Failed`, uses buttons and polite/alert outcomes, sets selected-card busy state, prevents duplicate same-project activation, restores focus, and leaves peer controls usable. BL-014 evidence now proves three Stop controls plus the exact one-to-two-to-three Restart-control progression as projects become Running. |
+| AC-6 | Home renders Restart only for `Running` and retained `Failed`, uses buttons and polite/alert outcomes, sets selected-card busy state, prevents duplicate same-project activation, restores focus, and leaves peer controls usable. Revision 6 makes the Close-dialog admission condition global: while Close B is open, programmatic Restart A is inert and sends no transport request; the opposite-direction regression proves that Restart A pending still permits Close B. BL-014 evidence proves three Stop controls plus the exact one-to-two-to-three Restart-control progression as projects become Running. |
 | AC-7 | Every accepted operation emits one `runtime.restart.requested` and one terminal success or failure; pre-acceptance rejection emits none. The event catalog, route outcomes, projection, Home notices, evidence validator, and protected-value scans agree without exposing protected runtime details. |
 | AC-8 | Release deadline or incomplete release settles `release-unconfirmed`, launches no replacement, retains `restart-release-unconfirmed`, keeps public `Failed`, and preserves the exact ownership or admission needed for a later retry. |
 | AC-9 | Replacement launch, readiness, overall-deadline, and non-confirming cleanup paths settle bounded non-success, retain an actionable failure, leave no installed successor, and either prove absence or publish `residualCount: null` with exact admission/quarantine evidence. |
@@ -83,10 +83,12 @@ logging, filesystem-safety, and stable-proxy core-components.
   - `project/work-items/41-bl-018-restart-a-running-or-failed-workbench/plan/01-action-plan.md`
   - `project/work-items/41-bl-018-restart-a-running-or-failed-workbench/plan/02-task-breakdown.md`
   - `project/work-items/41-bl-018-restart-a-running-or-failed-workbench/plan/03-test-plan.md`
-- Action-plan SHA-256:
-  `0b32cd2b88d5dc3312c9aaed86809bf47e5f402dd5680f764715097880306cbf`
-- Test-plan SHA-256:
-  `e315d53e8077d7224b16039a4e59a8e43e184608e4510333bfda433fbf2fea23`
+- Revision-6 action-plan SHA-256:
+  `95e9966ed8e6f513d6cf6a171dbba50763c38a3a04da0d65a585c6f651fea5f5`
+- Revision-6 implementation-handoff task-breakdown SHA-256:
+  `0178803b7c77fd43c176662f2ad991291e5147658ad66b109e76846d491e2b55`
+- Revision-6 test-plan SHA-256:
+  `b7fe31160aed8833a156668cd2a6636c282a8215b782d0b0709cefd5f14bad5b`
 - Retained matrix:
   `project/work-items/41-bl-018-restart-a-running-or-failed-workbench/implementation/evidence/runtime-restart-matrix.json`
 - Disposable matrix:
@@ -111,6 +113,37 @@ logging, filesystem-safety, and stable-proxy core-components.
 | `just verify-session-switching` | Passed: five deterministic files, eight tests; one zero-retry Chromium episode; residual audit status `ok` |
 | Restart documentation contracts | Passed: eight Restart tests plus historical Stop and session-switching contracts |
 | `just verify` | Passed end to end, including all historical designated browser proofs, full package suites, builds, BL-018 proofs, and residual audits |
+
+## Revision 6 AC-6 correction
+
+Independent Verify of commit
+`e4e8dc1a6da7035a984e628bce2127397805b954` returned AC-6 to Plan
+because Restart admission used `value.close?.id === projectId`, which allowed
+Restart A while Close B's dialog was open. Plan revision 6 reconciled T-7 and
+V-12 with the existing global rule in
+`ADR-260815-per-project-lifecycle-activation`; no architecture artifact,
+decision-log entry, or application documentation changed.
+
+- `apps/web/src/use-project-home.ts` now guards Restart admission with
+  `value.close !== undefined`.
+- `apps/web/test/use-project-home-restart.test.tsx` proves that Close B open
+  leaves both restart lanes, settlement version, focus, announcement, and
+  Close B unchanged while issuing zero Restart transport requests.
+- `apps/web/src/runtime-restart-component-matrix.test.tsx` scenario 16 proves
+  the same refusal through the rendered component while leaving the selected
+  card unmodified. The retained opposite-direction test proves that Restart A
+  pending still permits Close B.
+- `just verify-focused apps/web/test/use-project-home-restart.test.tsx apps/web/src/runtime-restart-component-matrix.test.tsx apps/web/src/runtime-restart-component.test.tsx apps/web/src/App.test.tsx --reporter=verbose`
+  passed four files and 59 tests.
+- Canonical `just verify` passed after formatting, and
+  `/tmp/ascend-runtime-data` contained zero test-owned directories.
+- The retained matrix remained byte-identical at
+  `fa5e267aa25c32a35a4c05746bac123d66a0ebc7b5733012b87321c609c32880`.
+
+Documentation has no impact: the shipped documentation states Restart
+eligibility, per-project pending behavior, modal Close behavior, and peer
+availability without enumerating controller admission expressions, so every
+published statement remains accurate.
 
 The first canonical attempts exposed deterministic proof-environment defects
 rather than product failures: the retained matrix needed the same serializer
@@ -174,8 +207,9 @@ registered `eng-harness-flow` skill, then attempted the required exact
 `eng-harness-flow --hook post-coding --json` invocation. This host accepts only
 registered skill names and returned skill-not-found for the argument-bearing
 invocation, so no post-coding lifecycle envelope was available. That
-unavailability is recorded as `COORD-001`; this record does not substitute a
-success-shaped fallback.
+unavailability is recorded as `COORD-001`; the coordinator repeated the exact
+attempt after the revision-6 correction and received the same unavailable
+result. Neither record substitutes a success-shaped fallback.
 
 ## Handoff boundary
 

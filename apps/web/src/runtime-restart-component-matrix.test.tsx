@@ -278,6 +278,36 @@ describe('BL-018 scenario 15: home-duplicate-activation-prevented', () => {
 
 describe('BL-018 scenario 16: home-peer-controls-available', () => {
   it(
+    'refuses a programmatic Restart while a peer Close dialog is open',
+    async () => {
+      const restart = vi.fn<RuntimeRestartTransport>()
+      await renderReady(restart)
+      const selectedRestart = screen.getByRole('button', {
+        name: 'Restart Selected project workbench',
+      })
+      const card = selectedCard()
+
+      fireEvent.click(
+        screen.getByRole('button', {
+          name: `Close ${peer.name}`,
+        })
+      )
+      expect(
+        screen.getByRole('dialog', { name: `Close ${peer.name}?` })
+      ).toBeVisible()
+      fireEvent.click(selectedRestart)
+
+      expect(restart).not.toHaveBeenCalled()
+      expect(selectedRestart).toBeEnabled()
+      expect(card).not.toHaveAttribute('aria-busy')
+      expect(
+        screen.queryByText('Selected project: Restarting workbench.')
+      ).toBeNull()
+    },
+    SCENARIO_TIMEOUT_MS
+  )
+
+  it(
     'keeps every peer control enabled and functional during a pending restart',
     async () => {
       const request = deferred<RuntimeRestartTransportResult>()

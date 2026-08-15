@@ -883,7 +883,7 @@ export function useProjectHome(
       if (
         value.listStatus !== 'success' ||
         value.mode !== 'editing' ||
-        value.close?.id === projectId ||
+        value.close !== undefined ||
         value.stop?.id === projectId ||
         restartOwners.current.has(projectId) ||
         (restartState !== undefined && !retrying)

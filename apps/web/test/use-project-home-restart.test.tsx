@@ -106,6 +106,37 @@ describe('Project Home per-project restart lane', () => {
     expect(screen.getByTestId('close')).toHaveTextContent('b')
   })
 
+  it('refuses Restart for one project while another project Close dialog is open', async () => {
+    const transport = vi.fn<RuntimeRestartTransport>()
+    await ready(transport)
+    fireEvent.click(screen.getByText('close-b'))
+
+    const unchanged = {
+      restartA: screen.getByTestId('restart-a').textContent,
+      restartB: screen.getByTestId('restart-b').textContent,
+      settlement: screen.getByTestId('settlement').textContent,
+      announcement: screen.getByTestId('announcement').textContent,
+      focus: screen.getByTestId('focus').textContent,
+    }
+    fireEvent.click(screen.getByText('restart-a'))
+
+    expect(transport).not.toHaveBeenCalled()
+    expect(screen.getByTestId('restart-a')).toHaveTextContent(
+      unchanged.restartA ?? ''
+    )
+    expect(screen.getByTestId('restart-b')).toHaveTextContent(
+      unchanged.restartB ?? ''
+    )
+    expect(screen.getByTestId('settlement')).toHaveTextContent(
+      unchanged.settlement ?? ''
+    )
+    expect(screen.getByTestId('announcement')).toHaveTextContent(
+      unchanged.announcement ?? ''
+    )
+    expect(screen.getByTestId('focus')).toHaveTextContent(unchanged.focus ?? '')
+    expect(screen.getByTestId('close')).toHaveTextContent('b')
+  })
+
   it('keeps a typed rejection retryable', async () => {
     const transport = vi
       .fn<RuntimeRestartTransport>()

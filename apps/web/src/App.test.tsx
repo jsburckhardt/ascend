@@ -17,6 +17,7 @@ import {
   type RegistrationTransport,
   type RegistrationTransportResult,
 } from './projects'
+import type { RuntimeReport, RuntimeStateLoader } from './runtime-state'
 
 const alpha: Project = {
   id: 'project-alpha',
@@ -474,4 +475,254 @@ describe('Project Home open interaction', () => {
     expect(register).toHaveBeenCalledOnce()
     expect(loader).toHaveBeenCalledTimes(2)
   })
+})
+
+describe('Project Home runtime state', () => {
+  it('renders all four states, a semantic summary, and one bounded failure notice', async () => {
+    const delta: Project = {
+      id: 'project-delta',
+      name: 'Delta Project',
+      canonicalPath: '/projects/delta',
+      createdAt: 4,
+    }
+    const projects = [alpha, beta, gamma, delta]
+    const loadRuntimeState = vi.fn<RuntimeStateLoader>().mockResolvedValue([
+      { id: beta.id, state: 'Starting' },
+      { id: alpha.id, state: 'Stopped' },
+      { id: gamma.id, state: 'Running' },
+      {
+        id: delta.id,
+        state: 'Failed',
+        failureCategory: 'readiness-timeout',
+      },
+    ])
+    render(
+      <App
+        loadProjectList={async () => projects}
+        loadRuntimeStates={loadRuntimeState}
+      />
+    )
+
+    expect(
+      await screen.findByLabelText('Runtime state summary')
+    ).toHaveTextContent('1 Stopped, 1 Starting, 1 Running, 1 Failed')
+    for (const [project, runtimeState] of [
+      [alpha, 'Stopped'],
+      [beta, 'Starting'],
+      [gamma, 'Running'],
+      [delta, 'Failed'],
+    ] as const) {
+      const card = screen
+        .getByRole('button', { name: 'Open ' + project.name })
+        .closest('li')!
+      expect(within(card).getByText(runtimeState)).toBeVisible()
+      expect(card).toHaveTextContent('Runtime state: ' + runtimeState)
+      expect(
+        card.querySelector('[data-runtime-state="' + runtimeState + '"]')
+      ).not.toBeNull()
+    }
+    expect(
+      screen.getByText('The workbench did not become ready in time.')
+    ).toBeVisible()
+    expect(
+      screen.getByText('The workbench did not become ready in time.')
+    ).toHaveAttribute('data-runtime-failure', 'readiness-timeout')
+    expect(loadRuntimeState).toHaveBeenCalledOnce()
+    expect(screen.queryByRole('button', { name: /stop|restart/iu })).toBeNull()
+  })
+
+  it('shows whole-list loading without inventing Stopped state', async () => {
+    const request = deferred<readonly RuntimeReport[]>()
+    render(
+      <App
+        loadProjectList={async () => [alpha]}
+        loadRuntimeStates={() => request.promise}
+      />
+    )
+
+    expect(
+      await screen.findByRole('heading', { name: 'Runtime states unavailable' })
+    ).toBeVisible()
+    expect(
+      await screen.findByText(
+        'Runtime states are loading and temporarily unavailable.'
+      )
+    ).toBeVisible()
+    expect(screen.queryByText('Runtime state:')).toBeNull()
+    expect(screen.getByText('Runtime state unavailable')).toHaveAttribute(
+      'data-runtime-unavailable',
+      'true'
+    )
+
+    await act(async () => {
+      request.resolve([{ id: alpha.id, state: 'Stopped' }])
+      await request.promise
+    })
+    expect(await screen.findByText('Stopped')).toBeVisible()
+    expect(
+      screen.queryByRole('heading', { name: 'Runtime states unavailable' })
+    ).toBeNull()
+  })
+
+  it('shows no partial state for a mismatch and retries the same revision once', async () => {
+    const loadRuntimeState = vi
+      .fn<RuntimeStateLoader>()
+      .mockResolvedValueOnce([
+        { id: alpha.id, state: 'Stopped' },
+        { id: beta.id, state: 'Running' },
+      ])
+      .mockResolvedValueOnce([
+        { id: beta.id, state: 'Running' },
+        { id: alpha.id, state: 'Stopped' },
+      ])
+    render(
+      <App
+        loadProjectList={async () => [alpha, beta]}
+        loadRuntimeStates={loadRuntimeState}
+      />
+    )
+
+    expect(
+      await screen.findByText(
+        'Runtime states did not match the project list and are unavailable.'
+      )
+    ).toBeVisible()
+    expect(screen.queryByText('Runtime state:')).toBeNull()
+    expect(screen.getAllByText('Runtime state unavailable')).toHaveLength(2)
+
+    await userEvent
+      .setup()
+      .click(screen.getByRole('button', { name: 'Retry runtime states' }))
+
+    expect(
+      await screen.findByLabelText('Runtime state summary')
+    ).toHaveTextContent('1 Stopped, 0 Starting, 1 Running, 0 Failed')
+    expect(loadRuntimeState).toHaveBeenCalledTimes(2)
+  })
+
+  it('issues one new runtime request after a successful project mutation', async () => {
+    const loadRuntimeState = vi
+      .fn<RuntimeStateLoader>()
+      .mockResolvedValueOnce([{ id: alpha.id, state: 'Stopped' }])
+      .mockResolvedValueOnce([
+        { id: alpha.id, state: 'Stopped' },
+        { id: gamma.id, state: 'Starting' },
+      ])
+    const register = vi.fn<RegistrationTransport>().mockResolvedValue({
+      kind: 'success',
+      disposition: 'created',
+      project: gamma,
+    })
+    render(
+      <App
+        loadProjectList={async () => [alpha]}
+        loadRuntimeStates={loadRuntimeState}
+        registerProject={register}
+      />
+    )
+    await screen.findByText('Stopped')
+
+    await submitPath('/projects/gamma')
+
+    expect(
+      await screen.findByRole('button', { name: 'Open Gamma Project' })
+    ).toBeVisible()
+    await waitFor(() => expect(loadRuntimeState).toHaveBeenCalledTimes(2))
+    expect(await screen.findByText('Starting')).toBeVisible()
+  })
+
+  it('keeps a peer project state and controls unchanged when another project fails', async () => {
+    const loadRuntimeState = vi
+      .fn<RuntimeStateLoader>()
+      .mockResolvedValueOnce([
+        { id: beta.id, state: 'Running' },
+        { id: alpha.id, state: 'Running' },
+      ])
+      .mockResolvedValueOnce([
+        { id: beta.id, state: 'Running' },
+        {
+          id: alpha.id,
+          state: 'Failed',
+          failureCategory: 'health-status-unexpected',
+        },
+        { id: gamma.id, state: 'Stopped' },
+      ])
+    const register = vi.fn<RegistrationTransport>().mockResolvedValue({
+      kind: 'success',
+      disposition: 'created',
+      project: gamma,
+    })
+    render(
+      <App
+        loadProjectList={async () => [alpha, beta]}
+        loadRuntimeStates={loadRuntimeState}
+        registerProject={register}
+      />
+    )
+    await screen.findByLabelText('Runtime state summary')
+    const peerBefore = screen
+      .getByRole('button', { name: 'Open Beta <script> Project' })
+      .closest('li')!
+    expect(
+      peerBefore.querySelector('[data-runtime-state="Running"]')
+    ).not.toBeNull()
+    const peerControlNames = within(peerBefore)
+      .getAllByRole('button')
+      .map((control) => control.getAttribute('aria-label'))
+
+    await submitPath('/projects/gamma')
+
+    expect(
+      await screen.findByText('The workbench health status was invalid.')
+    ).toBeVisible()
+    const peerAfter = screen
+      .getByRole('button', { name: 'Open Beta <script> Project' })
+      .closest('li')!
+    expect(
+      peerAfter.querySelector('[data-runtime-state="Running"]')
+    ).not.toBeNull()
+    expect(peerAfter.querySelector('[data-runtime-failure]')).toBeNull()
+    expect(
+      within(peerAfter)
+        .getAllByRole('button')
+        .map((control) => control.getAttribute('aria-label'))
+    ).toEqual(peerControlNames)
+  })
+
+  it.each([
+    {
+      name: 'transport failure',
+      loader: vi
+        .fn<RuntimeStateLoader>()
+        .mockRejectedValue(new Error('offline')),
+      timeoutMs: undefined,
+      message: 'Runtime states could not be loaded and are unavailable.',
+    },
+    {
+      name: 'timeout',
+      loader: vi.fn<RuntimeStateLoader>(() => new Promise(() => undefined)),
+      timeoutMs: 10,
+      message: 'Runtime states did not load in time and are unavailable.',
+    },
+  ])(
+    'renders whole-list unavailability and one-request Retry for $name',
+    async ({ loader, message, timeoutMs }) => {
+      render(
+        <App
+          loadProjectList={async () => [alpha, beta]}
+          loadRuntimeStates={loader}
+          runtimeStateTimeoutMs={timeoutMs}
+        />
+      )
+
+      expect(await screen.findByText(message)).toBeVisible()
+      expect(screen.getAllByText('Runtime state unavailable')).toHaveLength(2)
+      expect(screen.queryByText('Runtime state:')).toBeNull()
+
+      await userEvent
+        .setup()
+        .click(screen.getByRole('button', { name: 'Retry runtime states' }))
+      await waitFor(() => expect(loader).toHaveBeenCalledTimes(2))
+    }
+  )
 })

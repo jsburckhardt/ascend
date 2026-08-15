@@ -10,7 +10,18 @@ import {
   type ProjectLoader,
   type RegistrationTransport,
 } from './projects'
+import {
+  PUBLIC_RUNTIME_STATES,
+  RUNTIME_FAILURE_NOTICES,
+  reconcileRuntimeReports,
+  type RuntimeStateLoader,
+} from './runtime-state'
 import { useProjectHome } from './use-project-home'
+import {
+  useRuntimeState,
+  type ProjectListRevision,
+  type RuntimeStateView,
+} from './use-runtime-state'
 import {
   browserWorkbenchNavigator,
   stableWorkbenchUrl,
@@ -21,16 +32,36 @@ export interface AppProperties {
   readonly loadProjectList?: ProjectLoader
   readonly registerProject?: RegistrationTransport
   readonly closeProject?: CloseTransport
+  readonly loadRuntimeStates?: RuntimeStateLoader
+  readonly runtimeStateTimeoutMs?: number
   readonly navigateToWorkbench?: WorkbenchNavigator
 }
 
 export const CLOSE_DIALOG_BODY =
   'Closing removes this project registration from Ascend. The filesystem directory and files will not be deleted.'
 
+function runtimeUnavailableMessage(view: RuntimeStateView): string {
+  if (view.kind === 'idle') {
+    return 'Runtime states are unavailable until the project list is ready.'
+  }
+  if (view.kind === 'loading') {
+    return 'Runtime states are loading and temporarily unavailable.'
+  }
+  if (view.kind === 'failure' && view.reason === 'timeout') {
+    return 'Runtime states did not load in time and are unavailable.'
+  }
+  if (view.kind === 'failure' && view.reason === 'mismatch') {
+    return 'Runtime states did not match the project list and are unavailable.'
+  }
+  return 'Runtime states could not be loaded and are unavailable.'
+}
+
 export function App({
   loadProjectList,
   registerProject,
   closeProject,
+  loadRuntimeStates,
+  runtimeStateTimeoutMs,
   navigateToWorkbench = browserWorkbenchNavigator,
 }: AppProperties) {
   const home = useProjectHome({
@@ -39,6 +70,12 @@ export function App({
     close: closeProject,
   })
   const { state } = home
+  const [projectListRevision, setProjectListRevision] =
+    useState<ProjectListRevision>()
+  const runtime = useRuntimeState(projectListRevision, {
+    loader: loadRuntimeStates,
+    timeoutMs: runtimeStateTimeoutMs,
+  })
   const [openAnnouncement, setOpenAnnouncement] = useState('')
   const [openingProjectId, setOpeningProjectId] = useState<string>()
   const activationGeneration = useRef(0)
@@ -50,6 +87,16 @@ export function App({
   const dialogRef = useRef<HTMLDivElement>(null)
   const projectActions = useRef(new Map<string, HTMLButtonElement>())
   const closeActions = useRef(new Map<string, HTMLButtonElement>())
+
+  useEffect(() => {
+    if (state.listStatus !== 'success') return
+    setProjectListRevision((current) =>
+      Object.freeze({
+        id: (current?.id ?? 0) + 1,
+        projectIds: Object.freeze(state.projects.map(({ id }) => id)),
+      })
+    )
+  }, [state.listStatus, state.projects])
 
   useEffect(() => {
     headingRef.current?.focus()
@@ -141,6 +188,24 @@ export function App({
   ]
     .filter(Boolean)
     .join(' ')
+  const currentRuntimeReconciliation =
+    runtime.view.kind === 'success'
+      ? reconcileRuntimeReports(
+          runtime.view.reports,
+          state.projects.map(({ id }) => id)
+        )
+      : undefined
+  const currentRuntimeReports =
+    currentRuntimeReconciliation?.kind === 'reconciled'
+      ? currentRuntimeReconciliation.reports
+      : undefined
+  const runtimeSummary =
+    currentRuntimeReports === undefined
+      ? undefined
+      : PUBLIC_RUNTIME_STATES.map(
+          (runtimeState) =>
+            `${currentRuntimeReports.filter(({ state: value }) => value === runtimeState).length} ${runtimeState}`
+        ).join(', ')
 
   return (
     <main className="mx-auto flex min-h-screen max-w-6xl flex-col gap-12 px-6 py-12">
@@ -305,8 +370,17 @@ export function App({
           <h2 className="text-2xl font-semibold" id="registered-projects">
             Registered projects
           </h2>
+          {runtimeSummary === undefined ? null : (
+            <p
+              aria-label="Runtime state summary"
+              aria-live="polite"
+              className="mt-3 text-sm text-slate-600"
+            >
+              Runtime state summary: {runtimeSummary}
+            </p>
+          )}
           <ul aria-label="Registered projects" className="mt-6 grid gap-4">
-            {state.projects.map((project) => (
+            {state.projects.map((project, index) => (
               <li className="rounded-xl border bg-white p-6" key={project.id}>
                 <h3 className="text-lg font-semibold">{project.name}</h3>
                 <p
@@ -315,6 +389,39 @@ export function App({
                 >
                   {project.canonicalPath}
                 </p>
+                {currentRuntimeReports === undefined ? (
+                  <p
+                    className="mt-3 text-sm text-slate-700"
+                    data-runtime-unavailable="true"
+                  >
+                    Runtime state unavailable
+                  </p>
+                ) : (
+                  <div
+                    className="mt-3"
+                    data-runtime-project-id={project.id}
+                    data-runtime-state={currentRuntimeReports[index]!.state}
+                  >
+                    <p>
+                      <span className="font-medium">Runtime state: </span>
+                      <span>{currentRuntimeReports[index]!.state}</span>
+                    </p>
+                    {currentRuntimeReports[index]!.state === 'Failed' ? (
+                      <p
+                        className="mt-1 text-sm text-red-800"
+                        data-runtime-failure={
+                          currentRuntimeReports[index]!.failureCategory
+                        }
+                      >
+                        {
+                          RUNTIME_FAILURE_NOTICES[
+                            currentRuntimeReports[index]!.failureCategory!
+                          ]
+                        }
+                      </p>
+                    ) : null}
+                  </div>
+                )}
                 <button
                   aria-label={'Open ' + project.name}
                   className="mt-5 rounded-md bg-slate-950 px-4 py-2 text-sm font-medium text-white focus-visible:outline focus-visible:outline-4 focus-visible:outline-blue-600"
@@ -360,6 +467,28 @@ export function App({
               </li>
             ))}
           </ul>
+          {runtimeSummary === undefined ? (
+            <div
+              aria-labelledby="runtime-state-unavailable"
+              className="mt-4 rounded-md border border-amber-300 bg-amber-50 p-4"
+            >
+              <h3 className="font-semibold" id="runtime-state-unavailable">
+                Runtime states unavailable
+              </h3>
+              <p className="mt-1 text-sm text-slate-700">
+                {runtime.view.kind === 'success'
+                  ? 'Runtime states did not match the project list and are unavailable.'
+                  : runtimeUnavailableMessage(runtime.view)}
+              </p>
+              <button
+                className="mt-3 rounded-md border px-3 py-1 text-sm font-medium"
+                onClick={runtime.retry}
+                type="button"
+              >
+                Retry runtime states
+              </button>
+            </div>
+          ) : null}
         </section>
       ) : null}
       {state.close === undefined ? null : (

@@ -11,6 +11,7 @@ This file is the single registry of all architectural decisions and core-compone
 | ADR-260810-full-page-browser-workbench-presentation | Select the Full-Page Browser Workbench Presentation | Accepted | 2026-08-10 |
 | ADR-260812-in-process-workbench-reverse-proxy | In-Process Stable Workbench Reverse Proxy | Accepted | 2026-08-12 |
 | ADR-260812-browser-navigation-shell | Separate Browser Navigation Shell from Workbench Transport | Accepted | 2026-08-12 |
+| ADR-260815-public-runtime-state-projection | Report Public Runtime State Through a Read-Only Projection | Accepted | 2026-08-15 |
 
 ## Core-Components
 
@@ -130,3 +131,16 @@ Short, actionable statements derived from ADRs and core-components. More than on
 | 92 | Use one opaque project token across runtime and proxy event attribution | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-12 |
 | 93 | Reject proxy snapshots that mismatch the persisted project or stable route or are not the exact manager-owned running object | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-12 |
 | 94 | Attribute proxy resource inventories and audits by opaque project token | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-12 |
+| 95 | Report public runtime state through a read-only projection endpoint | ADR-260815-public-runtime-state-projection | 2026-08-15 |
+| 96 | Keep runtime state out of the four-field project payload and its validators | ADR-260815-public-runtime-state-projection | 2026-08-15 |
+| 97 | Refresh public runtime state on demand without polling, streaming, or background health loops | ADR-260815-public-runtime-state-projection | 2026-08-15 |
+| 98 | Expose exactly one of Stopped, Starting, Running, or Failed on every public surface | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
+| 99 | Project every public runtime state from the runtime manager in one synchronous pass | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
+| 100 | Report retained runtime failures as Failed instead of Stopped | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
+| 101 | Disclose only bounded failure categories in public runtime reports | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
+| 102 | Report an unavailable public runtime report explicitly instead of substituting a state | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
+| 103 | Announce each public runtime-state transition with exactly one NFR-015 catalog event | CORE-COMPONENT-260808-structured-runtime-logging | 2026-08-15 |
+| 104 | Report post-readiness runtime exits as runtime.health.changed and emit no non-catalog lifecycle event | CORE-COMPONENT-260808-structured-runtime-logging | 2026-08-15 |
+| 105 | Route every running-to-failed transition through one guarded compare-and-set operation | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
+| 106 | Reject runtime reports that do not match the authoritative ordered project list revision | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
+| 107 | Request public runtime state exactly once per authoritative project-list revision | ADR-260815-public-runtime-state-projection | 2026-08-15 |

@@ -114,6 +114,7 @@ describe('execution-backed Home/workbench component matrix', () => {
     render(
       <App
         loadProjectList={async () => [project]}
+        loadRuntimeStates={async () => [{ id: project.id, state: 'Running' }]}
         navigateToWorkbench={(url) => {
           navigations.push(url)
         }}
@@ -125,11 +126,16 @@ describe('execution-backed Home/workbench component matrix', () => {
     await waitFor(() =>
       expect(navigations).toEqual(['/projects/stable-id/workbench/'])
     )
+    expect(
+      screen.getByText('Running').closest('[data-runtime-state]')
+    ).toHaveAttribute('data-runtime-state', 'Running')
     rows.push(
       observedRow('normal-open', [event('normal-open')], {
         navigationCount: 1,
         url: navigations[0],
         focus: 'Open Stable project',
+        runtimeState: 'running',
+        assertionCount: 5,
       })
     )
 

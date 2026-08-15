@@ -88,7 +88,9 @@ Retained evidence contains safe classes, counts, timings, stable execution IDs, 
 
 ## Out of scope
 
-Multi-project policy, public authentication, public networking, TLS termination, multi-host routing, alternate editors, persisted runtime state, runtime-status UI, and user lifecycle controls remain out of scope.
+BL-016 adds read-only runtime reporting on Project Home without changing stable workbench target selection, proxy transport, front-door trust, or shell acquisition. The browser requests the separate `GET /api/projects/runtime` endpoint only after an authoritative project-list revision and renders whole-list unavailability on timeout, transport failure, or exact-ID/order mismatch. Post-readiness exit is represented by the catalogued `runtime.health.changed` event. No client health probe, polling, event stream, Stop, Restart, or proxy lifecycle message is added.
+
+Multi-project policy, public authentication, public networking, TLS termination, multi-host routing, alternate editors, persisted runtime state, and user lifecycle controls remain out of scope.
 
 
 ## BL-013 interleaved target isolation

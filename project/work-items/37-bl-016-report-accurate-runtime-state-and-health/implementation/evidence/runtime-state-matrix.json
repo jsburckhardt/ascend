@@ -1,0 +1,423 @@
+{
+  "schemaVersion": 1,
+  "rows": [
+    {
+      "scenario": "stopped-registered",
+      "executionIds": {
+        "runtime": "bl016-runtime-stopped-registered",
+        "api": "bl016-api-stopped-registered",
+        "home": "bl016-home-stopped-registered"
+      },
+      "runtime": "Stopped",
+      "api": "Stopped",
+      "home": "Stopped",
+      "failureCategory": null,
+      "events": [],
+      "cleanupCount": 0,
+      "readinessObserved": false,
+      "peerDigests": null,
+      "contenderCount": 0,
+      "loserEventCount": 0,
+      "assertionCount": 8
+    },
+    {
+      "scenario": "starting-delayed-readiness",
+      "executionIds": {
+        "runtime": "bl016-runtime-starting-delayed-readiness",
+        "api": "bl016-api-starting-delayed-readiness",
+        "home": "bl016-home-starting-delayed-readiness"
+      },
+      "runtime": "Starting",
+      "api": "Starting",
+      "home": "Starting",
+      "failureCategory": null,
+      "events": [
+        {
+          "id": "bl016-event-starting-delayed-readiness-1",
+          "event": "runtime.start.requested",
+          "from": "stopped",
+          "to": "starting",
+          "publicState": "Starting",
+          "classification": null,
+          "elapsedClass": "zero"
+        }
+      ],
+      "cleanupCount": 0,
+      "readinessObserved": false,
+      "peerDigests": null,
+      "contenderCount": 0,
+      "loserEventCount": 0,
+      "assertionCount": 8
+    },
+    {
+      "scenario": "running-observed-readiness",
+      "executionIds": {
+        "runtime": "bl016-runtime-running-observed-readiness",
+        "api": "bl016-api-running-observed-readiness",
+        "home": "bl016-home-running-observed-readiness"
+      },
+      "runtime": "Running",
+      "api": "Running",
+      "home": "Running",
+      "failureCategory": null,
+      "events": [
+        {
+          "id": "bl016-event-running-observed-readiness-1",
+          "event": "runtime.start.requested",
+          "from": "stopped",
+          "to": "starting",
+          "publicState": "Starting",
+          "classification": null,
+          "elapsedClass": "zero"
+        },
+        {
+          "id": "bl016-event-running-observed-readiness-2",
+          "event": "runtime.start.succeeded",
+          "from": "starting",
+          "to": "running",
+          "publicState": "Running",
+          "classification": null,
+          "elapsedClass": "zero"
+        }
+      ],
+      "cleanupCount": 0,
+      "readinessObserved": true,
+      "peerDigests": null,
+      "contenderCount": 0,
+      "loserEventCount": 0,
+      "assertionCount": 8
+    },
+    {
+      "scenario": "failed-start-before-readiness",
+      "executionIds": {
+        "runtime": "bl016-runtime-failed-start-before-readiness",
+        "api": "bl016-api-failed-start-before-readiness",
+        "home": "bl016-home-failed-start-before-readiness"
+      },
+      "runtime": "Failed",
+      "api": "Failed",
+      "home": "Failed",
+      "failureCategory": "spawn-error",
+      "events": [
+        {
+          "id": "bl016-event-failed-start-before-readiness-1",
+          "event": "runtime.start.requested",
+          "from": "stopped",
+          "to": "starting",
+          "publicState": "Starting",
+          "classification": null,
+          "elapsedClass": "zero"
+        },
+        {
+          "id": "bl016-event-failed-start-before-readiness-2",
+          "event": "runtime.start.failed",
+          "from": "starting",
+          "to": "failed",
+          "publicState": "Failed",
+          "classification": "spawn-error",
+          "elapsedClass": "zero"
+        }
+      ],
+      "cleanupCount": 1,
+      "readinessObserved": false,
+      "peerDigests": null,
+      "contenderCount": 1,
+      "loserEventCount": 0,
+      "assertionCount": 8
+    },
+    {
+      "scenario": "failed-post-readiness-exit",
+      "executionIds": {
+        "runtime": "bl016-runtime-failed-post-readiness-exit",
+        "api": "bl016-api-failed-post-readiness-exit",
+        "home": "bl016-home-failed-post-readiness-exit"
+      },
+      "runtime": "Failed",
+      "api": "Failed",
+      "home": "Failed",
+      "failureCategory": "early-exit-code",
+      "events": [
+        {
+          "id": "bl016-event-failed-post-readiness-exit-1",
+          "event": "runtime.start.requested",
+          "from": "stopped",
+          "to": "starting",
+          "publicState": "Starting",
+          "classification": null,
+          "elapsedClass": "zero"
+        },
+        {
+          "id": "bl016-event-failed-post-readiness-exit-2",
+          "event": "runtime.start.succeeded",
+          "from": "starting",
+          "to": "running",
+          "publicState": "Running",
+          "classification": null,
+          "elapsedClass": "zero"
+        },
+        {
+          "id": "bl016-event-failed-post-readiness-exit-3",
+          "event": "runtime.health.changed",
+          "from": "running",
+          "to": "failed",
+          "publicState": "Failed",
+          "classification": "early-exit-code",
+          "elapsedClass": "zero"
+        }
+      ],
+      "cleanupCount": 1,
+      "readinessObserved": true,
+      "peerDigests": null,
+      "contenderCount": 1,
+      "loserEventCount": 0,
+      "assertionCount": 8
+    },
+    {
+      "scenario": "failed-health-observation",
+      "executionIds": {
+        "runtime": "bl016-runtime-failed-health-observation",
+        "api": "bl016-api-failed-health-observation",
+        "home": "bl016-home-failed-health-observation"
+      },
+      "runtime": "Failed",
+      "api": "Failed",
+      "home": "Failed",
+      "failureCategory": "health-status-unexpected",
+      "events": [
+        {
+          "id": "bl016-event-failed-health-observation-1",
+          "event": "runtime.start.requested",
+          "from": "stopped",
+          "to": "starting",
+          "publicState": "Starting",
+          "classification": null,
+          "elapsedClass": "zero"
+        },
+        {
+          "id": "bl016-event-failed-health-observation-2",
+          "event": "runtime.start.succeeded",
+          "from": "starting",
+          "to": "running",
+          "publicState": "Running",
+          "classification": null,
+          "elapsedClass": "zero"
+        },
+        {
+          "id": "bl016-event-failed-health-observation-3",
+          "event": "runtime.health.changed",
+          "from": "running",
+          "to": "failed",
+          "publicState": "Failed",
+          "classification": "health-status-unexpected",
+          "elapsedClass": "zero"
+        }
+      ],
+      "cleanupCount": 1,
+      "readinessObserved": true,
+      "peerDigests": null,
+      "contenderCount": 1,
+      "loserEventCount": 0,
+      "assertionCount": 8
+    },
+    {
+      "scenario": "failed-false-liveness",
+      "executionIds": {
+        "runtime": "bl016-runtime-failed-false-liveness",
+        "api": "bl016-api-failed-false-liveness",
+        "home": "bl016-home-failed-false-liveness"
+      },
+      "runtime": "Failed",
+      "api": "Failed",
+      "home": "Failed",
+      "failureCategory": "early-exit-code",
+      "events": [
+        {
+          "id": "bl016-event-failed-false-liveness-1",
+          "event": "runtime.start.requested",
+          "from": "stopped",
+          "to": "starting",
+          "publicState": "Starting",
+          "classification": null,
+          "elapsedClass": "zero"
+        },
+        {
+          "id": "bl016-event-failed-false-liveness-2",
+          "event": "runtime.start.succeeded",
+          "from": "starting",
+          "to": "running",
+          "publicState": "Running",
+          "classification": null,
+          "elapsedClass": "zero"
+        },
+        {
+          "id": "bl016-event-failed-false-liveness-3",
+          "event": "runtime.health.changed",
+          "from": "running",
+          "to": "failed",
+          "publicState": "Failed",
+          "classification": "early-exit-code",
+          "elapsedClass": "zero"
+        }
+      ],
+      "cleanupCount": 1,
+      "readinessObserved": true,
+      "peerDigests": null,
+      "contenderCount": 1,
+      "loserEventCount": 0,
+      "assertionCount": 8
+    },
+    {
+      "scenario": "failed-transition-race",
+      "executionIds": {
+        "runtime": "bl016-runtime-failed-transition-race",
+        "api": "bl016-api-failed-transition-race",
+        "home": "bl016-home-failed-transition-race"
+      },
+      "runtime": "Failed",
+      "api": "Failed",
+      "home": "Failed",
+      "failureCategory": "health-status-unexpected",
+      "events": [
+        {
+          "id": "bl016-event-failed-transition-race-1",
+          "event": "runtime.start.requested",
+          "from": "stopped",
+          "to": "starting",
+          "publicState": "Starting",
+          "classification": null,
+          "elapsedClass": "zero"
+        },
+        {
+          "id": "bl016-event-failed-transition-race-2",
+          "event": "runtime.start.succeeded",
+          "from": "starting",
+          "to": "running",
+          "publicState": "Running",
+          "classification": null,
+          "elapsedClass": "zero"
+        },
+        {
+          "id": "bl016-event-failed-transition-race-3",
+          "event": "runtime.health.changed",
+          "from": "running",
+          "to": "failed",
+          "publicState": "Failed",
+          "classification": "health-status-unexpected",
+          "elapsedClass": "zero"
+        }
+      ],
+      "cleanupCount": 1,
+      "readinessObserved": true,
+      "peerDigests": null,
+      "contenderCount": 2,
+      "loserEventCount": 0,
+      "assertionCount": 8
+    },
+    {
+      "scenario": "cross-project-isolation",
+      "executionIds": {
+        "runtime": "bl016-runtime-cross-project-isolation",
+        "api": "bl016-api-cross-project-isolation",
+        "home": "bl016-home-cross-project-isolation"
+      },
+      "runtime": "Failed",
+      "api": "Failed",
+      "home": "Failed",
+      "failureCategory": "early-exit-signal",
+      "events": [
+        {
+          "id": "bl016-event-cross-project-isolation-1",
+          "event": "runtime.start.requested",
+          "from": "stopped",
+          "to": "starting",
+          "publicState": "Starting",
+          "classification": null,
+          "elapsedClass": "zero"
+        },
+        {
+          "id": "bl016-event-cross-project-isolation-2",
+          "event": "runtime.start.succeeded",
+          "from": "starting",
+          "to": "running",
+          "publicState": "Running",
+          "classification": null,
+          "elapsedClass": "zero"
+        },
+        {
+          "id": "bl016-event-cross-project-isolation-3",
+          "event": "runtime.start.requested",
+          "from": "stopped",
+          "to": "starting",
+          "publicState": "Starting",
+          "classification": null,
+          "elapsedClass": "zero"
+        },
+        {
+          "id": "bl016-event-cross-project-isolation-4",
+          "event": "runtime.start.succeeded",
+          "from": "starting",
+          "to": "running",
+          "publicState": "Running",
+          "classification": null,
+          "elapsedClass": "zero"
+        },
+        {
+          "id": "bl016-event-cross-project-isolation-5",
+          "event": "runtime.health.changed",
+          "from": "running",
+          "to": "failed",
+          "publicState": "Failed",
+          "classification": "early-exit-signal",
+          "elapsedClass": "zero"
+        }
+      ],
+      "cleanupCount": 1,
+      "readinessObserved": true,
+      "peerDigests": {
+        "before": "{\"projectId\":\"peer-project\",\"state\":\"Running\"}",
+        "after": "{\"projectId\":\"peer-project\",\"state\":\"Running\"}"
+      },
+      "contenderCount": 1,
+      "loserEventCount": 0,
+      "assertionCount": 8
+    },
+    {
+      "scenario": "event-consistency",
+      "executionIds": {
+        "runtime": "bl016-runtime-event-consistency",
+        "api": "bl016-api-event-consistency",
+        "home": "bl016-home-event-consistency"
+      },
+      "runtime": "Running",
+      "api": "Running",
+      "home": "Running",
+      "failureCategory": null,
+      "events": [
+        {
+          "id": "bl016-event-event-consistency-1",
+          "event": "runtime.start.requested",
+          "from": "stopped",
+          "to": "starting",
+          "publicState": "Starting",
+          "classification": null,
+          "elapsedClass": "zero"
+        },
+        {
+          "id": "bl016-event-event-consistency-2",
+          "event": "runtime.start.succeeded",
+          "from": "starting",
+          "to": "running",
+          "publicState": "Running",
+          "classification": null,
+          "elapsedClass": "zero"
+        }
+      ],
+      "cleanupCount": 0,
+      "readinessObserved": true,
+      "peerDigests": null,
+      "contenderCount": 0,
+      "loserEventCount": 0,
+      "assertionCount": 8
+    }
+  ]
+}

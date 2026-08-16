@@ -61,7 +61,7 @@ describe('stable workbench routing documentation and command contract', () => {
       'bounded classes',
       'browser-local',
       'raw host',
-      '29-failure',
+      '30-failure',
       'GET /projects/stable-project-id/workbench/',
       'EXTENSIONS_GALLERY={}',
       'Open VSX',

@@ -45,10 +45,25 @@ describe('stable workbench proxy contract', () => {
   })
 
   it('freezes one complete exact failure table', () => {
-    expect(WORKBENCH_FAILURE_TABLE).toHaveLength(29)
+    expect(WORKBENCH_FAILURE_TABLE).toHaveLength(30)
     expect(
       new Set(WORKBENCH_FAILURE_TABLE.map((entry) => entry.category)).size
-    ).toBe(29)
+    ).toBe(30)
+    expect(
+      WORKBENCH_FAILURE_TABLE.filter(({ category }) =>
+        category.startsWith('runtime:')
+      )
+    ).toHaveLength(18)
+    expect(
+      WORKBENCH_FAILURE_TABLE.find(
+        ({ category }) => category === 'runtime:reconcile-unconfirmed'
+      )
+    ).toEqual({
+      category: 'runtime:reconcile-unconfirmed',
+      status: 503,
+      code: 'workbench_reconcile_unconfirmed',
+      message: 'Workbench recovery could not be confirmed.',
+    })
     expect(WORKBENCH_FAILURE_TABLE_SHA256).toMatch(/^[a-f0-9]{64}$/u)
     expect(
       workbenchFailureEnvelope(workbenchFailure('websocket-timeout'))

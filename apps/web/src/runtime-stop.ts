@@ -18,6 +18,8 @@ export const RUNTIME_STOP_ERROR_CATEGORIES = Object.freeze([
   'runtime_stop_unconfirmed',
   'runtime_manager_shutdown',
   'runtime_stop_failed',
+  'runtime_reconcile_in_progress',
+  'runtime_reconcile_unresolved',
 ] as const)
 export type RuntimeStopErrorCategory =
   (typeof RUNTIME_STOP_ERROR_CATEGORIES)[number]
@@ -36,6 +38,10 @@ export const RUNTIME_STOP_NOTICES: Readonly<
     'The workbench is still starting. Retry after startup settles.',
   runtime_restart_in_progress:
     'The workbench is restarting. Retry after restart settles.',
+  runtime_reconcile_in_progress:
+    'Ascend is still recovering this workbench. Retry after recovery settles.',
+  runtime_reconcile_unresolved:
+    'Ascend could not confirm this workbench after a restart.',
   runtime_failure_retained: 'The workbench has a retained runtime failure.',
   runtime_stop_unconfirmed:
     'Ascend could not confirm that the workbench stopped.',
@@ -52,6 +58,8 @@ const RUNTIME_STOP_STATUS: Readonly<Record<RuntimeStopErrorCategory, number>> =
     runtime_not_managed: 409,
     runtime_start_in_progress: 409,
     runtime_restart_in_progress: 409,
+    runtime_reconcile_in_progress: 409,
+    runtime_reconcile_unresolved: 409,
     runtime_failure_retained: 409,
     runtime_stop_unconfirmed: 500,
     runtime_manager_shutdown: 503,

@@ -66,6 +66,8 @@ On application close, reject new proxy work and settle or abort proxy-owned oper
 - Public networking, authentication, TLS, and multi-host operation remain out of scope.
 - Project Home and header UI remain BL-012 work.
 - The accepted full-page presentation remains unchanged.
+- Amended 2026-08-15: [ADR-260815-api-restart-runtime-reconciliation](./ADR-260815-api-restart-runtime-reconciliation.md) makes acquisition await its own project's reconciliation settlement before it resolves a target, and makes it refuse rather than launch while that project is pending or unresolved. The proxy remains a pure consumer of the manager's exact running snapshot, still accepts no client target, and gains exactly one additional bounded public failure row for the new reconciliation category. Adopted runtimes are reached through their unchanged stable routes.
+- Amended 2026-08-15 (revision 2 of the BL-019 plan): acquisition is also the primary on-demand liveness correction for an adopted runtime. Because an adopted process has no automatic death observation, the delivered liveness and readiness re-checks that acquisition already performs on a running entry are what turn a stale `Running` into the delivered failure instead of routing to a dead identity. The proxy itself is unchanged: it still accepts no client target, performs no attribution of its own, and adds exactly one bounded public failure row.
 
 ## Related Issues
 

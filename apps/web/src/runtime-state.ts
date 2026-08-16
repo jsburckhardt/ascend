@@ -29,6 +29,7 @@ export const RUNTIME_FAILURE_CATEGORIES = [
   'restart-deadline-exceeded',
   'runtime-restarting',
   'restart-replacement-unconfirmed',
+  'reconcile-unconfirmed',
 ] as const
 export type RuntimeFailureCategory = (typeof RUNTIME_FAILURE_CATEGORIES)[number]
 
@@ -56,6 +57,8 @@ export const RUNTIME_FAILURE_NOTICES: Readonly<
   'runtime-restarting': 'The workbench is currently restarting.',
   'restart-replacement-unconfirmed':
     'Ascend could not confirm replacement workbench cleanup.',
+  'reconcile-unconfirmed':
+    'Ascend could not confirm this workbench after a restart.',
 })
 
 const PUBLIC_STATE_SET = new Set<string>(PUBLIC_RUNTIME_STATES)

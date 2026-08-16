@@ -17,6 +17,8 @@ const errorStatus: Readonly<Record<RuntimeRestartErrorCategory, number>> = {
   runtime_not_managed: 409,
   runtime_start_in_progress: 409,
   runtime_stop_in_progress: 409,
+  runtime_reconcile_in_progress: 409,
+  runtime_reconcile_unresolved: 409,
   runtime_restart_release_unconfirmed: 500,
   runtime_replacement_failed: 500,
   runtime_manager_shutdown: 503,

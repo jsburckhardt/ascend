@@ -16,6 +16,7 @@ This file is the single registry of all architectural decisions and core-compone
 | ADR-260815-termination-sequencer-boundary | Prove Termination Sequencing Through an Injectable Primitive Boundary | Accepted | 2026-08-15 |
 | ADR-260815-explicit-workbench-restart-control | Replace One Selected Workbench Runtime Through a Manager-Owned Restart Control | Accepted | 2026-08-15 |
 | ADR-260815-per-project-lifecycle-activation | Serialize Project Home Lifecycle Activation Per Project | Accepted | 2026-08-15 |
+| ADR-260815-api-restart-runtime-reconciliation | Reconcile Surviving Workbench Runtimes After an API Restart Through Host-Derived Exact Attribution | Accepted | 2026-08-15 |
 
 ## Core-Components
 
@@ -34,6 +35,7 @@ This file is the single registry of all architectural decisions and core-compone
 | CORE-COMPONENT-260808-engineering-harness-delivery-contract | Engineering Harness Delivery Contract | Adopted | 2026-08-08 |
 | CORE-COMPONENT-260810-sqlite-persistence-lifecycle | SQLite Persistence Lifecycle | Adopted | 2026-08-10 |
 | CORE-COMPONENT-260812-stable-workbench-proxy | Stable Workbench Proxy Boundary | Adopted | 2026-08-12 |
+| CORE-COMPONENT-260815-host-runtime-attribution-evidence | Host Runtime Attribution Evidence | Adopted | 2026-08-15 |
 
 ## Decisions
 
@@ -277,3 +279,61 @@ Short, actionable statements derived from ADRs and core-components. More than on
 | 234 | Refine decision 226: encode the prohibited zero-residual claim as an explicit null residual value | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
 | 235 | Refine decision 179: identify a retained failed entry's prior owned resources as one live handle | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
 | 236 | Record validation-owned fixture teardown in its own field, separate from settlement residual knowledge | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
+| 237 | Reconcile surviving workbench runtimes once per API process before serving the first request | ADR-260815-api-restart-runtime-reconciliation | 2026-08-15 |
+| 238 | Prohibit persisting runtime identity, port, state, or release markers for reconciliation | ADR-260815-api-restart-runtime-reconciliation | 2026-08-15 |
+| 239 | Adopt a survivor only under the complete host-derived attribution conjunction for one registered project | ADR-260815-api-restart-runtime-reconciliation | 2026-08-15 |
+| 240 | Treat adoption as the sole ownership boundary and never signal an unadopted candidate | ADR-260815-api-restart-runtime-reconciliation | 2026-08-15 |
+| 241 | Settle every registered project as adopted, absent, or unresolved within 15,000 ms | ADR-260815-api-restart-runtime-reconciliation | 2026-08-15 |
+| 242 | Claim reconciliation absence only from a completed scan or a completed audit triple | ADR-260815-api-restart-runtime-reconciliation | 2026-08-15 |
+| 243 | Publish reconcile-unconfirmed as a bounded failure category and one 503 workbench row | ADR-260815-api-restart-runtime-reconciliation | 2026-08-15 |
+| 244 | Add the internal reconciling entry state and project it as Starting | ADR-260815-api-restart-runtime-reconciliation | 2026-08-15 |
+| 245 | Emit exactly four reconciliation events and no start, stop, restart, or health event | ADR-260815-api-restart-runtime-reconciliation | 2026-08-15 |
+| 246 | Reject Stop and Restart with reconcile-in-progress while a project's reconciliation is pending | ADR-260815-api-restart-runtime-reconciliation | 2026-08-15 |
+| 247 | Reject Stop and Restart with reconcile-unresolved while a project's reconciliation is unresolved | ADR-260815-api-restart-runtime-reconciliation | 2026-08-15 |
+| 248 | Refuse workbench acquisition before any launch while a project's reconciliation is unresolved | ADR-260815-api-restart-runtime-reconciliation | 2026-08-15 |
+| 249 | Arm the reconciliation deadline with the trusted scheduler, never the injectable sleep | ADR-260815-api-restart-runtime-reconciliation | 2026-08-15 |
+| 250 | Fail API startup explicitly when the reconciliation project-library list fails | ADR-260815-api-restart-runtime-reconciliation | 2026-08-15 |
+| 251 | Redirect workbench child stderr to a per-runtime file descriptor instead of a parent pipe | ADR-260815-api-restart-runtime-reconciliation | 2026-08-15 |
+| 252 | Derive the address-in-use classification from a bounded prefix of that stderr file | ADR-260815-api-restart-runtime-reconciliation | 2026-08-15 |
+| 253 | Require uid, executable, argv, group leadership, listener inode, readiness, and identity stability together | CORE-COMPONENT-260815-host-runtime-attribution-evidence | 2026-08-15 |
+| 254 | Refuse attribution when two candidates match one project or one candidate matches two | CORE-COMPONENT-260815-host-runtime-attribution-evidence | 2026-08-15 |
+| 255 | Prohibit signalling, routing to, or counting any refused candidate as Ascend-owned | CORE-COMPONENT-260815-host-runtime-attribution-evidence | 2026-08-15 |
+| 256 | Abandon every attribution observation at its deadline and never convert it to absence | CORE-COMPONENT-260815-host-runtime-attribution-evidence | 2026-08-15 |
+| 257 | Keep attribution observation read-only, unprivileged, and free of PID exhaustion or indefinite waiting | CORE-COMPONENT-260815-host-runtime-attribution-evidence | 2026-08-15 |
+| 258 | Inject attribution primitives behind one dependency surface so every refusal branch is provable | CORE-COMPONENT-260815-host-runtime-attribution-evidence | 2026-08-15 |
+| 259 | Publish only bounded classes, project tokens, counts, and elapsed values as attribution evidence | CORE-COMPONENT-260815-host-runtime-attribution-evidence | 2026-08-15 |
+| 260 | Report Stopped after reconciliation only from a positive absence observation | ADR-260815-public-runtime-state-projection | 2026-08-15 |
+| 261 | Answer already-stopped for a project whose reconciliation positively established absence | ADR-260815-selected-runtime-stop-control | 2026-08-15 |
+| 262 | Keep explicit Restart eligible for an adopted runtime under the unchanged restart contract | ADR-260815-explicit-workbench-restart-control | 2026-08-15 |
+| 263 | Await a project's reconciliation settlement in workbench acquisition before resolving a target | ADR-260812-in-process-workbench-reverse-proxy | 2026-08-15 |
+| 264 | Join concurrent acquisitions across a reconciliation boundary to one settlement and one outcome | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-15 |
+| 265 | Abort in-flight reconciliation at manager shutdown without claiming unobserved absence | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
+| 266 | Prohibit a late reconciliation observation from changing a later generation's state | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
+| 267 | Keep a workbench child's standard streams independent of its launching process lifetime | CORE-COMPONENT-260808-host-process-environment | 2026-08-15 |
+| 268 | Store the per-runtime diagnostic file at mode 0600 inside its ephemeral runtime-data directory | CORE-COMPONENT-260808-filesystem-path-safety | 2026-08-15 |
+| 269 | Prohibit reconciliation from creating, modifying, or deleting anything inside a project directory | CORE-COMPONENT-260808-filesystem-path-safety | 2026-08-15 |
+| 270 | Route adopted identities through the unchanged termination sequencer and its bounds | ADR-260815-termination-sequencer-boundary | 2026-08-15 |
+| 271 | Exclude finer reconciliation refusal classes from events and browser-visible surfaces | CORE-COMPONENT-260808-structured-runtime-logging | 2026-08-15 |
+| 272 | Derive the expected workbench argv prefix from the installed runtime's real path and installation root | ADR-260815-api-restart-runtime-reconciliation | 2026-08-15 |
+| 273 | Prohibit comparing a candidate's argv[0] to the configured executable path; supersedes decision 253's executable element | CORE-COMPONENT-260815-host-runtime-attribution-evidence | 2026-08-15 |
+| 274 | Refuse the whole reconciliation pass when the installed-runtime identity cannot be resolved | ADR-260815-api-restart-runtime-reconciliation | 2026-08-15 |
+| 275 | Attribute a runtime's loopback listener to an exactly observed conforming member of its own process group | CORE-COMPONENT-260815-host-runtime-attribution-evidence | 2026-08-15 |
+| 276 | Decide candidacy by canonical-path and owner-token markers so path and token refusals stay reachable | CORE-COMPONENT-260815-host-runtime-attribution-evidence | 2026-08-15 |
+| 277 | Evaluate the specific path, owner-token, and port checks before the wholesale argv byte-equality check | CORE-COMPONENT-260815-host-runtime-attribution-evidence | 2026-08-15 |
+| 278 | Declare startup reconciliation a required boundary capability and invoke it unconditionally | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
+| 279 | Prohibit automatic death observation for an adopted runtime and correct it only on demand | ADR-260815-api-restart-runtime-reconciliation | 2026-08-15 |
+| 280 | Record a delivered corrective event on an adopted runtime as its own path's event, never a reconciliation event | CORE-COMPONENT-260808-structured-runtime-logging | 2026-08-15 |
+| 281 | Measure the 15,000 ms reconciliation ceiling from the replacement API process spawn instant | ADR-260815-api-restart-runtime-reconciliation | 2026-08-15 |
+| 282 | Bound internal reconciliation at 11,000 ms inside a declared 3,000 ms startup headroom and 1,000 ms response allowance; supersedes decision 241's internal bound | ADR-260815-api-restart-runtime-reconciliation | 2026-08-15 |
+| 283 | Finalize a teardown claim only atomically from an independent re-observation with per-class probe completion | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-15 |
+| 284 | Isolate every marker-bearing negative control as the sole candidate for its own registered project | CORE-COMPONENT-260815-host-runtime-attribution-evidence | 2026-08-15 |
+| 285 | Prohibit a marker-bearing control from living during a pass that must attribute that project's survivor | CORE-COMPONENT-260815-host-runtime-attribution-evidence | 2026-08-15 |
+| 286 | Prove every marker-bearing control removed by independent re-observation before the survivor pass begins | CORE-COMPONENT-260815-host-runtime-attribution-evidence | 2026-08-15 |
+| 287 | Prove a coexisting control's non-candidacy by computing both markers from its observed argv | CORE-COMPONENT-260815-host-runtime-attribution-evidence | 2026-08-15 |
+| 288 | Settle every negative control through the production predicate, never by exemption or pre-classification | ADR-260815-api-restart-runtime-reconciliation | 2026-08-15 |
+| 289 | Require every deterministic scenario row to be produced by executing production paths with an execution witness | CORE-COMPONENT-260815-host-runtime-attribution-evidence | 2026-08-15 |
+| 290 | Require every claimed API generation to execute the repository's compiled API entry with host-observed evidence | ADR-260815-api-restart-runtime-reconciliation | 2026-08-15 |
+| 291 | Prohibit placeholder, in-process, synthesized, or assigned API generations as restart evidence | ADR-260815-api-restart-runtime-reconciliation | 2026-08-15 |
+| 292 | Record readiness-observation evidence per project, never in one shared row-level counter | CORE-COMPONENT-260815-host-runtime-attribution-evidence | 2026-08-15 |
+| 293 | Require zero readiness observations for a project refused before readiness and at least one for a project that reached it | CORE-COMPONENT-260815-host-runtime-attribution-evidence | 2026-08-15 |
+| 294 | Attribute every readiness observation from the primitive call ledger and fail closed when attribution is ambiguous | CORE-COMPONENT-260815-host-runtime-attribution-evidence | 2026-08-15 |

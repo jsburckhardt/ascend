@@ -55,6 +55,10 @@ export const NFR015_EVENT_CATALOG = Object.freeze([
   'runtime.restart.requested',
   'runtime.restart.succeeded',
   'runtime.restart.failed',
+  'runtime.reconcile.requested',
+  'runtime.reconcile.succeeded',
+  'runtime.reconcile.absent',
+  'runtime.reconcile.failed',
   'runtime.health.changed',
 ] as const)
 
@@ -628,9 +632,17 @@ function validateSequencerSource(source: string): readonly string[] {
 
   if (!/now: \(\) => performance\.now\(\)/u.test(source))
     violations.push('production-clock-monotonic')
+  const terminationPrimitivesStart = source.indexOf(
+    'export const defaultRuntimeTerminationPrimitives'
+  )
+  const terminationPrimitivesEnd = source.indexOf(
+    'export const defaultRuntimeDeadlineScheduler'
+  )
   if (
-    /defaultRuntimeTerminationPrimitives[\s\S]{0,400}now: Date\.now/u.test(
-      source
+    terminationPrimitivesStart < 0 ||
+    terminationPrimitivesEnd <= terminationPrimitivesStart ||
+    /now: Date\.now/u.test(
+      source.slice(terminationPrimitivesStart, terminationPrimitivesEnd)
     )
   )
     violations.push('production-clock-wall')
@@ -679,7 +691,7 @@ function validateRouteSource(route: string): readonly string[] {
     violations.push('route-category-list')
   } else if (
     countMatches(route.slice(categoriesStart, categoriesEnd), /'[a-z_]+'/gu) !==
-    10
+    12
   ) {
     violations.push('route-category-count')
   }

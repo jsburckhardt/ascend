@@ -79,6 +79,7 @@ describe('stable workbench route lifecycle', () => {
       close: vi.fn(() => order.push('library')),
     }
     const runtime: ProjectRuntimeManager = {
+      beginReconciliation: async () => undefined,
       start: vi.fn(),
       ownsSnapshot: vi.fn(() => true),
       inspect: vi.fn(),

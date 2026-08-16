@@ -24,6 +24,7 @@ function runtime(
   ) => RuntimeStopOutcome | Promise<RuntimeStopOutcome>
 ): ProjectRuntimeManager {
   return {
+    beginReconciliation: async () => undefined,
     register: vi.fn(),
     start: vi.fn(),
     stop: vi.fn(({ projectId }) => implementation(projectId)),
@@ -110,6 +111,8 @@ describe('POST /api/projects/:id/runtime/stop', () => {
     ['failure-retained', 409, 'runtime_failure_retained'],
     ['stop-unconfirmed', 500, 'runtime_stop_unconfirmed'],
     ['manager-shutdown', 503, 'runtime_manager_shutdown'],
+    ['reconcile-in-progress', 409, 'runtime_reconcile_in_progress'],
+    ['reconcile-unresolved', 409, 'runtime_reconcile_unresolved'],
   ] as const)('maps %s to %i %s', async (rejection, status, category) => {
     const logs: string[] = []
     const projectRuntime = runtime((projectId) => ({

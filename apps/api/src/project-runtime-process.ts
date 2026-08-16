@@ -1,6 +1,15 @@
 import { spawn } from 'node:child_process'
 import { constants as fsConstants } from 'node:fs'
-import { access, mkdir, readFile, readdir, rm } from 'node:fs/promises'
+import {
+  access,
+  mkdir,
+  open,
+  readFile,
+  readdir,
+  readlink,
+  realpath,
+  rm,
+} from 'node:fs/promises'
 import { createConnection, createServer } from 'node:net'
 import os from 'node:os'
 import path from 'node:path'
@@ -86,6 +95,8 @@ export interface RuntimeProcessDependencies {
   readonly health: RuntimeHealthAdapter
   readonly now: () => number
   readonly sleep: (milliseconds: number, signal: AbortSignal) => Promise<void>
+  readonly attribution: RuntimeAttributionPrimitives
+  readonly termination?: RuntimeTerminationPrimitives
 }
 
 export interface ReadyRuntime {
@@ -115,6 +126,73 @@ export interface RuntimeTerminationPrimitives extends RuntimeDeadlineScheduler {
   delay(milliseconds: number, signal: AbortSignal): Promise<void>
   signalProcessGroup(processGroupId: number, signal: NodeJS.Signals): boolean
 }
+
+export interface InstalledRuntimeIdentity {
+  readonly launcherRealPath: string
+  readonly installationRoot: string
+  readonly interpreterPath: string
+  readonly launcherArgvPrefix: readonly [string, string]
+}
+
+export interface RuntimeProcessIdentity {
+  readonly pid: number
+  readonly processGroupId: number
+  readonly uid: number
+  readonly startTime: string
+}
+
+export interface RuntimeCandidatePidScan {
+  readonly pids: readonly number[]
+  readonly complete: boolean
+}
+
+export interface RuntimeProcessGroupScan {
+  readonly pids: readonly number[]
+  readonly complete: boolean
+}
+
+export interface RuntimeAttributionPrimitives {
+  resolveInstalledRuntimeIdentity(
+    executablePath: string,
+    signal: AbortSignal
+  ): Promise<InstalledRuntimeIdentity | null>
+  listRuntimeCandidatePids(
+    signal: AbortSignal
+  ): Promise<RuntimeCandidatePidScan>
+  readProcessIdentity(
+    pid: number,
+    signal: AbortSignal
+  ): Promise<RuntimeProcessIdentity | null>
+  readProcessCommandLine(
+    pid: number,
+    signal: AbortSignal
+  ): Promise<readonly string[] | null>
+  readProcessGroupMemberPids(
+    processGroupId: number,
+    signal: AbortSignal
+  ): Promise<RuntimeProcessGroupScan>
+  readLoopbackListenerInode(
+    port: number,
+    signal: AbortSignal
+  ): Promise<string | null>
+  readProcessSocketInodes(
+    pid: number,
+    signal: AbortSignal
+  ): Promise<readonly string[] | null>
+}
+
+export interface RuntimeGroupListenerOwner {
+  readonly identity: RuntimeProcessIdentity
+  readonly argv: readonly string[]
+}
+
+export type RuntimeGroupListenerResolution =
+  | Readonly<{ owner: RuntimeGroupListenerOwner; refusalReason: null }>
+  | Readonly<{
+      owner: null
+      refusalReason:
+        'group-scan-incomplete' | 'listener-absent' | 'listener-not-owned'
+    }>
 
 export async function readProcessStartTime(
   pid: number,
@@ -183,6 +261,238 @@ export async function readProcessGroupMembers(
     }
   }
   return Object.freeze(members)
+}
+
+export const defaultRuntimeAttributionPrimitives: RuntimeAttributionPrimitives =
+  Object.freeze<RuntimeAttributionPrimitives>({
+    async resolveInstalledRuntimeIdentity(executablePath, signal) {
+      try {
+        signal.throwIfAborted()
+        const launcherRealPath = await realpath(executablePath)
+        signal.throwIfAborted()
+        const installationRoot = path.dirname(path.dirname(launcherRealPath))
+        const interpreterPath = path.join(installationRoot, 'lib', 'node')
+        await access(interpreterPath, fsConstants.X_OK)
+        signal.throwIfAborted()
+        return Object.freeze({
+          launcherRealPath,
+          installationRoot,
+          interpreterPath,
+          launcherArgvPrefix: Object.freeze([
+            interpreterPath,
+            installationRoot,
+          ]) as readonly [string, string],
+        })
+      } catch {
+        return null
+      }
+    },
+    async listRuntimeCandidatePids(signal) {
+      try {
+        signal.throwIfAborted()
+        const entries = await readdir('/proc')
+        signal.throwIfAborted()
+        const pids = entries
+          .filter((entry) => /^\d+$/u.test(entry))
+          .map(Number)
+          .sort((left, right) => left - right)
+        return Object.freeze({ pids: Object.freeze(pids), complete: true })
+      } catch {
+        return Object.freeze({ pids: Object.freeze([]), complete: false })
+      }
+    },
+    async readProcessIdentity(pid, signal) {
+      try {
+        signal.throwIfAborted()
+        const [statContent, statusContent] = await Promise.all([
+          readFile('/proc/' + String(pid) + '/stat', {
+            encoding: 'utf8',
+            signal,
+          }),
+          readFile('/proc/' + String(pid) + '/status', {
+            encoding: 'utf8',
+            signal,
+          }),
+        ])
+        const fields = statContent
+          .slice(statContent.lastIndexOf(')') + 2)
+          .split(' ')
+        const uidMatch = /^Uid:\s+(\d+)/mu.exec(statusContent)
+        const processGroupId = Number(fields[2])
+        const startTime = fields[19]
+        const uid = uidMatch === null ? Number.NaN : Number(uidMatch[1])
+        if (
+          !Number.isSafeInteger(processGroupId) ||
+          processGroupId <= 0 ||
+          startTime === undefined ||
+          !Number.isSafeInteger(uid) ||
+          uid < 0
+        ) {
+          return null
+        }
+        return Object.freeze({ pid, processGroupId, uid, startTime })
+      } catch {
+        return null
+      }
+    },
+    async readProcessCommandLine(pid, signal) {
+      try {
+        signal.throwIfAborted()
+        const content = await readFile('/proc/' + String(pid) + '/cmdline', {
+          signal,
+        })
+        signal.throwIfAborted()
+        const argv = content
+          .toString('utf8')
+          .split('\0')
+          .filter((value) => value.length > 0)
+        return argv.length === 0 ? null : Object.freeze(argv)
+      } catch {
+        return null
+      }
+    },
+    async readProcessGroupMemberPids(processGroupId, signal) {
+      const scan = await this.listRuntimeCandidatePids(signal)
+      if (!scan.complete)
+        return Object.freeze({ pids: Object.freeze([]), complete: false })
+      const pids: number[] = []
+      let complete = true
+      for (const pid of scan.pids) {
+        if (signal.aborted) {
+          complete = false
+          break
+        }
+        const identity = await this.readProcessIdentity(pid, signal)
+        if (identity === null) {
+          if (signal.aborted) complete = false
+          continue
+        }
+        if (identity.processGroupId === processGroupId) pids.push(pid)
+      }
+      return Object.freeze({ pids: Object.freeze(pids), complete })
+    },
+    async readLoopbackListenerInode(port, signal) {
+      const portHex = port.toString(16).toUpperCase().padStart(4, '0')
+      const loopbackAddresses = new Set([
+        '0100007F',
+        '00000000000000000000000001000000',
+      ])
+      const inodes = new Set<string>()
+      let observedTable = false
+      for (const table of ['/proc/net/tcp', '/proc/net/tcp6']) {
+        try {
+          signal.throwIfAborted()
+          const content = await readFile(table, { encoding: 'utf8', signal })
+          observedTable = true
+          for (const line of content.split('\n').slice(1)) {
+            const columns = line.trim().split(/\s+/u)
+            if (columns.length < 10 || columns[3] !== '0A') continue
+            const separator = columns[1]?.lastIndexOf(':') ?? -1
+            if (separator < 0) continue
+            const address = columns[1]?.slice(0, separator)
+            const candidatePort = columns[1]?.slice(separator + 1)
+            const inode = columns[9]
+            if (
+              address !== undefined &&
+              candidatePort === portHex &&
+              loopbackAddresses.has(address) &&
+              inode !== undefined &&
+              /^\d+$/u.test(inode)
+            ) {
+              inodes.add(inode)
+            }
+          }
+        } catch {
+          if (signal.aborted) return null
+        }
+      }
+      return observedTable && inodes.size === 1
+        ? (inodes.values().next().value ?? null)
+        : null
+    },
+    async readProcessSocketInodes(pid, signal) {
+      try {
+        signal.throwIfAborted()
+        const descriptors = await readdir('/proc/' + String(pid) + '/fd')
+        const inodes = new Set<string>()
+        for (const descriptor of descriptors) {
+          signal.throwIfAborted()
+          try {
+            const target = await readlink(
+              '/proc/' + String(pid) + '/fd/' + descriptor
+            )
+            const match = /^socket:\[(\d+)\]$/u.exec(target)
+            if (match?.[1] !== undefined) inodes.add(match[1])
+          } catch {
+            if (signal.aborted) return null
+          }
+        }
+        return Object.freeze([...inodes])
+      } catch {
+        return null
+      }
+    },
+  })
+
+function pathIsWithin(root: string, candidate: string): boolean {
+  const relative = path.relative(root, path.resolve(candidate))
+  return (
+    relative === '' ||
+    (!relative.startsWith('..' + path.sep) && !path.isAbsolute(relative))
+  )
+}
+
+const listenerRefusal = (
+  refusalReason:
+    'group-scan-incomplete' | 'listener-absent' | 'listener-not-owned'
+): RuntimeGroupListenerResolution =>
+  Object.freeze({ owner: null, refusalReason })
+
+export async function resolveGroupListenerOwner(input: {
+  readonly processGroupId: number
+  readonly port: number
+  readonly installedRuntime: InstalledRuntimeIdentity
+  readonly signal: AbortSignal
+  readonly primitives?: RuntimeAttributionPrimitives
+}): Promise<RuntimeGroupListenerResolution> {
+  const primitives = input.primitives ?? defaultRuntimeAttributionPrimitives
+  const group = await primitives.readProcessGroupMemberPids(
+    input.processGroupId,
+    input.signal
+  )
+  if (!group.complete) return listenerRefusal('group-scan-incomplete')
+  const listenerInode = await primitives.readLoopbackListenerInode(
+    input.port,
+    input.signal
+  )
+  if (listenerInode === null) return listenerRefusal('listener-absent')
+
+  const holders: RuntimeGroupListenerOwner[] = []
+  for (const pid of group.pids) {
+    const [identity, argv, socketInodes] = await Promise.all([
+      primitives.readProcessIdentity(pid, input.signal),
+      primitives.readProcessCommandLine(pid, input.signal),
+      primitives.readProcessSocketInodes(pid, input.signal),
+    ])
+    if (identity === null || argv === null || socketInodes === null) {
+      return listenerRefusal('listener-not-owned')
+    }
+    if (!socketInodes.includes(listenerInode)) continue
+    const currentUid =
+      typeof process.getuid === 'function' ? process.getuid() : -1
+    const conforming =
+      currentUid > 0 &&
+      identity.uid === currentUid &&
+      identity.processGroupId === input.processGroupId &&
+      argv[0] === input.installedRuntime.interpreterPath &&
+      argv[1] !== undefined &&
+      pathIsWithin(input.installedRuntime.installationRoot, argv[1])
+    if (!conforming) return listenerRefusal('listener-not-owned')
+    holders.push(Object.freeze({ identity, argv }))
+  }
+  return holders.length === 1
+    ? Object.freeze({ owner: holders[0]!, refusalReason: null })
+    : listenerRefusal('listener-not-owned')
 }
 
 type BoundedPrimitiveResult<T> =
@@ -561,6 +871,31 @@ export function buildRuntimeArgv(
   ]
 }
 
+export function buildRuntimeUserDataPath(
+  ownerToken: string,
+  port: number
+): string {
+  return path.join(
+    os.tmpdir(),
+    'ascend-runtime-data',
+    ownerToken + '-' + String(port)
+  )
+}
+
+async function readRuntimeDiagnostic(stderrPath: string): Promise<string> {
+  let handle
+  try {
+    handle = await open(stderrPath, 'r')
+    const buffer = Buffer.alloc(4_096)
+    const { bytesRead } = await handle.read(buffer, 0, buffer.length, 0)
+    return buffer.subarray(0, bytesRead).toString('utf8')
+  } catch {
+    return ''
+  } finally {
+    await handle?.close()
+  }
+}
+
 export function createNodeRuntimeProcessAdapter(
   primitives: RuntimeTerminationPrimitives = defaultRuntimeTerminationPrimitives
 ): RuntimeProcessAdapter {
@@ -577,33 +912,30 @@ export function createNodeRuntimeProcessAdapter(
       }
     },
     async launch({ config, canonicalPath, ownerToken, port }) {
-      const userDataPath = path.join(
-        os.tmpdir(),
-        'ascend-runtime-data',
-        ownerToken + '-' + String(port)
-      )
+      const userDataPath = buildRuntimeUserDataPath(ownerToken, port)
+      const stderrPath = path.join(userDataPath, 'runtime-stderr.log')
       await mkdir(userDataPath, { recursive: true, mode: 0o700 })
       const argv = buildRuntimeArgv(canonicalPath, port, userDataPath)
       let child
       try {
-        child = spawn(config.executablePath, argv, {
-          cwd: canonicalPath,
-          detached: true,
-          env: config.environment,
-          stdio: ['ignore', 'ignore', 'pipe'],
-        })
+        const stderrHandle = await open(stderrPath, 'a', 0o600)
+        try {
+          child = spawn(config.executablePath, argv, {
+            cwd: canonicalPath,
+            detached: true,
+            env: config.environment,
+            stdio: ['ignore', 'ignore', stderrHandle.fd],
+          })
+        } finally {
+          await stderrHandle.close()
+        }
       } catch {
+        await rm(userDataPath, { recursive: true, force: true })
         throw new RuntimeFailure('spawn-error')
       }
-      let diagnosticOutput = ''
-      child.stderr?.setEncoding('utf8')
-      child.stderr?.on('data', (chunk: string) => {
-        if (diagnosticOutput.length < 4_096) {
-          diagnosticOutput += chunk.slice(0, 4_096 - diagnosticOutput.length)
-        }
-      })
       const spawnError = new Promise<never>((_, reject) => {
         child.once('error', (error: NodeJS.ErrnoException) => {
+          void rm(userDataPath, { recursive: true, force: true })
           reject(
             new RuntimeFailure(
               error.code === 'ENOENT' ? 'executable-missing' : 'spawn-error'
@@ -612,17 +944,22 @@ export function createNodeRuntimeProcessAdapter(
         })
       })
       const pid = child.pid
-      if (pid === undefined) throw new RuntimeFailure('spawn-error')
+      if (pid === undefined) {
+        await rm(userDataPath, { recursive: true, force: true })
+        throw new RuntimeFailure('spawn-error')
+      }
       const exit = new Promise<RuntimeExit>((resolve) => {
-        child.once('exit', (code, signal) =>
-          resolve({
-            code,
-            signal,
-            addressInUse: /EADDRINUSE|address already in use/iu.test(
-              diagnosticOutput
-            ),
-          })
-        )
+        child.once('exit', (code, signal) => {
+          void readRuntimeDiagnostic(stderrPath).then((diagnosticOutput) =>
+            resolve({
+              code,
+              signal,
+              addressInUse: /EADDRINUSE|address already in use/iu.test(
+                diagnosticOutput
+              ),
+            })
+          )
+        })
       })
       let processStartTime: string | null = null
       const identityDeadline = Date.now() + 1_000
@@ -703,6 +1040,91 @@ export function createNodeRuntimeProcessAdapter(
   }
 }
 
+export function adoptOwnedRuntimeProcess(input: {
+  readonly config: ProjectRuntimeConfig
+  readonly pid: number
+  readonly processStartTime: string
+  readonly port: number
+  readonly ownerToken: string
+  readonly primitives?: RuntimeTerminationPrimitives
+  readonly attribution?: RuntimeAttributionPrimitives
+}): OwnedRuntimeProcess {
+  const primitives = input.primitives ?? defaultRuntimeTerminationPrimitives
+  const attribution = input.attribution ?? defaultRuntimeAttributionPrimitives
+  const userDataPath = buildRuntimeUserDataPath(input.ownerToken, input.port)
+  let settleExit!: (exit: RuntimeExit) => void
+  let settled = false
+  const exit = new Promise<RuntimeExit>((resolve) => {
+    settleExit = resolve
+  })
+  const settleAbsent = (): void => {
+    if (settled) return
+    settled = true
+    settleExit(Object.freeze({ code: null, signal: null, addressInUse: false }))
+  }
+  const audit = async (port: number): Promise<RuntimeResourceAudit> => {
+    const controller = new AbortController()
+    const deadlineAt = primitives.now() + input.config.stopAuditAllowanceMs
+    const cancelDeadline = primitives.scheduleDeadline(
+      input.config.stopAuditAllowanceMs,
+      () => controller.abort()
+    )
+    try {
+      return (
+        (await auditRuntimeResource({
+          pid: input.pid,
+          processStartTime: input.processStartTime,
+          port,
+          deadlineAt,
+          parentSignal: controller.signal,
+          primitives,
+        })) ?? nonConfirmingAudit(input.pid, input.processStartTime, port)
+      )
+    } finally {
+      cancelDeadline()
+      controller.abort()
+    }
+  }
+  return Object.freeze({
+    pid: input.pid,
+    processStartTime: input.processStartTime,
+    exit,
+    async terminate(
+      gracefulMs: number,
+      forceMs: number,
+      port: number,
+      signal?: AbortSignal
+    ) {
+      const result = await terminateOwnedRuntimeGroup({
+        pid: input.pid,
+        processStartTime: input.processStartTime,
+        port,
+        gracefulMs,
+        forceMs,
+        auditAllowanceMs: input.config.stopAuditAllowanceMs,
+        ...(signal === undefined ? {} : { signal }),
+        primitives,
+      })
+      if (result.processAbsent) settleAbsent()
+      await rm(userDataPath, { recursive: true, force: true })
+      return result
+    },
+    audit,
+    async isAlive() {
+      const identity = await attribution.readProcessIdentity(
+        input.pid,
+        new AbortController().signal
+      )
+      const alive = identity?.startTime === input.processStartTime
+      if (!alive) {
+        settleAbsent()
+        await rm(userDataPath, { recursive: true, force: true })
+      }
+      return alive
+    },
+  })
+}
+
 export const nodeRuntimeProcessAdapter: RuntimeProcessAdapter =
   createNodeRuntimeProcessAdapter()
 
@@ -748,6 +1170,8 @@ export const defaultRuntimeProcessDependencies: RuntimeProcessDependencies = {
   process: nodeRuntimeProcessAdapter,
   ports: nodeRuntimePortProvider,
   health: fetchRuntimeHealthAdapter,
+  attribution: defaultRuntimeAttributionPrimitives,
+  termination: defaultRuntimeTerminationPrimitives,
   now: Date.now,
   sleep: (milliseconds, signal) =>
     new Promise<void>((resolve, reject) => {

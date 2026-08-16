@@ -593,6 +593,7 @@ async function buildArtifact() {
       }
     | undefined
   const wrappedRuntime: ProjectRuntimeManager = {
+    beginReconciliation: async () => undefined,
     ...manager,
     async start(input) {
       const selected = await manager.start(input)

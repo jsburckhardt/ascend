@@ -201,6 +201,7 @@ const createApi = async (upstreamPort: number) => {
     elapsedMs: 1,
   })
   const runtime: ProjectRuntimeManager = {
+    beginReconciliation: async () => undefined,
     start: vi.fn(async () => snapshot),
     ownsSnapshot: vi.fn(() => true),
     inspect: vi.fn(() => snapshot),

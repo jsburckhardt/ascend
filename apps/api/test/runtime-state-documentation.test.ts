@@ -105,6 +105,10 @@ describe('BL-016 application documentation contract', () => {
     ).toEqual([
       'runtime.health.changed',
       'runtime.md',
+      'runtime.reconcile.absent',
+      'runtime.reconcile.failed',
+      'runtime.reconcile.requested',
+      'runtime.reconcile.succeeded',
       'runtime.restart.failed',
       'runtime.restart.rejected',
       'runtime.restart.requested',

@@ -179,6 +179,12 @@ export const WORKBENCH_FAILURE_TABLE: readonly WorkbenchPublicFailure[] =
       'Workbench restart replacement cleanup could not be confirmed.'
     ),
     row(
+      'runtime:reconcile-unconfirmed',
+      503,
+      'workbench_reconcile_unconfirmed',
+      'Workbench recovery could not be confirmed.'
+    ),
+    row(
       'upstream-dns',
       502,
       'workbench_upstream_dns_failed',

@@ -15,3 +15,4 @@ project/work-items/11-bl-004-establish-the-workbench-capacity-baseline/implement
 project/work-items/39-bl-017-stop-a-workbench-without-closing-its-project/implementation/evidence
 project/work-items/41-bl-018-restart-a-running-or-failed-workbench/implementation/evidence
 .trees
+project/work-items/43-bl-019-reconcile-workbench-runtimes-after-api-restart/implementation/evidence

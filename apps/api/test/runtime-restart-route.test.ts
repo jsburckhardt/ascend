@@ -21,6 +21,7 @@ function runtime(
   ) => RuntimeRestartOutcome | Promise<RuntimeRestartOutcome>
 ): ProjectRuntimeManager {
   return {
+    beginReconciliation: async () => undefined,
     register: vi.fn(),
     start: vi.fn(),
     stop: vi.fn(),
@@ -90,6 +91,8 @@ describe('POST /api/projects/:id/runtime/restart', () => {
     ['release-unconfirmed', 500, 'runtime_restart_release_unconfirmed'],
     ['replacement-failed', 500, 'runtime_replacement_failed'],
     ['manager-shutdown', 503, 'runtime_manager_shutdown'],
+    ['reconcile-in-progress', 409, 'runtime_reconcile_in_progress'],
+    ['reconcile-unresolved', 409, 'runtime_reconcile_unresolved'],
   ] as const)(
     'maps %s without private diagnostics',
     async (category, status, error) => {
@@ -164,9 +167,9 @@ describe('POST /api/projects/:id/runtime/restart', () => {
     }
   })
 
-  it('freezes the exact ten-category route vocabulary and body bound', () => {
-    expect(RUNTIME_RESTART_ROUTE_ERROR_CATEGORIES).toHaveLength(10)
-    expect(new Set(RUNTIME_RESTART_ROUTE_ERROR_CATEGORIES).size).toBe(10)
+  it('freezes the exact twelve-category route vocabulary and body bound', () => {
+    expect(RUNTIME_RESTART_ROUTE_ERROR_CATEGORIES).toHaveLength(12)
+    expect(new Set(RUNTIME_RESTART_ROUTE_ERROR_CATEGORIES).size).toBe(12)
     expect(RUNTIME_RESTART_BODY_LIMIT_BYTES).toBe(1_024)
   })
 })

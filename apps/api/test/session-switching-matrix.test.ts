@@ -42,6 +42,7 @@ describe('BL-014 execution-backed navigation and reuse matrix', () => {
       close: vi.fn(),
     }
     const runtime: ProjectRuntimeManager = {
+      beginReconciliation: async () => undefined,
       register: vi.fn(),
       start: vi.fn(async ({ projectId, canonicalPath }) => {
         const existing = running.get(projectId)

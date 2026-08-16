@@ -59,6 +59,7 @@ function runtime(
     audits: [],
   }
   return {
+    beginReconciliation: async () => undefined,
     register: vi.fn(),
     start: vi.fn(),
     reportPublicStates: vi.fn(reportPublicStates),

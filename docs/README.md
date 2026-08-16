@@ -44,6 +44,10 @@ The repository exposes `just proof-start` and `just proof-stop` for one bounded 
 
 Issue #25 adds one internal manager that starts and reuses a persisted project's code-server. The stable proxy and Project Home Open now consume it through the browser navigation shell. Runtime identity, port, state, and process ownership remain memory-only; SQLite stays four-field metadata. Launch is non-root, direct argv, exact-canonical-path, and loopback-only. Readiness uses the bounded /healthz/ JSON contract, exactly concurrent calls share one start, and caller cancellation affects only its waiter. Application shutdown inventories every running or in-flight PID/start identity, group, port, and listener, returns graceful or escalated exact-absence audits, and leaves unrelated controls alive before persistence closes. See [project-runtime.md](project-runtime.md) for configuration, typed failures, redacted events, commands, the retained authoritative timing field, and deferred boundaries.
 
+## API restart recovery
+
+Replacement API startup performs one bounded reconciliation pass before routes are registered. See [api-restart-reconciliation.md](api-restart-reconciliation.md) for attribution, bounds, admission, adopted-runtime liveness, evidence, cleanup, and recovery.
+
 ## Public runtime reporting
 
 `GET /api/projects/runtime` reports one ordered row per registered project with exactly `Stopped`, `Starting`, `Running`, or `Failed`; only `Failed` includes a bounded `failureCategory`. It uses the same order as `GET /api/projects`. The existing project-list record remains exactly `id`, `name`, `canonicalPath`, and `createdAt`. A list or projection failure is the exact non-partial `500 {"error":{"category":"runtime_state_failed"}}` envelope.
@@ -54,7 +58,7 @@ Run `just verify-runtime-state`. The retained matrix is `project/work-items/37-b
 
 ## Selected workbench stop
 
-Issue #39 adds a non-destructive Stop action to each Project Home card and `POST /api/projects/{id}/runtime/stop`. A confirmed stop releases only the selected manager-owned runtime while keeping the four persisted project fields and project filesystem unchanged. Success is exactly `stopped` or the current-manager idempotent `already-stopped`; a persisted project with no managed runtime is the distinct `409 runtime_not_managed` rejection. Home displays state only after one fresh runtime projection, uses client-owned text for all ten route categories, serializes Stop with other Home mutations, and keeps an indeterminate transport result explicitly unknown.
+Issue #39 adds a non-destructive Stop action to each Project Home card and `POST /api/projects/{id}/runtime/stop`. A confirmed stop releases only the selected manager-owned runtime while keeping the four persisted project fields and project filesystem unchanged. Success is exactly `stopped` or the current-manager idempotent `already-stopped`; a persisted project with no managed runtime is the distinct `409 runtime_not_managed` rejection. Home displays state only after one fresh runtime projection, uses client-owned text for all twelve route categories, serializes Stop with other Home mutations, and keeps an indeterminate transport result explicitly unknown.
 
 The manager's internal entry states are `registered`, `starting`, `running`, `stopping`, `restarting`, and `failed`; lifecycle transition targets add `stopping`, `stopped`, and `restarting` without adding a fifth public state. Graceful and force windows use a monotonic termination clock and begin only after their respective signals report delivered. An independent trusted scheduler enforces the overall deadline even if a fallible awaited identity, group, listener, or delay primitive hangs or ignores cancellation. Release is confirmed only when the exact root identity, owned process group, and listener are absent. Process-group membership is the attribution boundary; the proof does not claim arbitrary descendants that escaped that group.
 

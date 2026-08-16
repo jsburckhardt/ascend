@@ -95,6 +95,7 @@ const api = async (
     elapsedMs: 2,
   })
   const runtime: ProjectRuntimeManager = {
+    beginReconciliation: async () => undefined,
     start: vi.fn(async () => snapshot),
     ownsSnapshot: vi.fn(() => true),
     inspect: vi.fn(() => snapshot),
@@ -628,6 +629,7 @@ describe('stable workbench HTTP transport', () => {
       close: vi.fn(),
     }
     const runtime: ProjectRuntimeManager = {
+      beginReconciliation: async () => undefined,
       start: vi.fn(async ({ projectId, canonicalPath }) => {
         if (projectId === 'runtime-shutdown')
           throw new RuntimeFailure('manager-shutdown')

@@ -146,6 +146,16 @@ proof-runtime-restart:
 proof-runtime-restart-residual-audit:
     pnpm --filter @ascend/api exec tsx src/cli/runtime-restart-residual-audit.ts
 
+verify-runtime-reconcile:
+    BL019_ACCEPTANCE=1 pnpm exec vitest run apps/api/test/runtime-reconcile-contract.test.ts apps/api/test/runtime-reconcile-attribution.test.ts apps/api/test/runtime-reconcile-manager.test.ts apps/api/test/runtime-reconcile-admission.test.ts apps/api/test/runtime-reconcile-app.test.ts apps/api/test/runtime-reconcile-route.test.ts apps/api/test/runtime-reconcile-evidence.test.ts apps/api/test/runtime-reconcile-matrix.test.ts apps/api/test/runtime-reconcile-documentation.test.ts apps/web/test/runtime-reconcile-client.test.ts --reporter=verbose
+
+proof-runtime-reconcile:
+    pnpm --filter @ascend/api build:ts
+    BL019_DESIGNATED=1 pnpm exec vitest run apps/api/test/runtime-reconcile-host-conformance.test.ts apps/api/test/runtime-reconcile-designated.test.ts --reporter=verbose
+
+proof-runtime-reconcile-residual-audit:
+    pnpm --filter @ascend/api exec tsx src/cli/runtime-reconcile-residual-audit.ts
+
 proof-session-switching-residual-audit:
     pnpm --filter @ascend/api exec tsx src/cli/session-switching-residual-audit.ts
 
@@ -181,5 +191,8 @@ verify:
     just verify-runtime-restart
     just proof-runtime-restart
     just proof-runtime-restart-residual-audit
+    just verify-runtime-reconcile
+    just proof-runtime-reconcile
+    just proof-runtime-reconcile-residual-audit
     just verify-mvp-performance
     just proof-mvp-performance-residual-audit

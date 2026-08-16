@@ -7,6 +7,7 @@ import {
   createProjectRuntimeConfig,
   deriveProjectOwnerToken,
   publicRuntimeState,
+  reconciliationOverallBoundMs,
   runtimeRestartOverallBoundMs,
   runtimeRestartReleaseBoundMs,
   runtimeStopOverallBoundMs,
@@ -14,6 +15,10 @@ import {
   stableProjectRoute,
   type PublicRuntimeReport,
   type ProjectRuntimeConfig,
+  type ReconcileAbsenceProof,
+  type ReconcileRefusalReason,
+  type ReconciliationInspection,
+  type ReconciliationProjectInspection,
   type RestartAdmissionPhase,
   type RestartQuarantineAuditState,
   type RuntimeEntryState,
@@ -26,9 +31,15 @@ import {
   type RuntimeUnresolvedAdmission,
 } from './project-runtime-contract.js'
 import {
+  adoptOwnedRuntimeProcess,
+  buildRuntimeArgv,
+  buildRuntimeUserDataPath,
   defaultRuntimeDeadlineScheduler,
   defaultRuntimeProcessDependencies,
   launchReadyRuntime,
+  resolveGroupListenerOwner,
+  type InstalledRuntimeIdentity,
+  type RuntimeAttributionPrimitives,
   type RuntimeDeadlineScheduler,
   type ReadyRuntime,
   type RuntimeOwnershipRecord,
@@ -41,6 +52,17 @@ export interface ProjectRuntimeStartInput {
   readonly projectId: string
   readonly canonicalPath: string
   readonly signal?: AbortSignal
+}
+
+interface ReconcilingEntry {
+  readonly state: 'reconciling'
+  readonly projectId: string
+  readonly canonicalPath: string
+  readonly generation: symbol
+  readonly snapshot: RuntimeSnapshot
+  readonly controller: AbortController
+  readonly settlement: Promise<void>
+  readonly settle: () => void
 }
 
 interface RestartingEntry {
@@ -116,6 +138,8 @@ export interface ProjectRuntimeManagerAudit {
 }
 
 export interface ProjectRuntimeManager {
+  beginReconciliation(): Promise<void>
+  inspectReconciliation?(): ReconciliationInspection
   register(projectId: string, canonicalPath: string): void
   start(input: ProjectRuntimeStartInput): Promise<RuntimeSnapshot>
   stop(input: { readonly projectId: string }): Promise<RuntimeStopOutcome>
@@ -135,6 +159,7 @@ export interface ProjectRuntimeManager {
 
 export interface ProjectRuntimeManagerDependencies {
   readonly findProjectById: (id: string) => Promise<Project | undefined>
+  readonly listProjects?: () => Promise<readonly Project[]>
   readonly config?: ProjectRuntimeConfig
   readonly processDependencies?: RuntimeProcessDependencies
   readonly launch?: (input: {
@@ -176,6 +201,7 @@ interface RunningEntry {
   readonly generation: symbol
   readonly ready: ReadyRuntime
   readonly snapshot: RuntimeSnapshot
+  readonly adopted?: true
 }
 
 interface StoppingEntry {
@@ -200,11 +226,48 @@ interface FailedEntry {
 
 type ProjectRuntimeEntry =
   | RegisteredEntry
+  | ReconcilingEntry
   | StartingEntry
   | RunningEntry
   | StoppingEntry
   | RestartingEntry
   | FailedEntry
+
+interface ReconcileCandidate {
+  readonly pid: number
+  readonly argv: readonly string[]
+  readonly port: number
+}
+
+type CandidateAttribution =
+  | Readonly<{
+      ok: true
+      candidateIdentity: Readonly<{
+        pid: number
+        processGroupId: number
+        uid: number
+        startTime: string
+      }>
+      candidateArgv: readonly string[]
+      ownerIdentity: Readonly<{
+        pid: number
+        processGroupId: number
+        uid: number
+        startTime: string
+      }>
+    }>
+  | Readonly<{ ok: false; reason: ReconcileRefusalReason }>
+
+interface MutableReconciliationProjectInspection {
+  readonly projectToken: string
+  outcome: 'adopted' | 'absent' | 'unresolved' | null
+  refusalReason: ReconcileRefusalReason | null
+  absenceProof: ReconcileAbsenceProof | null
+  settledElapsedMs: number | null
+}
+
+type BoundedReconciliationResult<T> =
+  Readonly<{ completed: true; value: T }> | Readonly<{ completed: false }>
 
 interface ManagedOwnership extends RuntimeOwnershipRecord {
   readonly projectId: string
@@ -245,6 +308,7 @@ export function createProjectRuntimeManager(
   const launch = dependencies.launch ?? launchReadyRuntime
   const now = dependencies.now ?? Date.now
   const recordEvent = dependencies.recordEvent ?? (() => undefined)
+  const listProjects = dependencies.listProjects ?? (async () => [])
   const deadlineScheduler =
     dependencies.deadlineScheduler ?? defaultRuntimeDeadlineScheduler
   const entries = new Map<string, ProjectRuntimeEntry>()
@@ -271,6 +335,19 @@ export function createProjectRuntimeManager(
   let shutdownPromise: Promise<RuntimeShutdownResult> | undefined
   let shutdownResult: RuntimeShutdownResult | undefined
   let shuttingDown = false
+  let reconciliationInstallation: Promise<void> | undefined
+  let reconciliationController: AbortController | undefined
+  let reconciliationCancelDeadline: (() => void) | undefined
+  let reconciliationPhase: ReconciliationInspection['phase'] = 'not-started'
+  let reconciliationStartedAt: number | null = null
+  let reconciliationSettledElapsedMs: number | null = null
+  let reconciliationScanCompleted: boolean | null = null
+  let reconciliationCandidateCount: number | null = null
+  let reconciliationProjectOrder: readonly string[] = Object.freeze([])
+  const reconciliationProjects = new Map<
+    string,
+    MutableReconciliationProjectInspection
+  >()
 
   const ownershipKey = (record: RuntimeOwnershipRecord): string =>
     [record.process.pid, record.process.processStartTime, record.port].join(':')
@@ -604,6 +681,757 @@ export function createProjectRuntimeManager(
     })
   }
 
+  const runReconciliationBounded = async <T>(input: {
+    readonly milliseconds: number
+    readonly parentSignal: AbortSignal
+    readonly call: (signal: AbortSignal) => Promise<T>
+  }): Promise<BoundedReconciliationResult<T>> => {
+    if (input.parentSignal.aborted) return Object.freeze({ completed: false })
+    const controller = new AbortController()
+    const abortFromParent = (): void =>
+      controller.abort(input.parentSignal.reason)
+    input.parentSignal.addEventListener('abort', abortFromParent, {
+      once: true,
+    })
+    if (input.parentSignal.aborted) abortFromParent()
+    let settleAborted!: () => void
+    const aborted = new Promise<Readonly<{ completed: false }>>((resolve) => {
+      settleAborted = () => resolve(Object.freeze({ completed: false }))
+      controller.signal.addEventListener('abort', settleAborted, { once: true })
+    })
+    const cancelDeadline = deadlineScheduler.scheduleDeadline(
+      input.milliseconds,
+      () => controller.abort()
+    )
+    const pending = Promise.resolve()
+      .then(() => input.call(controller.signal))
+      .then(
+        (value) => Object.freeze({ completed: true as const, value }),
+        () => Object.freeze({ completed: false as const })
+      )
+    try {
+      const result = await Promise.race([pending, aborted])
+      if (!result.completed)
+        void pending.then(
+          () => undefined,
+          () => undefined
+        )
+      return result
+    } finally {
+      cancelDeadline()
+      input.parentSignal.removeEventListener('abort', abortFromParent)
+      controller.signal.removeEventListener('abort', settleAborted)
+      controller.abort()
+    }
+  }
+
+  const awaitTrustedReconciliationDelay = (
+    milliseconds: number,
+    signal: AbortSignal
+  ): Promise<void> => {
+    if (signal.aborted) return Promise.resolve()
+    return new Promise<void>((resolve) => {
+      let settled = false
+      let cancelDeadline = (): void => undefined
+      const settle = (): void => {
+        if (settled) return
+        settled = true
+        cancelDeadline()
+        signal.removeEventListener('abort', settle)
+        resolve()
+      }
+      signal.addEventListener('abort', settle, { once: true })
+      if (signal.aborted) {
+        settle()
+        return
+      }
+      cancelDeadline = deadlineScheduler.scheduleDeadline(
+        Math.max(0, milliseconds),
+        settle
+      )
+      if (settled) cancelDeadline()
+    })
+  }
+
+  const inspectReconciliation = (): ReconciliationInspection =>
+    Object.freeze({
+      phase: reconciliationPhase,
+      startedAt: reconciliationStartedAt,
+      settledElapsedMs: reconciliationSettledElapsedMs,
+      boundMs: reconciliationOverallBoundMs(config),
+      scanCompleted: reconciliationScanCompleted,
+      candidateCount: reconciliationCandidateCount,
+      projects: Object.freeze(
+        reconciliationProjectOrder.map((projectId) => {
+          const inspection = reconciliationProjects.get(projectId)
+          if (inspection === undefined)
+            throw new Error('Reconciliation inspection invariant failed')
+          return Object.freeze({
+            ...inspection,
+          }) satisfies ReconciliationProjectInspection
+        })
+      ),
+    })
+
+  const finishReconciliationIfSettled = (): void => {
+    if (
+      reconciliationProjectOrder.some(
+        (projectId) => reconciliationProjects.get(projectId)?.outcome === null
+      )
+    ) {
+      return
+    }
+    reconciliationCancelDeadline?.()
+    reconciliationCancelDeadline = undefined
+    if (reconciliationPhase !== 'aborted') reconciliationPhase = 'settled'
+    reconciliationSettledElapsedMs =
+      reconciliationStartedAt === null
+        ? 0
+        : Math.max(0, deadlineScheduler.now() - reconciliationStartedAt)
+  }
+
+  const settleReconciliation = (input: {
+    readonly entry: ReconcilingEntry
+    readonly outcome: 'adopted' | 'absent' | 'unresolved'
+    readonly refusalReason?: ReconcileRefusalReason
+    readonly absenceProof?: ReconcileAbsenceProof
+    readonly ready?: ReadyRuntime
+  }): void => {
+    const installed = entries.get(input.entry.projectId)
+    if (
+      installed !== input.entry ||
+      installed.state !== 'reconciling' ||
+      installed.generation !== input.entry.generation
+    ) {
+      return
+    }
+    const inspection = reconciliationProjects.get(input.entry.projectId)
+    if (inspection === undefined || inspection.outcome !== null) return
+    const elapsedMs =
+      reconciliationStartedAt === null
+        ? 0
+        : Math.max(0, deadlineScheduler.now() - reconciliationStartedAt)
+    inspection.outcome = input.outcome
+    inspection.refusalReason = input.refusalReason ?? null
+    inspection.absenceProof = input.absenceProof ?? null
+    inspection.settledElapsedMs = elapsedMs
+
+    if (input.refusalReason === 'manager-shutdown') {
+      reconciliationPhase = 'aborted'
+      input.entry.settle()
+      finishReconciliationIfSettled()
+      return
+    }
+
+    if (input.outcome === 'adopted' && input.ready !== undefined) {
+      const snapshot = freezeSnapshot({
+        ...input.entry.snapshot,
+        state: 'running',
+        pid: input.ready.process.pid,
+        processStartTime: input.ready.process.processStartTime,
+        internalUrl: input.ready.internalUrl,
+        port: input.ready.port,
+        elapsedMs,
+      })
+      const adoptedEntry: RunningEntry = {
+        state: 'running',
+        projectId: input.entry.projectId,
+        canonicalPath: input.entry.canonicalPath,
+        generation: input.entry.generation,
+        ready: input.ready,
+        snapshot,
+        adopted: true,
+      }
+      registerOwnership(
+        input.entry.projectId,
+        input.entry.generation,
+        input.ready
+      )
+      entries.set(input.entry.projectId, adoptedEntry)
+      emit({
+        event: 'runtime.reconcile.succeeded',
+        projectId: input.entry.projectId,
+        from: 'reconciling',
+        to: 'running',
+        elapsedMs,
+      })
+    } else if (input.outcome === 'absent') {
+      entries.set(input.entry.projectId, {
+        state: 'registered',
+        projectId: input.entry.projectId,
+        canonicalPath: input.entry.canonicalPath,
+        released: true,
+      })
+      emit({
+        event: 'runtime.reconcile.absent',
+        projectId: input.entry.projectId,
+        from: 'reconciling',
+        to: 'stopped',
+        elapsedMs,
+      })
+    } else {
+      const failure = new RuntimeFailure('reconcile-unconfirmed')
+      failEntry(
+        input.entry.projectId,
+        input.entry.canonicalPath,
+        input.entry.generation,
+        input.entry.snapshot,
+        failure,
+        input.entry.snapshot.startedAt
+      )
+      emit({
+        event: 'runtime.reconcile.failed',
+        projectId: input.entry.projectId,
+        from: 'reconciling',
+        to: 'failed',
+        elapsedMs,
+        classification: failure.category,
+      })
+    }
+    input.entry.settle()
+    finishReconciliationIfSettled()
+  }
+
+  const settlePendingReconciliations = (
+    refusalReason: ReconcileRefusalReason
+  ): void => {
+    for (const projectId of reconciliationProjectOrder) {
+      const entry = entries.get(projectId)
+      if (entry?.state === 'reconciling')
+        settleReconciliation({
+          entry,
+          outcome: 'unresolved',
+          refusalReason,
+        })
+    }
+  }
+
+  const auditCandidateAbsence = async (input: {
+    readonly candidate: ReconcileCandidate
+    readonly processStartTime: string
+    readonly controller: AbortController
+    readonly attribution: RuntimeAttributionPrimitives
+  }): Promise<boolean> => {
+    const audit = await runReconciliationBounded({
+      milliseconds: config.reconcileSettlementAllowanceMs,
+      parentSignal: input.controller.signal,
+      call: async (signal) => {
+        const [identity, group, listenerInode] = await Promise.all([
+          input.attribution.readProcessIdentity(input.candidate.pid, signal),
+          input.attribution.readProcessGroupMemberPids(
+            input.candidate.pid,
+            signal
+          ),
+          input.attribution.readLoopbackListenerInode(
+            input.candidate.port,
+            signal
+          ),
+        ])
+        return (
+          identity?.startTime !== input.processStartTime &&
+          group.complete &&
+          group.pids.length === 0 &&
+          listenerInode === null
+        )
+      },
+    })
+    return audit.completed && audit.value
+  }
+
+  const attributeReconcileCandidate = async (input: {
+    readonly entry: ReconcilingEntry
+    readonly candidate: ReconcileCandidate
+    readonly installedRuntime: InstalledRuntimeIdentity
+    readonly attribution: RuntimeAttributionPrimitives
+  }): Promise<CandidateAttribution> => {
+    const result = await runReconciliationBounded({
+      milliseconds: config.reconcileAttributionAllowanceMs,
+      parentSignal: input.entry.controller.signal,
+      call: async (signal): Promise<CandidateAttribution> => {
+        const [candidateIdentity, candidateArgv] = await Promise.all([
+          input.attribution.readProcessIdentity(input.candidate.pid, signal),
+          input.attribution.readProcessCommandLine(input.candidate.pid, signal),
+        ])
+        if (candidateIdentity === null || candidateArgv === null)
+          return Object.freeze({ ok: false, reason: 'identity-unstable' })
+        const currentUid =
+          typeof process.getuid === 'function' ? process.getuid() : -1
+        if (currentUid <= 0 || candidateIdentity.uid !== currentUid)
+          return Object.freeze({ ok: false, reason: 'uid-mismatch' })
+        if (
+          candidateArgv[0] !== input.installedRuntime.launcherArgvPrefix[0] ||
+          candidateArgv[1] !== input.installedRuntime.launcherArgvPrefix[1]
+        ) {
+          return Object.freeze({
+            ok: false,
+            reason: 'launcher-prefix-mismatch',
+          })
+        }
+        if (candidateArgv.at(-1) !== input.entry.canonicalPath)
+          return Object.freeze({ ok: false, reason: 'canonical-path-mismatch' })
+        const userDataIndex = candidateArgv.indexOf('--user-data-dir')
+        const expectedUserDataPath = buildRuntimeUserDataPath(
+          input.entry.snapshot.ownerToken,
+          input.candidate.port
+        )
+        if (
+          userDataIndex < 0 ||
+          candidateArgv[userDataIndex + 1] !== expectedUserDataPath
+        ) {
+          return Object.freeze({ ok: false, reason: 'owner-token-mismatch' })
+        }
+        const bindIndex = candidateArgv.indexOf('--bind-addr')
+        if (
+          bindIndex < 0 ||
+          candidateArgv[bindIndex + 1] !==
+            '127.0.0.1:' + String(input.candidate.port)
+        ) {
+          return Object.freeze({ ok: false, reason: 'port-mismatch' })
+        }
+        const expectedArgv = buildRuntimeArgv(
+          input.entry.canonicalPath,
+          input.candidate.port,
+          expectedUserDataPath
+        )
+        if (
+          candidateArgv.length !== expectedArgv.length + 2 ||
+          candidateArgv
+            .slice(input.installedRuntime.launcherArgvPrefix.length)
+            .some((value, index) => value !== expectedArgv[index])
+        ) {
+          return Object.freeze({ ok: false, reason: 'argv-mismatch' })
+        }
+        if (candidateIdentity.processGroupId !== input.candidate.pid)
+          return Object.freeze({ ok: false, reason: 'not-group-leader' })
+        const listener = await resolveGroupListenerOwner({
+          processGroupId: input.candidate.pid,
+          port: input.candidate.port,
+          installedRuntime: input.installedRuntime,
+          signal,
+          primitives: input.attribution,
+        })
+        if (listener.owner === null)
+          return Object.freeze({
+            ok: false,
+            reason: listener.refusalReason,
+          })
+        return Object.freeze({
+          ok: true,
+          candidateIdentity,
+          candidateArgv,
+          ownerIdentity: listener.owner.identity,
+        })
+      },
+    })
+    return result.completed
+      ? result.value
+      : Object.freeze({ ok: false, reason: 'deadline-exceeded' })
+  }
+
+  const probeCandidateReadiness = async (input: {
+    readonly entry: ReconcilingEntry
+    readonly candidate: ReconcileCandidate
+  }): Promise<boolean> => {
+    const readinessDeadlineAt =
+      deadlineScheduler.now() + config.reconcileReadinessBoundMs
+    const result = await runReconciliationBounded({
+      milliseconds: config.reconcileReadinessBoundMs,
+      parentSignal: input.entry.controller.signal,
+      call: async (signal) => {
+        while (!signal.aborted) {
+          const verdict = await processDependencies.health.check(
+            'http://127.0.0.1:' +
+              String(input.candidate.port) +
+              PROJECT_RUNTIME_DEFAULTS.healthPath,
+            config.healthAttemptTimeoutMs,
+            signal
+          )
+          if (
+            verdict.status === PROJECT_RUNTIME_DEFAULTS.healthStatus &&
+            verdict.bodyStatus !== null &&
+            PROJECT_RUNTIME_DEFAULTS.healthBodyStatuses.includes(
+              verdict.bodyStatus as 'alive' | 'expired'
+            )
+          ) {
+            return true
+          }
+          await awaitTrustedReconciliationDelay(
+            Math.max(
+              0,
+              Math.min(
+                config.pollIntervalMs,
+                readinessDeadlineAt - deadlineScheduler.now()
+              )
+            ),
+            signal
+          )
+          if (signal.aborted) return false
+        }
+        return false
+      },
+    })
+    return result.completed && result.value
+  }
+
+  const reconcileCandidate = async (input: {
+    readonly entry: ReconcilingEntry
+    readonly candidate: ReconcileCandidate
+    readonly installedRuntime: InstalledRuntimeIdentity
+    readonly attribution: RuntimeAttributionPrimitives
+  }): Promise<void> => {
+    const first = await attributeReconcileCandidate(input)
+    if (!first.ok) {
+      if (
+        first.reason === 'identity-unstable' ||
+        first.reason === 'listener-absent'
+      ) {
+        const processStartTime =
+          (
+            await input.attribution.readProcessIdentity(
+              input.candidate.pid,
+              input.entry.controller.signal
+            )
+          )?.startTime ?? ''
+        if (processStartTime.length === 0) {
+          settleReconciliation({
+            entry: input.entry,
+            outcome: 'unresolved',
+            refusalReason: 'absence-unconfirmed',
+          })
+          return
+        }
+        if (
+          await auditCandidateAbsence({
+            candidate: input.candidate,
+            processStartTime,
+            controller: input.entry.controller,
+            attribution: input.attribution,
+          })
+        ) {
+          settleReconciliation({
+            entry: input.entry,
+            outcome: 'absent',
+            absenceProof: 'candidate-audit-triple-absent',
+          })
+          return
+        }
+      }
+      settleReconciliation({
+        entry: input.entry,
+        outcome: 'unresolved',
+        refusalReason: first.reason,
+      })
+      return
+    }
+
+    const ready = await probeCandidateReadiness(input)
+    const second = await runReconciliationBounded({
+      milliseconds: config.reconcileAttributionAllowanceMs,
+      parentSignal: input.entry.controller.signal,
+      call: async (signal) => {
+        const [identity, argv, listener] = await Promise.all([
+          input.attribution.readProcessIdentity(input.candidate.pid, signal),
+          input.attribution.readProcessCommandLine(input.candidate.pid, signal),
+          resolveGroupListenerOwner({
+            processGroupId: input.candidate.pid,
+            port: input.candidate.port,
+            installedRuntime: input.installedRuntime,
+            signal,
+            primitives: input.attribution,
+          }),
+        ])
+        return { identity, argv, listener }
+      },
+    })
+    const stable =
+      second.completed &&
+      second.value.identity?.startTime === first.candidateIdentity.startTime &&
+      second.value.argv !== null &&
+      second.value.argv.length === first.candidateArgv.length &&
+      second.value.argv.every(
+        (value, index) => value === first.candidateArgv[index]
+      ) &&
+      second.value.listener.owner?.identity.pid === first.ownerIdentity.pid &&
+      second.value.listener.owner.identity.startTime ===
+        first.ownerIdentity.startTime
+    if (!stable) {
+      if (
+        await auditCandidateAbsence({
+          candidate: input.candidate,
+          processStartTime: first.candidateIdentity.startTime,
+          controller: input.entry.controller,
+          attribution: input.attribution,
+        })
+      ) {
+        settleReconciliation({
+          entry: input.entry,
+          outcome: 'absent',
+          absenceProof: 'candidate-audit-triple-absent',
+        })
+      } else {
+        settleReconciliation({
+          entry: input.entry,
+          outcome: 'unresolved',
+          refusalReason: second.completed
+            ? 'identity-unstable'
+            : 'absence-unconfirmed',
+        })
+      }
+      return
+    }
+    if (!ready) {
+      settleReconciliation({
+        entry: input.entry,
+        outcome: 'unresolved',
+        refusalReason: 'readiness-unconfirmed',
+      })
+      return
+    }
+
+    const process = adoptOwnedRuntimeProcess({
+      config,
+      pid: first.candidateIdentity.pid,
+      processStartTime: first.candidateIdentity.startTime,
+      port: input.candidate.port,
+      ownerToken: input.entry.snapshot.ownerToken,
+      attribution: input.attribution,
+      primitives: processDependencies.termination,
+    })
+    settleReconciliation({
+      entry: input.entry,
+      outcome: 'adopted',
+      ready: Object.freeze({
+        process,
+        port: input.candidate.port,
+        internalUrl: 'http://127.0.0.1:' + String(input.candidate.port),
+        readinessAttempts: Object.freeze([]),
+      }),
+    })
+  }
+
+  const observeReconciliation = async (
+    installedRuntime: InstalledRuntimeIdentity,
+    controller: AbortController
+  ): Promise<void> => {
+    const attribution = processDependencies.attribution
+    const discovery = await runReconciliationBounded({
+      milliseconds: config.reconcileScanAllowanceMs,
+      parentSignal: controller.signal,
+      call: async (signal) => {
+        const scan = await attribution.listRuntimeCandidatePids(signal)
+        const candidates = new Map<string, ReconcileCandidate[]>()
+        for (const projectId of reconciliationProjectOrder)
+          candidates.set(projectId, [])
+        let complete = scan.complete
+        for (const pid of scan.pids) {
+          const argv = await attribution.readProcessCommandLine(pid, signal)
+          if (argv === null) continue
+          const userDataIndex = argv.indexOf('--user-data-dir')
+          const userDataPath =
+            userDataIndex < 0 ? undefined : argv[userDataIndex + 1]
+          const bindIndex = argv.indexOf('--bind-addr')
+          const bindMatch = /^127\.0\.0\.1:(\d+)$/u.exec(
+            bindIndex < 0 ? '' : (argv[bindIndex + 1] ?? '')
+          )
+          const bindPort = bindMatch === null ? undefined : Number(bindMatch[1])
+          for (const projectId of reconciliationProjectOrder) {
+            const entry = entries.get(projectId)
+            if (entry?.state !== 'reconciling') continue
+            const base =
+              userDataPath === undefined
+                ? ''
+                : userDataPath.slice(userDataPath.lastIndexOf('/') + 1)
+            const portSeparator = base.lastIndexOf('-')
+            const ownerPort =
+              portSeparator < 0
+                ? undefined
+                : Number(base.slice(portSeparator + 1))
+            const hasOwnerMarker = base.includes(entry.snapshot.ownerToken)
+            const hasCanonicalMarker = argv.at(-1) === entry.canonicalPath
+            if (!hasOwnerMarker && !hasCanonicalMarker) continue
+            const port = ownerPort ?? bindPort
+            if (
+              typeof port !== 'number' ||
+              !Number.isSafeInteger(port) ||
+              port <= 0 ||
+              port > 65_535
+            )
+              continue
+            candidates.get(projectId)?.push(Object.freeze({ pid, argv, port }))
+          }
+        }
+        return { candidates, complete }
+      },
+    })
+
+    if (!discovery.completed) {
+      reconciliationScanCompleted = false
+      reconciliationCandidateCount = 0
+      settlePendingReconciliations('scan-incomplete')
+      return
+    }
+    reconciliationScanCompleted = discovery.value.complete
+    reconciliationCandidateCount = [
+      ...discovery.value.candidates.values(),
+    ].reduce((count, candidates) => count + candidates.length, 0)
+    const tasks: Promise<void>[] = []
+    for (const projectId of reconciliationProjectOrder) {
+      const entry = entries.get(projectId)
+      if (entry?.state !== 'reconciling') continue
+      const candidates = discovery.value.candidates.get(projectId) ?? []
+      if (candidates.length === 0) {
+        if (discovery.value.complete)
+          settleReconciliation({
+            entry,
+            outcome: 'absent',
+            absenceProof: 'no-candidate-complete-scan',
+          })
+        else
+          settleReconciliation({
+            entry,
+            outcome: 'unresolved',
+            refusalReason: 'scan-incomplete',
+          })
+        continue
+      }
+      if (candidates.length > 1) {
+        settleReconciliation({
+          entry,
+          outcome: 'unresolved',
+          refusalReason: 'ambiguous-candidates',
+        })
+        continue
+      }
+      tasks.push(
+        reconcileCandidate({
+          entry,
+          candidate: candidates[0]!,
+          installedRuntime,
+          attribution,
+        })
+      )
+    }
+    await Promise.all(tasks)
+  }
+
+  const beginReconciliation = (): Promise<void> => {
+    reconciliationInstallation ??= (async () => {
+      if (shuttingDown) throw new RuntimeFailure('manager-shutdown')
+      reconciliationPhase = 'installing'
+      const projects = await listProjects()
+      if (shuttingDown) throw new RuntimeFailure('manager-shutdown')
+      reconciliationProjectOrder = Object.freeze(
+        projects.map((project) => project.id)
+      )
+      reconciliationScanCompleted = projects.length === 0 ? true : null
+      reconciliationCandidateCount = projects.length === 0 ? 0 : null
+      if (projects.length === 0) {
+        reconciliationStartedAt = deadlineScheduler.now()
+        reconciliationPhase = 'settled'
+        reconciliationSettledElapsedMs = Math.max(
+          0,
+          deadlineScheduler.now() - reconciliationStartedAt
+        )
+        return
+      }
+
+      const identityController = new AbortController()
+      const identity = await runReconciliationBounded({
+        milliseconds: config.reconcileAttributionAllowanceMs,
+        parentSignal: identityController.signal,
+        call: (signal) =>
+          processDependencies.attribution.resolveInstalledRuntimeIdentity(
+            config.executablePath,
+            signal
+          ),
+      })
+      identityController.abort()
+      reconciliationStartedAt = deadlineScheduler.now()
+      const controller = new AbortController()
+      reconciliationController = controller
+      for (const project of projects) {
+        if (entries.has(project.id))
+          throw new Error('Reconciliation entry installation invariant failed')
+        const generation = Symbol(project.id)
+        let settle!: () => void
+        const settlement = new Promise<void>((resolve) => {
+          settle = resolve
+        })
+        const snapshot = freezeSnapshot({
+          projectId: project.id,
+          state: 'starting',
+          pid: null,
+          processStartTime: null,
+          internalUrl: null,
+          port: null,
+          canonicalPath: project.canonicalPath,
+          stableRoute: stableProjectRoute(project.id),
+          ownerToken: deriveProjectOwnerToken(project.id),
+          startedAt: now(),
+          elapsedMs: 0,
+        })
+        entries.set(project.id, {
+          state: 'reconciling',
+          projectId: project.id,
+          canonicalPath: project.canonicalPath,
+          generation,
+          snapshot,
+          controller,
+          settlement,
+          settle,
+        })
+        reconciliationProjects.set(project.id, {
+          projectToken: snapshot.ownerToken,
+          outcome: null,
+          refusalReason: null,
+          absenceProof: null,
+          settledElapsedMs: null,
+        })
+        emit({
+          event: 'runtime.reconcile.requested',
+          projectId: project.id,
+          from: 'stopped',
+          to: 'reconciling',
+          elapsedMs: 0,
+        })
+      }
+      reconciliationCancelDeadline = deadlineScheduler.scheduleDeadline(
+        reconciliationOverallBoundMs(config),
+        () => {
+          controller.abort()
+          settlePendingReconciliations('deadline-exceeded')
+        }
+      )
+      if (!identity.completed || identity.value === null) {
+        settlePendingReconciliations('launcher-unresolved')
+        return
+      }
+      reconciliationPhase = 'observing'
+      void observeReconciliation(identity.value, controller).then(
+        () => undefined,
+        () => settlePendingReconciliations('scan-incomplete')
+      )
+    })()
+    return reconciliationInstallation
+  }
+
+  const waitForReconciliation = (
+    entry: ReconcilingEntry,
+    signal?: AbortSignal
+  ): Promise<void> => {
+    if (signal?.aborted)
+      return Promise.reject(new RuntimeFailure('caller-cancelled'))
+    return new Promise<void>((resolve, reject) => {
+      const cancel = (): void => reject(new RuntimeFailure('caller-cancelled'))
+      signal?.addEventListener('abort', cancel, { once: true })
+      entry.settlement.then(() => {
+        signal?.removeEventListener('abort', cancel)
+        if (shuttingDown) reject(new RuntimeFailure('manager-shutdown'))
+        else resolve()
+      })
+    })
+  }
+
   const transitionRunningToFailed = async (
     entry: RunningEntry,
     failure: RuntimeFailure,
@@ -705,6 +1533,13 @@ export function createProjectRuntimeManager(
     }
 
     const current = entries.get(input.projectId)
+    if (current?.state === 'reconciling') {
+      return Object.freeze({
+        outcome: 'rejected',
+        projectId: input.projectId,
+        category: 'reconcile-in-progress',
+      })
+    }
     if (
       current === undefined ||
       (current.state === 'registered' && !current.released)
@@ -732,7 +1567,10 @@ export function createProjectRuntimeManager(
       return Object.freeze({
         outcome: 'rejected',
         projectId: input.projectId,
-        category: 'failure-retained',
+        category:
+          current.failure.category === 'reconcile-unconfirmed'
+            ? 'reconcile-unresolved'
+            : 'failure-retained',
       })
     }
     if (current.state === 'restarting') {
@@ -910,6 +1748,13 @@ export function createProjectRuntimeManager(
     }
 
     const current = entries.get(input.projectId)
+    if (current?.state === 'reconciling') {
+      return Object.freeze({
+        outcome: 'rejected',
+        projectId: input.projectId,
+        category: 'reconcile-in-progress',
+      })
+    }
     if (current === undefined || current.state === 'registered') {
       return Object.freeze({
         outcome: 'rejected',
@@ -932,6 +1777,16 @@ export function createProjectRuntimeManager(
       })
     }
     if (current.state === 'restarting') return current.operation
+    if (
+      current.state === 'failed' &&
+      current.failure.category === 'reconcile-unconfirmed'
+    ) {
+      return Object.freeze({
+        outcome: 'rejected',
+        projectId: input.projectId,
+        category: 'reconcile-unresolved',
+      })
+    }
 
     const priorAdmission = pendingAdmissions.get(input.projectId)
     const priorReady = ownedReadyFor(current)
@@ -1589,8 +2444,19 @@ export function createProjectRuntimeManager(
       throw new RuntimeFailure('canonical-path-invariant')
     if (shuttingDown) throw new RuntimeFailure('manager-shutdown')
 
+    let current = entries.get(input.projectId)
+    if (current?.state === 'reconciling') {
+      await waitForReconciliation(current, input.signal)
+      current = entries.get(input.projectId)
+    }
+    if (
+      current?.state === 'failed' &&
+      current.failure.category === 'reconcile-unconfirmed'
+    ) {
+      throw current.failure
+    }
     register(input.projectId, input.canonicalPath)
-    const current = entries.get(input.projectId)
+    current = entries.get(input.projectId)
     if (current?.state === 'starting')
       return waitForStarting(current, input.signal)
 
@@ -1631,11 +2497,13 @@ export function createProjectRuntimeManager(
         )
         throw result.failure
       }
-      const failure = new RuntimeFailure('early-exit-code', { exitCode: -1 })
+      const failure = current.adopted
+        ? new RuntimeFailure('reconcile-unconfirmed')
+        : new RuntimeFailure('early-exit-code', { exitCode: -1 })
       const result = await transitionRunningToFailed(
         current,
         failure,
-        'terminate'
+        current.adopted ? 'audit' : 'terminate'
       )
       throw result.failure
     }
@@ -1801,6 +2669,11 @@ export function createProjectRuntimeManager(
   const shutdown = (): Promise<RuntimeShutdownResult> => {
     shutdownPromise ??= (async () => {
       shuttingDown = true
+      if (reconciliationController !== undefined) {
+        reconciliationPhase = 'aborted'
+        reconciliationController.abort(new RuntimeFailure('manager-shutdown'))
+        settlePendingReconciliations('manager-shutdown')
+      }
       const entriesAtShutdown = [...entries.values()]
       for (const entry of entriesAtShutdown)
         if (entry.state === 'starting' || entry.state === 'restarting')
@@ -1919,6 +2792,8 @@ export function createProjectRuntimeManager(
   }
 
   return {
+    beginReconciliation,
+    inspectReconciliation,
     register,
     start,
     stop,

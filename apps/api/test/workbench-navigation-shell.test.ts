@@ -27,6 +27,7 @@ const setup = async () => {
     close: vi.fn(),
   }
   const runtime: ProjectRuntimeManager = {
+    beginReconciliation: async () => undefined,
     start: vi.fn(),
     ownsSnapshot: vi.fn(() => true),
     inspect: vi.fn(),

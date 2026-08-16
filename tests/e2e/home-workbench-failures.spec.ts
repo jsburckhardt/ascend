@@ -67,6 +67,7 @@ test('runs exactly four controlled browser failure cases with one recovery actio
     close: () => undefined,
   }
   const runtime: ProjectRuntimeManager = {
+    beginReconciliation: async () => undefined,
     start: async () => {
       throw new Error('Not owned by controlled proxy')
     },

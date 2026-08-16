@@ -66,6 +66,7 @@ describe('project runtime lifecycle integration', () => {
       close: vi.fn(() => order.push('registration')),
     }
     const manager: ProjectRuntimeManager = {
+      beginReconciliation: async () => undefined,
       register: vi.fn(),
       start: vi.fn(),
       ownsSnapshot: vi.fn(() => true),

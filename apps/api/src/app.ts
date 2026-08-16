@@ -131,6 +131,7 @@ const app: FastifyPluginAsync<AppOptions> = async (
       ((projectLibrary, recordEvent) =>
         createProjectRuntimeManager({
           findProjectById: (id) => projectLibrary.findById(id),
+          listProjects: () => projectLibrary.list(),
           recordEvent,
         }))
     )(library, (event) => fastify.log.info(event))
@@ -175,6 +176,15 @@ const app: FastifyPluginAsync<AppOptions> = async (
       renderWorkbenchNavigationShell(opts.workbenchDocumentTimeoutMs),
     renderRouteError: renderWorkbenchRouteError,
   })
+  try {
+    await runtimeManager.beginReconciliation()
+  } catch {
+    await workbenchProxy.shutdown()
+    await runtimeManager.shutdown()
+    registration.close()
+    library.close()
+    throw new ProjectLibraryInitializationError()
+  }
   fastify.addHook('onClose', async () => {
     await workbenchProxy.shutdown()
     await runtimeManager.shutdown()

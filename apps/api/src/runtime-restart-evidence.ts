@@ -892,7 +892,7 @@ function validateRouteSources(
     if (
       start < 0 ||
       end < 0 ||
-      countMatches(source.slice(start, end), /'[a-z_]+'/gu) !== 10
+      countMatches(source.slice(start, end), /'[a-z_]+'/gu) !== 12
     ) {
       violations.push('restart-bound-outside-config')
     }

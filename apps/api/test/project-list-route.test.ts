@@ -6,6 +6,7 @@ import {
   type ProjectLibrary,
 } from '../src/project-library.js'
 import type { Project } from '../src/project-persistence.js'
+import { createProjectRuntimeManager } from '../src/project-runtime-manager.js'
 import {
   PROJECT_LIST_FAILED,
   PROJECT_LIST_FAILED_EVENT,
@@ -34,6 +35,12 @@ const projects: Project[] = [
     createdAt: 10,
   },
 ]
+
+const createEmptyRuntimeManager = () =>
+  createProjectRuntimeManager({
+    findProjectById: async () => undefined,
+    listProjects: async () => [],
+  })
 
 function libraryWithList(list: () => Promise<Project[]>): ProjectLibrary {
   return {
@@ -144,6 +151,7 @@ describe('GET /api/projects', () => {
     const app = await build({
       createProjectLibrary: async () =>
         libraryWithList(async () => rows as unknown as Project[]),
+      createProjectRuntimeManager: createEmptyRuntimeManager,
     })
     const response = await app.inject('/api/projects')
     expect(response.statusCode).toBe(500)
@@ -174,6 +182,7 @@ describe('GET /api/projects', () => {
           libraryWithList(async () => {
             throw new Error(sentinel)
           }),
+        createProjectRuntimeManager: createEmptyRuntimeManager,
         createProjectRegistration: async () => ({
           register: async () => ({ category: 'path_not_found', field: 'path' }),
           close() {},

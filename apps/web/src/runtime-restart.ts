@@ -16,6 +16,8 @@ export const RUNTIME_RESTART_ERROR_CATEGORIES = Object.freeze([
   'runtime_replacement_failed',
   'runtime_manager_shutdown',
   'runtime_restart_failed',
+  'runtime_reconcile_in_progress',
+  'runtime_reconcile_unresolved',
 ] as const)
 export type RuntimeRestartErrorCategory =
   (typeof RUNTIME_RESTART_ERROR_CATEGORIES)[number]
@@ -34,6 +36,10 @@ export const RUNTIME_RESTART_NOTICES: Readonly<
     'The workbench is still starting. Retry after startup settles.',
   runtime_stop_in_progress:
     'The workbench is stopping. Retry after stop settles.',
+  runtime_reconcile_in_progress:
+    'Ascend is still recovering this workbench. Retry after recovery settles.',
+  runtime_reconcile_unresolved:
+    'Ascend could not confirm this workbench after a restart.',
   runtime_restart_release_unconfirmed:
     'Ascend could not release the previous workbench session.',
   runtime_replacement_failed: 'Ascend could not start a replacement workbench.',
@@ -51,6 +57,8 @@ const RUNTIME_RESTART_STATUS: Readonly<
   runtime_not_managed: 409,
   runtime_start_in_progress: 409,
   runtime_stop_in_progress: 409,
+  runtime_reconcile_in_progress: 409,
+  runtime_reconcile_unresolved: 409,
   runtime_restart_release_unconfirmed: 500,
   runtime_replacement_failed: 500,
   runtime_manager_shutdown: 503,

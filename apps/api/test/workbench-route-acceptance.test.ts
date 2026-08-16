@@ -288,6 +288,7 @@ describe('BL-011 executable acceptance coordinator', () => {
         close: vi.fn(),
       }
       const runtime: ProjectRuntimeManager = {
+        beginReconciliation: async () => undefined,
         register: vi.fn(),
         start: vi.fn(async ({ projectId, canonicalPath }) => {
           observeBoundary('runtime-manager')
@@ -628,6 +629,7 @@ describe('BL-011 executable acceptance coordinator', () => {
       elapsedMs: 1,
     })
     const runtime: ProjectRuntimeManager = {
+      beginReconciliation: async () => undefined,
       register: vi.fn(),
       start: vi.fn(async ({ canonicalPath }) => {
         runtimeInputs.push(canonicalPath)
@@ -1154,6 +1156,7 @@ describe('BL-011 executable acceptance coordinator', () => {
       elapsedMs: 1,
     })
     const runtime: ProjectRuntimeManager = {
+      beginReconciliation: async () => undefined,
       register: vi.fn(),
       start: vi.fn(async () => snapshot),
       ownsSnapshot: vi.fn(() => true),

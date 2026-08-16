@@ -14,6 +14,7 @@ export const RUNTIME_ENTRY_STATES = [
   'running',
   'stopping',
   'restarting',
+  'reconciling',
   'failed',
 ] as const
 export type RuntimeEntryState = (typeof RUNTIME_ENTRY_STATES)[number]
@@ -25,6 +26,7 @@ export const RUNTIME_LIFECYCLE_TARGETS = [
   'stopping',
   'stopped',
   'restarting',
+  'reconciling',
 ] as const
 export type RuntimeLifecycleTarget = (typeof RUNTIME_LIFECYCLE_TARGETS)[number]
 
@@ -65,6 +67,8 @@ export const RUNTIME_RESTART_REJECTION_CATEGORIES = Object.freeze([
   'release-unconfirmed',
   'replacement-failed',
   'manager-shutdown',
+  'reconcile-in-progress',
+  'reconcile-unresolved',
 ] as const)
 export type RuntimeRestartRejectionCategory =
   (typeof RUNTIME_RESTART_REJECTION_CATEGORIES)[number]
@@ -121,6 +125,7 @@ export const RUNTIME_FAILURE_CATEGORIES = [
   'restart-deadline-exceeded',
   'runtime-restarting',
   'restart-replacement-unconfirmed',
+  'reconcile-unconfirmed',
 ] as const
 export type RuntimeFailureCategory = (typeof RUNTIME_FAILURE_CATEGORIES)[number]
 
@@ -139,6 +144,7 @@ export function publicRuntimeState(
       return 'Stopped'
     case 'starting':
     case 'restarting':
+    case 'reconciling':
       return 'Starting'
     case 'running':
     case 'stopping':
@@ -186,6 +192,8 @@ export const RUNTIME_FAILURE_MESSAGES: Readonly<
     'Workbench is restarting; wait for the current operation to settle before retrying.',
   'restart-replacement-unconfirmed':
     'Workbench restart could not confirm replacement cleanup; retry after the runtime manager reconciles it.',
+  'reconcile-unconfirmed':
+    'Workbench recovery could not confirm this runtime; restart Ascend after resolving the workbench.',
 })
 
 export interface RuntimeFailureDiagnostics {
@@ -257,6 +265,60 @@ export function runtimeReplacementBoundMs(
   )
 }
 
+export const RECONCILE_OUTCOMES = Object.freeze([
+  'adopted',
+  'absent',
+  'unresolved',
+] as const)
+export type ReconcileOutcome = (typeof RECONCILE_OUTCOMES)[number]
+
+export const RECONCILE_REFUSAL_REASONS = Object.freeze([
+  'ambiguous-candidates',
+  'launcher-unresolved',
+  'launcher-prefix-mismatch',
+  'argv-mismatch',
+  'canonical-path-mismatch',
+  'owner-token-mismatch',
+  'port-mismatch',
+  'uid-mismatch',
+  'not-group-leader',
+  'group-scan-incomplete',
+  'listener-absent',
+  'listener-not-owned',
+  'readiness-unconfirmed',
+  'identity-unstable',
+  'absence-unconfirmed',
+  'scan-incomplete',
+  'deadline-exceeded',
+  'manager-shutdown',
+] as const)
+export type ReconcileRefusalReason = (typeof RECONCILE_REFUSAL_REASONS)[number]
+
+export const RECONCILE_ABSENCE_PROOFS = Object.freeze([
+  'no-candidate-complete-scan',
+  'candidate-audit-triple-absent',
+] as const)
+export type ReconcileAbsenceProof = (typeof RECONCILE_ABSENCE_PROOFS)[number]
+
+export interface ReconciliationProjectInspection {
+  readonly projectToken: string
+  readonly outcome: ReconcileOutcome | null
+  readonly refusalReason: ReconcileRefusalReason | null
+  readonly absenceProof: ReconcileAbsenceProof | null
+  readonly settledElapsedMs: number | null
+}
+
+export interface ReconciliationInspection {
+  readonly phase:
+    'not-started' | 'installing' | 'observing' | 'settled' | 'aborted'
+  readonly startedAt: number | null
+  readonly settledElapsedMs: number | null
+  readonly boundMs: number
+  readonly scanCompleted: boolean | null
+  readonly candidateCount: number | null
+  readonly projects: readonly ReconciliationProjectInspection[]
+}
+
 export function restartQuarantineReleaseBoundMs(
   config: ProjectRuntimeConfig
 ): number {
@@ -309,17 +371,26 @@ export interface RuntimeUnresolvedAdmission {
   readonly phase: RestartAdmissionPhase
 }
 
+export const RUNTIME_LIFECYCLE_EVENTS = Object.freeze([
+  'runtime.start.requested',
+  'runtime.start.succeeded',
+  'runtime.start.failed',
+  'runtime.health.changed',
+  'runtime.stop.requested',
+  'runtime.stop.succeeded',
+  'runtime.restart.requested',
+  'runtime.restart.succeeded',
+  'runtime.restart.failed',
+  'runtime.reconcile.requested',
+  'runtime.reconcile.succeeded',
+  'runtime.reconcile.absent',
+  'runtime.reconcile.failed',
+] as const)
+export type RuntimeLifecycleEventName =
+  (typeof RUNTIME_LIFECYCLE_EVENTS)[number]
+
 export interface RuntimeLifecycleEvent {
-  readonly event:
-    | 'runtime.start.requested'
-    | 'runtime.start.succeeded'
-    | 'runtime.start.failed'
-    | 'runtime.health.changed'
-    | 'runtime.stop.requested'
-    | 'runtime.stop.succeeded'
-    | 'runtime.restart.requested'
-    | 'runtime.restart.succeeded'
-    | 'runtime.restart.failed'
+  readonly event: RuntimeLifecycleEventName
   readonly projectId: string
   readonly from: RuntimeLifecycleTarget
   readonly to: RuntimeLifecycleTarget
@@ -339,6 +410,10 @@ const PUBLIC_STATE_BY_LIFECYCLE_EVENT: Readonly<
   'runtime.restart.requested': 'Starting',
   'runtime.restart.succeeded': 'Running',
   'runtime.restart.failed': 'Failed',
+  'runtime.reconcile.requested': 'Starting',
+  'runtime.reconcile.succeeded': 'Running',
+  'runtime.reconcile.absent': 'Stopped',
+  'runtime.reconcile.failed': 'Failed',
 })
 
 export function publicRuntimeStateForLifecycleTarget(
@@ -351,6 +426,7 @@ export function publicRuntimeStateForLifecycleTarget(
       return 'Running'
     case 'starting':
     case 'restarting':
+    case 'reconciling':
     case 'running':
     case 'failed':
       return publicRuntimeState(target)
@@ -382,6 +458,12 @@ export const PROJECT_RUNTIME_DEFAULTS = Object.freeze({
   forceShutdownMs: 2_000,
   stopAuditAllowanceMs: 1_000,
   restartSettlementAllowanceMs: 1_000,
+  reconcileScanAllowanceMs: 2_000,
+  reconcileAttributionAllowanceMs: 1_000,
+  reconcileReadinessBoundMs: 7_000,
+  reconcileSettlementAllowanceMs: 1_000,
+  reconcileStartupHeadroomMs: 3_000,
+  reconcileResponseAllowanceMs: 1_000,
 })
 
 export interface ProjectRuntimeConfig {
@@ -396,6 +478,12 @@ export interface ProjectRuntimeConfig {
   readonly forceShutdownMs: number
   readonly stopAuditAllowanceMs: number
   readonly restartSettlementAllowanceMs: number
+  readonly reconcileScanAllowanceMs: number
+  readonly reconcileAttributionAllowanceMs: number
+  readonly reconcileReadinessBoundMs: number
+  readonly reconcileSettlementAllowanceMs: number
+  readonly reconcileStartupHeadroomMs: number
+  readonly reconcileResponseAllowanceMs: number
 }
 
 export function createProjectRuntimeConfig(
@@ -445,6 +533,24 @@ export function createProjectRuntimeConfig(
     restartSettlementAllowanceMs:
       overrides.restartSettlementAllowanceMs ??
       PROJECT_RUNTIME_DEFAULTS.restartSettlementAllowanceMs,
+    reconcileScanAllowanceMs:
+      overrides.reconcileScanAllowanceMs ??
+      PROJECT_RUNTIME_DEFAULTS.reconcileScanAllowanceMs,
+    reconcileAttributionAllowanceMs:
+      overrides.reconcileAttributionAllowanceMs ??
+      PROJECT_RUNTIME_DEFAULTS.reconcileAttributionAllowanceMs,
+    reconcileReadinessBoundMs:
+      overrides.reconcileReadinessBoundMs ??
+      PROJECT_RUNTIME_DEFAULTS.reconcileReadinessBoundMs,
+    reconcileSettlementAllowanceMs:
+      overrides.reconcileSettlementAllowanceMs ??
+      PROJECT_RUNTIME_DEFAULTS.reconcileSettlementAllowanceMs,
+    reconcileStartupHeadroomMs:
+      overrides.reconcileStartupHeadroomMs ??
+      PROJECT_RUNTIME_DEFAULTS.reconcileStartupHeadroomMs,
+    reconcileResponseAllowanceMs:
+      overrides.reconcileResponseAllowanceMs ??
+      PROJECT_RUNTIME_DEFAULTS.reconcileResponseAllowanceMs,
   }
   for (const value of [
     config.collisionAttempts,
@@ -455,6 +561,12 @@ export function createProjectRuntimeConfig(
     config.forceShutdownMs,
     config.stopAuditAllowanceMs,
     config.restartSettlementAllowanceMs,
+    config.reconcileScanAllowanceMs,
+    config.reconcileAttributionAllowanceMs,
+    config.reconcileReadinessBoundMs,
+    config.reconcileSettlementAllowanceMs,
+    config.reconcileStartupHeadroomMs,
+    config.reconcileResponseAllowanceMs,
   ]) {
     if (!Number.isSafeInteger(value) || value <= 0) {
       throw new Error('Runtime bounds must be positive integers')
@@ -473,6 +585,49 @@ export function runtimeStopOverallBoundMs(
   )
 }
 
+export function reconciliationOverallBoundMs(
+  config: ProjectRuntimeConfig
+): number {
+  return checkedRuntimeBound(
+    config.reconcileScanAllowanceMs +
+      config.reconcileAttributionAllowanceMs +
+      config.reconcileReadinessBoundMs +
+      config.reconcileSettlementAllowanceMs
+  )
+}
+
+export function reconciliationEndToEndBoundMs(
+  config: ProjectRuntimeConfig
+): number {
+  return checkedRuntimeBound(
+    config.reconcileStartupHeadroomMs +
+      reconciliationOverallBoundMs(config) +
+      config.reconcileResponseAllowanceMs
+  )
+}
+
+export function reconciliationStartupControlBoundMs(
+  config: ProjectRuntimeConfig
+): number {
+  return checkedRuntimeBound(
+    config.reconcileStartupHeadroomMs + config.reconcileResponseAllowanceMs
+  )
+}
+
+export function workbenchAcquisitionBoundMs(
+  config: ProjectRuntimeConfig
+): number {
+  return checkedRuntimeBound(runtimeReplacementBoundMs(config))
+}
+
+export function acquisitionAcrossReconciliationBoundMs(
+  config: ProjectRuntimeConfig
+): number {
+  return checkedRuntimeBound(
+    reconciliationOverallBoundMs(config) + workbenchAcquisitionBoundMs(config)
+  )
+}
+
 export const RUNTIME_STOP_OUTCOMES = Object.freeze([
   'stopped',
   'already-stopped',
@@ -488,6 +643,8 @@ export const RUNTIME_STOP_REJECTION_CATEGORIES = Object.freeze([
   'failure-retained',
   'stop-unconfirmed',
   'manager-shutdown',
+  'reconcile-in-progress',
+  'reconcile-unresolved',
 ] as const)
 export type RuntimeStopRejectionCategory =
   (typeof RUNTIME_STOP_REJECTION_CATEGORIES)[number]

@@ -63,8 +63,8 @@ describe('BL-018 documented restart contract', () => {
     for (const target of RUNTIME_LIFECYCLE_TARGETS)
       expect(runbook).toContain(target)
     for (const state of PUBLIC_RUNTIME_STATES) expect(runbook).toContain(state)
-    expect(RUNTIME_FAILURE_CATEGORIES).toHaveLength(18)
-    expect(runbook).toContain('The 18 closed categories')
+    expect(RUNTIME_FAILURE_CATEGORIES).toHaveLength(19)
+    expect(runbook).toContain('The 19 closed categories')
     for (const category of RUNTIME_FAILURE_CATEGORIES)
       expect(runbook).toContain(category)
     // The runbook documents the rejection vocabulary in prose rather than by
@@ -74,31 +74,33 @@ describe('BL-018 documented restart contract', () => {
       (typeof RUNTIME_RESTART_REJECTION_CATEGORIES)[number],
       string
     > = {
-      'not-registered': 'missing registration',
-      'no-managed-runtime': 'unowned runtime',
-      'start-in-progress': 'start/stop conflicts',
-      'stop-in-progress': 'start/stop conflicts',
-      'release-unconfirmed': 'unconfirmed release',
-      'replacement-failed': 'replacement failure',
-      'manager-shutdown': 'manager shutdown',
+      'not-registered': 'not-registered',
+      'no-managed-runtime': 'no-managed-runtime',
+      'start-in-progress': 'start-in-progress',
+      'stop-in-progress': 'stop-in-progress',
+      'release-unconfirmed': 'release-unconfirmed',
+      'replacement-failed': 'replacement-failed',
+      'manager-shutdown': 'manager-shutdown',
+      'reconcile-in-progress': 'reconcile-in-progress',
+      'reconcile-unresolved': 'reconcile-unresolved',
     }
-    expect(RUNTIME_RESTART_REJECTION_CATEGORIES).toHaveLength(7)
+    expect(RUNTIME_RESTART_REJECTION_CATEGORIES).toHaveLength(9)
     for (const category of RUNTIME_RESTART_REJECTION_CATEGORIES)
       expect(runbook).toContain(documentedRejection[category])
   })
 
-  it('documents the route body limit and its ten client-visible errors', async () => {
+  it('documents the route body limit and its twelve client-visible errors', async () => {
     const [runbook, readme, routes] = await Promise.all([
       text(RUNBOOK),
       text(ROOT_README),
       text(ROUTES_README),
     ])
     expect(RUNTIME_RESTART_BODY_LIMIT_BYTES).toBe(1_024)
-    expect(RUNTIME_RESTART_ROUTE_ERROR_CATEGORIES).toHaveLength(10)
+    expect(RUNTIME_RESTART_ROUTE_ERROR_CATEGORIES).toHaveLength(12)
     expect(runbook).toContain('1,024-byte body limit')
-    expect(runbook).toContain('Its ten client-visible errors')
+    expect(runbook).toContain('Its twelve client-visible errors')
     expect(readme).toContain('absent or empty body up to 1,024 bytes')
-    expect(readme).toContain('ten client-owned notices')
+    expect(readme).toContain('twelve client-owned notices')
     // Each delivered identifier is documented verbatim, so renaming one on
     // either side without the other fails here rather than silently drifting.
     for (const category of RUNTIME_RESTART_ROUTE_ERROR_CATEGORIES)
@@ -190,7 +192,7 @@ describe('BL-018 documented restart contract', () => {
     )
     expect(runbook).toContain('remain explicitly unknown')
     expect(runbook).toContain('selected Restart by BL-018')
-    expect(runbook).toContain('API-process restart reconciliation')
+    expect(runbook).toContain('API-restart reconciliation')
     expect(readme).toContain('peer project controls remain usable')
   })
 })

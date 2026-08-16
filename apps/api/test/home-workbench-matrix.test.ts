@@ -88,6 +88,7 @@ describe('execution-backed Home/workbench API matrix', () => {
       close: vi.fn(),
     }
     const runtime: ProjectRuntimeManager = {
+      beginReconciliation: async () => undefined,
       start: vi.fn(async ({ projectId, canonicalPath }) => {
         record(projectId, 'runtime')
         startRequests.set(projectId, (startRequests.get(projectId) ?? 0) + 1)

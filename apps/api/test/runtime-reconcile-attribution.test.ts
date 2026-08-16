@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
   defaultRuntimeAttributionPrimitives,
   resolveGroupListenerOwner,
@@ -36,23 +36,28 @@ function primitives(
   const group = input.group ?? [100, 101]
   const holders = input.holders ?? [101]
   return {
-    resolveInstalledRuntimeIdentity: async () => installed,
-    listRuntimeCandidatePids: async () => ({ pids: group, complete: true }),
-    readProcessIdentity: async (pid) => identity(pid),
-    readProcessCommandLine: async (pid) =>
+    resolveInstalledRuntimeIdentity: vi.fn(async () => installed),
+    listRuntimeCandidatePids: vi.fn(async () => ({
+      pids: group,
+      complete: true,
+    })),
+    readProcessIdentity: vi.fn(async (pid) => identity(pid)),
+    readProcessCommandLine: vi.fn(async (pid) =>
       pid === 100
         ? [installed.interpreterPath, installed.installationRoot]
         : [
             installed.interpreterPath,
             installed.installationRoot + '/out/node/entry.js',
-          ],
-    readProcessGroupMemberPids: async () => ({
+          ]
+    ),
+    readProcessGroupMemberPids: vi.fn(async () => ({
       pids: group,
       complete: input.complete ?? true,
-    }),
-    readLoopbackListenerInode: async () => '8080',
-    readProcessSocketInodes: async (pid) =>
-      holders.includes(pid) ? ['8080'] : [],
+    })),
+    readLoopbackListenerInode: vi.fn(async () => '8080'),
+    readProcessSocketInodes: vi.fn(async (pid) =>
+      holders.includes(pid) ? ['8080'] : []
+    ),
   }
 }
 
@@ -85,11 +90,29 @@ describe('runtime reconciliation attribution', () => {
   })
 
   it.each([
-    [
-      'incomplete group scan',
-      primitives({ complete: false }),
-      'group-scan-incomplete',
-    ],
+    ['incomplete group scan', primitives({ complete: false })],
+    ['complete empty group scan', primitives({ group: [] })],
+    ['complete group scan missing its leader', primitives({ group: [101] })],
+  ])('refuses %s before listener observation', async (_label, injected) => {
+    const result = await resolveGroupListenerOwner({
+      processGroupId: 100,
+      port: 8080,
+      installedRuntime: installed,
+      signal: new AbortController().signal,
+      primitives: injected,
+    })
+
+    expect(result).toEqual({
+      owner: null,
+      refusalReason: 'group-scan-incomplete',
+    })
+    expect(injected.readLoopbackListenerInode).not.toHaveBeenCalled()
+    expect(injected.readProcessIdentity).not.toHaveBeenCalled()
+    expect(injected.readProcessCommandLine).not.toHaveBeenCalled()
+    expect(injected.readProcessSocketInodes).not.toHaveBeenCalled()
+  })
+
+  it.each([
     [
       'no holder in the exact group',
       primitives({ holders: [] }),

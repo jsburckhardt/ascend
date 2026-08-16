@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
+  RECONCILE_REFUSAL_REASONS,
   RUNTIME_FAILURE_CATEGORIES,
   RUNTIME_RESTART_REJECTION_CATEGORIES,
   RUNTIME_STOP_REJECTION_CATEGORIES,
@@ -52,6 +53,54 @@ describe('BL-019 application documentation', () => {
     expect(runbook).toContain('just verify-runtime-reconcile')
     expect(runbook).toContain('just proof-runtime-reconcile')
     expect(runbook).toContain('just proof-runtime-reconcile-residual-audit')
+  })
+
+  it('states the two-tier disclosure boundary and matches retained evidence', async () => {
+    const [runbook, matrix] = await Promise.all([
+      text('docs/api-restart-reconciliation.md'),
+      text(
+        'project/work-items/43-bl-019-reconcile-workbench-runtimes-after-api-restart/implementation/evidence/runtime-reconcile-matrix.json'
+      ),
+    ])
+
+    for (const phrase of [
+      'group enumeration must complete and contain the workbench leader',
+      'same trusted monotonic scheduling boundary as reconciliation deadlines',
+      'each gap is bounded by the remaining readiness window',
+      'Browser-visible surfaces, HTTP bodies, and lifecycle events',
+      'they never expose an internal refusal reason',
+      'retained validation evidence, explicitly including the committed matrix and designated episode',
+      'may record bounded outcome, absence-proof, and refusal-reason enum names',
+      'appear in neither public surfaces nor committed evidence',
+    ])
+      expect(runbook).toContain(phrase)
+
+    for (const refusalReason of RECONCILE_REFUSAL_REASONS)
+      expect(matrix).toContain(
+        '"refusalReason": ' + JSON.stringify(refusalReason)
+      )
+    for (const key of [
+      'canonicalPath',
+      'argv',
+      'executablePath',
+      'installationRoot',
+      'interpreterPath',
+      'launcherRealPath',
+      'pid',
+      'processStartTime',
+      'port',
+      'internalUrl',
+      'authority',
+      'inode',
+      'environment',
+      'credentials',
+      'terminal',
+      'stack',
+      'rawError',
+    ])
+      expect(matrix).not.toMatch(new RegExp('"' + key + '"\\s*:', 'u'))
+    expect(matrix).not.toMatch(/127\.0\.0\.1:|\/(?:tmp|opt|fixtures)\//u)
+    expect(matrix).toContain('"matches": []')
   })
 
   it('keeps all public vocabularies and documentation surfaces aligned', async () => {

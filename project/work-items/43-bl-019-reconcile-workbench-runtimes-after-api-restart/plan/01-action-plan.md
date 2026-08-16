@@ -7,9 +7,25 @@
 - **Branch:** feat/43-reconcile-workbench-runtimes-after-api-restart
 - **Base SHA:** 4e2b48b8a54204d68617b40e2dd6de302676f550
 - **Scope Type:** issue
-- **Revision:** 4
+- **Revision:** 5
 
 Every behavioural decision, type name, member set, vocabulary count, bound, cardinality, scenario name, evidence field, and command in this plan is fixed here. Implement executes them and designs nothing. A required deviation returns to Plan.
+
+---
+
+## Revision 5 narrative
+
+Independent Verify rejected the implementation commit `61d3acf22a14be55ed9f7ae386739fd9366ece23` and returned this issue to Plan. Revision 5 repairs exactly the three verified defects it found and changes nothing else. **No acceptance criterion, no AC ID or order, no scope boundary, no outcome, no refusal class, no bound, no vocabulary count, no scenario identifier, no task identifier, no validation identifier, no architecture artifact ID or creation date, and no candidacy or conjunction element changes.** Every count in the ledger of section 8 stands: 22 ACs, 15 tasks, 20 validations, 66 scenarios, 18 refusal reasons, 20 source guards, 12 mutation classes, 13 declared bounds, 13 `SelectedReconcileSources` members, 18 episode phases, 15 episode rejection reasons, 3 outcomes, 2 absence proofs, 4 public states, and `+1 execution` with 7 nested members.
+
+**R5-1 (high) — a completed process-group enumeration that omits the candidate leader was accepted.** `apps/api/src/project-runtime-process.ts:459-495` refuses `group-scan-incomplete` only when `group.complete` is false, then proceeds straight to the listener lookup. Check 9 of section 1b and the core-component conjunction both require the enumeration to complete **and contain** the candidate, so a `{ complete: true, pids: [] }` or `{ complete: true, pids: [<forked member>] }` observation must refuse before any listener inode is read, and today it does not. The plan was under-specified rather than wrong: section 1c stated the membership conjunct in one clause of one sentence, the refusal-class gloss described only the completeness branch, and `S-17` declared the completeness input, which is the branch the delivered code already handles. Section 13a now fixes the leader-identifier owner, the exact comparison, the evaluation order, the refusal class, the expected primitive-call consequences, and the negative fixtures; `S-17` moves to the membership branch and the completeness branch keeps deterministic coverage at `V-2` and `V-6`, so the catalog stays at 66 rows and no vocabulary count moves.
+
+**R5-2 (high) — reconciliation readiness paced itself on a fallible awaited primitive.** `apps/api/src/project-runtime-manager.ts:1028` awaits `processDependencies.sleep(config.pollIntervalMs, signal)` inside the readiness poll loop. The accepted architecture requires every awaited host observation on a reconciliation path to be bounded, cancellable, and armed from the trusted synchronous `RuntimeDeadlineScheduler`, never from the fallible injectable `sleep`; section 4 stated the outer deadline precisely and left the poll gap unnamed, and revision 4 still described check 12 as polling "at `config.pollIntervalMs`". Section 13b now defines one module-local trusted delay built from the same scheduler, its clamp inside the enclosing readiness window, its cancellation and error semantics, the two distinct scheduler uses and how they stay apart, the two delivered `sleep` call sites that are deliberately preserved, and the mechanical guard plus the injected failing-`sleep` control that keep the regression out. No timer library, no new configuration member, no new bound, and no new public surface is introduced.
+
+**R5-3 (medium) — the documented privacy boundary contradicted the committed evidence.** `docs/api-restart-reconciliation.md:9` states that refusal reasons "never enter a browser-visible surface, HTTP body, or committed artifact", and `T-14` item 8 carried the same conflation into the plan, while the committed 66-row matrix intentionally records bounded `refusalReason` enum values for 19 projects and the evidence schema requires them. The ADR and the core-component were already right that finer classifications live in trusted in-process inspection and retained validation evidence; what was missing was that retained validation evidence includes committed artifacts. Section 13c states the two tiers once, the core-component amendment makes it explicit, and `T-14` and `V-19` are corrected so the documentation states the boundary at that granularity instead of over-claiming.
+
+**Architecture amended, narrowly.** `ADR-260815-api-restart-runtime-reconciliation` is amended for R5-2 only: the trusted-scheduling sentence now covers every bounded wait including a poll gap, one alternative row records why awaiting `sleep` is refused, and one neutral consequence records that non-reconciliation `sleep` uses are unchanged. `CORE-COMPONENT-260815-host-runtime-attribution-evidence` is amended for all three: the group-membership precondition becomes its own rule with its own refusal semantics and ordering, the bounded-observation rule extends to intermediate pauses, the disclosure rule states the two tiers, the refusal-class gloss names both sub-branches, and the enforcement paragraph gains three mechanical obligations. Both keep their identifiers and their 2026-08-15 creation dates. `DECISION-LOG.md` keeps decisions 1 … 294 byte-unchanged and appends 295 … 301.
+
+**Reopened for the Implement correction, in dependency order:** `T-2` (membership conjunct and its ordering), `T-3` (trusted poll gap and the manager-level refusal consequences), `T-9` (two extended source guards, the extended `M-9` fixtures, the amended `S-17` catalog entry), `T-10` (re-execute the matrix and regenerate the committed artifact), `T-14` (correct the privacy sentence and document both corrections), `T-15` (rerun the canonical gate and re-prove the preserved digests). `T-1`, `T-4`, `T-5`, `T-6`, `T-7`, `T-8`, `T-11`, `T-12`, and `T-13` stay completed and are not reopened: no contract vocabulary, admission rule, route category, web mirror, test-double migration, episode phase, audit rule, or recipe changes.
 
 ---
 
@@ -86,7 +102,7 @@ Counts, bounds, scenario identifiers, source guards, mutation classes, task depe
 ---
 
 ## ADRs Created
-- **ADR-260815-api-restart-runtime-reconciliation** — `project/architecture/ADR/ADR-260815-api-restart-runtime-reconciliation.md` (created 2026-08-15, Accepted). **Amended in place for revision 2 and again for revision 3**; its ID and creation date are preserved and no replacement artifact is created. Revision 3 records the candidacy-precedence consequence, the negative-control proof rule, and the evidence-authenticity rule; it changes no production behaviour.
+- **ADR-260815-api-restart-runtime-reconciliation** — `project/architecture/ADR/ADR-260815-api-restart-runtime-reconciliation.md` (created 2026-08-15, Accepted). **Amended in place for revision 2, again for revision 3, and again for revision 5**; its ID and creation date are preserved and no replacement artifact is created. Revision 3 records the candidacy-precedence consequence, the negative-control proof rule, and the evidence-authenticity rule; it changes no production behaviour. Revision 5 extends the trusted-scheduling rule to every bounded wait on a reconciliation path, including a readiness poll gap (section 13b).
 
 ## ADRs Amended
 - **ADR-260815-public-runtime-state-projection** — spends its explicit BL-019 deferral; adds the `reconciling` entry state and target and the four reconciliation events. **Revision 2 adds** the recorded adopted-liveness limitation: a `Running` projection for an adopted runtime is only as fresh as the last on-demand observation.
@@ -97,7 +113,7 @@ Counts, bounds, scenario identifiers, source guards, mutation classes, task depe
 - **Not amended, deliberately:** `ADR-260815-per-project-lifecycle-activation`. Project Home's admission rules, ownership, focus, and refresh cardinality are unchanged; the browser work in this issue is limited to mirroring three closed vocabularies, which that ADR does not govern.
 
 ## Core-Components Created
-- **CORE-COMPONENT-260815-host-runtime-attribution-evidence** — `project/architecture/core-components/CORE-COMPONENT-260815-host-runtime-attribution-evidence.md` (created 2026-08-15, Adopted). **Amended in place for revision 2 and again for revision 3**; its ID and creation date are preserved and no replacement artifact is created. Revision 3 adds the negative-control isolation rules and the executed-evidence rules to the component's definition and enforcement.
+- **CORE-COMPONENT-260815-host-runtime-attribution-evidence** — `project/architecture/core-components/CORE-COMPONENT-260815-host-runtime-attribution-evidence.md` (created 2026-08-15, Adopted). **Amended in place for revision 2, again for revision 3, again for revision 4, and again for revision 5**; its ID and creation date are preserved and no replacement artifact is created. Revision 3 adds the negative-control isolation rules and the executed-evidence rules to the component's definition and enforcement. Revision 5 adds the group-membership precondition and its refusal semantics, extends the bounded-observation rule to intermediate pauses, and states the two-tier disclosure boundary (sections 13a, 13b, 13c).
 
 ## Core-Components Amended
 - **CORE-COMPONENT-260808-runtime-lifecycle-error-handling** — eleven reconciliation rules (state, one-shot ownership, three outcomes, adoption boundary, bounds, admission, blocked refusal, shutdown, stale-observation guard). **Revision 2 adds two rules:** startup reconciliation is a required capability of the boundary, and an adopted runtime's death is corrected only on demand and must never be published as an automatic transition.
@@ -108,7 +124,7 @@ Counts, bounds, scenario identifiers, source guards, mutation classes, task depe
 - **Unchanged, deliberately:** `CORE-COMPONENT-260810-sqlite-persistence-lifecycle`. This issue adds no persisted field, table, migration, or API payload change; the four-field project contract is untouched.
 
 ## Decision Log
-`project/architecture/ADR/DECISION-LOG.md` retains its two artifact rows and decisions **237 through 271** unchanged, gained decisions **272 through 283** (12 records) for the revision-2 architecture changes, and gained decisions **284 through 291** (8 records) for the revision-3 amendments, and gains decisions **292 through 294** (3 records) for the revision-4 amendment. No historical decision record is rewritten, and no revision-2 or revision-3 decision is superseded by revision 4; the new records make the readiness-observation obligation project-keyed.
+`project/architecture/ADR/DECISION-LOG.md` retains its two artifact rows and decisions **237 through 271** unchanged, gained decisions **272 through 283** (12 records) for the revision-2 architecture changes, and gained decisions **284 through 291** (8 records) for the revision-3 amendments, gained decisions **292 through 294** (3 records) for the revision-4 amendment, and gains decisions **295 through 301** (7 records) for the revision-5 amendments — 5 from the core-component and 2 from the ADR. No historical decision record is rewritten, and no earlier decision is superseded by revision 5; the new records make the group-membership precondition, the trusted poll gap, and the two-tier disclosure boundary explicit.
 
 **In revision 4 the only amended architecture artifact is `CORE-COMPONENT-260815-host-runtime-attribution-evidence`**, whose revision-3 enforcement paragraph stated the ambiguous row-level readiness rule. `ADR-260815-api-restart-runtime-reconciliation` is deliberately left unchanged: its executed-evidence decision requires every settled value to be read back from the run and states no per-project readiness counter, so no global decision text is wrong.
 
@@ -202,7 +218,7 @@ Revision 1 defined candidacy as final-element equality alone, which made check `
 | 6 | The `--user-data-dir` basename's port segment equals the `--bind-addr` port, as the same integer | `/proc/<pid>/cmdline` | `port-mismatch` |
 | 7 | `argv.slice(2)` is byte-equal to `expected = buildRuntimeArgv(P.canonicalPath, port, buildRuntimeUserDataPath(deriveProjectOwnerToken(P.id), port))`, including length, order, and every flag | `/proc/<pid>/cmdline` | `argv-mismatch` |
 | 8 | Process-group id equals the pid | `/proc/<pid>/stat` field 5 | `not-group-leader` |
-| 9 | The bounded enumeration of that process group completes and contains the candidate pid | `/proc/*/stat` field 5 | `group-scan-incomplete` |
+| 9 | The bounded enumeration of that process group completes **and** contains the candidate pid — two conjuncts, both refusing by the same name (section 13a) | `/proc/*/stat` field 5 | `group-scan-incomplete` |
 | 10 | A loopback listening socket exists on that port | `/proc/net/tcp`, `/proc/net/tcp6` | `listener-absent` |
 | 11 | That socket's inode is held by an **exactly observed conforming member of that same process group** | `/proc/<member>/fd` | `listener-not-owned` |
 | 12 | The delivered readiness contract passes on `http://127.0.0.1:<port>/healthz/` — HTTP 200 with body `status` in `alive` or `expired` | delivered health adapter | `readiness-unconfirmed` |
@@ -231,7 +247,7 @@ resolveGroupListenerOwner(input: {
 
 Its rules are total and closed:
 
-- the group enumeration must complete and contain `groupLeaderPid`, else `group-scan-incomplete`;
+- the group enumeration must complete and contain the candidate leader, else `group-scan-incomplete`. This is **two** conjuncts, not one, and section 13a fixes which source owns the candidate leader identifier, the exact membership comparison, the evaluation order relative to the listener lookup, and the primitive-call consequences of the refusal;
 - a loopback LISTEN row for `port` must exist in `/proc/net/tcp` or `/proc/net/tcp6`, else `listener-absent`;
 - that row's inode must appear in the socket descriptors of **exactly one** conforming member of that group, else `listener-not-owned` — this covers an inode held by a pid outside the group, an inode held by a non-conforming member, an inode whose holder could not be observed at all, and an inode held by more than one observed member;
 - the owner may be the group leader **or** a forked member; the plan asserts neither, because the real host produces the forked-member case and a future build may produce either.
@@ -268,7 +284,9 @@ Reconciliation settles every registered project into exactly one of three outcom
 
 `RECONCILE_REFUSAL_REASONS` (**18**, frozen, in this declaration order, which is **not** the evaluation order given in section 1b): `ambiguous-candidates`, `launcher-unresolved`, `launcher-prefix-mismatch`, `argv-mismatch`, `canonical-path-mismatch`, `owner-token-mismatch`, `port-mismatch`, `uid-mismatch`, `not-group-leader`, `group-scan-incomplete`, `listener-absent`, `listener-not-owned`, `readiness-unconfirmed`, `identity-unstable`, `absence-unconfirmed`, `scan-incomplete`, `deadline-exceeded`, `manager-shutdown`.
 
-Revision 1 declared **16**. The delta is exact: `executable-mismatch` is **removed** because the delivered launcher makes an `argv[0] === config.executablePath` comparison impossible; `launcher-prefix-mismatch`, `launcher-unresolved`, and `group-scan-incomplete` are **added**. These are internal classifications: they appear in trusted in-process inspection and in retained validation evidence, and **never** in an HTTP body, a lifecycle event, or any browser-visible surface. The single public classification is the bounded failure category `reconcile-unconfirmed`.
+Revision 1 declared **16**. The delta is exact: `executable-mismatch` is **removed** because the delivered launcher makes an `argv[0] === config.executablePath` comparison impossible; `launcher-prefix-mismatch`, `launcher-unresolved`, and `group-scan-incomplete` are **added**. `group-scan-incomplete` names **both** sub-branches of check 9 — an enumeration of the candidate's own process group that did not complete, and one that completed without containing the candidate leader — and no class is added, split, or renamed for the second (section 13a).
+
+These are internal classifications: they appear in trusted in-process inspection and in retained validation evidence, **including the committed matrix and the designated episode**, and **never** in an HTTP body, a lifecycle event, or any browser-visible surface. The single public classification is the bounded failure category `reconcile-unconfirmed`. Section 13c states that two-tier boundary once, and it is the boundary the documentation must state.
 
 While a project is `reconciling` its public state is `Starting`. `PUBLIC_RUNTIME_STATES` stays at exactly **4**. `Running` is never reported from process existence alone: check 12 is mandatory.
 
@@ -335,7 +353,7 @@ Delivered bounds referenced and unchanged: `runtimeStopOverallBoundMs` 5,000; `r
 - The designated episode is the only artifact that claims the end-to-end ceiling, and it declares **15,000** with `originAt: 'api-process-spawn'`.
 - AC-3's "inconclusive at 15,000 ms" is satisfied strictly: an inconclusive project settles `Failed` at or before 11,000 ms internal, hence at or before 14,000 ms from the authoritative origin, and is reported by 15,000 ms.
 - AC-13 is measured against the **existing** 60,000 ms acquisition ceiling and needs no new ceiling: a healthy acquisition across the boundary costs at most 11,000 ms of settlement plus one 1,000 ms reuse health check, and an inconclusive one at most 11,000 ms. AC-9's "later normal workbench acquisition" begins after settlement and is measured against 60,000 ms; AC-9's eight-acquisition absent-boundary case, which must still launch, is the only user of 71,000 ms.
-- `RuntimeDeadlineScheduler.now()` and `scheduleDeadline()` arm every reconciliation deadline. `processDependencies.sleep` is never used on a reconciliation path. All allowances are validated as positive safe integers through the delivered `checkedRuntimeBound` guard, exactly like their delivered siblings.
+- `RuntimeDeadlineScheduler.now()` and `scheduleDeadline()` arm every reconciliation deadline **and every reconciliation poll gap**; `processDependencies.sleep` is never awaited on a reconciliation path, and section 13b fixes the delay helper, its clamp, its cancellation semantics, and the two scheduler uses that must not be confused with one another. All allowances are validated as positive safe integers through the delivered `checkedRuntimeBound` guard, exactly like their delivered siblings. `config.pollIntervalMs` remains the delivered 50 ms poll interval and is **not** promoted to a declared BL-019 bound, so `BL019_DECLARED_BOUNDS` stays at 13 entries.
 
 ### 5. Adopted runtimes and liveness: the recorded limitation (revision 2)
 
@@ -445,6 +463,21 @@ Revision 2 adds one clarification that the evidence validator enforces: the `run
 | tasks / validations / AC IDs | 15 / 20 / 22 | **15 / 20 / 22** | unchanged |
 | episode phases / rejection reasons | 18 / 15 | **18 / 15** | unchanged |
 
+**Revision 5 delta, exactly.** Revision 5 changes **no count anywhere in this plan**. It changes the body of two source guards, the fixture set of one mutation class, the declared input and name of one scenario, one task item of documentation content, and one production helper that is module-local by construction.
+
+| Item | Revision 4 | Revision 5 | Why |
+|---|---:|---:|---|
+| `RECONCILE_REFUSAL_REASONS` | 18 | **18** | `group-scan-incomplete` names both sub-branches of check 9; no class is added or split (13a) |
+| source-guard codes | 20 | **20** | `reconcile-listener-group-scoped` and `reconcile-deadline-trusted-scheduler` are extended in place (13a, 13b) |
+| matrix mutation classes | 12 | **12** | `M-9` gains one fixture; no class is added (13a) |
+| `BL019_SCENARIOS` | 66 | **66** | `S-17` changes its declared input and name only (13a) |
+| `BL019_DECLARED_BOUNDS` | 13 | **13** | the poll gap declares no bound and `config.pollIntervalMs` is not promoted (13b) |
+| `ProjectRuntimeConfig` / `ProjectRuntimeManager` / `RuntimeProcessDependencies` / `RuntimeAttributionPrimitives` members | 17 / 15 / 6 / 7 | **17 / 15 / 6 / 7** | `awaitTrustedReconciliationDelay` is module-local and exported nowhere (13b) |
+| `SelectedReconcileSources` members | 13 | **13** | both extended guards read sources already declared |
+| `RuntimeReconcileEvidenceRow` members / `execution` nested members | +1 / 7 | **+1 / 7** | the schema was already correct |
+| episode phases / rejection reasons | 18 / 15 | **18 / 15** | the designated episode is unchanged |
+| tasks / validations / AC IDs | 15 / 20 / 22 | **15 / 20 / 22** | six tasks reopen; none is added, removed, or renumbered |
+
 `BL019_DECLARED_BOUNDS`, enumerated exactly (**13**): `reconcileScanAllowanceMs` 2,000; `reconcileAttributionAllowanceMs` 1,000; `reconcileReadinessBoundMs` 7,000; `reconcileSettlementAllowanceMs` 1,000; `reconcileStartupHeadroomMs` 3,000; `reconcileResponseAllowanceMs` 1,000; `reconciliationOverallBoundMs` 11,000; `reconciliationStartupControlBoundMs` 4,000; `reconciliationEndToEndBoundMs` 15,000; `workbenchAcquisitionBoundMs` 60,000; `acquisitionAcrossReconciliationBoundMs` 71,000; `runtimeStopOverallBoundMs` 5,000; `runtimeRestartOverallBoundMs(config, false)` 66,000.
 
 Fixed safe messages (no path, port, pid, command, or host detail) — unchanged from revision 1:
@@ -530,7 +563,7 @@ Every one of the 66 rows is produced by invoking a real `ProjectRuntimeManager`,
 | Recorded settlement for project `P` | Where `P`'s evaluation stopped | `probeHealthByProject[P]` |
 |---|---|---|
 | `adopted` | check 12 satisfied, then check 13 satisfied | `>= 1` |
-| `unresolved` / `readiness-unconfirmed` | check 12 attempted and never satisfied inside `reconcileReadinessBoundMs` | `>= 1`, and typically far more, because check 12 polls at `config.pollIntervalMs` |
+| `unresolved` / `readiness-unconfirmed` | check 12 attempted and never satisfied inside `reconcileReadinessBoundMs` | `>= 1`, and typically far more, because check 12 re-attempts across trusted-scheduler poll gaps of at most `config.pollIntervalMs` (section 13b) |
 | `unresolved` / `identity-unstable` | check 13, which the order reaches only after check 12 | `>= 1` |
 | `unresolved` / `launcher-unresolved`, `ambiguous-candidates`, `uid-mismatch`, `launcher-prefix-mismatch`, `canonical-path-mismatch`, `owner-token-mismatch`, `port-mismatch`, `argv-mismatch`, `not-group-leader`, `group-scan-incomplete`, `listener-absent`, `listener-not-owned` | checks 0 … 11, every one of them strictly before readiness | exactly `0` |
 | `absent` / `no-candidate-complete-scan` | no candidate existed, so no conjunction ran for `P` | exactly `0` |
@@ -540,7 +573,7 @@ Every one of the 66 rows is produced by invoking a real `ProjectRuntimeManager`,
 
 The three unconstrained families are unconstrained **by class only**, and that is deliberate: the evaluation order genuinely does not determine whether the interruption landed before or after check 12, and a rule that pretended otherwise would make a legal execution unrecordable — the exact failure being repaired. They are not unconstrained in substance, because each count is still an observed ledger value keyed to its own project: no peer's probe can be attributed to them, and their presence can never relax the exact `0` another project on the same row must record.
 
-**Aggregation, when a project is observed more than once.** `probeHealthByProject` counts only the readiness observations issued by the reconciliation pass the row's own `inspection` record was captured from — the **witnessed pass** — so the per-project rule stays exact for a row that constructs several managers. Within that pass a project's count is the sum over every candidate and readiness observation its evaluation issued, including every poll attempt inside `reconcileReadinessBoundMs`; there is no upper bound, because check 12 polls. A row with `managerInstances > 1` (`S-27`, `S-55`, `S-56`) accumulates its earlier passes' readiness observations in `primitiveCalls.probeHealth` alone, which is exactly why the sum relation is an inequality there and an equality on a single-pass row with no declared action.
+**Aggregation, when a project is observed more than once.** `probeHealthByProject` counts only the readiness observations issued by the reconciliation pass the row's own `inspection` record was captured from — the **witnessed pass** — so the per-project rule stays exact for a row that constructs several managers. Within that pass a project's count is the sum over every candidate and readiness observation its evaluation issued, including every poll attempt inside `reconcileReadinessBoundMs`; there is no upper bound, because check 12 re-attempts across trusted-scheduler poll gaps (section 13b). A row with `managerInstances > 1` (`S-27`, `S-55`, `S-56`) accumulates its earlier passes' readiness observations in `primitiveCalls.probeHealth` alone, which is exactly why the sum relation is an inequality there and an equality on a single-pass row with no declared action.
 
 **Attribution, from the injected primitive call ledger only.** Every health-adapter call the injected dependency receives is appended to the ledger with the loopback authority it was asked to probe and the manager instance that issued it. A ledger entry is counted in `probeHealthByProject[P]` when its manager instance is the witnessed pass's **and** its authority is the declared authority of the candidate the scenario injected for `P`. Both are observed values — a recorded call argument and a declared scenario input — so no outcome, refusal class, public state, or other expectation participates in the count, and `reconcile-matrix-observed-rows` keeps every such literal out of the fixture module. Two fail-closed rules keep the attribution honest rather than convenient: an entry from the witnessed pass whose authority matches injected candidates of **more than one** registered project fails the row as `probe-unattributable` instead of being assigned by guess; and an entry whose authority is a port the injected allocator issued to a launched runtime is a start-path probe, is excluded from every project's map, and is counted only in the aggregate.
 
@@ -567,6 +600,88 @@ This rule is the load-bearing one: each project's count is an emergent consequen
 #### 12c. Control isolation is enforced on observed evidence
 
 The episode validator additionally rejects, by name: `control-subepisode-missing`; `control-not-sole-candidate` (an observed candidate count other than 1 for a control's registered project); `control-settlement-mismatch` (a public settlement other than `Failed` with `reconcile-unconfirmed`, or an observed refusal reason other than the declared one); `control-signalled` (`signalsSent > 0`, or an observed liveness or identity change before its own teardown); `control-not-cleared-before-main-episode` (a control residual class that is not a completed-probe zero, or a clearance recorded at or after `P1`); `main-episode-control-candidate-bearing` (a coexisting control whose observed `pathMarker` or `tokenMarker` is non-null); and `phase-order-mismatch` (a `phaseOrder` other than the eighteen declared phases in their declared order).
+
+### 13. Revision 5 corrections, decided
+
+Three verified defects are repaired here and nowhere else. Each subsection is complete: Implement executes it and designs nothing.
+
+#### 13a. Check 9 is two conjuncts, and both refuse before the listener is read
+
+**What is wrong.** `resolveGroupListenerOwner` in `apps/api/src/project-runtime-process.ts` refuses `group-scan-incomplete` on `!group.complete` and then calls `readLoopbackListenerInode`. A `{ complete: true, pids: [] }` observation, and a `{ complete: true, pids: [<forked member>] }` observation that omits the candidate leader, both reach the listener lookup and can only be refused later — or, if a conforming member happens to hold the inode, not refused at all. Check 9 of section 1b and the core-component conjunction require the enumeration to complete **and contain** the candidate.
+
+**Which source owns the candidate leader identifier.** The attribution boundary that already proved leadership owns it: the manager passes its attributed candidate root pid as the helper's leader argument, after check 8 has proven `candidateIdentity.processGroupId === candidate.pid`. The delivered parameter is named `processGroupId` and carries exactly that value; **it is not renamed**, because the candidate leader's pid and its process-group id are the same integer by check 8 and a rename would be churn. The helper must never derive, default, re-read, or infer the leader identifier from `readProcessGroupMemberPids`' result: that result is the set under test, never the authority for what it is tested against.
+
+**The exact membership comparison.** `group.pids.includes(input.processGroupId)` — strict numeric identity against the enumerated member pids, which the primitive already returns as parsed integers. Forbidden: string coercion of either side, re-parsing a member entry, a prefix or substring test, a cardinality test, and any inference that a non-empty member set implies membership.
+
+**Evaluation order inside the helper, fixed and total.**
+
+| # | Step | On failure |
+|---|---|---|
+| 1 | `primitives.readProcessGroupMemberPids(processGroupId, signal)` | — |
+| 2 | `group.complete` is `true` | `group-scan-incomplete` |
+| 3 | `group.pids.includes(processGroupId)` is `true` | `group-scan-incomplete` |
+| 4 | `primitives.readLoopbackListenerInode(port, signal)` returns an inode | `listener-absent` |
+| 5 | exactly one conforming member holds that inode | `listener-not-owned` |
+
+Steps 2 and 3 are adjacent, and no listener, file-descriptor, identity, argument-vector, or health primitive may be called between step 1 and a step-3 refusal. Nothing else in the helper changes: the conforming-member definition, the `listener-absent` and `listener-not-owned` semantics, and the leader-or-forked-member rule are exactly as fixed in section 1c.
+
+**Refusal class.** `group-scan-incomplete`, for both sub-branches. `RECONCILE_REFUSAL_REASONS` stays at **18**; no class is added, split, renamed, or reordered, and the declaration order of section 2 is unchanged. Its meaning, stated once for every artifact: *the bounded enumeration of the candidate's own process group did not complete, or completed without containing the candidate leader.*
+
+**Expected consequences of the refusal, which the evidence must show.** For the refused project, within that pass: `readLoopbackListenerInode` **0** calls; `readProcessSocketInodes` **0** calls; no further identity or argument-vector read for that candidate; `probeHealth` **0** calls, hence `probeHealthByProject[P] === 0` under the unchanged section-12a class rule, which already lists `group-scan-incomplete` in the exactly-zero family; `listenerAttributed: 0`; `listenerOwner: null`; `launches: 0`; `signalsSent: 0`; `outcome: 'unresolved'`; `publicState: 'Failed'`; `publicFailureCategory: 'reconcile-unconfirmed'`; and the delivered two-event record (`requested`, then `failed`).
+
+**Mechanical enforcement, by extension rather than addition.** The existing source guard `reconcile-listener-group-scoped` is extended — the guard count stays **20** and no code is renamed. Over the helper's own region of `sources.process`, sliced from `export async function resolveGroupListenerOwner` to `async function runBoundedPrimitive`, it additionally requires that the region contains `group.pids.includes(input.processGroupId)`, that its index is greater than the index of `readProcessGroupMemberPids(`, and that its index is less than the index of `primitives.readLoopbackListenerInode(`. Its negative controls are a region with the membership test removed and a region with the membership test moved after the inode lookup. The existing mutation class `M-9` is extended with one fixture rather than a new class — the count stays **12** — rejecting a project recorded with `refusalReason: 'group-scan-incomplete'` together with `listenerAttributed: 1` or a non-null `listenerOwner`.
+
+**Deterministic coverage, with the catalog unchanged at 66 rows.** `S-17` moves to the branch the delivered code accepts: its injected `readProcessGroupMemberPids` returns `{ complete: true, pids: [<one forked member>] }`, omitting the candidate leader, and its name becomes *Process-group enumeration completes without the candidate leader*. The enumeration-did-not-complete branch keeps deterministic coverage where it already had it — `V-2`, at the helper layer, and `V-6`, at the manager layer — so both branches stay separately provable and the vocabulary coverage table is unchanged, because `S-17` still carries `group-scan-incomplete`. No scenario is added, removed, renumbered, or re-bounded; `S-17` keeps `boundMs: 11000` and its `AC-10, AC-12` mapping. Its observable row members are unchanged in value, so the committed artifact changes only in that row's `name` and in whatever the injected input makes of the recorded counters.
+
+#### 13b. Reconciliation pacing is trusted scheduling, never an awaited fallible primitive
+
+**What is wrong.** `probeCandidateReadiness` in `apps/api/src/project-runtime-manager.ts` awaits `processDependencies.sleep(config.pollIntervalMs, signal)` between health attempts. `sleep` is the fallible injectable primitive the architecture excludes from reconciliation: it can reject, it can be substituted, and it paces a window whose bound it does not own, so readiness pacing stops being provable from the trusted clock.
+
+**The two uses of the trusted scheduler, kept apart.** They are different in owner, duration, and effect, and no artifact may conflate them.
+
+| Use | Owner | Duration | Effect when it fires | Cancelled by |
+|---|---|---|---|---|
+| readiness **window deadline** | `runReconciliationBounded({ milliseconds: config.reconcileReadinessBoundMs, … })`, one per readiness observation | **7,000 ms** at defaults | aborts the inner controller, so the readiness observation is abandoned and the project settles by the reason its enclosing window declares | the bounded helper's existing `finally` |
+| readiness **poll gap** | `awaitTrustedReconciliationDelay`, one per gap between two health attempts | at most `config.pollIntervalMs` (**50 ms** delivered), clamped as below | resolves the gap so the loop re-checks its signal and re-attempts | its own handle, and the window's abort |
+
+The poll gap never becomes a bound: it declares nothing, is not a member of `BL019_DECLARED_BOUNDS` (**13**, unchanged), and cannot extend the 7,000 ms window it runs inside.
+
+**The delay helper, fixed.**
+
+```
+awaitTrustedReconciliationDelay(milliseconds: number, signal: AbortSignal): Promise<void>
+```
+
+- Module-local to `apps/api/src/project-runtime-manager.ts`, declared beside `runReconciliationBounded`. It is not exported, not a `ProjectRuntimeManager` member (**15**, unchanged), not a `ProjectRuntimeConfig` member (**17**, unchanged), and not a `RuntimeProcessDependencies` member (**6**, unchanged).
+- Resolves immediately when `signal.aborted` is already true on entry.
+- Otherwise arms `deadlineScheduler.scheduleDeadline(Math.max(0, milliseconds), resolve)` and one `once: true` `'abort'` listener that resolves the same promise.
+- Never rejects, never throws, and returns nothing, so no caller can read a value out of a pause.
+- Cancels the scheduled handle and removes the abort listener on every exit path, so a callback delivered after cancellation resolves nothing, records nothing, and mutates nothing.
+- Performs no observation of its own: no probe, no read, no write, no state transition. Late resolution is therefore inert by construction, on top of the section-3 and section-7 compare-and-set guards.
+
+**The clamp, computed on the same monotonic clock.** `probeCandidateReadiness` captures `readinessDeadlineAt = deadlineScheduler.now() + config.reconcileReadinessBoundMs` immediately before it calls `runReconciliationBounded` for readiness — the same instant, on the same clock, from which that helper arms its window — and each gap awaits `awaitTrustedReconciliationDelay(Math.max(0, Math.min(config.pollIntervalMs, readinessDeadlineAt - deadlineScheduler.now())), signal)`. A gap therefore never outlives its window even before the window's abort reaches it, and no new configuration member, no second clock, and no derived bound is introduced.
+
+**Loop semantics, unchanged except for the primitive.** The `while (!signal.aborted)` loop, the delivered `/healthz/` verdict test, `config.healthAttemptTimeoutMs` per attempt, and the enclosing bounded helper are all as delivered. After each gap the loop re-checks `signal.aborted` and issues **no** further health probe once aborted. An abort during a gap resolves the gap, exits the loop, and returns `{ completed: false }` from the bounded helper, which settles the project by its enclosing reason — `deadline-exceeded` or `manager-shutdown` — and never as `adopted`, never as `absent`, and never from a readiness verdict that was not read.
+
+**No timer library and no new public surface.** `setTimeout`, `setInterval`, `timers/promises`, and any new dependency are forbidden on reconciliation paths; the trusted scheduler's delivered default implementation already owns the single host timer. `config.pollIntervalMs` is reused exactly as delivered.
+
+**Preserved uses of `processDependencies.sleep`, which must not change.** Exactly two delivered call sites keep it: launched-runtime readiness polling in `apps/api/src/project-runtime-process.ts`, and the selected-Stop overall bound inside `stop` in `apps/api/src/project-runtime-manager.ts`. Reconciliation paths — installation, discovery, attribution, readiness, the identity re-read, the absence audit, settlement, the deadline, and shutdown — contain none.
+
+**Mechanical enforcement, by extension rather than addition.** The existing source guard `reconcile-deadline-trusted-scheduler` is extended — the guard count stays **20**. It slices the reconciliation region of `sources.manager` from `const runReconciliationBounded` to `const stop = async` and additionally requires that the region contains **zero** occurrences of `processDependencies.sleep(`, `setTimeout(`, and `setInterval(`, and that it contains both `const awaitTrustedReconciliationDelay` and a `deadlineScheduler.scheduleDeadline(` call inside that helper. The end anchor is `const stop = async` precisely so the delivered selected-Stop `sleep` stays legal and unguarded. Its negative controls are a region that awaits `processDependencies.sleep(`, and a region whose delay helper is armed from anything other than the scheduler. No mutation class changes, because the defect is a source property rather than an artifact property.
+
+**Deterministic proof that the fallible primitive cannot participate.** `V-7` and `V-16` inject a `sleep` implementation that fails when invoked, then run the readiness-polling scenarios to settlement on the injected scheduler and clock. A reconciliation that depended on `sleep` cannot settle under that control, and the polling rows (`S-21` above all) still settle exactly as catalogued, entirely on injected time. No real sleep, no retry, and no wall-clock wait enters the matrix.
+
+#### 13c. The disclosure boundary has two tiers, and the documentation must state both
+
+**What is wrong.** `docs/api-restart-reconciliation.md:9` places refusal reasons in one sentence with raw identities, ports, argv, installation paths, socket inodes, environment values, and raw errors, and says none of them enters "a browser-visible surface, HTTP body, or committed artifact". `T-14` item 8 carried the same conflation. The committed 66-row matrix records bounded `refusalReason` enum values by design, the evidence schema requires them, `M-3` rejects a wrong or missing one, and the ADR and core-component both permit them in trusted inspection and retained validation evidence. The documentation therefore contradicts the delivered artifact and the accepted architecture.
+
+**Tier 1 — public surfaces: browser-visible surfaces, HTTP bodies, and lifecycle events.** Only the delivered opaque project token, the four public states, and the bounded public categories `reconcile-unconfirmed`, `runtime_reconcile_in_progress`, `runtime_reconcile_unresolved`, and `workbench_reconcile_unconfirmed`. **No refusal reason, ever.**
+
+**Tier 2 — trusted in-process inspection and retained validation evidence, explicitly including the committed matrix and the designated episode.** Bounded enum names — the 18 refusal reasons, the 3 outcomes, the 2 absence proofs — together with opaque tokens, counts, and elapsed measurements. This is where the internal classification legitimately exists, and it is why section 11 step 10 witnesses a refusal class from `inspectReconciliation()` rather than from a public surface.
+
+**Neither tier, ever.** Raw canonical paths, argument vectors, executable and installation paths, process identifiers, process-start times, ports, loopback authorities, socket inodes, environment values, credentials, terminal or source content, stacks, and raw errors. The privacy scan of section 12 and mutation class `M-8` already enforce exactly this list over every declared source and over the committed artifact, and neither changes.
+
+**What must change.** `T-14` item 8 is rewritten to state the two tiers at that granularity, `docs/api-restart-reconciliation.md` is corrected in the same words, and `V-19` gains an assertion that the documented boundary matches the committed artifact rather than over-claiming. No vocabulary, schema, validator, guard, or mutation class changes, because the artifact was already right and only the prose was wrong.
 
 ---
 
@@ -603,23 +718,25 @@ Every AC maps to implementation tasks, validation, and expected evidence. Task I
 
 ## Implementation Tasks (dependency order)
 
-| Task | Title | Depends on | Revision 2 | Revision 3 |
-|---|---|---|---|---|
-| T-1 | Runtime contract: reconciling state, four events, categories, vocabularies, six allowances, five bounds | — | changed | unchanged |
-| T-2 | Host attribution primitives, installed-runtime identity, group listener ownership, adopted handle, survivorship-safe child stderr | T-1 | changed | changed (V-4 control isolation only; no product change) |
-| T-3 | Manager reconciliation: install, discover, attribute, settle, bound, inspect, shut down | T-1, T-2 | changed | unchanged |
-| T-4 | Manager admission: acquisition await, blocked refusal, Stop and Restart pre-acceptance | T-3 | unchanged in substance | unchanged |
-| T-5 | Application wiring: one required reconciliation before routes, explicit startup failure | T-3, T-4 | changed | unchanged |
-| T-6 | Routes: two Stop categories, two Restart categories, exhaustive proxy failure table | T-1, T-4 | unchanged | unchanged |
-| T-7 | Web mirrors: three closed vocabularies, notices, status maps | T-6 | unchanged | unchanged |
-| T-8 | Migrate every typed `ProjectRuntimeManager` test double to the required member | T-1, T-3 | **new** | unchanged |
-| T-9 | Evidence contract and validator: catalog, schema, source guards, mutation classes | T-1..T-7 | changed | **changed** (execution witness, generation authenticity, control isolation, 18 phases) |
-| T-10 | Deterministic 66-scenario matrix and artifact emission, executed against production paths | T-9 | changed | **changed** (section 12a) |
-| T-11 | Designated real API-restart episode with an isolated control subepisode and real compiled-API generations | T-5, T-10 | changed | **changed** (sections 11, 12b) |
-| T-12 | Independent residual audit command | T-2, T-11 | changed | **changed** (audits both subepisodes and generation authenticity) |
-| T-13 | Root justfile recipes, canonical gate wiring, prettier ignore | T-10, T-11, T-12 | unchanged | unchanged |
-| T-14 | Application documentation maintenance | T-1..T-13 | changed | **changed** (validation-structure topics only) |
-| T-15 | Full canonical gate and prior-evidence byte preservation | all | unchanged | unchanged |
+| Task | Title | Depends on | Revision 2 | Revision 3 | Revision 5 |
+|---|---|---|---|---|---|
+| T-1 | Runtime contract: reconciling state, four events, categories, vocabularies, six allowances, five bounds | — | changed | unchanged | completed, not reopened |
+| T-2 | Host attribution primitives, installed-runtime identity, group listener ownership, adopted handle, survivorship-safe child stderr | T-1 | changed | changed (V-4 control isolation only; no product change) | **reopened** (13a) |
+| T-3 | Manager reconciliation: install, discover, attribute, settle, bound, inspect, shut down | T-1, T-2 | changed | unchanged | **reopened** (13b, and 13a's manager-side consequences) |
+| T-4 | Manager admission: acquisition await, blocked refusal, Stop and Restart pre-acceptance | T-3 | unchanged in substance | unchanged | completed, not reopened |
+| T-5 | Application wiring: one required reconciliation before routes, explicit startup failure | T-3, T-4 | changed | unchanged | completed, not reopened |
+| T-6 | Routes: two Stop categories, two Restart categories, exhaustive proxy failure table | T-1, T-4 | unchanged | unchanged | completed, not reopened |
+| T-7 | Web mirrors: three closed vocabularies, notices, status maps | T-6 | unchanged | unchanged | completed, not reopened |
+| T-8 | Migrate every typed `ProjectRuntimeManager` test double to the required member | T-1, T-3 | **new** | unchanged | completed, not reopened |
+| T-9 | Evidence contract and validator: catalog, schema, source guards, mutation classes | T-1..T-7 | changed | **changed** (execution witness, generation authenticity, control isolation, 18 phases) | **reopened** (two guards extended, `M-9` fixture, `S-17` entry) |
+| T-10 | Deterministic 66-scenario matrix and artifact emission, executed against production paths | T-9 | changed | **changed** (section 12a) | **reopened** (re-execute, regenerate artifact) |
+| T-11 | Designated real API-restart episode with an isolated control subepisode and real compiled-API generations | T-5, T-10 | changed | **changed** (sections 11, 12b) | completed, not reopened |
+| T-12 | Independent residual audit command | T-2, T-11 | changed | **changed** (audits both subepisodes and generation authenticity) | completed, not reopened |
+| T-13 | Root justfile recipes, canonical gate wiring, prettier ignore | T-10, T-11, T-12 | unchanged | unchanged | completed, not reopened |
+| T-14 | Application documentation maintenance | T-1..T-13 | changed | **changed** (validation-structure topics only) | **reopened** (13c, plus the two behavioural corrections) |
+| T-15 | Full canonical gate and prior-evidence byte preservation | all | unchanged | unchanged | **reopened** (rerun the gate, re-prove the digests) |
+
+**Revision-5 correction order.** The six reopened tasks run in exactly this dependency order and no other: **T-2 -> T-3 -> T-9 -> T-10 -> T-14 -> T-15.** `T-3` consumes `T-2`'s corrected helper; `T-9` guards the shape both produce and carries the amended `S-17` catalog entry; `T-10` re-executes the matrix against the corrected code and regenerates the committed artifact; `T-14` documents the settled behaviour and repairs the privacy sentence; `T-15` reruns the canonical gate last. The nine tasks not reopened remain accurately completed, because all three corrections leave their delivered surfaces untouched.
 
 ---
 
@@ -655,3 +772,11 @@ Each item is a claim Implement may rely on. Items 1 to 13 were re-checked agains
 20. **The readiness witness is total and inhabitable on every row.** `probeHealthByProject` is defined for every one of the 66 rows: `{}` on the zero-project row and one key per project elsewhere, with each key's total fixed by that project's own recorded class. Every mixed row has a legal shape — `S-28`, `S-29`, `S-30`, `S-31`, `S-47`, `S-53`, and `S-57` are each resolved explicitly in section 12a — and no row can be required to record both `0` and `>= 1` in one place. The three indeterminate families (`candidate-audit-triple-absent`/`absence-unconfirmed`, `deadline-exceeded`, and `manager-shutdown`/`unsettled`) are unconstrained by class because the evaluation order truly does not determine where the interruption landed; constraining them would have replaced one uninhabitable rule with another.
 21. **The witness cannot be typed and cannot hide a peer's probe.** Each count is attributed from the injected primitive call ledger by observed call authority and observed manager instance, never from an outcome, refusal class, or public state; `reconcile-matrix-observed-rows` already forbids those literals in the fixture module; an ambiguous attribution fails the row as `probe-unattributable` rather than being guessed; and a start-path probe is excluded from every project's map and counted only in the aggregate. Because the map is keyed per project, an illegal readiness probe issued for a project the predicate refused at check 3 raises **that project's** count above `0` and is rejected, whatever its peers recorded.
 22. **The correction is contained.** Only the nested members of `execution` change. The top-level row still gains exactly `+1 execution`; the 20 source guards, 12 mutation classes, 66 scenarios, 18 refusal reasons, 13 bounds, 18 phases, 15 episode rejection reasons, 15 tasks, 20 validations, and 22 AC IDs are untouched; `M-12` keeps its identity and gains a total, project-keyed body; and the only amended architecture artifact is the core-component whose enforcement paragraph carried the row-level wording.
+
+**Revision 5 adds these claims.**
+
+23. **Check 9's second conjunct is specified where it is executed.** Section 13a fixes the owner of the candidate leader identifier (the attribution boundary, never the enumeration under test), the comparison (`group.pids.includes(input.processGroupId)`, strict numeric identity), the position (adjacent to the completeness test, strictly before the listening-socket lookup and before any descriptor or readiness observation), the single refusal class (`group-scan-incomplete`, still one of eighteen), and the observable consequences (zero listener, descriptor, and readiness calls; `probeHealthByProject[P] === 0`; `listenerAttributed: 0`; `listenerOwner: null`). Both sub-branches keep deterministic proof: the membership branch at `S-17` and `V-6`, the completeness branch at `V-2` and `V-6`, and the ordering at the extended `reconcile-listener-group-scoped` guard with its two negative controls.
+24. **No reconciliation path can await a fallible primitive, and the two scheduler uses cannot be confused.** Section 13b names the readiness window deadline (7,000 ms, armed once per readiness observation by `runReconciliationBounded`) and the poll gap (at most 50 ms, armed by `awaitTrustedReconciliationDelay` and clamped by `readinessDeadlineAt`) as distinct uses with distinct owners, and neither declares a bound, so `BL019_DECLARED_BOUNDS` stays at thirteen. The helper is module-local, never rejects, resolves on abort, cancels its handle on every exit path, and observes nothing, so a late resolution is inert. The extended `reconcile-deadline-trusted-scheduler` guard bans `processDependencies.sleep(`, `setTimeout(`, and `setInterval(` from the reconciliation region while leaving the delivered selected-Stop `sleep` legal, and `V-7` and `V-16` prove participation is impossible by injecting a `sleep` that fails when invoked. The matrix stays hermetic: injected clock, injected scheduler, no real sleep, no retry.
+25. **The privacy contract is one boundary stated in two tiers.** Section 13c fixes bounded enum classifications in trusted inspection and retained validation evidence — the committed matrix and the designated episode included — and the raw-value list in neither tier. That is what the committed artifact already does for its refused projects, what `M-3` and `M-8` already enforce, and what `T-14` and `V-19` now require the documentation to state. No schema, validator, guard, or mutation class changes.
+26. **Counts and history reconcile.** Every count named in section 8 is identical to revision 4, and the revision-5 delta table is entirely "unchanged" by design. Decisions 1 … 294 are byte-unchanged and 295 … 301 are appended. Both architecture artifacts keep their identifiers and their 2026-08-15 creation dates. The 22 AC IDs, their issue order, and the full coverage mapping are untouched; the corrections attach to the AC-10, AC-12, AC-18, and AC-20 evidence already claimed through `S-17`, `V-2`, `V-6`, `V-7`, `V-15`, `V-16`, and `V-19`.
+27. **Unresolved blockers:** none. All three Verify findings are repaired from the delivered source, the committed artifact, and the accepted architecture, and this revision changed no product code, test, application documentation, justfile recipe, evidence artifact, or implementation record.

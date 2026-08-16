@@ -461,6 +461,8 @@ export async function resolveGroupListenerOwner(input: {
     input.signal
   )
   if (!group.complete) return listenerRefusal('group-scan-incomplete')
+  if (!group.pids.includes(input.processGroupId))
+    return listenerRefusal('group-scan-incomplete')
   const listenerInode = await primitives.readLoopbackListenerInode(
     input.port,
     input.signal

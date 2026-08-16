@@ -1758,7 +1758,7 @@
     },
     {
       "id": "S-17",
-      "name": "Process-group enumeration does not complete",
+      "name": "Process-group enumeration completes without the candidate leader",
       "acceptanceCriteria": [
         "AC-10",
         "AC-12"
@@ -2270,10 +2270,10 @@
           "readProcessGroupMemberPids": 2,
           "readLoopbackListenerInode": 2,
           "readProcessSocketInodes": 4,
-          "probeHealth": 1
+          "probeHealth": 140
         },
         "probeHealthByProject": {
-          "bl019-project-22721cc736862a12": 1
+          "bl019-project-22721cc736862a12": 140
         },
         "projectionCalls": 2,
         "eventSinkWrites": 2,
@@ -5778,10 +5778,10 @@
           "readProcessGroupMemberPids": 2,
           "readLoopbackListenerInode": 2,
           "readProcessSocketInodes": 4,
-          "probeHealth": 1
+          "probeHealth": 140
         },
         "probeHealthByProject": {
-          "bl019-project-835353e475dd57f2": 1
+          "bl019-project-835353e475dd57f2": 140
         },
         "projectionCalls": 2,
         "eventSinkWrites": 2,

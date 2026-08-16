@@ -66,7 +66,7 @@ const NAMES: Readonly<Record<Bl019Scenario, string>> = Object.freeze({
   'S-14': 'An argument flag is altered while specific checks pass',
   'S-15': 'Candidate is owned by a different uid',
   'S-16': 'Candidate is not its own process-group leader',
-  'S-17': 'Process-group enumeration does not complete',
+  'S-17': 'Process-group enumeration completes without the candidate leader',
   'S-18': 'No loopback listener exists on the declared port',
   'S-19': 'Listener inode held by a process outside the group',
   'S-20': 'Listener inode held by a non-conforming group member',
@@ -324,6 +324,7 @@ class InjectedClock implements RuntimeDeadlineScheduler {
   private value = 1
   private readonly scheduled: {
     readonly milliseconds: number
+    readonly dueAt: number
     readonly callback: () => void
     active: boolean
   }[] = []
@@ -334,13 +335,31 @@ class InjectedClock implements RuntimeDeadlineScheduler {
 
   advance(milliseconds: number): void {
     this.value += milliseconds
+    this.fireDue()
   }
 
   scheduleDeadline(milliseconds: number, callback: () => void): () => void {
-    const item = { milliseconds, callback, active: true }
+    const item = {
+      milliseconds,
+      dueAt: this.value + milliseconds,
+      callback,
+      active: true,
+    }
     this.scheduled.push(item)
+    if (milliseconds <= PROJECT_RUNTIME_DEFAULTS.pollIntervalMs)
+      queueMicrotask(() => {
+        if (item.active) this.advance(Math.max(0, item.dueAt - this.value))
+      })
     return () => {
       item.active = false
+    }
+  }
+
+  private fireDue(): void {
+    for (const item of this.scheduled) {
+      if (!item.active || item.dueAt > this.value) continue
+      item.active = false
+      item.callback()
     }
   }
 
@@ -349,9 +368,7 @@ class InjectedClock implements RuntimeDeadlineScheduler {
       (candidate) => candidate.active && candidate.milliseconds === milliseconds
     )
     if (item !== undefined) {
-      item.active = false
-      this.value += milliseconds
-      item.callback()
+      this.advance(Math.max(0, item.dueAt - this.value))
     }
   }
 }
@@ -562,7 +579,7 @@ const attributionFor = (input: {
       .find((entry) => entry.pid === processGroupId)
     if (candidate === undefined) return { pids: [], complete: true }
     if (candidate.profile === Profile.GroupIncomplete)
-      return { pids: [], complete: false }
+      return { pids: [candidate.memberPid], complete: true }
     if (
       candidate.profile === Profile.AuditAbsent &&
       !input.ledger.hosts.get(candidate.pid)?.alive
@@ -751,12 +768,9 @@ const dependenciesFor = (input: {
   attribution: attributionFor(input),
   termination: terminationFor(input.ledger, input.clock),
   now: () => input.clock.now(),
-  sleep: async (milliseconds, signal) => {
-    const config = createProjectRuntimeConfig()
-    if (milliseconds === config.pollIntervalMs) {
-      if (!signal.aborted) input.clock.fire(config.reconcileReadinessBoundMs)
-      return
-    }
+  sleep: async (_milliseconds, signal) => {
+    if (!input.ledger.actionsStarted)
+      throw new Error('Reconciliation must not use process sleep')
     await new Promise<void>((resolve) => {
       if (signal.aborted) {
         resolve()
@@ -780,7 +794,7 @@ const waitForObservation = async (
   pending: boolean,
   scenario: Bl019Scenario
 ): Promise<void> => {
-  for (let attempt = 0; attempt < 100; attempt += 1) {
+  for (let attempt = 0; attempt < 1_000; attempt += 1) {
     const phase = inspectManager(manager).phase
     if (pending ? phase === 'observing' : phase === 'settled') return
     await Promise.resolve()

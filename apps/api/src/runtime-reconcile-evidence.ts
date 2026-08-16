@@ -417,10 +417,38 @@ export function validateSelectedReconcileSource(
   const requireCode = (code: Bl019SourceGuardCode, accepted: boolean): void => {
     if (!accepted) violations.push(code)
   }
+  const reconciliationStart = sources.manager.indexOf(
+    'const runReconciliationBounded'
+  )
+  const reconciliationEnd = sources.manager.indexOf(
+    'const stop = async',
+    reconciliationStart
+  )
+  const reconciliationRegion = sources.manager.slice(
+    reconciliationStart,
+    reconciliationEnd
+  )
+  const delayHelperStart = reconciliationRegion.indexOf(
+    'const awaitTrustedReconciliationDelay'
+  )
+  const delayHelperEnd = reconciliationRegion.indexOf(
+    'const inspectReconciliation',
+    delayHelperStart
+  )
+  const delayHelperRegion = reconciliationRegion.slice(
+    delayHelperStart,
+    delayHelperEnd
+  )
   requireCode(
     'reconcile-deadline-trusted-scheduler',
-    sources.manager.includes('deadlineScheduler.scheduleDeadline') &&
-      !sources.manager.includes('setInterval(')
+    reconciliationStart >= 0 &&
+      reconciliationEnd > reconciliationStart &&
+      delayHelperStart >= 0 &&
+      delayHelperEnd > delayHelperStart &&
+      delayHelperRegion.includes('deadlineScheduler.scheduleDeadline(') &&
+      !reconciliationRegion.includes('processDependencies.sleep(') &&
+      !reconciliationRegion.includes('setTimeout(') &&
+      !reconciliationRegion.includes('setInterval(')
   )
   requireCode(
     'reconcile-bound-origin-arithmetic',
@@ -454,12 +482,37 @@ export function validateSelectedReconcileSource(
     sources.manager.includes('const second = await runReconciliationBounded') &&
       sources.manager.includes('first.ownerIdentity.startTime')
   )
+  const groupHelperStart = sources.process.indexOf(
+    'export async function resolveGroupListenerOwner'
+  )
+  const groupHelperEnd = sources.process.indexOf(
+    'async function runBoundedPrimitive',
+    groupHelperStart
+  )
+  const groupHelperRegion = sources.process.slice(
+    groupHelperStart,
+    groupHelperEnd
+  )
+  const groupEnumeration = groupHelperRegion.indexOf(
+    'readProcessGroupMemberPids('
+  )
+  const groupMembership = groupHelperRegion.indexOf(
+    'group.pids.includes(input.processGroupId)'
+  )
+  const listenerLookup = groupHelperRegion.indexOf(
+    'primitives.readLoopbackListenerInode('
+  )
   requireCode(
     'reconcile-listener-group-scoped',
-    sources.process.includes('resolveGroupListenerOwner') &&
-      sources.process.includes('readProcessGroupMemberPids') &&
+    groupHelperStart >= 0 &&
+      groupHelperEnd > groupHelperStart &&
+      groupEnumeration >= 0 &&
+      groupMembership > groupEnumeration &&
+      listenerLookup > groupMembership &&
       sources.manager.includes('processGroupId: input.candidate.pid') &&
-      !sources.process.includes('readProcessSocketInodes(input.processGroupId')
+      !groupHelperRegion.includes(
+        'readProcessSocketInodes(input.processGroupId'
+      )
   )
   requireCode(
     'reconcile-absence-requires-complete-scan',

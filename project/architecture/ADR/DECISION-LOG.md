@@ -337,3 +337,10 @@ Short, actionable statements derived from ADRs and core-components. More than on
 | 292 | Record readiness-observation evidence per project, never in one shared row-level counter | CORE-COMPONENT-260815-host-runtime-attribution-evidence | 2026-08-15 |
 | 293 | Require zero readiness observations for a project refused before readiness and at least one for a project that reached it | CORE-COMPONENT-260815-host-runtime-attribution-evidence | 2026-08-15 |
 | 294 | Attribute every readiness observation from the primitive call ledger and fail closed when attribution is ambiguous | CORE-COMPONENT-260815-host-runtime-attribution-evidence | 2026-08-15 |
+| 295 | Refuse `group-scan-incomplete` when a completed process-group enumeration omits the candidate leader | CORE-COMPONENT-260815-host-runtime-attribution-evidence | 2026-08-16 |
+| 296 | Take the candidate leader identifier from the attribution boundary, never from the enumeration being tested | CORE-COMPONENT-260815-host-runtime-attribution-evidence | 2026-08-16 |
+| 297 | Test process-group membership before any listener, descriptor, or readiness observation for that candidate | CORE-COMPONENT-260815-host-runtime-attribution-evidence | 2026-08-16 |
+| 298 | Arm every reconciliation poll gap from the trusted scheduler and prohibit awaiting a fallible delay primitive | ADR-260815-api-restart-runtime-reconciliation | 2026-08-16 |
+| 299 | Clamp every reconciliation poll gap inside its enclosing bounded window and abandon it on cancellation | ADR-260815-api-restart-runtime-reconciliation | 2026-08-16 |
+| 300 | Permit bounded refusal-reason enum names in trusted inspection and in committed validation evidence | CORE-COMPONENT-260815-host-runtime-attribution-evidence | 2026-08-16 |
+| 301 | Prohibit raw host values from every public surface and from every committed evidence artifact | CORE-COMPONENT-260815-host-runtime-attribution-evidence | 2026-08-16 |

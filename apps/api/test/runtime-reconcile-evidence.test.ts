@@ -248,6 +248,86 @@ describe('BL-019 reconciliation evidence source guards', () => {
         validateSelectedReconcileSource(corruptions[code]).violations
       ).toContain(code)
   })
+
+  it('rejects revision-five membership and trusted-delay negative controls', async () => {
+    const baseline = await sources()
+    const withoutMembership: SelectedReconcileSources = {
+      ...baseline,
+      process: baseline.process.replace(
+        'group.pids.includes(input.processGroupId)',
+        'group.pids.some(() => true)'
+      ),
+    }
+    const membershipAfterListener: SelectedReconcileSources = {
+      ...baseline,
+      process: baseline.process
+        .replace(
+          'group.pids.includes(input.processGroupId)',
+          'group.pids.some(() => true)'
+        )
+        .replace(
+          '  if (listenerInode === null)',
+          '  void group.pids.includes(input.processGroupId)\n  if (listenerInode === null)'
+        ),
+    }
+    for (const corrupted of [withoutMembership, membershipAfterListener])
+      expect(validateSelectedReconcileSource(corrupted).violations).toContain(
+        'reconcile-listener-group-scoped'
+      )
+
+    const delayCorruptions: readonly SelectedReconcileSources[] = [
+      {
+        ...baseline,
+        manager: baseline.manager.replace(
+          'await awaitTrustedReconciliationDelay(',
+          'await processDependencies.sleep('
+        ),
+      },
+      {
+        ...baseline,
+        manager: baseline.manager.replace(
+          'cancelDeadline = deadlineScheduler.scheduleDeadline(',
+          'cancelDeadline = setTimeout('
+        ),
+      },
+      {
+        ...baseline,
+        manager: baseline.manager.replace(
+          'cancelDeadline = deadlineScheduler.scheduleDeadline(',
+          'cancelDeadline = setInterval('
+        ),
+      },
+      {
+        ...baseline,
+        manager: baseline.manager.replaceAll(
+          'awaitTrustedReconciliationDelay',
+          'untrustedReconciliationDelay'
+        ),
+      },
+      {
+        ...baseline,
+        manager: baseline.manager.replace(
+          '\n      cancelDeadline = deadlineScheduler.scheduleDeadline(',
+          '\n      cancelDeadline = untrustedDeadline('
+        ),
+      },
+    ]
+    for (const corrupted of delayCorruptions)
+      expect(validateSelectedReconcileSource(corrupted).violations).toContain(
+        'reconcile-deadline-trusted-scheduler'
+      )
+
+    const selectedStopOnly = baseline.manager.slice(
+      baseline.manager.indexOf('const stop = async')
+    )
+    expect(selectedStopOnly).toContain(
+      '.sleep(runtimeStopOverallBoundMs(config), deadlineController.signal)'
+    )
+    expect(validateSelectedReconcileSource(baseline)).toEqual({
+      accepted: true,
+      violations: [],
+    })
+  })
 })
 
 describe('BL-019 matrix mutation classes', () => {
@@ -309,6 +389,20 @@ describe('BL-019 matrix mutation classes', () => {
       })
       expect(validateRuntimeReconcileMatrix(mutated).violations).toContain(
         'M-12'
+      )
+    }
+  })
+
+  it('rejects listener attribution on a group-scan-incomplete project as M-9', async () => {
+    const baseline = await buildRuntimeReconcileMatrix()
+    const corruptions: readonly Partial<RuntimeReconcileEvidenceProject>[] = [
+      { listenerAttributed: 1 },
+      { listenerOwner: 'group-member' },
+    ]
+    for (const changes of corruptions) {
+      const mutated = mutateProject(baseline, 'S-17', changes)
+      expect(validateRuntimeReconcileMatrix(mutated).violations).toContain(
+        'M-9'
       )
     }
   })

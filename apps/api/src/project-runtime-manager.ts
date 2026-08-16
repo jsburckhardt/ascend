@@ -725,6 +725,34 @@ export function createProjectRuntimeManager(
     }
   }
 
+  const awaitTrustedReconciliationDelay = (
+    milliseconds: number,
+    signal: AbortSignal
+  ): Promise<void> => {
+    if (signal.aborted) return Promise.resolve()
+    return new Promise<void>((resolve) => {
+      let settled = false
+      let cancelDeadline = (): void => undefined
+      const settle = (): void => {
+        if (settled) return
+        settled = true
+        cancelDeadline()
+        signal.removeEventListener('abort', settle)
+        resolve()
+      }
+      signal.addEventListener('abort', settle, { once: true })
+      if (signal.aborted) {
+        settle()
+        return
+      }
+      cancelDeadline = deadlineScheduler.scheduleDeadline(
+        Math.max(0, milliseconds),
+        settle
+      )
+      if (settled) cancelDeadline()
+    })
+  }
+
   const inspectReconciliation = (): ReconciliationInspection =>
     Object.freeze({
       phase: reconciliationPhase,
@@ -1004,6 +1032,8 @@ export function createProjectRuntimeManager(
     readonly entry: ReconcilingEntry
     readonly candidate: ReconcileCandidate
   }): Promise<boolean> => {
+    const readinessDeadlineAt =
+      deadlineScheduler.now() + config.reconcileReadinessBoundMs
     const result = await runReconciliationBounded({
       milliseconds: config.reconcileReadinessBoundMs,
       parentSignal: input.entry.controller.signal,
@@ -1025,7 +1055,17 @@ export function createProjectRuntimeManager(
           ) {
             return true
           }
-          await processDependencies.sleep(config.pollIntervalMs, signal)
+          await awaitTrustedReconciliationDelay(
+            Math.max(
+              0,
+              Math.min(
+                config.pollIntervalMs,
+                readinessDeadlineAt - deadlineScheduler.now()
+              )
+            ),
+            signal
+          )
+          if (signal.aborted) return false
         }
         return false
       },

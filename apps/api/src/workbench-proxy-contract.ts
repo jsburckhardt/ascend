@@ -10,6 +10,15 @@ export const WORKBENCH_SHUTDOWN_TIMEOUT_MS = 5_000 as const
 export const WORKBENCH_PROJECT_ID_PATTERN =
   /^[A-Za-z0-9][A-Za-z0-9._~-]{0,127}$/u
 
+export interface WorkbenchProxyAudit {
+  readonly shuttingDown: boolean
+  readonly pendingOperations: number
+  readonly upstreamHttpRequests: number
+  readonly upstreamHttpResponses: number
+  readonly rawSockets: number
+  readonly webSockets: number
+}
+
 type ProxiedRuntimeFailureCategory = Exclude<
   RuntimeFailureCategory,
   'manager-shutdown'
@@ -183,6 +192,18 @@ export const WORKBENCH_FAILURE_TABLE: readonly WorkbenchPublicFailure[] =
       503,
       'workbench_reconcile_unconfirmed',
       'Workbench recovery could not be confirmed.'
+    ),
+    row(
+      'runtime:runtime-closing',
+      503,
+      'workbench_closing',
+      'Workbench is being closed.'
+    ),
+    row(
+      'runtime:close-release-unconfirmed',
+      503,
+      'workbench_release_unconfirmed',
+      'Ascend could not confirm the workbench release during close.'
     ),
     row(
       'upstream-dns',

@@ -16,6 +16,7 @@ async function createE2eLibrary(): Promise<ProjectLibrary> {
   const library = await createApplicationProjectLibrary()
   return {
     create: (input) => library.create(input),
+    findById: (id) => library.findById(id),
     async list() {
       if (delayList) {
         await new Promise((resolve) => setTimeout(resolve, 150))

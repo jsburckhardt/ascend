@@ -82,7 +82,7 @@ Typed path bodies contain exactly `{"error":{"category":"...","field":"path"}}`;
 
 Use root commands only: `just verify-open-project`, targeted `just verify-focused <test-path>`, and `just verify`. The API matrix uses a refused-default database and isolated SQLite paths and disposable content fixtures, compares manifests, closes every handle, removes only the selected database and `-wal`, `-shm`, `-journal` sidecars, and proves no residue. Browser success evidence is generated as `test-results/bl-008/open-project/episode.json`. The executed cleanup scenarios are retained separately in `cleanup-matrix.json`: startup and assertion failures, episode timeout, interrupted graceful shutdown, and a surviving descendant each report independent process-group, listener, database/sidecar, and fixture counts. The survivor deliberately reports `ownerCleanupPassed: false` before exact-PID test teardown and `teardownClean: true` afterward.
 
-Open now navigates by encoded stable ID to the browser workbench shell. Picker, scanning, clone/import, running or failed workbench close, search, user sorting, tags, path mutation, Restart, and broader lifecycle controls remain later scope; BL-017 selected Stop is documented below.
+Open now navigates by encoded stable ID to the browser workbench shell. Picker, scanning, clone/import, search, user sorting, tags, and path mutation are not implemented here; BL-017 selected Stop, BL-018 selected Restart, and the BL-020 close of a running or failed project are documented below.
 
 
 ## DELETE project registration (BL-009)
@@ -93,7 +93,7 @@ ProjectLibrary.closeProject performs DELETE WHERE id RETURNING id in one explici
 
 ProjectCloseService receives only the metadata closeProject boundary. It imports no registration inspector, canonical project path, runtime manager, or project-filesystem API. Validation, unknown ID, success, rollback, ambiguity, retry, and repeated absence therefore cannot modify a project directory. The BL-009 manifest matrix executes Cancel, success, unknown, persistence failure, transport ambiguity with authoritative GET, same-ID retry, repeated already-absent close, and combined eight concurrent HTTP DELETE paths. Each retains complete before/after membership, bytes, modes, and nanosecond timestamps before test-only fixture cleanup.
 
-Validate with just verify-close-project and just verify. Controlled browser failure is injected only through test application construction; there is no product fault route. Test cleanup removes only its isolated database and -wal, -shm, -journal sidecars plus owned fixtures after integrity capture. Running or failed workbench close and Restart remain BL-020; this route supports stopped-project metadata only. Selected runtime Stop is a separate manager action that preserves registration.
+Validate with just verify-close-project and just verify. Controlled browser failure is injected only through test application construction; there is no product fault route. Test cleanup removes only its isolated database and -wal, -shm, -journal sidecars plus owned fixtures after integrity capture. Selected runtime Stop and Restart are separate manager actions that preserve registration. The same DELETE route now also closes a running or failed project through the runtime manager, as documented in the BL-020 section below; the persistence boundary described here is unchanged.
 
 
 Exact DELETE wire examples are:
@@ -135,7 +135,7 @@ The API contract for marked transport remains unchanged; the unmarked browser-do
 
 `ProjectRuntimeManager.stop({ projectId })` is the sole selected-runtime process owner. `POST /api/projects/{id}/runtime/stop` validates the decoded ID and empty action request, then delegates once. A confirmed release returns exactly HTTP 200 `{"id":"stable-id","outcome":"stopped"}`; repeating that Stop in the same manager returns `already-stopped`. A persisted project with no manager entry before reconciliation returns HTTP 409 `{"error":{"category":"runtime_not_managed"}}`; after API restart, proven absence returns `already-stopped`, while pending or unresolved reconciliation returns its distinct HTTP 409 category.
 
-The twelve route error categories and statuses are 400 `invalid_project_id` or `invalid_stop_request`; 404 `project_not_found`; 409 `runtime_not_managed`, `runtime_start_in_progress`, `runtime_restart_in_progress`, `runtime_failure_retained`, `runtime_reconcile_in_progress`, or `runtime_reconcile_unresolved`; 500 `runtime_stop_unconfirmed` or `runtime_stop_failed`; and 503 `runtime_manager_shutdown`. Error bodies contain exactly the category. Success contains exactly ID and outcome. No response carries state, release mode, audit, PID, process-start identity, process group, listener, port, canonical path, authority, or server message.
+The twelve route error categories and statuses are 400 `invalid_project_id` or `invalid_stop_request`; 404 `project_not_found`; 409 `runtime_not_managed`, `runtime_start_in_progress`, `runtime_restart_in_progress`, `runtime_failure_retained`, `runtime_reconcile_in_progress`, or `runtime_reconcile_unresolved`; 500 `runtime_stop_unconfirmed` or `runtime_stop_failed`; and 503 `runtime_manager_shutdown`. Since BL-020 a thirteenth stop route category exists: 409 `runtime_close_in_progress`, returned when a close claim already owns that project, from the manager rejection `rejected`/`close-in-progress`. Error bodies contain exactly the category. Success contains exactly ID and outcome. No response carries state, release mode, audit, PID, process-start identity, process group, listener, port, canonical path, authority, or server message.
 
 The manager uses internal `registered`, `starting`, `running`, `stopping`, `restarting`, and `failed` entries. It claims the exact running generation synchronously, joins concurrent same-project callers, and releases ownership only after an audit confirms the exact root identity, owned process group, and listener all absent. Graceful and force windows are measured on `performance.now()` from their respective confirmed delivered signals. Awaited identity, group, listener, and delay primitives are individually bounded and cancellable; an independent trusted native scheduler enforces the overall deadline if any hangs or ignores cancellation. Refused signals and signal faults are not recorded as delivered. An unconfirmed release remains Failed and retained for one non-concurrent shutdown-phase termination and audit.
 
@@ -153,4 +153,33 @@ One `restarting` entry spans confirmed release and replacement. Eight same-proje
 
 Restart emits only `runtime.restart.requested`, `runtime.restart.succeeded`, and `runtime.restart.failed`. Shutdown does not await a never-settling abandoned launch, reports unresolved admissions, and fails while admission or quarantine uncertainty remains. Use `just verify-runtime-restart`, `just proof-runtime-restart`, and `just proof-runtime-restart-residual-audit`.
 
-Restart adds no environment variable, SQLite/data/schema/API-payload migration, persisted runtime handle, deployment topology, daemon, or separate process.
+Restart adds no environment variable, SQLite/data/schema/API-payload migration, persisted runtime handle, deployment topology, daemon, or separate process. Since BL-020 a thirteenth restart route category exists: 409 `runtime_close_in_progress`, returned from the manager rejection `rejected`/`close-in-progress` while a close claim owns that project.
+
+## Selected project close (BL-020)
+
+`DELETE /api/projects/{id}` now also closes a project whose workbench is running or failed. The route keeps its decoded-ID validation and its single delegation, and the close service is recomposed rather than rewritten: it receives the metadata `closeProject` boundary plus three runtime-manager callables — an ownership probe, a close-claim entry point, and one `commitRemoval` callback constructed at exactly one place. The persistence boundary is unchanged, so `ProjectLibrary.closeProject` still performs `DELETE WHERE id RETURNING id` in one explicit transaction, and the durable removal is still the last step of the operation.
+
+The eleven route error categories, their statuses, and the manager result each maps are:
+
+| Manager result | Status | Category |
+|---|---|---|
+| `closed` | 200 | success body, no category |
+| invalid input | 400 | `invalid_project_id` |
+| `already-absent`, or a losing concurrent contender | 404 | `project_not_found` |
+| `start-in-progress` | 409 | `runtime_start_in_progress` |
+| `stop-in-progress` | 409 | `runtime_stop_in_progress` |
+| `restart-in-progress` | 409 | `runtime_restart_in_progress` |
+| `reconcile-in-progress` | 409 | `runtime_reconcile_in_progress` |
+| `reconcile-unresolved` | 409 | `runtime_reconcile_unresolved` |
+| `release-unconfirmed` | 500 | `runtime_release_unconfirmed` |
+| `ownership-cardinality-exceeded` | 500 | `runtime_close_ownership_unresolved` |
+| `removal-failed`, and unexpected route failure | 500 | `project_close_failed` |
+| `manager-shutdown` | 503 | `runtime_manager_shutdown` |
+
+The success body is unchanged from BL-009: exactly `{"id":"stable-id","disposition":"closed"}`. Failure bodies remain exactly `{"error":{"category":"<category>"}}` with no partial success, no runtime state, no release mode, no audit, and no PID, process-start identity, process group, listener, port, canonical path, authority, or server message. Structured success still uses `project.closed`, and its cardinality is exactly one record per completed close: eight concurrent DELETEs for one project produce one 200, seven 404s, and one `project.closed`; a rejected or already-absent close produces none. `req.url` redaction is unchanged, so encoded or decoded stable IDs never enter access or close records.
+
+A rejection is a pure refusal: it releases nothing, removes nothing, emits no lifecycle event, and leaves the registration and its four persisted fields byte-identical. A `500 runtime_release_unconfirmed` retains the registration and a `failed` entry classified `close-release-unconfirmed`; a `500 runtime_close_ownership_unresolved` attempted nothing at all; a `500 project_close_failed` means the runtime was released and only the removal failed, so a retry removes the registration. While a close claim is installed, `start` and `register` fail with the acquisition-only `runtime-closing` failure and the stop and restart routes return their new 409 `runtime_close_in_progress` row.
+
+No migration is required and none is possible to require: the same four persisted project fields are written by the same statements, no schema, index, trigger, column, or table changes, no new value is persisted, and no archive, soft delete, or product cleanup is introduced. The close keeps no persisted runtime handle, adds no environment variable or configuration default, and changes no deployment topology, process, port, service, or host requirement. The three internal close allowances are documented in [docs/project-runtime.md](../../docs/project-runtime.md); they are constants, not settings.
+
+Validate with `just verify-close-project`, `just verify-runtime-close`, `just proof-runtime-close`, `just proof-runtime-close-residual-audit`, and `just verify`. The committed artifacts are `project/work-items/45-bl-020-close-a-running-or-failed-project/implementation/evidence/close-matrix.json`, `designated-episode.json`, and `residual-audit.json`; host identities, measured timings, disposable fixtures, and the browser episode remain ignored under `test-results/bl-020/`. Every retained row carries opaque project tokens and bounded classifications — outcome, category, residual class, and confirmation clause names are recorded deliberately — and never a raw canonical path, argument vector, executable path, PID or start time, port or loopback authority, socket inode, environment value, credential, terminal or source content, stack, or raw error.

@@ -327,6 +327,13 @@ const ROUTE_RESPONSE_MARKER = structural(
 const ROUTE_REJECTION_MARKER = structural(
   'const STOP_REJECTION_STATUS = Object\\.freeze\\(\\{'
 )
+const INSTALL_ENTRY_MARKER = structural(
+  'const installEntry = \\( projectId: string, entry: ProjectRuntimeEntry, owner\\?: CloseClaim \\): boolean => \\{'
+)
+/** Counts the install sites that assert their helper result with the path's
+ * invariant error. Whitespace is tolerated exactly as `structural` tolerates
+ * it, so a formatter reflow of a long condition cannot disarm the count. */
+const INSTALL_ASSERTION = /if \(\s*!(?:installEntry|failEntry)\(/gu
 
 /** Removes nested arrow and function bodies so a span can be read for its own
  * synchronous control flow rather than for deferred work it merely constructs. */
@@ -370,18 +377,32 @@ function validateManagerSource(manager: string): readonly string[] {
   }
   if (
     countMatches(manager, /(?<!readonly )state: 'stopping',/gu) !== 1 ||
-    countMatches(stopBody, /entries\.set\(input\.projectId, stopping\)/gu) !== 1
+    countMatches(stopBody, /installEntry\(input\.projectId, stopping\)/gu) !== 1
   ) {
     violations.push('stopping-entry-install-count')
   }
-  if (countMatches(stopBody, /entries\.set\(/gu) !== 2)
+  // One entry-install authority. Counting raw mutation occurrences inside one
+  // operation is a lexical fingerprint of a single implementation rather than
+  // evidence of the invariant, so the claim is made structurally instead: the
+  // stop body performs no direct entry write at all and installs through the
+  // helper exactly twice, and the manager as a whole writes `entries` from
+  // exactly one place, inside `installEntry`.
+  const installEntryBody = bodyAfter(manager, INSTALL_ENTRY_MARKER)
+  if (
+    countMatches(stopBody, /entries\.set\(/gu) !== 0 ||
+    countMatches(stopBody, /installEntry\(/gu) !== 2 ||
+    countMatches(manager, /entries\.set\(/gu) !== 1 ||
+    installEntryBody === undefined ||
+    countMatches(installEntryBody, /entries\.set\(/gu) !== 1
+  ) {
     violations.push('stop-entry-mutation-count')
+  }
 
   const readIndex = stopBody.indexOf(
     'const current = entries.get(input.projectId)'
   )
   const installIndex = stopBody.indexOf(
-    'entries.set(input.projectId, stopping)'
+    'installEntry(input.projectId, stopping)'
   )
   if (readIndex < 0 || installIndex < 0 || installIndex < readIndex) {
     violations.push('claim-install-order')
@@ -417,7 +438,7 @@ function validateManagerSource(manager: string): readonly string[] {
   const recheckCount = countMatches(stopBody, recheck)
   const terminalInstalls = [
     stopBody.indexOf('failEntry('),
-    stopBody.indexOf('entries.set(stopping.projectId, {'),
+    stopBody.indexOf('installEntry(stopping.projectId, {'),
   ]
   if (recheckCount !== terminalInstalls.length)
     violations.push('settlement-recheck-count')
@@ -441,10 +462,19 @@ function validateManagerSource(manager: string): readonly string[] {
     )
       violations.push('settlement-recheck-suspension')
   }
+  // Every unrefusable-by-construction install asserts its helper result with the
+  // stop path's invariant error rather than discarding it, so the expected fault
+  // count is the recheck count plus one per asserted install. Both operands are
+  // read from the source, so the guard cannot drift from the code.
+  const installAssertionCount = countMatches(stopBody, INSTALL_ASSERTION)
+  const installCallCount =
+    countMatches(stopBody, /installEntry\(/gu) +
+    countMatches(stopBody, /failEntry\(/gu)
   if (
     !/throw new RuntimeStopInvariantError\(\)/u.test(stopBody) ||
+    installAssertionCount !== installCallCount ||
     countMatches(stopBody, /throw new RuntimeStopInvariantError\(\)/gu) !==
-      recheckCount
+      recheckCount + installAssertionCount
   ) {
     violations.push('settlement-invariant-fault')
   }
@@ -691,7 +721,7 @@ function validateRouteSource(route: string): readonly string[] {
     violations.push('route-category-list')
   } else if (
     countMatches(route.slice(categoriesStart, categoriesEnd), /'[a-z_]+'/gu) !==
-    12
+    13
   ) {
     violations.push('route-category-count')
   }

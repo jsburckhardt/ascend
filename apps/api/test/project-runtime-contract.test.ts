@@ -52,7 +52,7 @@ describe('project runtime contract', () => {
         'state',
       ].sort()
     )
-    expect(RUNTIME_FAILURE_CATEGORIES).toHaveLength(19)
+    expect(RUNTIME_FAILURE_CATEGORIES).toHaveLength(21)
     const filtered = new RuntimeFailure('spawn-error', {
       attemptCount: Number.NaN,
       signal: 'SIGNAL_NAME_LONGER_THAN_LIMIT',

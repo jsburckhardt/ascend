@@ -67,6 +67,9 @@ describe('BL-014 execution-backed navigation and reuse matrix', () => {
         running.set(projectId, snapshot)
         return snapshot
       }),
+      close: async () => {
+        throw new Error('session switching does not close projects')
+      },
       ownsSnapshot: (snapshot) => running.get(snapshot.projectId) === snapshot,
       inspect: (id) => running.get(id),
       inspectEntries: () => [],
@@ -87,6 +90,9 @@ describe('BL-014 execution-backed navigation and reuse matrix', () => {
         response.end(snapshot.stableRoute)
       },
       handleUpgrade: async () => undefined,
+      closeProject: async () => {
+        throw new Error('session switching does not close proxy sessions')
+      },
       shutdown: async () => proxy.audit(),
       audit: () => ({
         shuttingDown: false,

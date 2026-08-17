@@ -1,6 +1,7 @@
 import type { Project } from './project-persistence.js'
 import {
   PROJECT_RUNTIME_DEFAULTS,
+  RuntimeCloseInvariantError,
   RuntimeFailure,
   RuntimeRestartInvariantError,
   RuntimeStopInvariantError,
@@ -8,12 +9,15 @@ import {
   deriveProjectOwnerToken,
   publicRuntimeState,
   reconciliationOverallBoundMs,
+  runtimeCloseOverallBoundMs,
+  runtimeCloseReleaseBoundMs,
   runtimeRestartOverallBoundMs,
   runtimeRestartReleaseBoundMs,
   runtimeStopOverallBoundMs,
   serializeRuntimeEvent,
   stableProjectRoute,
   type PublicRuntimeReport,
+  type ProjectRuntimeCloseInput,
   type ProjectRuntimeConfig,
   type ReconcileAbsenceProof,
   type ReconcileRefusalReason,
@@ -21,6 +25,8 @@ import {
   type ReconciliationProjectInspection,
   type RestartAdmissionPhase,
   type RestartQuarantineAuditState,
+  type RuntimeCloseOutcome,
+  type RuntimeCloseRejectionCategory,
   type RuntimeEntryState,
   type RuntimeLifecycleEvent,
   type RuntimeRestartIdentity,
@@ -47,6 +53,7 @@ import {
   type RuntimeResourceAudit,
   type RuntimeTerminationAudit,
 } from './project-runtime-process.js'
+import type { WorkbenchProxyAudit } from './workbench-proxy-manager.js'
 
 export interface ProjectRuntimeStartInput {
   readonly projectId: string
@@ -118,6 +125,15 @@ export interface ProjectRuntimeEntryInspection {
   readonly waiterCount: number
 }
 
+export interface ProjectRuntimeCloseClaimInspection {
+  readonly projectId: string
+  readonly projectToken: string
+  readonly frozenOwnershipCardinality: number
+  readonly sweepUnits: number
+  readonly lateWork: number
+  readonly sealed: boolean
+}
+
 export interface ProjectRuntimeManagerAudit {
   readonly shuttingDown: boolean
   readonly entryCount: number
@@ -135,6 +151,11 @@ export interface ProjectRuntimeManagerAudit {
   readonly quarantinedOwnershipRecords?: number
   readonly quarantineCleanupRecords?: number
   readonly admissionResolutions?: number
+  readonly closeTasks?: number
+  readonly closeClaims?: readonly ProjectRuntimeCloseClaimInspection[]
+  readonly retiredProjects?: number
+  readonly lateCloseSettlements?: number
+  readonly refusedLateAcquisitions?: number
 }
 
 export interface ProjectRuntimeManager {
@@ -144,6 +165,7 @@ export interface ProjectRuntimeManager {
   start(input: ProjectRuntimeStartInput): Promise<RuntimeSnapshot>
   stop(input: { readonly projectId: string }): Promise<RuntimeStopOutcome>
   restart(input: { readonly projectId: string }): Promise<RuntimeRestartOutcome>
+  close(input: ProjectRuntimeCloseInput): Promise<RuntimeCloseOutcome>
   reportPublicStates(
     projectIds: readonly string[]
   ): readonly PublicRuntimeReport[]
@@ -232,6 +254,26 @@ type ProjectRuntimeEntry =
   | StoppingEntry
   | RestartingEntry
   | FailedEntry
+
+/** Exclusive per-project close claim. It is orthogonal to the entry it claims:
+ * the entry keeps its own state and keeps projecting truthfully while the claim
+ * is installed. `claimedEntry` is captured by reference — `undefined` included —
+ * inside the same synchronous section that installs the claim, so confirmation
+ * can compare generation identity rather than a state label. `sealed` closes the
+ * confirmation-to-removal window structurally: it is set by the last statement
+ * of the confirmation region and refuses every entry install for the subject,
+ * the owning close included, while durable removal is in flight. */
+interface CloseClaim {
+  readonly projectId: string
+  readonly controller: AbortController
+  readonly settlement: Promise<RuntimeCloseOutcome>
+  readonly claimedEntry: ProjectRuntimeEntry | undefined
+  installedRegisteredEntry: RegisteredEntry | undefined
+  frozenOwnershipCardinality: number
+  sweepUnits: number
+  lateWork: number
+  sealed: boolean
+}
 
 interface ReconcileCandidate {
   readonly pid: number
@@ -326,12 +368,17 @@ export function createProjectRuntimeManager(
   const quarantineCleanups = new Map<string, RuntimeTerminationAudit>()
   const quarantineTerminationAttempts = new Map<string, number>()
   const quarantineReclamations = new Map<string, Promise<void>>()
+  const closeClaims = new Map<string, CloseClaim>()
+  const closeTasks = new Set<Promise<RuntimeCloseOutcome>>()
+  const retiredProjects = new Set<string>()
   let admissionSequence = 0
   let admissionResolutions = 0
   let completionTaskSettlements = 0
   let backgroundTaskSettlements = 0
   let lateTerminationSettlements = 0
   let lateReplacementSettlements = 0
+  let lateCloseSettlements = 0
+  let refusedLateAcquisitions = 0
   let shutdownPromise: Promise<RuntimeShutdownResult> | undefined
   let shutdownResult: RuntimeShutdownResult | undefined
   let shuttingDown = false
@@ -352,12 +399,113 @@ export function createProjectRuntimeManager(
   const ownershipKey = (record: RuntimeOwnershipRecord): string =>
     [record.process.pid, record.process.processStartTime, record.port].join(':')
 
+  /** A settlement that arrives for a claimed or retired project is accounted,
+   * never applied: it installs nothing, emits nothing, records no cleanup, and
+   * makes the arriving work visible to the close confirmation predicate. */
+  const accountLateCloseSettlement = (projectId: string): void => {
+    lateCloseSettlements += 1
+    const claim = closeClaims.get(projectId)
+    if (claim !== undefined) claim.lateWork += 1
+  }
+
+  /** A reconciliation observation that arrives for a project a close already
+   * retired, or one a close currently claims, has no caller to settle: the
+   * reconciling entry it was observing is gone. It is still identity-bearing
+   * work that arrived late, so it is accounted exactly as every other stale
+   * settlement is — installing nothing, emitting nothing, recording no
+   * cleanup, and touching no other project. */
+  const accountLateReconciliationObservation = (projectId: string): void => {
+    if (retiredProjects.has(projectId) || closeClaims.has(projectId))
+      accountLateCloseSettlement(projectId)
+  }
+
+  const closeClaimFailure = (projectId: string): RuntimeFailure | undefined =>
+    closeClaims.has(projectId)
+      ? new RuntimeFailure('runtime-closing')
+      : undefined
+
+  /** A refusal raised before the caller installed an entry, registered or
+   * revived ownership, created a pending admission, minted a generation, or
+   * returned a snapshot created no identity-bearing state. It is the mechanism
+   * working, so it is counted for evidence only: it never raises `lateWork` and
+   * the confirmation predicate never reads this counter. */
+  const refuseAcquisition = <T>(refusal: T): T => {
+    refusedLateAcquisitions += 1
+    return refusal
+  }
+
+  /** The authorisation an install may present. A close's own claim authorises
+   * its rollback install only while that claim is unsealed: once the
+   * confirmation region seals it, durable removal is in flight and no entry may
+   * be installed behind it by any caller, the owning close included. */
+  const ownerAuthorises = (projectId: string, owner?: CloseClaim): boolean =>
+    owner !== undefined && closeClaims.get(projectId) === owner && !owner.sealed
+
+  /** Single refusal rule for every entry-installing and acquisition seam: a
+   * retired project is unknown, and a project claimed by another close is
+   * closing. `runtime-closing` is an acquisition failure only and is never
+   * installed as an entry failure category. */
+  const entryInstallRefusal = (
+    projectId: string,
+    owner?: CloseClaim
+  ): RuntimeFailure | undefined => {
+    if (retiredProjects.has(projectId))
+      return new RuntimeFailure('unknown-project')
+    if (ownerAuthorises(projectId, owner)) return undefined
+    return closeClaimFailure(projectId)
+  }
+
+  /** The only entry write in the manager. Every install consults the retirement
+   * set, the claim map, and the claim seal first. A refused install had already
+   * materialised the generation it was about to install, so it is
+   * identity-bearing late work: it accounts a late settlement, raises the
+   * claim's `lateWork`, and mutates nothing. */
+  const installEntry = (
+    projectId: string,
+    entry: ProjectRuntimeEntry,
+    owner?: CloseClaim
+  ): boolean => {
+    if (entryInstallRefusal(projectId, owner) !== undefined) {
+      accountLateCloseSettlement(projectId)
+      return false
+    }
+    entries.set(projectId, entry)
+    return true
+  }
+
+  /** Quarantine key for an identity that arrived while its project's claim was
+   * sealed. It is namespaced by project rather than by a replacement admission,
+   * because no admission exists on this path. */
+  const sealedCloseAdmissionId = (projectId: string): string =>
+    'close-seal:' + deriveProjectOwnerToken(projectId)
+
+  /** An exact `pid:processStartTime:port` identity reported after the sweep
+   * cardinality was frozen is identity-bearing late work. While the claim is
+   * sealed the identity must not enter the ownership index behind an in-flight
+   * removal, so it is quarantined instead: still reachable by the manager
+   * shutdown sweep, never orphaned, and never owned by a removed project. */
   const registerOwnership = (
     projectId: string,
     generation: symbol,
     record: RuntimeOwnershipRecord
   ): void => {
+    const claim = closeClaims.get(projectId)
+    if (claim?.sealed === true) {
+      const admissionId = sealedCloseAdmissionId(projectId)
+      quarantinedOwnership.set(restartQuarantineKey(admissionId, record), {
+        projectId,
+        restartGeneration: generation,
+        admissionId,
+        process: record.process,
+        port: record.port,
+        auditState: 'unaudited',
+      })
+      accountLateCloseSettlement(projectId)
+      return
+    }
     ownership.set(ownershipKey(record), { projectId, generation, ...record })
+    if (claim !== undefined || retiredProjects.has(projectId))
+      accountLateCloseSettlement(projectId)
   }
 
   const auditConfirmsAbsence = (audit: RuntimeResourceAudit): boolean =>
@@ -603,20 +751,35 @@ export function createProjectRuntimeManager(
     recordEvent(serializeRuntimeEvent(event))
   }
 
+  /** Phase 7. The stable project ID is never reissued, so the tombstone is a
+   * permanent refusal for every later install, acquisition, and settlement. */
+  const retireProject = (projectId: string): void => {
+    entries.delete(projectId)
+    cleanupOutcomes.delete(projectId)
+    retiredProjects.add(projectId)
+  }
+
   const register = (projectId: string, canonicalPath: string): void => {
     if (shuttingDown) throw new RuntimeFailure('manager-shutdown')
+    const refusal = entryInstallRefusal(projectId)
+    if (refusal !== undefined) throw refuseAcquisition(refusal)
     const current = entries.get(projectId)
     if (current !== undefined) {
       if (current.canonicalPath !== canonicalPath)
         throw new RuntimeFailure('canonical-path-invariant')
       return
     }
-    entries.set(projectId, {
-      state: 'registered',
-      projectId,
-      canonicalPath,
-      released: false,
-    })
+    // Unrefusable by construction: the refusal above is evaluated in this same
+    // synchronous section, so no claim, seal, or tombstone can appear between.
+    if (
+      !installEntry(projectId, {
+        state: 'registered',
+        projectId,
+        canonicalPath,
+        released: false,
+      })
+    )
+      throw new RuntimeCloseInvariantError()
   }
 
   const waitForStarting = (
@@ -667,18 +830,23 @@ export function createProjectRuntimeManager(
     snapshot: RuntimeSnapshot,
     failure: RuntimeFailure,
     startedAt: number,
-    pendingAdmissionId?: string
-  ): void => {
+    pendingAdmissionId?: string,
+    owner?: CloseClaim
+  ): boolean => {
     const elapsedMs = Math.max(0, now() - startedAt)
-    entries.set(projectId, {
-      state: 'failed',
+    return installEntry(
       projectId,
-      canonicalPath,
-      generation,
-      failure,
-      snapshot: freezeSnapshot({ ...snapshot, state: 'failed', elapsedMs }),
-      ...(pendingAdmissionId === undefined ? {} : { pendingAdmissionId }),
-    })
+      {
+        state: 'failed',
+        projectId,
+        canonicalPath,
+        generation,
+        failure,
+        snapshot: freezeSnapshot({ ...snapshot, state: 'failed', elapsedMs }),
+        ...(pendingAdmissionId === undefined ? {} : { pendingAdmissionId }),
+      },
+      owner
+    )
   }
 
   const runReconciliationBounded = async <T>(input: {
@@ -847,46 +1015,53 @@ export function createProjectRuntimeManager(
         input.entry.generation,
         input.ready
       )
-      entries.set(input.entry.projectId, adoptedEntry)
-      emit({
-        event: 'runtime.reconcile.succeeded',
-        projectId: input.entry.projectId,
-        from: 'reconciling',
-        to: 'running',
-        elapsedMs,
-      })
+      if (installEntry(input.entry.projectId, adoptedEntry)) {
+        emit({
+          event: 'runtime.reconcile.succeeded',
+          projectId: input.entry.projectId,
+          from: 'reconciling',
+          to: 'running',
+          elapsedMs,
+        })
+      }
     } else if (input.outcome === 'absent') {
-      entries.set(input.entry.projectId, {
-        state: 'registered',
-        projectId: input.entry.projectId,
-        canonicalPath: input.entry.canonicalPath,
-        released: true,
-      })
-      emit({
-        event: 'runtime.reconcile.absent',
-        projectId: input.entry.projectId,
-        from: 'reconciling',
-        to: 'stopped',
-        elapsedMs,
-      })
+      if (
+        installEntry(input.entry.projectId, {
+          state: 'registered',
+          projectId: input.entry.projectId,
+          canonicalPath: input.entry.canonicalPath,
+          released: true,
+        })
+      ) {
+        emit({
+          event: 'runtime.reconcile.absent',
+          projectId: input.entry.projectId,
+          from: 'reconciling',
+          to: 'stopped',
+          elapsedMs,
+        })
+      }
     } else {
       const failure = new RuntimeFailure('reconcile-unconfirmed')
-      failEntry(
-        input.entry.projectId,
-        input.entry.canonicalPath,
-        input.entry.generation,
-        input.entry.snapshot,
-        failure,
-        input.entry.snapshot.startedAt
-      )
-      emit({
-        event: 'runtime.reconcile.failed',
-        projectId: input.entry.projectId,
-        from: 'reconciling',
-        to: 'failed',
-        elapsedMs,
-        classification: failure.category,
-      })
+      if (
+        failEntry(
+          input.entry.projectId,
+          input.entry.canonicalPath,
+          input.entry.generation,
+          input.entry.snapshot,
+          failure,
+          input.entry.snapshot.startedAt
+        )
+      ) {
+        emit({
+          event: 'runtime.reconcile.failed',
+          projectId: input.entry.projectId,
+          from: 'reconciling',
+          to: 'failed',
+          elapsedMs,
+          classification: failure.category,
+        })
+      }
     }
     input.entry.settle()
     finishReconciliationIfSettled()
@@ -903,6 +1078,7 @@ export function createProjectRuntimeManager(
           outcome: 'unresolved',
           refusalReason,
         })
+      else accountLateReconciliationObservation(projectId)
     }
   }
 
@@ -1349,6 +1525,7 @@ export function createProjectRuntimeManager(
       reconciliationStartedAt = deadlineScheduler.now()
       const controller = new AbortController()
       reconciliationController = controller
+      const installedProjectIds: string[] = []
       for (const project of projects) {
         if (entries.has(project.id))
           throw new Error('Reconciliation entry installation invariant failed')
@@ -1370,16 +1547,20 @@ export function createProjectRuntimeManager(
           startedAt: now(),
           elapsedMs: 0,
         })
-        entries.set(project.id, {
-          state: 'reconciling',
-          projectId: project.id,
-          canonicalPath: project.canonicalPath,
-          generation,
-          snapshot,
-          controller,
-          settlement,
-          settle,
-        })
+        if (
+          !installEntry(project.id, {
+            state: 'reconciling',
+            projectId: project.id,
+            canonicalPath: project.canonicalPath,
+            generation,
+            snapshot,
+            controller,
+            settlement,
+            settle,
+          })
+        )
+          continue
+        installedProjectIds.push(project.id)
         reconciliationProjects.set(project.id, {
           projectToken: snapshot.ownerToken,
           outcome: null,
@@ -1395,6 +1576,7 @@ export function createProjectRuntimeManager(
           elapsedMs: 0,
         })
       }
+      reconciliationProjectOrder = Object.freeze([...installedProjectIds])
       reconciliationCancelDeadline = deadlineScheduler.scheduleDeadline(
         reconciliationOverallBoundMs(config),
         () => {
@@ -1443,6 +1625,20 @@ export function createProjectRuntimeManager(
         failure: new RuntimeFailure('manager-shutdown'),
       })
     }
+    // A retired project is unknown, and a claimed project belongs to the close
+    // that is releasing it: the settlement installs nothing and emits nothing.
+    // Only the retired case is late work — the claimed case is the close's own
+    // termination reporting back through the exit path it just triggered.
+    if (retiredProjects.has(entry.projectId)) {
+      lateCloseSettlements += 1
+      return Object.freeze({
+        claimed: false,
+        failure: new RuntimeFailure('unknown-project'),
+      })
+    }
+    const closing = closeClaimFailure(entry.projectId)
+    if (closing !== undefined)
+      return Object.freeze({ claimed: false, failure: closing })
     const installed = entries.get(entry.projectId)
     if (
       installed !== entry ||
@@ -1459,14 +1655,21 @@ export function createProjectRuntimeManager(
       })
     }
 
-    failEntry(
-      entry.projectId,
-      entry.canonicalPath,
-      entry.generation,
-      entry.snapshot,
-      failure,
-      entry.snapshot.startedAt
-    )
+    if (
+      !failEntry(
+        entry.projectId,
+        entry.canonicalPath,
+        entry.generation,
+        entry.snapshot,
+        failure,
+        entry.snapshot.startedAt
+      )
+    ) {
+      return Object.freeze({
+        claimed: false,
+        failure: entryInstallRefusal(entry.projectId) ?? failure,
+      })
+    }
     emit({
       event: 'runtime.health.changed',
       projectId: entry.projectId,
@@ -1531,6 +1734,22 @@ export function createProjectRuntimeManager(
         category: 'manager-shutdown',
       })
     }
+    if (retiredProjects.has(input.projectId)) {
+      const refused: RuntimeStopOutcome = Object.freeze({
+        outcome: 'rejected',
+        projectId: input.projectId,
+        category: 'not-registered',
+      })
+      return refuseAcquisition(refused)
+    }
+    if (closeClaims.has(input.projectId)) {
+      const refused: RuntimeStopOutcome = Object.freeze({
+        outcome: 'rejected',
+        projectId: input.projectId,
+        category: 'close-in-progress',
+      })
+      return refuseAcquisition(refused)
+    }
 
     const current = entries.get(input.projectId)
     if (current?.state === 'reconciling') {
@@ -1590,14 +1809,21 @@ export function createProjectRuntimeManager(
         throw new RuntimeStopInvariantError()
       }
       const failure = new RuntimeFailure('stop-unconfirmed')
-      failEntry(
-        stopping.projectId,
-        stopping.canonicalPath,
-        stopping.generation,
-        stopping.snapshot,
-        failure,
-        stopping.snapshot.startedAt
-      )
+      // Unrefusable by construction: the identity recheck above dominates this
+      // install with no suspension between them, and close admission refuses a
+      // `stopping` entry, so no claim or tombstone can exist here.
+      if (
+        !failEntry(
+          stopping.projectId,
+          stopping.canonicalPath,
+          stopping.generation,
+          stopping.snapshot,
+          failure,
+          stopping.snapshot.startedAt
+        )
+      ) {
+        throw new RuntimeStopInvariantError()
+      }
       emit({
         event: 'runtime.health.changed',
         projectId: stopping.projectId,
@@ -1657,12 +1883,16 @@ export function createProjectRuntimeManager(
             const record = ownership.get(key)
             if (record?.generation === stopping.generation)
               ownership.delete(key)
-            entries.set(stopping.projectId, {
-              state: 'registered',
-              projectId: stopping.projectId,
-              canonicalPath: stopping.canonicalPath,
-              released: true,
-            })
+            if (
+              !installEntry(stopping.projectId, {
+                state: 'registered',
+                projectId: stopping.projectId,
+                canonicalPath: stopping.canonicalPath,
+                released: true,
+              })
+            ) {
+              throw new RuntimeStopInvariantError()
+            }
             emit({
               event: 'runtime.stop.succeeded',
               projectId: stopping.projectId,
@@ -1705,7 +1935,10 @@ export function createProjectRuntimeManager(
       snapshot: current.snapshot,
       operation,
     }
-    entries.set(input.projectId, stopping)
+    // Unrefusable by construction: the close-claim and retirement refusals above
+    // are evaluated in this same synchronous section as the entry read.
+    if (!installEntry(input.projectId, stopping))
+      throw new RuntimeStopInvariantError()
     emit({
       event: 'runtime.stop.requested',
       projectId: input.projectId,
@@ -1745,6 +1978,22 @@ export function createProjectRuntimeManager(
         projectId: input.projectId,
         category: 'manager-shutdown',
       })
+    }
+    if (retiredProjects.has(input.projectId)) {
+      const refused: RuntimeRestartOutcome = Object.freeze({
+        outcome: 'rejected',
+        projectId: input.projectId,
+        category: 'no-managed-runtime',
+      })
+      return refuseAcquisition(refused)
+    }
+    if (closeClaims.has(input.projectId)) {
+      const refused: RuntimeRestartOutcome = Object.freeze({
+        outcome: 'rejected',
+        projectId: input.projectId,
+        category: 'close-in-progress',
+      })
+      return refuseAcquisition(refused)
     }
 
     const current = entries.get(input.projectId)
@@ -1867,15 +2116,22 @@ export function createProjectRuntimeManager(
       if (entries.get(input.projectId) !== restarting)
         throw new RuntimeRestartInvariantError()
       operationSettled = true
-      failEntry(
-        input.projectId,
-        current.canonicalPath,
-        failureGeneration,
-        snapshot,
-        failure,
-        startedAt,
-        pendingAdmissionId
-      )
+      // Unrefusable by construction: the identity recheck above dominates this
+      // install with no suspension between them, and close admission refuses a
+      // `restarting` entry.
+      if (
+        !failEntry(
+          input.projectId,
+          current.canonicalPath,
+          failureGeneration,
+          snapshot,
+          failure,
+          startedAt,
+          pendingAdmissionId
+        )
+      ) {
+        throw new RuntimeRestartInvariantError()
+      }
       emit({
         event: 'runtime.restart.failed',
         projectId: input.projectId,
@@ -2358,7 +2614,8 @@ export function createProjectRuntimeManager(
           if (entries.get(input.projectId) !== restarting)
             throw new RuntimeRestartInvariantError()
           operationSettled = true
-          entries.set(input.projectId, entry)
+          if (!installEntry(input.projectId, entry))
+            throw new RuntimeRestartInvariantError()
           emit({
             event: 'runtime.restart.succeeded',
             projectId: input.projectId,
@@ -2417,7 +2674,10 @@ export function createProjectRuntimeManager(
       operation,
       controller: phaseController,
     }
-    entries.set(input.projectId, restarting)
+    // Unrefusable by construction: the close-claim and retirement refusals above
+    // are evaluated in this same synchronous section as the entry read.
+    if (!installEntry(input.projectId, restarting))
+      throw new RuntimeRestartInvariantError()
     emit({
       event: 'runtime.restart.requested',
       projectId: input.projectId,
@@ -2433,6 +2693,435 @@ export function createProjectRuntimeManager(
     return operation
   }
 
+  const ownershipRecordsFor = (
+    projectId: string
+  ): readonly [string, ManagedOwnership][] =>
+    [...ownership.entries()].filter(
+      ([, record]) => record.projectId === projectId
+    )
+
+  const proxyAuditIsClear = (audit: WorkbenchProxyAudit): boolean =>
+    audit.pendingOperations === 0 &&
+    audit.upstreamHttpRequests === 0 &&
+    audit.upstreamHttpResponses === 0 &&
+    audit.rawSockets === 0 &&
+    audit.webSockets === 0
+
+  const closeRejection = (
+    projectId: string,
+    category: RuntimeCloseRejectionCategory,
+    audits: readonly RuntimeTerminationAudit[] = [],
+    failureCategory?: RuntimeFailure['category']
+  ): RuntimeCloseOutcome =>
+    Object.freeze({
+      outcome: 'rejected' as const,
+      projectId,
+      category,
+      ...(failureCategory === undefined ? {} : { failureCategory }),
+      ...(audits.length === 0 ? {} : { audits: Object.freeze([...audits]) }),
+    })
+
+  const closeSignal = <Kind extends string>(
+    kind: Kind
+  ): Readonly<{
+    promise: Promise<Readonly<{ kind: Kind }>>
+    fire: () => void
+  }> => {
+    let fire!: () => void
+    const promise = new Promise<Readonly<{ kind: Kind }>>((resolve) => {
+      fire = () => resolve(Object.freeze({ kind }))
+    })
+    return Object.freeze({ promise, fire })
+  }
+
+  const runClose = async (
+    input: ProjectRuntimeCloseInput,
+    claim: CloseClaim,
+    requiresQuarantineResolution: boolean
+  ): Promise<RuntimeCloseOutcome> => {
+    const projectId = input.projectId
+    const audits: RuntimeTerminationAudit[] = []
+    const releasedKeys = new Set<string>()
+    const drainController = new AbortController()
+    const phaseAbort = abortedPromise(claim.controller.signal)
+    const drainDeadline = closeSignal('drain-deadline')
+    const releaseDeadline = closeSignal('release-deadline')
+    const overallDeadline = closeSignal('overall-deadline')
+    // One drain deadline covers both permitted drains; the release and overall
+    // deadlines are cardinality-aware through the frozen, validated sweep units.
+    const cancelDrainDeadline = deadlineScheduler.scheduleDeadline(
+      config.closeDrainAllowanceMs,
+      () => {
+        drainController.abort(new RuntimeFailure('close-release-unconfirmed'))
+        drainDeadline.fire()
+      }
+    )
+    const cancelReleaseDeadline = deadlineScheduler.scheduleDeadline(
+      runtimeCloseReleaseBoundMs(
+        config,
+        requiresQuarantineResolution,
+        claim.sweepUnits
+      ),
+      releaseDeadline.fire
+    )
+    const cancelOverallDeadline = deadlineScheduler.scheduleDeadline(
+      runtimeCloseOverallBoundMs(
+        config,
+        requiresQuarantineResolution,
+        claim.sweepUnits
+      ),
+      () => {
+        drainController.abort(new RuntimeFailure('close-release-unconfirmed'))
+        overallDeadline.fire()
+      }
+    )
+
+    /** Retains the runtime as an unconfirmed release. A claimed `running`
+     * subject is the only truthful running-to-failed transition in the close
+     * region, so it is the only one that emits. */
+    const installCloseFailure = (): void => {
+      const installed = entries.get(projectId)
+      const subject =
+        installed !== undefined &&
+        claim.installedRegisteredEntry !== undefined &&
+        Object.is(installed, claim.installedRegisteredEntry)
+          ? claim.claimedEntry
+          : installed
+      if (subject === undefined) return
+      if (subject.state !== 'running' && subject.state !== 'failed') return
+      const failure = new RuntimeFailure('close-release-unconfirmed')
+      const reported = failEntry(
+        projectId,
+        subject.canonicalPath,
+        subject.generation,
+        subject.snapshot,
+        failure,
+        subject.snapshot.startedAt,
+        undefined,
+        claim
+      )
+      if (!reported || subject.state !== 'running') return
+      emit({
+        event: 'runtime.health.changed',
+        projectId,
+        from: 'running',
+        to: 'failed',
+        elapsedMs: Math.max(0, now() - subject.snapshot.startedAt),
+        classification: failure.category,
+      })
+    }
+
+    const unconfirmed = (): RuntimeCloseOutcome => {
+      installCloseFailure()
+      return closeRejection(
+        projectId,
+        'release-unconfirmed',
+        audits,
+        'close-release-unconfirmed'
+      )
+    }
+
+    const drain = (): Promise<
+      | Readonly<{ kind: 'drained'; audit: WorkbenchProxyAudit }>
+      | Readonly<{ kind: 'drain-faulted'; error: unknown }>
+      | Readonly<{ kind: 'drain-deadline' }>
+      | Readonly<{ kind: 'overall-deadline' }>
+      | Readonly<{ kind: 'phase-aborted'; reason: unknown }>
+    > =>
+      Promise.race([
+        input.drainConnections(drainController.signal).then(
+          (audit) => Object.freeze({ kind: 'drained' as const, audit }),
+          (error) => Object.freeze({ kind: 'drain-faulted' as const, error })
+        ),
+        drainDeadline.promise,
+        overallDeadline.promise,
+        phaseAbort.promise,
+      ])
+
+    const releaseOwnership = async (
+      record: Pick<ManagedOwnership, 'process' | 'port'>,
+      key: string
+    ): Promise<RuntimeTerminationAudit> => {
+      const audit = await record.process.terminate(
+        config.gracefulShutdownMs,
+        config.forceShutdownMs,
+        record.port,
+        claim.controller.signal
+      )
+      recordCleanup(projectId, audit)
+      audits.push(audit)
+      releasedKeys.add(key)
+      if (auditConfirmsAbsence(audit)) ownership.delete(key)
+      return audit
+    }
+
+    try {
+      const drained = await drain()
+      if (shuttingDown)
+        return closeRejection(projectId, 'manager-shutdown', audits)
+      if (drained.kind === 'drain-faulted') throw drained.error
+      if (drained.kind !== 'drained' || !proxyAuditIsClear(drained.audit))
+        return unconfirmed()
+
+      const resolveAdmissions = async (): Promise<
+        Readonly<{ kind: 'resolved' }>
+      > => {
+        await reclaimProjectQuarantine(projectId)
+        const installedAdmission = pendingAdmissions.get(projectId)
+        if (installedAdmission !== undefined) {
+          await installedAdmission.resolution
+          if (
+            installedAdmission.phase === 'absent-confirmed' ||
+            installedAdmission.phase === 'audited-absent'
+          )
+            finishAdmission(installedAdmission)
+        }
+        return Object.freeze({ kind: 'resolved' as const })
+      }
+      const admissionResult = await Promise.race([
+        resolveAdmissions(),
+        releaseDeadline.promise,
+        overallDeadline.promise,
+        phaseAbort.promise,
+      ])
+      if (shuttingDown)
+        return closeRejection(projectId, 'manager-shutdown', audits)
+      if (admissionResult.kind !== 'resolved') return unconfirmed()
+
+      const claimedRuntime = entries.get(projectId)
+      if (
+        claimedRuntime !== undefined &&
+        (claimedRuntime.state === 'running' ||
+          claimedRuntime.state === 'failed')
+      ) {
+        const ready = ownedReadyFor(claimedRuntime)
+        if (ready !== undefined)
+          await releaseOwnership(ready, ownershipKey(ready))
+      }
+      if (shuttingDown)
+        return closeRejection(projectId, 'manager-shutdown', audits)
+
+      // Sweep every remaining frozen ownership record for this project,
+      // including multi-ownership with no quarantined identity. Peers are never
+      // read, probed, or signalled.
+      for (const [key, record] of ownershipRecordsFor(projectId)) {
+        if (releasedKeys.has(key)) continue
+        const recordedAudit = cleanupOutcomes.get(projectId)
+        if (
+          recordedAudit !== undefined &&
+          [
+            recordedAudit.pid,
+            recordedAudit.processStartTime,
+            recordedAudit.port,
+          ].join(':') === key &&
+          auditConfirmsAbsence(recordedAudit)
+        ) {
+          audits.push(recordedAudit)
+          releasedKeys.add(key)
+          ownership.delete(key)
+          continue
+        }
+        await releaseOwnership(record, key)
+        if (shuttingDown)
+          return closeRejection(projectId, 'manager-shutdown', audits)
+      }
+
+      let observed = input.auditConnections()
+      if (!proxyAuditIsClear(observed)) {
+        const redrained = await drain()
+        if (shuttingDown)
+          return closeRejection(projectId, 'manager-shutdown', audits)
+        if (redrained.kind === 'drain-faulted') throw redrained.error
+        if (redrained.kind !== 'drained') return unconfirmed()
+        observed = input.auditConnections()
+      }
+
+      const currentEntry = entries.get(projectId)
+      const liveConnectionsClear = proxyAuditIsClear(observed)
+      const ownershipClear = ownershipRecordsFor(projectId).length === 0
+      const quarantineClear = quarantineForProject(projectId).length === 0
+      const pendingClear = !pendingAdmissions.has(projectId)
+      const lifecycleClear =
+        (currentEntry === undefined ||
+          currentEntry.state === 'registered' ||
+          currentEntry.state === 'running' ||
+          currentEntry.state === 'failed') &&
+        pendingClear &&
+        claim.lateWork === 0
+      const releaseAuditsConfirm = audits.every((audit) =>
+        auditConfirmsAbsence(audit)
+      )
+      const generationIdentity =
+        Object.is(currentEntry, claim.claimedEntry) ||
+        (claim.installedRegisteredEntry !== undefined &&
+          Object.is(currentEntry, claim.installedRegisteredEntry))
+      const notRetired = !retiredProjects.has(projectId)
+      if (!(
+        liveConnectionsClear &&
+        ownershipClear &&
+        quarantineClear &&
+        pendingClear &&
+        lifecycleClear &&
+        releaseAuditsConfirm &&
+        generationIdentity &&
+        notRetired
+      ))
+        return unconfirmed()
+      claim.sealed = true
+      const removal = input.commitRemoval()
+      const releasedGenerations = releasedKeys.size
+      const disposition = await removal.then(
+        (result) => Object.freeze({ kind: 'settled' as const, result }),
+        (error) => Object.freeze({ kind: 'faulted' as const, error })
+      )
+      if (disposition.kind === 'faulted') {
+        // Clause 7 already proved the current entry is the one this close
+        // claimed, so a project that had no entry keeps having none.
+        if (currentEntry !== undefined) {
+          const releasedEntry: RegisteredEntry = {
+            state: 'registered',
+            projectId,
+            canonicalPath: currentEntry.canonicalPath,
+            released: true,
+          }
+          claim.sealed = false
+          if (installEntry(projectId, releasedEntry, claim))
+            claim.installedRegisteredEntry = releasedEntry
+        }
+        return closeRejection(projectId, 'removal-failed', audits)
+      }
+      retireProject(projectId)
+      return disposition.result.disposition === 'closed'
+        ? Object.freeze({
+            outcome: 'closed' as const,
+            projectId,
+            releasedGenerations,
+            ...(audits.length === 0
+              ? {}
+              : { audits: Object.freeze([...audits]) }),
+          })
+        : Object.freeze({
+            outcome: 'already-absent' as const,
+            projectId,
+            released: releasedGenerations > 0,
+          })
+    } catch (error) {
+      // A fault leaves the runtime exactly as an unconfirmed release and is
+      // then surfaced; it is never reported as a settled close.
+      if (shuttingDown)
+        return closeRejection(projectId, 'manager-shutdown', audits)
+      installCloseFailure()
+      throw error
+    } finally {
+      phaseAbort.cancel()
+      cancelDrainDeadline()
+      cancelReleaseDeadline()
+      cancelOverallDeadline()
+    }
+  }
+
+  const close = async (
+    input: ProjectRuntimeCloseInput
+  ): Promise<RuntimeCloseOutcome> => {
+    const projectId = input.projectId
+    if (shuttingDown) return closeRejection(projectId, 'manager-shutdown')
+    const persisted = await dependencies.findProjectById(projectId)
+    if (shuttingDown) return closeRejection(projectId, 'manager-shutdown')
+    if (persisted === undefined) {
+      return Object.freeze({
+        outcome: 'already-absent' as const,
+        projectId,
+        released: retiredProjects.has(projectId),
+      })
+    }
+    const contended = closeClaims.get(projectId)
+    if (contended !== undefined) {
+      const winner = await contended.settlement
+      return winner.outcome === 'closed'
+        ? Object.freeze({
+            outcome: 'already-absent' as const,
+            projectId,
+            released: true,
+          })
+        : winner
+    }
+    const current = entries.get(projectId)
+    if (current?.state === 'reconciling')
+      return closeRejection(projectId, 'reconcile-in-progress')
+    if (
+      current?.state === 'failed' &&
+      current.failure.category === 'reconcile-unconfirmed'
+    )
+      return closeRejection(projectId, 'reconcile-unresolved')
+    if (current?.state === 'starting')
+      return closeRejection(projectId, 'start-in-progress')
+    if (current?.state === 'restarting')
+      return closeRejection(projectId, 'restart-in-progress')
+    if (current?.state === 'stopping')
+      return closeRejection(projectId, 'stop-in-progress')
+
+    // One synchronous section: read the entry, install the claim, and freeze the
+    // ownership cardinality with no suspension in between.
+    let settleClaim!: (outcome: RuntimeCloseOutcome) => void
+    let faultClaim!: (error: unknown) => void
+    const settlement = new Promise<RuntimeCloseOutcome>((resolve, reject) => {
+      settleClaim = resolve
+      faultClaim = reject
+    })
+    void settlement.catch(() => undefined)
+    const claim: CloseClaim = {
+      projectId,
+      controller: new AbortController(),
+      settlement,
+      claimedEntry: current,
+      installedRegisteredEntry: undefined,
+      frozenOwnershipCardinality: 0,
+      sweepUnits: 1,
+      lateWork: 0,
+      sealed: false,
+    }
+    closeClaims.set(projectId, claim)
+    claim.frozenOwnershipCardinality = ownershipRecordsFor(projectId).length
+    const requiresQuarantineResolution =
+      pendingAdmissions.has(projectId) ||
+      quarantineForProject(projectId).length > 0
+    if (claim.frozenOwnershipCardinality > config.closeOwnershipSweepCap) {
+      closeClaims.delete(projectId)
+      const refused = closeRejection(
+        projectId,
+        'ownership-cardinality-exceeded'
+      )
+      settleClaim(refused)
+      return refused
+    }
+    claim.sweepUnits = Math.max(1, claim.frozenOwnershipCardinality)
+    if (closeClaims.get(projectId) !== claim)
+      throw new RuntimeCloseInvariantError()
+
+    const task = (async (): Promise<RuntimeCloseOutcome> => {
+      try {
+        const outcome = await runClose(
+          input,
+          claim,
+          requiresQuarantineResolution
+        )
+        settleClaim(outcome)
+        return outcome
+      } catch (error) {
+        faultClaim(error)
+        throw error
+      } finally {
+        if (closeClaims.get(projectId) === claim) closeClaims.delete(projectId)
+      }
+    })()
+    closeTasks.add(task)
+    void task.then(
+      () => closeTasks.delete(task),
+      () => closeTasks.delete(task)
+    )
+    return task
+  }
+
   const start = async (
     input: ProjectRuntimeStartInput
   ): Promise<RuntimeSnapshot> => {
@@ -2443,10 +3132,16 @@ export function createProjectRuntimeManager(
     if (persisted.canonicalPath !== input.canonicalPath)
       throw new RuntimeFailure('canonical-path-invariant')
     if (shuttingDown) throw new RuntimeFailure('manager-shutdown')
+    const admissionRefusal = entryInstallRefusal(input.projectId)
+    if (admissionRefusal !== undefined)
+      throw refuseAcquisition(admissionRefusal)
 
     let current = entries.get(input.projectId)
     if (current?.state === 'reconciling') {
       await waitForReconciliation(current, input.signal)
+      const reconciledRefusal = entryInstallRefusal(input.projectId)
+      if (reconciledRefusal !== undefined)
+        throw refuseAcquisition(reconciledRefusal)
       current = entries.get(input.projectId)
     }
     if (
@@ -2457,11 +3152,18 @@ export function createProjectRuntimeManager(
     }
     register(input.projectId, input.canonicalPath)
     current = entries.get(input.projectId)
-    if (current?.state === 'starting')
-      return waitForStarting(current, input.signal)
+    if (current?.state === 'starting') {
+      const joined = await waitForStarting(current, input.signal)
+      const joinRefusal = entryInstallRefusal(input.projectId)
+      if (joinRefusal !== undefined) throw refuseAcquisition(joinRefusal)
+      return joined
+    }
 
     if (current?.state === 'running') {
       const alive = await current.ready.process.isAlive()
+      const livenessCloseRefusal = entryInstallRefusal(current.projectId)
+      if (livenessCloseRefusal !== undefined)
+        throw refuseAcquisition(livenessCloseRefusal)
       const livenessOwnershipFailure = reuseOwnershipFailure(current)
       if (livenessOwnershipFailure !== undefined) throw livenessOwnershipFailure
       if (alive) {
@@ -2471,6 +3173,9 @@ export function createProjectRuntimeManager(
           config.healthAttemptTimeoutMs,
           healthController.signal
         )
+        const healthCloseRefusal = entryInstallRefusal(current.projectId)
+        if (healthCloseRefusal !== undefined)
+          throw refuseAcquisition(healthCloseRefusal)
         const healthOwnershipFailure = reuseOwnershipFailure(current)
         if (healthOwnershipFailure !== undefined) throw healthOwnershipFailure
         if (
@@ -2482,6 +3187,8 @@ export function createProjectRuntimeManager(
         ) {
           if (input.signal?.aborted)
             throw new RuntimeFailure('caller-cancelled')
+          const reuseRefusal = entryInstallRefusal(current.projectId)
+          if (reuseRefusal !== undefined) throw refuseAcquisition(reuseRefusal)
           return current.snapshot
         }
         const failure = new RuntimeFailure(
@@ -2586,7 +3293,12 @@ export function createProjectRuntimeManager(
           ready,
           snapshot,
         }
-        entries.set(input.projectId, entry)
+        if (!installEntry(input.projectId, entry)) {
+          throw (
+            entryInstallRefusal(input.projectId) ??
+            new RuntimeFailure('runtime-closing')
+          )
+        }
         emit({
           event: 'runtime.start.succeeded',
           projectId: input.projectId,
@@ -2620,8 +3332,9 @@ export function createProjectRuntimeManager(
           error instanceof RuntimeFailure
             ? error
             : new RuntimeFailure('spawn-error')
+        let reported = false
         if (!shuttingDown) {
-          failEntry(
+          reported = failEntry(
             input.projectId,
             input.canonicalPath,
             generation,
@@ -2630,14 +3343,16 @@ export function createProjectRuntimeManager(
             startedAt
           )
         }
-        emit({
-          event: 'runtime.start.failed',
-          projectId: input.projectId,
-          from: 'starting',
-          to: 'failed',
-          elapsedMs: Math.max(0, now() - startedAt),
-          classification: failure.category,
-        })
+        if (reported || shuttingDown) {
+          emit({
+            event: 'runtime.start.failed',
+            projectId: input.projectId,
+            from: 'starting',
+            to: 'failed',
+            elapsedMs: Math.max(0, now() - startedAt),
+            classification: failure.category,
+          })
+        }
         throw failure
       }
     })
@@ -2662,7 +3377,10 @@ export function createProjectRuntimeManager(
       operation,
       waiters: new Set(),
     }
-    entries.set(input.projectId, starting)
+    // Unrefusable by construction: `register` above evaluated the same refusal
+    // in this synchronous section, so no claim, seal, or tombstone can appear.
+    if (!installEntry(input.projectId, starting))
+      throw new RuntimeCloseInvariantError()
     return waitForStarting(starting, input.signal)
   }
 
@@ -2673,6 +3391,13 @@ export function createProjectRuntimeManager(
         reconciliationPhase = 'aborted'
         reconciliationController.abort(new RuntimeFailure('manager-shutdown'))
         settlePendingReconciliations('manager-shutdown')
+      }
+      // In-flight closes settle as `manager-shutdown` and release their claims
+      // before the ownership sweep reads any state they could still mutate.
+      while (closeTasks.size > 0) {
+        for (const claim of closeClaims.values())
+          claim.controller.abort(new RuntimeFailure('manager-shutdown'))
+        await Promise.allSettled([...closeTasks])
       }
       const entriesAtShutdown = [...entries.values()]
       for (const entry of entriesAtShutdown)
@@ -2798,6 +3523,7 @@ export function createProjectRuntimeManager(
     start,
     stop,
     restart,
+    close,
     reportPublicStates(projectIds) {
       return Object.freeze(
         projectIds.map((projectId) => {
@@ -2873,6 +3599,22 @@ export function createProjectRuntimeManager(
         backgroundTaskSettlements,
         lateTerminationSettlements,
         lateReplacementSettlements,
+        closeTasks: closeTasks.size,
+        closeClaims: Object.freeze(
+          [...closeClaims.values()].map((claim) =>
+            Object.freeze({
+              projectId: claim.projectId,
+              projectToken: deriveProjectOwnerToken(claim.projectId),
+              frozenOwnershipCardinality: claim.frozenOwnershipCardinality,
+              sweepUnits: claim.sweepUnits,
+              lateWork: claim.lateWork,
+              sealed: claim.sealed,
+            })
+          )
+        ),
+        retiredProjects: retiredProjects.size,
+        lateCloseSettlements,
+        refusedLateAcquisitions,
       })
     },
     lastFailure(projectId) {

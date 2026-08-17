@@ -1,0 +1,3706 @@
+{
+  "evidenceId": "bl-020-designated-episode",
+  "schemaVersion": 2,
+  "runId": "run-b854cbf860315dcf",
+  "timingOrigin": "episode-start-monotonic",
+  "phaseOrder": [
+    "P1",
+    "P2",
+    "P3",
+    "P4",
+    "P5",
+    "P6",
+    "P7",
+    "P8",
+    "P9",
+    "P10",
+    "P11",
+    "P12",
+    "P13"
+  ],
+  "compiledAssets": [
+    {
+      "asset": "apps/api/dist/server.js",
+      "role": "api-entry-point",
+      "sha256": "5a5496a48df4d086cddf665280b1846e1bf19bae05060e863ff5a93e1829d9a1",
+      "bytes": 519,
+      "builtBy": "pnpm --filter @ascend/api build:ts"
+    },
+    {
+      "asset": "apps/api/dist/app.js",
+      "role": "api-module",
+      "sha256": "621abbbb6bfa981088dbad08be7c46851ae311db23d5275b41a413e553bfdc07",
+      "bytes": 5646,
+      "builtBy": "pnpm --filter @ascend/api build:ts"
+    },
+    {
+      "asset": "apps/api/dist/project-runtime-manager.js",
+      "role": "api-module",
+      "sha256": "4ef608cbcdd9832aac3ee16b7f4f3ccf776cce7dc2c7c14cdd3490dc0e2cca55",
+      "bytes": 117260,
+      "builtBy": "pnpm --filter @ascend/api build:ts"
+    },
+    {
+      "asset": "apps/api/dist/project-runtime-process.js",
+      "role": "api-module",
+      "sha256": "611a562c1fbf1c181dac7c66bac551295e7bb73f80a5a766cd08c7f80ebf8d33",
+      "bytes": 38939,
+      "builtBy": "pnpm --filter @ascend/api build:ts"
+    },
+    {
+      "asset": "apps/api/dist/workbench-proxy-manager.js",
+      "role": "api-module",
+      "sha256": "1a9711dc395f588bf1d523f3ebb409a7cd988744942094b721b2d272c7c853cd",
+      "bytes": 33038,
+      "builtBy": "pnpm --filter @ascend/api build:ts"
+    },
+    {
+      "asset": "apps/api/dist/routes/projects.js",
+      "role": "api-module",
+      "sha256": "e583c3c6dc6ab62da584708efd1c0dcfda56f3bcc377b17a0c673c9ae8897153",
+      "bytes": 9514,
+      "builtBy": "pnpm --filter @ascend/api build:ts"
+    },
+    {
+      "asset": "apps/web/dist/assets/index-B-iEwpLR.css",
+      "role": "web-asset",
+      "sha256": "41c800b381d43b5c565b9557c070a5e2f29b9f861949372c563d85462e35da4b",
+      "bytes": 13947,
+      "builtBy": "pnpm --filter @ascend/web build"
+    },
+    {
+      "asset": "apps/web/dist/assets/index-Cltx056F.js",
+      "role": "web-asset",
+      "sha256": "5080e0321c19d946a47eebbfc9ddabfbd06e7e49a00d49b00f27825c0b99c676",
+      "bytes": 439153,
+      "builtBy": "pnpm --filter @ascend/web build"
+    },
+    {
+      "asset": "apps/web/dist/favicon.svg",
+      "role": "web-asset",
+      "sha256": "61bc9a161de58248288e6905425d7180f0624c2865007b97d763fdac12043a66",
+      "bytes": 9522,
+      "builtBy": "pnpm --filter @ascend/web build"
+    },
+    {
+      "asset": "apps/web/dist/icons.svg",
+      "role": "web-asset",
+      "sha256": "b45fa506195cfcdef406ba9f0c77b36ddc1a7c224040926ec70abc2fdea7b93a",
+      "bytes": 5031,
+      "builtBy": "pnpm --filter @ascend/web build"
+    },
+    {
+      "asset": "apps/web/dist/index.html",
+      "role": "web-asset",
+      "sha256": "f0a240e308557586c3d5f400ef49ba7832758b25016953d33155ada1da7eb1b0",
+      "bytes": 453,
+      "builtBy": "pnpm --filter @ascend/web build"
+    }
+  ],
+  "sources": [
+    {
+      "path": "apps/api/src/project-runtime-contract.ts",
+      "sha256": "45a33b8f1f02dff02e065e53b747a588d40729a331d997a70c9d52772b3ab90b",
+      "bytes": 25385
+    },
+    {
+      "path": "apps/api/src/project-runtime-manager.ts",
+      "sha256": "4aa45a447c5ca9525d1aa6ab496a9b57690da0367aadb571f95393916803ed6d",
+      "bytes": 126839
+    },
+    {
+      "path": "apps/api/src/project-runtime-process.ts",
+      "sha256": "fdc70bbb5987455afed9cf94c8f4877ddd0f80ad5a23fa9e82eb0a6ca5c82eb4",
+      "bytes": 42669
+    },
+    {
+      "path": "apps/api/src/workbench-proxy-contract.ts",
+      "sha256": "cb7b8f891228f58657af6d0dc1b096627e91e9b43d1e1ef1b53892a6791a4c63",
+      "bytes": 22277
+    },
+    {
+      "path": "apps/api/src/workbench-proxy-manager.ts",
+      "sha256": "8d00a1396d21db5da8b43070acc8a89b19cc526ac172ff1261ef84f48b7ac7b0",
+      "bytes": 33383
+    },
+    {
+      "path": "apps/api/src/project-close.ts",
+      "sha256": "64a2a67254a93616a4d6bbdca461d18626258363d7bea6f12fcc1982ceb088d1",
+      "bytes": 1800
+    },
+    {
+      "path": "apps/api/src/project-persistence.ts",
+      "sha256": "286be5601effd9d3310881af3df59a8fc089f0324e3a8fe9f2c6c2371f58525f",
+      "bytes": 4840
+    },
+    {
+      "path": "apps/api/src/project-library.ts",
+      "sha256": "f4b9a145b9058b7264acfe3b9e92d10f3802869bfc7c916aaf51c2aa56079eb0",
+      "bytes": 1686
+    },
+    {
+      "path": "apps/api/src/routes/projects.ts",
+      "sha256": "bb6478e9c5d14c7a1a9f77d842a253fe9957bf6f310ad1715a662f9f2b53ca33",
+      "bytes": 9708
+    },
+    {
+      "path": "apps/api/src/routes/project-runtime-stop.ts",
+      "sha256": "5040708a39573c1c8a72e0246c6f656c9d57cb96905d280cdb0baaa72703be58",
+      "bytes": 5071
+    },
+    {
+      "path": "apps/api/src/routes/project-runtime-restart.ts",
+      "sha256": "67592921ac175ec23252ce5db2906bbbb035522b459f134caef9e346d2d426cc",
+      "bytes": 5169
+    },
+    {
+      "path": "apps/api/src/app.ts",
+      "sha256": "b13fa3e01f4b6102415769e5545c254203538959fe952807e7fd72580672ab57",
+      "bytes": 7319
+    },
+    {
+      "path": "apps/web/src/projects.ts",
+      "sha256": "db244d9abb0e7e098a9bd22715abb5d38f1b626c65c8de91b7132423b03b8ddc",
+      "bytes": 11820
+    },
+    {
+      "path": "apps/web/src/runtime-state.ts",
+      "sha256": "1323f630670c0e72bbc975caa548a303384ee7e489be14ae6b0f8df83549170d",
+      "bytes": 6128
+    },
+    {
+      "path": "apps/web/src/use-project-home.ts",
+      "sha256": "22d2e53c74be28e3a054aa49a7f7b2e1e5113051131c22ea7401ed98dd99f680",
+      "bytes": 40192
+    },
+    {
+      "path": "apps/api/src/project-close-evidence.ts",
+      "sha256": "0e60684e256efa4a50fe7f4feeeabf72d386ce9917e6b646becf4e2d63a1b982",
+      "bytes": 150929
+    },
+    {
+      "path": "apps/api/src/cli/project-close-residual-audit.ts",
+      "sha256": "6074532dc8830b7cfc78675d7ea499d53b08cd6fc39f894f3fcc409480b8a3f7",
+      "bytes": 12850
+    },
+    {
+      "path": "apps/api/test/project-close-matrix.test.ts",
+      "sha256": "f36abf8a5c7a1516bcb0bbcea062b95639399c32acd42b84b385704f0c869a2b",
+      "bytes": 20410
+    }
+  ],
+  "episodesDeclared": 7,
+  "designatedEpisodesExecuted": 7,
+  "allPassed": true,
+  "episodeCount": 7,
+  "episodes": [
+    {
+      "id": "E-1",
+      "name": "running-close-exact-release",
+      "execution": {
+        "executionId": "exec-8c39f9a3a5797cf8",
+        "receipt": "receipt-32ac56eef1eb629760f45602a589a129",
+        "timingOrigin": "episode-start-monotonic",
+        "startedAt": "2026-08-17T00:58:15.492Z",
+        "settledAt": "2026-08-17T00:58:21.386Z",
+        "durationMs": 5711.549878
+      },
+      "declaredExpectations": [
+        "the compiled route settles the close as closed with status 200",
+        "the recorded workbench process group and its listener become absent",
+        "the durable registration for the subject is removed exactly once",
+        "the peer workbench, its listener, and the subject project tree survive",
+        "exactly one project.closed event is emitted"
+      ],
+      "phases": [
+        {
+          "phase": "P1",
+          "name": "preconditions-observed",
+          "completed": true,
+          "at": "2026-08-17T00:58:15.492Z",
+          "startedAtMs": 0.047628,
+          "durationMs": 0.668147,
+          "observations": [
+            "the compiled server entry point exists in the repository build output",
+            "the real workbench executable exists on this host",
+            "this episode owns a fresh project home, database file, and port"
+          ]
+        },
+        {
+          "phase": "P2",
+          "name": "compiled-assets-and-sources-hashed",
+          "completed": true,
+          "at": "2026-08-17T00:58:15.493Z",
+          "startedAtMs": 0.729547,
+          "durationMs": 0.08087200000000005,
+          "observations": [
+            "the eighteen frozen source-set members are hashed for this run: 18",
+            "the compiled server and web assets are hashed for this run: 11",
+            "the source-set digest of record is 2894eaeb480e93229fd6cea38965933d13c586dd0f2ef7abfbcc17fb9f0354c7",
+            "the compiled-asset digest of record is ade96afcb1e45e3442055ba8a3b0f919544f417179d80b207c63ebcbfbbadb4f"
+          ]
+        },
+        {
+          "phase": "P3",
+          "name": "real-generation-established",
+          "completed": true,
+          "at": "2026-08-17T00:58:15.519Z",
+          "startedAtMs": 26.204415,
+          "durationMs": 1894.5373240000001,
+          "observations": [
+            "the repository compiled server entry point runs as its own process group",
+            "its loopback listener is attributed to that process by socket inode",
+            "it served a real request over that listener before the episode acted"
+          ]
+        },
+        {
+          "phase": "P4",
+          "name": "fixtures-and-registrations-established",
+          "completed": true,
+          "at": "2026-08-17T00:58:17.413Z",
+          "startedAtMs": 1920.74902,
+          "durationMs": 1717.7300200000002,
+          "observations": [
+            "two real project trees are registered in the real durable store",
+            "the peer project runs a real workbench process group of its own"
+          ]
+        },
+        {
+          "phase": "P5",
+          "name": "subject-arranged",
+          "completed": true,
+          "at": "2026-08-17T00:58:19.133Z",
+          "startedAtMs": 3638.537436,
+          "durationMs": 1721.024849,
+          "observations": [
+            "the subject project runs a real workbench process group",
+            "its project tree content manifest is recorded before the action"
+          ]
+        },
+        {
+          "phase": "P6",
+          "name": "expectations-declared",
+          "completed": true,
+          "at": "2026-08-17T00:58:20.905Z",
+          "startedAtMs": 5410.905695,
+          "durationMs": 0.2735689999999522,
+          "observations": [
+            "real proxied client connections are held open to the subject and the peer",
+            "the compiled route settles the close as closed with status 200",
+            "the recorded workbench process group and its listener become absent",
+            "the durable registration for the subject is removed exactly once",
+            "the peer workbench, its listener, and the subject project tree survive",
+            "exactly one project.closed event is emitted"
+          ]
+        },
+        {
+          "phase": "P7",
+          "name": "action-executed-through-compiled-route",
+          "completed": true,
+          "at": "2026-08-17T00:58:20.906Z",
+          "startedAtMs": 5411.262319,
+          "durationMs": 298.9089779999995,
+          "observations": [
+            "close is requested through the compiled server public route"
+          ]
+        },
+        {
+          "phase": "P8",
+          "name": "settlement-observed",
+          "completed": true,
+          "at": "2026-08-17T00:58:21.204Z",
+          "startedAtMs": 5710.184123,
+          "durationMs": 1.3579719999997906,
+          "observations": [
+            "the route settled with status 200",
+            "the route reported the disposition closed",
+            "the recorded workbench root identity is absent from the process table"
+          ]
+        },
+        {
+          "phase": "P9",
+          "name": "durable-and-published-projection-observed",
+          "completed": true,
+          "at": "2026-08-17T00:58:21.206Z",
+          "startedAtMs": 5711.552216,
+          "durationMs": 179.08316600000035,
+          "observations": [
+            "the durable registration for the subject is gone from the store",
+            "the peer workbench and the subject project tree are untouched",
+            "the held proxied connection was severed by the close itself"
+          ]
+        },
+        {
+          "phase": "P10",
+          "name": "live-resource-evidence-before-teardown",
+          "completed": true,
+          "at": "2026-08-17T00:58:21.388Z",
+          "startedAtMs": 5894.072922,
+          "durationMs": 68.42236499999944,
+          "observations": [
+            "live resource evidence is captured while this episode hosts are running",
+            "every live class is counted from the host before any teardown action"
+          ]
+        },
+        {
+          "phase": "P11",
+          "name": "teardown-actions-with-exact-targets",
+          "completed": true,
+          "at": "2026-08-17T00:58:21.457Z",
+          "startedAtMs": 5962.631746,
+          "durationMs": 346.2297779999999,
+          "observations": [
+            "every teardown action names the exact identities it acted on",
+            "each action carries a receipt derived from that action and its targets"
+          ]
+        },
+        {
+          "phase": "P12",
+          "name": "independent-post-teardown-reobservation",
+          "completed": true,
+          "at": "2026-08-17T00:58:21.803Z",
+          "startedAtMs": 6308.88014,
+          "durationMs": 163.11853299999984,
+          "observations": [
+            "a different process re-read the host for every recorded identity",
+            "the re-observation was given identities and paths, never conclusions"
+          ]
+        },
+        {
+          "phase": "P13",
+          "name": "atomic-finalization",
+          "completed": true,
+          "at": "2026-08-17T00:58:21.967Z",
+          "startedAtMs": 6472.316922,
+          "durationMs": 0.07874600000013743,
+          "observations": [
+            "the row is sealed and its receipt derives from its own content",
+            "the row reaches its destinations only through one atomic finalization"
+          ]
+        }
+      ],
+      "generations": [
+        {
+          "generationId": "api-9472af45c8ee8eb1",
+          "authenticity": "compiled-entry-point",
+          "entryPoint": "apps/api/dist/server.js",
+          "argumentVectorObserved": true,
+          "listeningSocketAttributed": true,
+          "servedRequests": 1,
+          "persistenceFileObserved": true
+        }
+      ],
+      "settled": true,
+      "observations": [
+        "a real Running project closed through the compiled network route",
+        "release was exact: the peer runtime, its listener, and its held client",
+        "connection all survived while the subject connection was severed"
+      ],
+      "boundIdentities": [
+        "api-9472af45c8ee8eb1",
+        "workbench-c81563ce0bb0714e",
+        "workbench-70fe7430e4b95a0d",
+        "project-fbe90f4c48016f19"
+      ],
+      "collections": {
+        "apiProcess": {
+          "collected": true,
+          "collectedBy": "host-process-table",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "compiled server generations alive at collection"
+        },
+        "workbenchProcess": {
+          "collected": true,
+          "collectedBy": "host-process-table",
+          "observed": 0,
+          "expected": 0,
+          "agrees": true,
+          "detail": "the recorded subject workbench root identity"
+        },
+        "workbenchDescendants": {
+          "collected": true,
+          "collectedBy": "host-process-group-scan",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "the subject workbench process group holds descendants: false"
+        },
+        "listener": {
+          "collected": true,
+          "collectedBy": "loopback-socket-probe",
+          "observed": 0,
+          "expected": 0,
+          "agrees": true,
+          "detail": "the recorded subject workbench loopback listener"
+        },
+        "activeRequests": {
+          "collected": true,
+          "collectedBy": "held-connection-probe",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "proxied connections still open through the compiled server"
+        },
+        "databaseRegistration": {
+          "collected": true,
+          "collectedBy": "durable-store-read",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "rows read directly from the episode database file"
+        },
+        "runtimeRecord": {
+          "collected": true,
+          "collectedBy": "compiled-runtime-route",
+          "observed": 0,
+          "expected": 0,
+          "agrees": true,
+          "detail": "a published runtime record for the subject project"
+        },
+        "projectRootImmutability": {
+          "collected": true,
+          "collectedBy": "project-tree-content-digest",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "the subject project tree content is unchanged by close"
+        },
+        "projectRootManifest": {
+          "collected": true,
+          "collectedBy": "project-tree-content-digest",
+          "observed": 3,
+          "expected": 3,
+          "agrees": true,
+          "detail": "the subject project tree member count is unchanged"
+        },
+        "peerSurvival": {
+          "collected": true,
+          "collectedBy": "host-process-table",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "the peer workbench process group is untouched by close"
+        },
+        "logEvents": {
+          "collected": true,
+          "collectedBy": "generation-log-stream",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "project.closed events emitted by the compiled generations"
+        },
+        "publicRouteProjection": {
+          "collected": true,
+          "collectedBy": "compiled-runtime-route",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "the published runtime state is null"
+        },
+        "proxyReleaseReceipts": {
+          "collected": true,
+          "collectedBy": "held-connection-probe",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "proxied connections the compiled server severed on close"
+        },
+        "managerReleaseReceipts": {
+          "collected": true,
+          "collectedBy": "compiled-route-response",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "the settled close disposition is closed"
+        }
+      },
+      "live": {
+        "capturedBeforeTeardown": true,
+        "startedAtMs": 5894.571629,
+        "classes": {
+          "apiProcesses": {
+            "observed": 1
+          },
+          "workbenchProcesses": {
+            "observed": 1
+          },
+          "attributableDescendants": {
+            "observed": 1
+          },
+          "listeners": {
+            "observed": 2
+          },
+          "activeRequests": {
+            "observed": 1
+          },
+          "databaseRegistrations": {
+            "observed": 1
+          },
+          "disposableFixtures": {
+            "observed": 1
+          }
+        },
+        "liveIdentities": [
+          "api-9472af45c8ee8eb1",
+          "workbench-70fe7430e4b95a0d",
+          "fixture-6ad96a1ac75fa68e"
+        ]
+      },
+      "teardownActions": [
+        {
+          "action": "release-held-connections",
+          "performed": true,
+          "startedAtMs": 5962.98063,
+          "targets": [
+            "connection-587b6635a98f0e6d",
+            "connection-531375b1e7e82049"
+          ],
+          "receipt": "receipt-076d117035a8481185d940d1e0b728e6"
+        },
+        {
+          "action": "stop-api-generations",
+          "performed": true,
+          "startedAtMs": 6014.528911,
+          "targets": [
+            "api-9472af45c8ee8eb1"
+          ],
+          "receipt": "receipt-3aebaa481d05efa68d05cb0501438eb5"
+        },
+        {
+          "action": "terminate-workbench-groups",
+          "performed": true,
+          "startedAtMs": 6151.231373,
+          "targets": [
+            "workbench-c81563ce0bb0714e",
+            "workbench-70fe7430e4b95a0d"
+          ],
+          "receipt": "receipt-558f02496996c3087a82168788fefca8"
+        },
+        {
+          "action": "remove-disposable-fixtures",
+          "performed": true,
+          "startedAtMs": 6304.143073,
+          "targets": [
+            "fixture-6ad96a1ac75fa68e"
+          ],
+          "receipt": "receipt-2d9ffaafb581e5f64fa5537ab1cf0fa1"
+        }
+      ],
+      "reobservation": {
+        "observer": "separate-process",
+        "observerModule": "apps/api/test/project-close-designated-observer.mjs",
+        "distinctFromExecutor": true,
+        "startedAtMs": 6309.209883,
+        "classes": {
+          "apiProcesses": {
+            "probeCompleted": true,
+            "residual": 0
+          },
+          "workbenchProcesses": {
+            "probeCompleted": true,
+            "residual": 0
+          },
+          "attributableDescendants": {
+            "probeCompleted": true,
+            "residual": 0
+          },
+          "listeners": {
+            "probeCompleted": true,
+            "residual": 0
+          },
+          "activeRequests": {
+            "probeCompleted": true,
+            "residual": 0
+          },
+          "disposableFixtures": {
+            "probeCompleted": true,
+            "residual": 0
+          }
+        },
+        "reobservedIdentities": [
+          "api-9472af45c8ee8eb1",
+          "workbench-c81563ce0bb0714e",
+          "workbench-70fe7430e4b95a0d",
+          "fixture-6ad96a1ac75fa68e"
+        ]
+      },
+      "registrationPresentAfter": false,
+      "durableRemovalObserved": true,
+      "residual": {
+        "selectedRuntimeProcesses": 0,
+        "attributableDescendants": 0,
+        "listeners": 0,
+        "proxyPendingOperations": 0,
+        "proxyHttpRequests": 0,
+        "proxyHttpResponses": 0,
+        "proxyRawSockets": 0,
+        "proxyWebSockets": 0,
+        "ownershipRecords": 0,
+        "pendingAdmissions": 0,
+        "quarantinedIdentities": 0,
+        "closeClaims": 0,
+        "inFlightCloseTasks": 0
+      },
+      "residualProbes": {
+        "selectedRuntimeProcesses": true,
+        "attributableDescendants": true,
+        "listeners": true,
+        "proxyPendingOperations": true,
+        "proxyHttpRequests": true,
+        "proxyHttpResponses": true,
+        "proxyRawSockets": true,
+        "proxyWebSockets": true,
+        "ownershipRecords": true,
+        "pendingAdmissions": true,
+        "quarantinedIdentities": true,
+        "closeClaims": true,
+        "inFlightCloseTasks": true
+      },
+      "statuses": [
+        200
+      ],
+      "projectClosedEmissions": 1,
+      "signalsAfterInterruption": null,
+      "candidateAttributed": null,
+      "replacementTeardownOrder": null,
+      "safeRetrySettled": null,
+      "absenceSurvivesRestart": null,
+      "interruption": null,
+      "repeats": null
+    },
+    {
+      "id": "E-2",
+      "name": "retained-failed-after-unconfirmed-release",
+      "execution": {
+        "executionId": "exec-8ab9a36409a1e6ec",
+        "receipt": "receipt-4c13b621ff4fe95e896408dd5cb91006",
+        "timingOrigin": "episode-start-monotonic",
+        "startedAt": "2026-08-17T00:58:21.967Z",
+        "settledAt": "2026-08-17T00:58:30.909Z",
+        "durationMs": 8926.888388
+      },
+      "declaredExpectations": [
+        "the compiled route refuses to report a close it could not confirm",
+        "the durable registration for the subject is retained",
+        "the subject is published Failed and classified close-release-unconfirmed",
+        "no signal is delivered, because the recorded identity is already absent"
+      ],
+      "phases": [
+        {
+          "phase": "P1",
+          "name": "preconditions-observed",
+          "completed": true,
+          "at": "2026-08-17T00:58:21.967Z",
+          "startedAtMs": 0.003364,
+          "durationMs": 0.44755100000000003,
+          "observations": [
+            "the compiled server entry point exists in the repository build output",
+            "the real workbench executable exists on this host",
+            "this episode owns a fresh project home, database file, and port"
+          ]
+        },
+        {
+          "phase": "P2",
+          "name": "compiled-assets-and-sources-hashed",
+          "completed": true,
+          "at": "2026-08-17T00:58:21.968Z",
+          "startedAtMs": 0.455487,
+          "durationMs": 0.018609000000000042,
+          "observations": [
+            "the eighteen frozen source-set members are hashed for this run: 18",
+            "the compiled server and web assets are hashed for this run: 11",
+            "the source-set digest of record is 2894eaeb480e93229fd6cea38965933d13c586dd0f2ef7abfbcc17fb9f0354c7",
+            "the compiled-asset digest of record is ade96afcb1e45e3442055ba8a3b0f919544f417179d80b207c63ebcbfbbadb4f"
+          ]
+        },
+        {
+          "phase": "P3",
+          "name": "real-generation-established",
+          "completed": true,
+          "at": "2026-08-17T00:58:21.987Z",
+          "startedAtMs": 19.115524,
+          "durationMs": 2222.88317,
+          "observations": [
+            "the repository compiled server entry point runs as its own process group",
+            "its loopback listener is attributed to that process by socket inode",
+            "it served a real request over that listener before the episode acted"
+          ]
+        },
+        {
+          "phase": "P4",
+          "name": "fixtures-and-registrations-established",
+          "completed": true,
+          "at": "2026-08-17T00:58:24.209Z",
+          "startedAtMs": 2242.013005,
+          "durationMs": 1825.6299760000002,
+          "observations": [
+            "two real project trees are registered in the real durable store",
+            "the peer project runs a real workbench process group of its own"
+          ]
+        },
+        {
+          "phase": "P5",
+          "name": "subject-arranged",
+          "completed": true,
+          "at": "2026-08-17T00:58:26.035Z",
+          "startedAtMs": 4067.659269,
+          "durationMs": 1576.915367,
+          "observations": [
+            "the subject project runs a real workbench process group",
+            "its project tree content manifest is recorded before the action"
+          ]
+        },
+        {
+          "phase": "P6",
+          "name": "expectations-declared",
+          "completed": true,
+          "at": "2026-08-17T00:58:27.696Z",
+          "startedAtMs": 5728.634973,
+          "durationMs": 2997.6977050000005,
+          "observations": [
+            "the first generation was interrupted while the workbench kept running",
+            "a replacement generation adopted the surviving workbench",
+            "the compiled route refuses to report a close it could not confirm",
+            "the durable registration for the subject is retained",
+            "the subject is published Failed and classified close-release-unconfirmed",
+            "no signal is delivered, because the recorded identity is already absent",
+            "the replacement generation published the state Running"
+          ]
+        },
+        {
+          "phase": "P7",
+          "name": "action-executed-through-compiled-route",
+          "completed": true,
+          "at": "2026-08-17T00:58:30.694Z",
+          "startedAtMs": 8726.349054,
+          "durationMs": 185.63917299999957,
+          "observations": [
+            "the adopted workbench group was removed by the host, not the product",
+            "an unrelated listener holds the exact port the runtime had bound",
+            "close is requested through the compiled server public route"
+          ]
+        },
+        {
+          "phase": "P8",
+          "name": "settlement-observed",
+          "completed": true,
+          "at": "2026-08-17T00:58:30.879Z",
+          "startedAtMs": 8912.000823,
+          "durationMs": 14.879845999999816,
+          "observations": [
+            "the route settled with status 500",
+            "the route reported the category runtime_release_unconfirmed",
+            "the published runtime state is Failed",
+            "the published classification is close-release-unconfirmed"
+          ]
+        },
+        {
+          "phase": "P9",
+          "name": "durable-and-published-projection-observed",
+          "completed": true,
+          "at": "2026-08-17T00:58:30.894Z",
+          "startedAtMs": 8926.889868,
+          "durationMs": 14.430671000000075,
+          "observations": [
+            "the durable registration for the subject is retained",
+            "the port the runtime had bound is still held by the injected listener",
+            "no project.closed event was emitted by any generation"
+          ]
+        },
+        {
+          "phase": "P10",
+          "name": "live-resource-evidence-before-teardown",
+          "completed": true,
+          "at": "2026-08-17T00:58:30.912Z",
+          "startedAtMs": 8944.175675,
+          "durationMs": 66.26651800000036,
+          "observations": [
+            "live resource evidence is captured while this episode hosts are running",
+            "every live class is counted from the host before any teardown action"
+          ]
+        },
+        {
+          "phase": "P11",
+          "name": "teardown-actions-with-exact-targets",
+          "completed": true,
+          "at": "2026-08-17T00:58:30.978Z",
+          "startedAtMs": 9010.481862,
+          "durationMs": 322.97184000000016,
+          "observations": [
+            "every teardown action names the exact identities it acted on",
+            "each action carries a receipt derived from that action and its targets"
+          ]
+        },
+        {
+          "phase": "P12",
+          "name": "independent-post-teardown-reobservation",
+          "completed": true,
+          "at": "2026-08-17T00:58:31.301Z",
+          "startedAtMs": 9333.46352,
+          "durationMs": 192.230055,
+          "observations": [
+            "a different process re-read the host for every recorded identity",
+            "the re-observation was given identities and paths, never conclusions"
+          ]
+        },
+        {
+          "phase": "P13",
+          "name": "atomic-finalization",
+          "completed": true,
+          "at": "2026-08-17T00:58:31.494Z",
+          "startedAtMs": 9526.138384,
+          "durationMs": 0.05727099999967322,
+          "observations": [
+            "the row is sealed and its receipt derives from its own content",
+            "the row reaches its destinations only through one atomic finalization"
+          ]
+        }
+      ],
+      "generations": [
+        {
+          "generationId": "api-036c64b30820134b",
+          "authenticity": "compiled-entry-point",
+          "entryPoint": "apps/api/dist/server.js",
+          "argumentVectorObserved": true,
+          "listeningSocketAttributed": true,
+          "servedRequests": 1,
+          "persistenceFileObserved": true
+        },
+        {
+          "generationId": "api-03b534435d4ddc63",
+          "authenticity": "compiled-entry-point",
+          "entryPoint": "apps/api/dist/server.js",
+          "argumentVectorObserved": true,
+          "listeningSocketAttributed": true,
+          "servedRequests": 1,
+          "persistenceFileObserved": true
+        }
+      ],
+      "settled": true,
+      "observations": [
+        "a real release the product could not confirm retained the project",
+        "the retained project is Failed and classified close-release-unconfirmed",
+        "the classification observed is close-release-unconfirmed"
+      ],
+      "boundIdentities": [
+        "api-036c64b30820134b",
+        "api-03b534435d4ddc63",
+        "workbench-c8b64cafb0dda08f",
+        "project-8a74f70f9da24e62"
+      ],
+      "collections": {
+        "apiProcess": {
+          "collected": true,
+          "collectedBy": "host-process-table",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "compiled server generations alive at collection"
+        },
+        "workbenchProcess": {
+          "collected": true,
+          "collectedBy": "host-process-table",
+          "observed": 0,
+          "expected": 0,
+          "agrees": true,
+          "detail": "the recorded subject workbench root identity"
+        },
+        "workbenchDescendants": {
+          "collected": true,
+          "collectedBy": "host-process-group-scan",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "the subject workbench process group holds descendants: false"
+        },
+        "listener": {
+          "collected": true,
+          "collectedBy": "loopback-socket-probe",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "the recorded subject workbench loopback listener"
+        },
+        "activeRequests": {
+          "collected": true,
+          "collectedBy": "held-connection-probe",
+          "observed": 0,
+          "expected": 0,
+          "agrees": true,
+          "detail": "proxied connections still open through the compiled server"
+        },
+        "databaseRegistration": {
+          "collected": true,
+          "collectedBy": "durable-store-read",
+          "observed": 2,
+          "expected": 2,
+          "agrees": true,
+          "detail": "rows read directly from the episode database file"
+        },
+        "runtimeRecord": {
+          "collected": true,
+          "collectedBy": "compiled-runtime-route",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "a published runtime record for the subject project"
+        },
+        "projectRootImmutability": {
+          "collected": true,
+          "collectedBy": "project-tree-content-digest",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "the subject project tree content is unchanged by close"
+        },
+        "projectRootManifest": {
+          "collected": true,
+          "collectedBy": "project-tree-content-digest",
+          "observed": 3,
+          "expected": 3,
+          "agrees": true,
+          "detail": "the subject project tree member count is unchanged"
+        },
+        "peerSurvival": {
+          "collected": true,
+          "collectedBy": "host-process-table",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "the peer workbench process group is untouched by close"
+        },
+        "logEvents": {
+          "collected": true,
+          "collectedBy": "generation-log-stream",
+          "observed": 0,
+          "expected": 0,
+          "agrees": true,
+          "detail": "project.closed events emitted by the compiled generations"
+        },
+        "publicRouteProjection": {
+          "collected": true,
+          "collectedBy": "compiled-runtime-route",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "the published runtime state is Failed"
+        },
+        "proxyReleaseReceipts": {
+          "collected": true,
+          "collectedBy": "held-connection-probe",
+          "observed": 2,
+          "expected": 2,
+          "agrees": true,
+          "detail": "proxied connections the compiled server severed on close"
+        },
+        "managerReleaseReceipts": {
+          "collected": true,
+          "collectedBy": "compiled-route-response",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "the settled close disposition is none"
+        }
+      },
+      "live": {
+        "capturedBeforeTeardown": true,
+        "startedAtMs": 8944.200188,
+        "classes": {
+          "apiProcesses": {
+            "observed": 1
+          },
+          "workbenchProcesses": {
+            "observed": 1
+          },
+          "attributableDescendants": {
+            "observed": 1
+          },
+          "listeners": {
+            "observed": 2
+          },
+          "activeRequests": {
+            "observed": 0
+          },
+          "databaseRegistrations": {
+            "observed": 2
+          },
+          "disposableFixtures": {
+            "observed": 1
+          }
+        },
+        "liveIdentities": [
+          "api-03b534435d4ddc63",
+          "workbench-dbb61ffe770dfc51",
+          "fixture-8f4f31cf915e6435"
+        ]
+      },
+      "teardownActions": [
+        {
+          "action": "release-held-connections",
+          "performed": true,
+          "startedAtMs": 9010.58108,
+          "targets": [
+            "connection-7c6ac3b288c495bb",
+            "connection-3c866a0579445f61",
+            "listener-5a3dde0be074eccd"
+          ],
+          "receipt": "receipt-fb8e04ae224efc99a7c2f3f3f0c39225"
+        },
+        {
+          "action": "stop-api-generations",
+          "performed": true,
+          "startedAtMs": 9060.256802,
+          "targets": [
+            "api-036c64b30820134b",
+            "api-03b534435d4ddc63"
+          ],
+          "receipt": "receipt-57fe1c3cbf7773f3f44dfbcb37ff00f4"
+        },
+        {
+          "action": "terminate-workbench-groups",
+          "performed": true,
+          "startedAtMs": 9136.597366,
+          "targets": [
+            "workbench-c8b64cafb0dda08f",
+            "workbench-dbb61ffe770dfc51"
+          ],
+          "receipt": "receipt-580e3eeeb9d2b006613b4ce0b1d7cc21"
+        },
+        {
+          "action": "remove-disposable-fixtures",
+          "performed": true,
+          "startedAtMs": 9329.79903,
+          "targets": [
+            "fixture-8f4f31cf915e6435"
+          ],
+          "receipt": "receipt-110b68c5027300f65707f2d2a67248ac"
+        }
+      ],
+      "reobservation": {
+        "observer": "separate-process",
+        "observerModule": "apps/api/test/project-close-designated-observer.mjs",
+        "distinctFromExecutor": true,
+        "startedAtMs": 9333.483192,
+        "classes": {
+          "apiProcesses": {
+            "probeCompleted": true,
+            "residual": 0
+          },
+          "workbenchProcesses": {
+            "probeCompleted": true,
+            "residual": 0
+          },
+          "attributableDescendants": {
+            "probeCompleted": true,
+            "residual": 0
+          },
+          "listeners": {
+            "probeCompleted": true,
+            "residual": 0
+          },
+          "activeRequests": {
+            "probeCompleted": true,
+            "residual": 0
+          },
+          "disposableFixtures": {
+            "probeCompleted": true,
+            "residual": 0
+          }
+        },
+        "reobservedIdentities": [
+          "api-036c64b30820134b",
+          "api-03b534435d4ddc63",
+          "workbench-c8b64cafb0dda08f",
+          "workbench-dbb61ffe770dfc51",
+          "fixture-8f4f31cf915e6435"
+        ]
+      },
+      "registrationPresentAfter": true,
+      "durableRemovalObserved": false,
+      "residual": {
+        "selectedRuntimeProcesses": 0,
+        "attributableDescendants": 0,
+        "listeners": 0,
+        "proxyPendingOperations": 0,
+        "proxyHttpRequests": 0,
+        "proxyHttpResponses": 0,
+        "proxyRawSockets": 0,
+        "proxyWebSockets": 0,
+        "ownershipRecords": 0,
+        "pendingAdmissions": 0,
+        "quarantinedIdentities": 0,
+        "closeClaims": 0,
+        "inFlightCloseTasks": 0
+      },
+      "residualProbes": {
+        "selectedRuntimeProcesses": true,
+        "attributableDescendants": true,
+        "listeners": true,
+        "proxyPendingOperations": true,
+        "proxyHttpRequests": true,
+        "proxyHttpResponses": true,
+        "proxyRawSockets": true,
+        "proxyWebSockets": true,
+        "ownershipRecords": true,
+        "pendingAdmissions": true,
+        "quarantinedIdentities": true,
+        "closeClaims": true,
+        "inFlightCloseTasks": true
+      },
+      "statuses": [
+        500
+      ],
+      "projectClosedEmissions": 0,
+      "signalsAfterInterruption": 0,
+      "candidateAttributed": false,
+      "replacementTeardownOrder": null,
+      "safeRetrySettled": null,
+      "absenceSurvivesRestart": null,
+      "interruption": null,
+      "repeats": null
+    },
+    {
+      "id": "E-3",
+      "name": "adopted-close-after-api-restart",
+      "execution": {
+        "executionId": "exec-451ae625fd6b0c65",
+        "receipt": "receipt-1ab5d97415bdf6b57ba5b3ffd4e74346",
+        "timingOrigin": "episode-start-monotonic",
+        "startedAt": "2026-08-17T00:58:31.495Z",
+        "settledAt": "2026-08-17T00:58:40.681Z",
+        "durationMs": 9158.497962
+      },
+      "declaredExpectations": [
+        "the replacement generation adopts the surviving workbench as Running",
+        "close through the compiled route settles as closed with status 200",
+        "the adopted workbench process group and its listener become absent",
+        "the durable registration for the subject is removed"
+      ],
+      "phases": [
+        {
+          "phase": "P1",
+          "name": "preconditions-observed",
+          "completed": true,
+          "at": "2026-08-17T00:58:31.495Z",
+          "startedAtMs": 0.007843,
+          "durationMs": 1.265221,
+          "observations": [
+            "the compiled server entry point exists in the repository build output",
+            "the real workbench executable exists on this host",
+            "this episode owns a fresh project home, database file, and port"
+          ]
+        },
+        {
+          "phase": "P2",
+          "name": "compiled-assets-and-sources-hashed",
+          "completed": true,
+          "at": "2026-08-17T00:58:31.497Z",
+          "startedAtMs": 1.285348,
+          "durationMs": 0.04330400000000001,
+          "observations": [
+            "the eighteen frozen source-set members are hashed for this run: 18",
+            "the compiled server and web assets are hashed for this run: 11",
+            "the source-set digest of record is 2894eaeb480e93229fd6cea38965933d13c586dd0f2ef7abfbcc17fb9f0354c7",
+            "the compiled-asset digest of record is ade96afcb1e45e3442055ba8a3b0f919544f417179d80b207c63ebcbfbbadb4f"
+          ]
+        },
+        {
+          "phase": "P3",
+          "name": "real-generation-established",
+          "completed": true,
+          "at": "2026-08-17T00:58:31.532Z",
+          "startedAtMs": 36.595717,
+          "durationMs": 2552.253872,
+          "observations": [
+            "the repository compiled server entry point runs as its own process group",
+            "its loopback listener is attributed to that process by socket inode",
+            "it served a real request over that listener before the episode acted"
+          ]
+        },
+        {
+          "phase": "P4",
+          "name": "fixtures-and-registrations-established",
+          "completed": true,
+          "at": "2026-08-17T00:58:34.084Z",
+          "startedAtMs": 2588.876076,
+          "durationMs": 1724.8863340000003,
+          "observations": [
+            "two real project trees are registered in the real durable store",
+            "the peer project runs a real workbench process group of its own"
+          ]
+        },
+        {
+          "phase": "P5",
+          "name": "subject-arranged",
+          "completed": true,
+          "at": "2026-08-17T00:58:35.809Z",
+          "startedAtMs": 4313.769991,
+          "durationMs": 1681.1224510000002,
+          "observations": [
+            "the subject project runs a real workbench process group",
+            "its project tree content manifest is recorded before the action"
+          ]
+        },
+        {
+          "phase": "P6",
+          "name": "expectations-declared",
+          "completed": true,
+          "at": "2026-08-17T00:58:37.574Z",
+          "startedAtMs": 6078.465842,
+          "durationMs": 2692.026955000001,
+          "observations": [
+            "the first generation was interrupted while the workbench kept running",
+            "the replacement generation adopts the surviving workbench as Running",
+            "close through the compiled route settles as closed with status 200",
+            "the adopted workbench process group and its listener become absent",
+            "the durable registration for the subject is removed",
+            "the replacement generation published the state Running"
+          ]
+        },
+        {
+          "phase": "P7",
+          "name": "action-executed-through-compiled-route",
+          "completed": true,
+          "at": "2026-08-17T00:58:40.266Z",
+          "startedAtMs": 8770.513275,
+          "durationMs": 386.7211810000008,
+          "observations": [
+            "the adopted runtime was published as Running",
+            "close is requested through the compiled server public route"
+          ]
+        },
+        {
+          "phase": "P8",
+          "name": "settlement-observed",
+          "completed": true,
+          "at": "2026-08-17T00:58:40.653Z",
+          "startedAtMs": 9157.24773,
+          "durationMs": 1.2411190000002534,
+          "observations": [
+            "the route settled with status 200",
+            "the route reported the disposition closed",
+            "the adopted workbench root identity is absent from the process table"
+          ]
+        },
+        {
+          "phase": "P9",
+          "name": "durable-and-published-projection-observed",
+          "completed": true,
+          "at": "2026-08-17T00:58:40.654Z",
+          "startedAtMs": 9158.501183,
+          "durationMs": 27.124760999999125,
+          "observations": [
+            "the durable registration for the subject is gone from the store",
+            "the peer workbench and the subject project tree are untouched"
+          ]
+        },
+        {
+          "phase": "P10",
+          "name": "live-resource-evidence-before-teardown",
+          "completed": true,
+          "at": "2026-08-17T00:58:40.688Z",
+          "startedAtMs": 9193.069561,
+          "durationMs": 107.18062699999973,
+          "observations": [
+            "live resource evidence is captured while this episode hosts are running",
+            "every live class is counted from the host before any teardown action"
+          ]
+        },
+        {
+          "phase": "P11",
+          "name": "teardown-actions-with-exact-targets",
+          "completed": true,
+          "at": "2026-08-17T00:58:40.796Z",
+          "startedAtMs": 9300.300032,
+          "durationMs": 327.4048950000015,
+          "observations": [
+            "every teardown action names the exact identities it acted on",
+            "each action carries a receipt derived from that action and its targets"
+          ]
+        },
+        {
+          "phase": "P12",
+          "name": "independent-post-teardown-reobservation",
+          "completed": true,
+          "at": "2026-08-17T00:58:41.123Z",
+          "startedAtMs": 9627.719168,
+          "durationMs": 186.57290199999989,
+          "observations": [
+            "a different process re-read the host for every recorded identity",
+            "the re-observation was given identities and paths, never conclusions"
+          ]
+        },
+        {
+          "phase": "P13",
+          "name": "atomic-finalization",
+          "completed": true,
+          "at": "2026-08-17T00:58:41.310Z",
+          "startedAtMs": 9814.520263,
+          "durationMs": 0.031531999999060645,
+          "observations": [
+            "the row is sealed and its receipt derives from its own content",
+            "the row reaches its destinations only through one atomic finalization"
+          ]
+        }
+      ],
+      "generations": [
+        {
+          "generationId": "api-973349174c7bbd4c",
+          "authenticity": "compiled-entry-point",
+          "entryPoint": "apps/api/dist/server.js",
+          "argumentVectorObserved": true,
+          "listeningSocketAttributed": true,
+          "servedRequests": 1,
+          "persistenceFileObserved": true
+        },
+        {
+          "generationId": "api-9480f1931d8c5025",
+          "authenticity": "compiled-entry-point",
+          "entryPoint": "apps/api/dist/server.js",
+          "argumentVectorObserved": true,
+          "listeningSocketAttributed": true,
+          "servedRequests": 1,
+          "persistenceFileObserved": true
+        }
+      ],
+      "settled": true,
+      "observations": [
+        "a runtime adopted after a real API restart closed exactly",
+        "the adopted identity the replacement published was Running"
+      ],
+      "boundIdentities": [
+        "api-973349174c7bbd4c",
+        "api-9480f1931d8c5025",
+        "workbench-53130edaa608fb2f",
+        "project-89e3d5af79f74107"
+      ],
+      "collections": {
+        "apiProcess": {
+          "collected": true,
+          "collectedBy": "host-process-table",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "compiled server generations alive at collection"
+        },
+        "workbenchProcess": {
+          "collected": true,
+          "collectedBy": "host-process-table",
+          "observed": 0,
+          "expected": 0,
+          "agrees": true,
+          "detail": "the recorded subject workbench root identity"
+        },
+        "workbenchDescendants": {
+          "collected": true,
+          "collectedBy": "host-process-group-scan",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "the subject workbench process group holds descendants: false"
+        },
+        "listener": {
+          "collected": true,
+          "collectedBy": "loopback-socket-probe",
+          "observed": 0,
+          "expected": 0,
+          "agrees": true,
+          "detail": "the recorded subject workbench loopback listener"
+        },
+        "activeRequests": {
+          "collected": true,
+          "collectedBy": "held-connection-probe",
+          "observed": 0,
+          "expected": 0,
+          "agrees": true,
+          "detail": "proxied connections still open through the compiled server"
+        },
+        "databaseRegistration": {
+          "collected": true,
+          "collectedBy": "durable-store-read",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "rows read directly from the episode database file"
+        },
+        "runtimeRecord": {
+          "collected": true,
+          "collectedBy": "compiled-runtime-route",
+          "observed": 0,
+          "expected": 0,
+          "agrees": true,
+          "detail": "a published runtime record for the subject project"
+        },
+        "projectRootImmutability": {
+          "collected": true,
+          "collectedBy": "project-tree-content-digest",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "the subject project tree content is unchanged by close"
+        },
+        "projectRootManifest": {
+          "collected": true,
+          "collectedBy": "project-tree-content-digest",
+          "observed": 3,
+          "expected": 3,
+          "agrees": true,
+          "detail": "the subject project tree member count is unchanged"
+        },
+        "peerSurvival": {
+          "collected": true,
+          "collectedBy": "host-process-table",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "the peer workbench process group is untouched by close"
+        },
+        "logEvents": {
+          "collected": true,
+          "collectedBy": "generation-log-stream",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "project.closed events emitted by the compiled generations"
+        },
+        "publicRouteProjection": {
+          "collected": true,
+          "collectedBy": "compiled-runtime-route",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "the published runtime state is null"
+        },
+        "proxyReleaseReceipts": {
+          "collected": true,
+          "collectedBy": "held-connection-probe",
+          "observed": 2,
+          "expected": 2,
+          "agrees": true,
+          "detail": "proxied connections the compiled server severed on close"
+        },
+        "managerReleaseReceipts": {
+          "collected": true,
+          "collectedBy": "compiled-route-response",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "the settled close disposition is closed"
+        }
+      },
+      "live": {
+        "capturedBeforeTeardown": true,
+        "startedAtMs": 9193.123907,
+        "classes": {
+          "apiProcesses": {
+            "observed": 1
+          },
+          "workbenchProcesses": {
+            "observed": 1
+          },
+          "attributableDescendants": {
+            "observed": 1
+          },
+          "listeners": {
+            "observed": 2
+          },
+          "activeRequests": {
+            "observed": 0
+          },
+          "databaseRegistrations": {
+            "observed": 1
+          },
+          "disposableFixtures": {
+            "observed": 1
+          }
+        },
+        "liveIdentities": [
+          "api-9480f1931d8c5025",
+          "workbench-39ee639c6117e814",
+          "fixture-8ff56ef802e735cd"
+        ]
+      },
+      "teardownActions": [
+        {
+          "action": "release-held-connections",
+          "performed": true,
+          "startedAtMs": 9300.339638,
+          "targets": [
+            "connection-fadda664584fdd88",
+            "connection-7a55a286d381b7c7"
+          ],
+          "receipt": "receipt-98462b82fc170909b740802ff9a480b4"
+        },
+        {
+          "action": "stop-api-generations",
+          "performed": true,
+          "startedAtMs": 9350.899298,
+          "targets": [
+            "api-973349174c7bbd4c",
+            "api-9480f1931d8c5025"
+          ],
+          "receipt": "receipt-b95b8d2c1d6b824a2bf9d3dd2a5db091"
+        },
+        {
+          "action": "terminate-workbench-groups",
+          "performed": true,
+          "startedAtMs": 9432.522675,
+          "targets": [
+            "workbench-53130edaa608fb2f",
+            "workbench-39ee639c6117e814"
+          ],
+          "receipt": "receipt-ec504d29faa4661279d77a9acff63e11"
+        },
+        {
+          "action": "remove-disposable-fixtures",
+          "performed": true,
+          "startedAtMs": 9621.570152,
+          "targets": [
+            "fixture-8ff56ef802e735cd"
+          ],
+          "receipt": "receipt-896e726fd6a200bb3ba1121f065c303d"
+        }
+      ],
+      "reobservation": {
+        "observer": "separate-process",
+        "observerModule": "apps/api/test/project-close-designated-observer.mjs",
+        "distinctFromExecutor": true,
+        "startedAtMs": 9627.751177,
+        "classes": {
+          "apiProcesses": {
+            "probeCompleted": true,
+            "residual": 0
+          },
+          "workbenchProcesses": {
+            "probeCompleted": true,
+            "residual": 0
+          },
+          "attributableDescendants": {
+            "probeCompleted": true,
+            "residual": 0
+          },
+          "listeners": {
+            "probeCompleted": true,
+            "residual": 0
+          },
+          "activeRequests": {
+            "probeCompleted": true,
+            "residual": 0
+          },
+          "disposableFixtures": {
+            "probeCompleted": true,
+            "residual": 0
+          }
+        },
+        "reobservedIdentities": [
+          "api-973349174c7bbd4c",
+          "api-9480f1931d8c5025",
+          "workbench-53130edaa608fb2f",
+          "workbench-39ee639c6117e814",
+          "fixture-8ff56ef802e735cd"
+        ]
+      },
+      "registrationPresentAfter": false,
+      "durableRemovalObserved": true,
+      "residual": {
+        "selectedRuntimeProcesses": 0,
+        "attributableDescendants": 0,
+        "listeners": 0,
+        "proxyPendingOperations": 0,
+        "proxyHttpRequests": 0,
+        "proxyHttpResponses": 0,
+        "proxyRawSockets": 0,
+        "proxyWebSockets": 0,
+        "ownershipRecords": 0,
+        "pendingAdmissions": 0,
+        "quarantinedIdentities": 0,
+        "closeClaims": 0,
+        "inFlightCloseTasks": 0
+      },
+      "residualProbes": {
+        "selectedRuntimeProcesses": true,
+        "attributableDescendants": true,
+        "listeners": true,
+        "proxyPendingOperations": true,
+        "proxyHttpRequests": true,
+        "proxyHttpResponses": true,
+        "proxyRawSockets": true,
+        "proxyWebSockets": true,
+        "ownershipRecords": true,
+        "pendingAdmissions": true,
+        "quarantinedIdentities": true,
+        "closeClaims": true,
+        "inFlightCloseTasks": true
+      },
+      "statuses": [
+        200
+      ],
+      "projectClosedEmissions": 1,
+      "signalsAfterInterruption": null,
+      "candidateAttributed": true,
+      "replacementTeardownOrder": null,
+      "safeRetrySettled": null,
+      "absenceSurvivesRestart": null,
+      "interruption": null,
+      "repeats": null
+    },
+    {
+      "id": "E-4",
+      "name": "interruption-between-confirmation-and-removal",
+      "execution": {
+        "executionId": "exec-f27b36345444c5bb",
+        "receipt": "receipt-be10d619ac4e0d812c30ddab7ba0c061",
+        "timingOrigin": "episode-start-monotonic",
+        "startedAt": "2026-08-17T00:58:41.312Z",
+        "settledAt": "2026-08-17T00:58:50.111Z",
+        "durationMs": 8777.501675
+      },
+      "declaredExpectations": [
+        "the interruption lands after the release is host-confirmed",
+        "no durable removal is observed and the registration survives",
+        "the interrupted close publishes no settled success anywhere",
+        "the next real generation settles the subject truthfully",
+        "a safe retry then closes the project and removes its registration"
+      ],
+      "phases": [
+        {
+          "phase": "P1",
+          "name": "preconditions-observed",
+          "completed": true,
+          "at": "2026-08-17T00:58:41.312Z",
+          "startedAtMs": 0.011253,
+          "durationMs": 1.094565,
+          "observations": [
+            "the compiled server entry point exists in the repository build output",
+            "the real workbench executable exists on this host",
+            "this episode owns a fresh project home, database file, and port"
+          ]
+        },
+        {
+          "phase": "P2",
+          "name": "compiled-assets-and-sources-hashed",
+          "completed": true,
+          "at": "2026-08-17T00:58:41.313Z",
+          "startedAtMs": 1.114965,
+          "durationMs": 0.031128000000000045,
+          "observations": [
+            "the eighteen frozen source-set members are hashed for this run: 18",
+            "the compiled server and web assets are hashed for this run: 11",
+            "the source-set digest of record is 2894eaeb480e93229fd6cea38965933d13c586dd0f2ef7abfbcc17fb9f0354c7",
+            "the compiled-asset digest of record is ade96afcb1e45e3442055ba8a3b0f919544f417179d80b207c63ebcbfbbadb4f"
+          ]
+        },
+        {
+          "phase": "P3",
+          "name": "real-generation-established",
+          "completed": true,
+          "at": "2026-08-17T00:58:41.346Z",
+          "startedAtMs": 33.869499,
+          "durationMs": 2140.625603,
+          "observations": [
+            "the repository compiled server entry point runs as its own process group",
+            "its loopback listener is attributed to that process by socket inode",
+            "it served a real request over that listener before the episode acted"
+          ]
+        },
+        {
+          "phase": "P4",
+          "name": "fixtures-and-registrations-established",
+          "completed": true,
+          "at": "2026-08-17T00:58:43.486Z",
+          "startedAtMs": 2174.502987,
+          "durationMs": 1923.1903570000004,
+          "observations": [
+            "two real project trees are registered in the real durable store",
+            "the peer project runs a real workbench process group of its own"
+          ]
+        },
+        {
+          "phase": "P5",
+          "name": "subject-arranged",
+          "completed": true,
+          "at": "2026-08-17T00:58:45.409Z",
+          "startedAtMs": 4097.705171,
+          "durationMs": 1771.9882700000007,
+          "observations": [
+            "the subject project runs a real workbench process group",
+            "its project tree content manifest is recorded before the action"
+          ]
+        },
+        {
+          "phase": "P6",
+          "name": "expectations-declared",
+          "completed": true,
+          "at": "2026-08-17T00:58:47.240Z",
+          "startedAtMs": 5927.870591,
+          "durationMs": 3.9558240000005753,
+          "observations": [
+            "a real write transaction is held on the episode database by the host",
+            "the interruption lands after the release is host-confirmed",
+            "no durable removal is observed and the registration survives",
+            "the interrupted close publishes no settled success anywhere",
+            "the next real generation settles the subject truthfully",
+            "a safe retry then closes the project and removes its registration"
+          ]
+        },
+        {
+          "phase": "P7",
+          "name": "action-executed-through-compiled-route",
+          "completed": true,
+          "at": "2026-08-17T00:58:47.244Z",
+          "startedAtMs": 5931.841785,
+          "durationMs": 250.40951300000052,
+          "observations": [
+            "close is requested through the compiled server public route",
+            "the host confirmed the release by process and listener absence",
+            "the generation was interrupted immediately after that confirmation"
+          ]
+        },
+        {
+          "phase": "P8",
+          "name": "settlement-observed",
+          "completed": true,
+          "at": "2026-08-17T00:58:47.494Z",
+          "startedAtMs": 6182.260181,
+          "durationMs": 1.6971870000006675,
+          "observations": [
+            "the interrupted request produced no settled response: true",
+            "the durable registration count under the interruption is 2"
+          ]
+        },
+        {
+          "phase": "P9",
+          "name": "durable-and-published-projection-observed",
+          "completed": true,
+          "at": "2026-08-17T00:58:47.496Z",
+          "startedAtMs": 6183.980628,
+          "durationMs": 2569.3332330000003,
+          "observations": [
+            "the write transaction is released before the replacement generation",
+            "the replacement generation settles the interrupted subject truthfully",
+            "the replacement generation published the state Stopped"
+          ]
+        },
+        {
+          "phase": "P10",
+          "name": "live-resource-evidence-before-teardown",
+          "completed": true,
+          "at": "2026-08-17T00:58:50.114Z",
+          "startedAtMs": 8799.08033,
+          "durationMs": 65.30674799999906,
+          "observations": [
+            "live resource evidence is captured while this episode hosts are running",
+            "every live class is counted from the host before any teardown action"
+          ]
+        },
+        {
+          "phase": "P11",
+          "name": "teardown-actions-with-exact-targets",
+          "completed": true,
+          "at": "2026-08-17T00:58:50.179Z",
+          "startedAtMs": 8864.443021,
+          "durationMs": 331.81085600000006,
+          "observations": [
+            "every teardown action names the exact identities it acted on",
+            "each action carries a receipt derived from that action and its targets"
+          ]
+        },
+        {
+          "phase": "P12",
+          "name": "independent-post-teardown-reobservation",
+          "completed": true,
+          "at": "2026-08-17T00:58:50.511Z",
+          "startedAtMs": 9196.263376,
+          "durationMs": 202.72363899999982,
+          "observations": [
+            "a different process re-read the host for every recorded identity",
+            "the re-observation was given identities and paths, never conclusions"
+          ]
+        },
+        {
+          "phase": "P13",
+          "name": "atomic-finalization",
+          "completed": true,
+          "at": "2026-08-17T00:58:50.714Z",
+          "startedAtMs": 9399.248457,
+          "durationMs": 0.0343300000004092,
+          "observations": [
+            "the row is sealed and its receipt derives from its own content",
+            "the row reaches its destinations only through one atomic finalization"
+          ]
+        }
+      ],
+      "generations": [
+        {
+          "generationId": "api-22df4e1b9273f590",
+          "authenticity": "compiled-entry-point",
+          "entryPoint": "apps/api/dist/server.js",
+          "argumentVectorObserved": true,
+          "listeningSocketAttributed": true,
+          "servedRequests": 1,
+          "persistenceFileObserved": true
+        },
+        {
+          "generationId": "api-91832dcba27a35b2",
+          "authenticity": "compiled-entry-point",
+          "entryPoint": "apps/api/dist/server.js",
+          "argumentVectorObserved": true,
+          "listeningSocketAttributed": true,
+          "servedRequests": 1,
+          "persistenceFileObserved": true
+        }
+      ],
+      "settled": true,
+      "observations": [
+        "the interruption landed between a host-confirmed release and removal",
+        "the durable registration count under the interruption was 2",
+        "the replacement generation published Stopped",
+        "a safe retry settled as closed"
+      ],
+      "boundIdentities": [
+        "api-22df4e1b9273f590",
+        "api-91832dcba27a35b2",
+        "workbench-da33d7d8b63b5651",
+        "project-cf9c739ecd53c91d"
+      ],
+      "collections": {
+        "apiProcess": {
+          "collected": true,
+          "collectedBy": "host-process-table",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "compiled server generations alive at collection"
+        },
+        "workbenchProcess": {
+          "collected": true,
+          "collectedBy": "host-process-table",
+          "observed": 0,
+          "expected": 0,
+          "agrees": true,
+          "detail": "the recorded subject workbench root identity"
+        },
+        "workbenchDescendants": {
+          "collected": true,
+          "collectedBy": "host-process-group-scan",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "the subject workbench process group holds descendants: false"
+        },
+        "listener": {
+          "collected": true,
+          "collectedBy": "loopback-socket-probe",
+          "observed": 0,
+          "expected": 0,
+          "agrees": true,
+          "detail": "the recorded subject workbench loopback listener"
+        },
+        "activeRequests": {
+          "collected": true,
+          "collectedBy": "held-connection-probe",
+          "observed": 0,
+          "expected": 0,
+          "agrees": true,
+          "detail": "proxied connections still open through the compiled server"
+        },
+        "databaseRegistration": {
+          "collected": true,
+          "collectedBy": "durable-store-read",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "rows read directly from the episode database file"
+        },
+        "runtimeRecord": {
+          "collected": true,
+          "collectedBy": "compiled-runtime-route",
+          "observed": 0,
+          "expected": 0,
+          "agrees": true,
+          "detail": "a published runtime record for the subject project"
+        },
+        "projectRootImmutability": {
+          "collected": true,
+          "collectedBy": "project-tree-content-digest",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "the subject project tree content is unchanged by close"
+        },
+        "projectRootManifest": {
+          "collected": true,
+          "collectedBy": "project-tree-content-digest",
+          "observed": 3,
+          "expected": 3,
+          "agrees": true,
+          "detail": "the subject project tree member count is unchanged"
+        },
+        "peerSurvival": {
+          "collected": true,
+          "collectedBy": "host-process-table",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "the peer workbench process group is untouched by close"
+        },
+        "logEvents": {
+          "collected": true,
+          "collectedBy": "generation-log-stream",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "project.closed events emitted by the compiled generations"
+        },
+        "publicRouteProjection": {
+          "collected": true,
+          "collectedBy": "compiled-runtime-route",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "the published runtime state is null"
+        },
+        "proxyReleaseReceipts": {
+          "collected": true,
+          "collectedBy": "held-connection-probe",
+          "observed": 2,
+          "expected": 2,
+          "agrees": true,
+          "detail": "proxied connections the compiled server severed on close"
+        },
+        "managerReleaseReceipts": {
+          "collected": true,
+          "collectedBy": "compiled-route-response",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "the settled close disposition is closed"
+        }
+      },
+      "live": {
+        "capturedBeforeTeardown": true,
+        "startedAtMs": 8799.112673,
+        "classes": {
+          "apiProcesses": {
+            "observed": 1
+          },
+          "workbenchProcesses": {
+            "observed": 1
+          },
+          "attributableDescendants": {
+            "observed": 1
+          },
+          "listeners": {
+            "observed": 2
+          },
+          "activeRequests": {
+            "observed": 0
+          },
+          "databaseRegistrations": {
+            "observed": 1
+          },
+          "disposableFixtures": {
+            "observed": 1
+          }
+        },
+        "liveIdentities": [
+          "api-91832dcba27a35b2",
+          "workbench-ea845e0e8e63ded2",
+          "fixture-5029aebcf77fe141"
+        ]
+      },
+      "teardownActions": [
+        {
+          "action": "release-held-connections",
+          "performed": true,
+          "startedAtMs": 8864.472843,
+          "targets": [
+            "connection-f47afc41c611dc2f",
+            "connection-e4fa61b7e131bfb7"
+          ],
+          "receipt": "receipt-7fb30d37614ceb6d6fcdf191df216832"
+        },
+        {
+          "action": "stop-api-generations",
+          "performed": true,
+          "startedAtMs": 8915.114973,
+          "targets": [
+            "api-22df4e1b9273f590",
+            "api-91832dcba27a35b2"
+          ],
+          "receipt": "receipt-d9348872da331b2d72b96184b48d589a"
+        },
+        {
+          "action": "terminate-workbench-groups",
+          "performed": true,
+          "startedAtMs": 9046.810029,
+          "targets": [
+            "workbench-da33d7d8b63b5651",
+            "workbench-ea845e0e8e63ded2"
+          ],
+          "receipt": "receipt-35d4c9292e6b6b4b3fd04661d7c907c2"
+        },
+        {
+          "action": "remove-disposable-fixtures",
+          "performed": true,
+          "startedAtMs": 9192.278658,
+          "targets": [
+            "fixture-5029aebcf77fe141"
+          ],
+          "receipt": "receipt-67df380a22d7eaf84b0153930fb33219"
+        }
+      ],
+      "reobservation": {
+        "observer": "separate-process",
+        "observerModule": "apps/api/test/project-close-designated-observer.mjs",
+        "distinctFromExecutor": true,
+        "startedAtMs": 9196.279779,
+        "classes": {
+          "apiProcesses": {
+            "probeCompleted": true,
+            "residual": 0
+          },
+          "workbenchProcesses": {
+            "probeCompleted": true,
+            "residual": 0
+          },
+          "attributableDescendants": {
+            "probeCompleted": true,
+            "residual": 0
+          },
+          "listeners": {
+            "probeCompleted": true,
+            "residual": 0
+          },
+          "activeRequests": {
+            "probeCompleted": true,
+            "residual": 0
+          },
+          "disposableFixtures": {
+            "probeCompleted": true,
+            "residual": 0
+          }
+        },
+        "reobservedIdentities": [
+          "api-22df4e1b9273f590",
+          "api-91832dcba27a35b2",
+          "workbench-da33d7d8b63b5651",
+          "workbench-ea845e0e8e63ded2",
+          "fixture-5029aebcf77fe141"
+        ]
+      },
+      "registrationPresentAfter": false,
+      "durableRemovalObserved": true,
+      "residual": {
+        "selectedRuntimeProcesses": 0,
+        "attributableDescendants": 0,
+        "listeners": 0,
+        "proxyPendingOperations": 0,
+        "proxyHttpRequests": 0,
+        "proxyHttpResponses": 0,
+        "proxyRawSockets": 0,
+        "proxyWebSockets": 0,
+        "ownershipRecords": 0,
+        "pendingAdmissions": 0,
+        "quarantinedIdentities": 0,
+        "closeClaims": 0,
+        "inFlightCloseTasks": 0
+      },
+      "residualProbes": {
+        "selectedRuntimeProcesses": true,
+        "attributableDescendants": true,
+        "listeners": true,
+        "proxyPendingOperations": true,
+        "proxyHttpRequests": true,
+        "proxyHttpResponses": true,
+        "proxyRawSockets": true,
+        "proxyWebSockets": true,
+        "ownershipRecords": true,
+        "pendingAdmissions": true,
+        "quarantinedIdentities": true,
+        "closeClaims": true,
+        "inFlightCloseTasks": true
+      },
+      "statuses": [
+        200
+      ],
+      "projectClosedEmissions": 1,
+      "signalsAfterInterruption": null,
+      "candidateAttributed": false,
+      "replacementTeardownOrder": null,
+      "safeRetrySettled": true,
+      "absenceSurvivesRestart": null,
+      "interruption": null,
+      "repeats": null
+    },
+    {
+      "id": "E-5",
+      "name": "interruption-after-removal",
+      "execution": {
+        "executionId": "exec-10055d3a5def07ad",
+        "receipt": "receipt-8c9fc794497207013e90b4f432a0589d",
+        "timingOrigin": "episode-start-monotonic",
+        "startedAt": "2026-08-17T00:58:50.715Z",
+        "settledAt": "2026-08-17T00:59:00.620Z",
+        "durationMs": 9884.901354
+      },
+      "declaredExpectations": [
+        "close settles as closed and the durable removal commits",
+        "the interruption after removal leaves no attributable candidate",
+        "the next real generation publishes no runtime for the removed project",
+        "the removal is never paired with a living attributable candidate"
+      ],
+      "phases": [
+        {
+          "phase": "P1",
+          "name": "preconditions-observed",
+          "completed": true,
+          "at": "2026-08-17T00:58:50.715Z",
+          "startedAtMs": 0.007219,
+          "durationMs": 0.628302,
+          "observations": [
+            "the compiled server entry point exists in the repository build output",
+            "the real workbench executable exists on this host",
+            "this episode owns a fresh project home, database file, and port"
+          ]
+        },
+        {
+          "phase": "P2",
+          "name": "compiled-assets-and-sources-hashed",
+          "completed": true,
+          "at": "2026-08-17T00:58:50.716Z",
+          "startedAtMs": 0.641808,
+          "durationMs": 0.02053499999999997,
+          "observations": [
+            "the eighteen frozen source-set members are hashed for this run: 18",
+            "the compiled server and web assets are hashed for this run: 11",
+            "the source-set digest of record is 2894eaeb480e93229fd6cea38965933d13c586dd0f2ef7abfbcc17fb9f0354c7",
+            "the compiled-asset digest of record is ade96afcb1e45e3442055ba8a3b0f919544f417179d80b207c63ebcbfbbadb4f"
+          ]
+        },
+        {
+          "phase": "P3",
+          "name": "real-generation-established",
+          "completed": true,
+          "at": "2026-08-17T00:58:50.738Z",
+          "startedAtMs": 22.381084,
+          "durationMs": 2250.840034,
+          "observations": [
+            "the repository compiled server entry point runs as its own process group",
+            "its loopback listener is attributed to that process by socket inode",
+            "it served a real request over that listener before the episode acted"
+          ]
+        },
+        {
+          "phase": "P4",
+          "name": "fixtures-and-registrations-established",
+          "completed": true,
+          "at": "2026-08-17T00:58:52.989Z",
+          "startedAtMs": 2273.22853,
+          "durationMs": 1686.7944360000001,
+          "observations": [
+            "two real project trees are registered in the real durable store",
+            "the peer project runs a real workbench process group of its own"
+          ]
+        },
+        {
+          "phase": "P5",
+          "name": "subject-arranged",
+          "completed": true,
+          "at": "2026-08-17T00:58:54.676Z",
+          "startedAtMs": 3960.035718,
+          "durationMs": 1778.1541989999996,
+          "observations": [
+            "the subject project runs a real workbench process group",
+            "its project tree content manifest is recorded before the action"
+          ]
+        },
+        {
+          "phase": "P6",
+          "name": "expectations-declared",
+          "completed": true,
+          "at": "2026-08-17T00:58:56.513Z",
+          "startedAtMs": 5797.554997,
+          "durationMs": 0.1817110000001776,
+          "observations": [
+            "close settles as closed and the durable removal commits",
+            "the interruption after removal leaves no attributable candidate",
+            "the next real generation publishes no runtime for the removed project",
+            "the removal is never paired with a living attributable candidate"
+          ]
+        },
+        {
+          "phase": "P7",
+          "name": "action-executed-through-compiled-route",
+          "completed": true,
+          "at": "2026-08-17T00:58:56.513Z",
+          "startedAtMs": 5797.743803,
+          "durationMs": 1347.3604649999997,
+          "observations": [
+            "close is requested through the compiled server route"
+          ]
+        },
+        {
+          "phase": "P8",
+          "name": "settlement-observed",
+          "completed": true,
+          "at": "2026-08-17T00:58:57.861Z",
+          "startedAtMs": 7145.123105,
+          "durationMs": 32.629955000000336,
+          "observations": [
+            "the route settled with status 200",
+            "the workbench was observed absent before the removal was observed",
+            "the generation was interrupted after the removal had committed"
+          ]
+        },
+        {
+          "phase": "P9",
+          "name": "durable-and-published-projection-observed",
+          "completed": true,
+          "at": "2026-08-17T00:58:57.893Z",
+          "startedAtMs": 7177.780703,
+          "durationMs": 2707.0821080000005,
+          "observations": [
+            "the replacement generation reconciles from the durable store alone",
+            "no candidate is attributable to the removed project",
+            "the replacement generation published the state null"
+          ]
+        },
+        {
+          "phase": "P10",
+          "name": "live-resource-evidence-before-teardown",
+          "completed": true,
+          "at": "2026-08-17T00:59:00.623Z",
+          "startedAtMs": 9907.379373,
+          "durationMs": 69.06310099999973,
+          "observations": [
+            "live resource evidence is captured while this episode hosts are running",
+            "every live class is counted from the host before any teardown action"
+          ]
+        },
+        {
+          "phase": "P11",
+          "name": "teardown-actions-with-exact-targets",
+          "completed": true,
+          "at": "2026-08-17T00:59:00.692Z",
+          "startedAtMs": 9976.489006,
+          "durationMs": 276.6748950000001,
+          "observations": [
+            "every teardown action names the exact identities it acted on",
+            "each action carries a receipt derived from that action and its targets"
+          ]
+        },
+        {
+          "phase": "P12",
+          "name": "independent-post-teardown-reobservation",
+          "completed": true,
+          "at": "2026-08-17T00:59:00.969Z",
+          "startedAtMs": 10253.178951,
+          "durationMs": 154.01274600000033,
+          "observations": [
+            "a different process re-read the host for every recorded identity",
+            "the re-observation was given identities and paths, never conclusions"
+          ]
+        },
+        {
+          "phase": "P13",
+          "name": "atomic-finalization",
+          "completed": true,
+          "at": "2026-08-17T00:59:01.123Z",
+          "startedAtMs": 10407.379429,
+          "durationMs": 0.022516999999425025,
+          "observations": [
+            "the row is sealed and its receipt derives from its own content",
+            "the row reaches its destinations only through one atomic finalization"
+          ]
+        }
+      ],
+      "generations": [
+        {
+          "generationId": "api-ae96d47a1c929fdc",
+          "authenticity": "compiled-entry-point",
+          "entryPoint": "apps/api/dist/server.js",
+          "argumentVectorObserved": true,
+          "listeningSocketAttributed": true,
+          "servedRequests": 1,
+          "persistenceFileObserved": true
+        },
+        {
+          "generationId": "api-129928c3a53694d7",
+          "authenticity": "compiled-entry-point",
+          "entryPoint": "apps/api/dist/server.js",
+          "argumentVectorObserved": true,
+          "listeningSocketAttributed": true,
+          "servedRequests": 1,
+          "persistenceFileObserved": true
+        }
+      ],
+      "settled": true,
+      "observations": [
+        "the interruption landed after the durable removal had committed",
+        "the registration count observed after the removal was 1",
+        "the replacement generation published null",
+        "no attributable candidate existed while the registration was absent"
+      ],
+      "boundIdentities": [
+        "api-ae96d47a1c929fdc",
+        "api-129928c3a53694d7",
+        "workbench-c38b2df62714f610",
+        "project-7763b3222d45f31d"
+      ],
+      "collections": {
+        "apiProcess": {
+          "collected": true,
+          "collectedBy": "host-process-table",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "compiled server generations alive at collection"
+        },
+        "workbenchProcess": {
+          "collected": true,
+          "collectedBy": "host-process-table",
+          "observed": 0,
+          "expected": 0,
+          "agrees": true,
+          "detail": "the recorded subject workbench root identity"
+        },
+        "workbenchDescendants": {
+          "collected": true,
+          "collectedBy": "host-process-group-scan",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "the subject workbench process group holds descendants: false"
+        },
+        "listener": {
+          "collected": true,
+          "collectedBy": "loopback-socket-probe",
+          "observed": 0,
+          "expected": 0,
+          "agrees": true,
+          "detail": "the recorded subject workbench loopback listener"
+        },
+        "activeRequests": {
+          "collected": true,
+          "collectedBy": "held-connection-probe",
+          "observed": 0,
+          "expected": 0,
+          "agrees": true,
+          "detail": "proxied connections still open through the compiled server"
+        },
+        "databaseRegistration": {
+          "collected": true,
+          "collectedBy": "durable-store-read",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "rows read directly from the episode database file"
+        },
+        "runtimeRecord": {
+          "collected": true,
+          "collectedBy": "compiled-runtime-route",
+          "observed": 0,
+          "expected": 0,
+          "agrees": true,
+          "detail": "a published runtime record for the subject project"
+        },
+        "projectRootImmutability": {
+          "collected": true,
+          "collectedBy": "project-tree-content-digest",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "the subject project tree content is unchanged by close"
+        },
+        "projectRootManifest": {
+          "collected": true,
+          "collectedBy": "project-tree-content-digest",
+          "observed": 3,
+          "expected": 3,
+          "agrees": true,
+          "detail": "the subject project tree member count is unchanged"
+        },
+        "peerSurvival": {
+          "collected": true,
+          "collectedBy": "host-process-table",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "the peer workbench process group is untouched by close"
+        },
+        "logEvents": {
+          "collected": true,
+          "collectedBy": "generation-log-stream",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "project.closed events emitted by the compiled generations"
+        },
+        "publicRouteProjection": {
+          "collected": true,
+          "collectedBy": "compiled-runtime-route",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "the published runtime state is null"
+        },
+        "proxyReleaseReceipts": {
+          "collected": true,
+          "collectedBy": "held-connection-probe",
+          "observed": 2,
+          "expected": 2,
+          "agrees": true,
+          "detail": "proxied connections the compiled server severed on close"
+        },
+        "managerReleaseReceipts": {
+          "collected": true,
+          "collectedBy": "compiled-route-response",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "the settled close disposition is closed"
+        }
+      },
+      "live": {
+        "capturedBeforeTeardown": true,
+        "startedAtMs": 9907.409179,
+        "classes": {
+          "apiProcesses": {
+            "observed": 1
+          },
+          "workbenchProcesses": {
+            "observed": 1
+          },
+          "attributableDescendants": {
+            "observed": 1
+          },
+          "listeners": {
+            "observed": 2
+          },
+          "activeRequests": {
+            "observed": 0
+          },
+          "databaseRegistrations": {
+            "observed": 1
+          },
+          "disposableFixtures": {
+            "observed": 1
+          }
+        },
+        "liveIdentities": [
+          "api-129928c3a53694d7",
+          "workbench-aaf77549e1d2bf51",
+          "fixture-8405c8f484ac2f55"
+        ]
+      },
+      "teardownActions": [
+        {
+          "action": "release-held-connections",
+          "performed": true,
+          "startedAtMs": 9976.53193,
+          "targets": [
+            "connection-3bb39d2619a7fd2f",
+            "connection-c60ee9954847faf3"
+          ],
+          "receipt": "receipt-de346ca12752fc7d9f38acce74a8e024"
+        },
+        {
+          "action": "stop-api-generations",
+          "performed": true,
+          "startedAtMs": 10027.021533,
+          "targets": [
+            "api-ae96d47a1c929fdc",
+            "api-129928c3a53694d7"
+          ],
+          "receipt": "receipt-192ecb1b6a98ada796b90d6a5ebc9eb5"
+        },
+        {
+          "action": "terminate-workbench-groups",
+          "performed": true,
+          "startedAtMs": 10106.738565,
+          "targets": [
+            "workbench-c38b2df62714f610",
+            "workbench-aaf77549e1d2bf51"
+          ],
+          "receipt": "receipt-4180571e465a8f24a5d37e53f2b98831"
+        },
+        {
+          "action": "remove-disposable-fixtures",
+          "performed": true,
+          "startedAtMs": 10249.165199,
+          "targets": [
+            "fixture-8405c8f484ac2f55"
+          ],
+          "receipt": "receipt-55c44bf64ae708d9aee804ef1f651774"
+        }
+      ],
+      "reobservation": {
+        "observer": "separate-process",
+        "observerModule": "apps/api/test/project-close-designated-observer.mjs",
+        "distinctFromExecutor": true,
+        "startedAtMs": 10253.206675,
+        "classes": {
+          "apiProcesses": {
+            "probeCompleted": true,
+            "residual": 0
+          },
+          "workbenchProcesses": {
+            "probeCompleted": true,
+            "residual": 0
+          },
+          "attributableDescendants": {
+            "probeCompleted": true,
+            "residual": 0
+          },
+          "listeners": {
+            "probeCompleted": true,
+            "residual": 0
+          },
+          "activeRequests": {
+            "probeCompleted": true,
+            "residual": 0
+          },
+          "disposableFixtures": {
+            "probeCompleted": true,
+            "residual": 0
+          }
+        },
+        "reobservedIdentities": [
+          "api-ae96d47a1c929fdc",
+          "api-129928c3a53694d7",
+          "workbench-c38b2df62714f610",
+          "workbench-aaf77549e1d2bf51",
+          "fixture-8405c8f484ac2f55"
+        ]
+      },
+      "registrationPresentAfter": false,
+      "durableRemovalObserved": true,
+      "residual": {
+        "selectedRuntimeProcesses": 0,
+        "attributableDescendants": 0,
+        "listeners": 0,
+        "proxyPendingOperations": 0,
+        "proxyHttpRequests": 0,
+        "proxyHttpResponses": 0,
+        "proxyRawSockets": 0,
+        "proxyWebSockets": 0,
+        "ownershipRecords": 0,
+        "pendingAdmissions": 0,
+        "quarantinedIdentities": 0,
+        "closeClaims": 0,
+        "inFlightCloseTasks": 0
+      },
+      "residualProbes": {
+        "selectedRuntimeProcesses": true,
+        "attributableDescendants": true,
+        "listeners": true,
+        "proxyPendingOperations": true,
+        "proxyHttpRequests": true,
+        "proxyHttpResponses": true,
+        "proxyRawSockets": true,
+        "proxyWebSockets": true,
+        "ownershipRecords": true,
+        "pendingAdmissions": true,
+        "quarantinedIdentities": true,
+        "closeClaims": true,
+        "inFlightCloseTasks": true
+      },
+      "statuses": [
+        200
+      ],
+      "projectClosedEmissions": 1,
+      "signalsAfterInterruption": null,
+      "candidateAttributed": false,
+      "replacementTeardownOrder": null,
+      "safeRetrySettled": null,
+      "absenceSurvivesRestart": true,
+      "interruption": null,
+      "repeats": null
+    },
+    {
+      "id": "E-6",
+      "name": "interruption-during-release-before-confirmation",
+      "execution": {
+        "executionId": "exec-1c7821212c0d5ecd",
+        "receipt": "receipt-a0248a01da6fb03f5da9e1e0cea6eddc",
+        "timingOrigin": "episode-start-monotonic",
+        "startedAt": "2026-08-17T00:59:01.124Z",
+        "settledAt": "2026-08-17T00:59:10.846Z",
+        "durationMs": 9706.039368
+      },
+      "declaredExpectations": [
+        "the interruption lands during release and before any confirmation",
+        "no signal reaches the runtime, which stays alive and healthy",
+        "no durable removal is observed and the registration is retained",
+        "the retained project enters the replacement unconfirmed, never closed",
+        "a healthy exactly attributable survivor is adopted and published Running",
+        "the survivor is never reported absent and never published Stopped",
+        "a safe retry then closes the adopted survivor exactly"
+      ],
+      "phases": [
+        {
+          "phase": "P1",
+          "name": "preconditions-observed",
+          "completed": true,
+          "at": "2026-08-17T00:59:01.124Z",
+          "startedAtMs": 0.00669,
+          "durationMs": 0.430452,
+          "observations": [
+            "the compiled server entry point exists in the repository build output",
+            "the real workbench executable exists on this host",
+            "this episode owns a fresh project home, database file, and port"
+          ]
+        },
+        {
+          "phase": "P2",
+          "name": "compiled-assets-and-sources-hashed",
+          "completed": true,
+          "at": "2026-08-17T00:59:01.125Z",
+          "startedAtMs": 0.445325,
+          "durationMs": 0.02347699999999997,
+          "observations": [
+            "the eighteen frozen source-set members are hashed for this run: 18",
+            "the compiled server and web assets are hashed for this run: 11",
+            "the source-set digest of record is 2894eaeb480e93229fd6cea38965933d13c586dd0f2ef7abfbcc17fb9f0354c7",
+            "the compiled-asset digest of record is ade96afcb1e45e3442055ba8a3b0f919544f417179d80b207c63ebcbfbbadb4f"
+          ]
+        },
+        {
+          "phase": "P3",
+          "name": "real-generation-established",
+          "completed": true,
+          "at": "2026-08-17T00:59:01.147Z",
+          "startedAtMs": 23.321526,
+          "durationMs": 2361.9410789999997,
+          "observations": [
+            "the repository compiled server entry point runs as its own process group",
+            "its loopback listener is attributed to that process by socket inode",
+            "it served a real request over that listener before the episode acted"
+          ]
+        },
+        {
+          "phase": "P4",
+          "name": "fixtures-and-registrations-established",
+          "completed": true,
+          "at": "2026-08-17T00:59:03.509Z",
+          "startedAtMs": 2385.273719,
+          "durationMs": 1807.675177,
+          "observations": [
+            "two real project trees are registered in the real durable store",
+            "the peer project runs a real workbench process group of its own"
+          ]
+        },
+        {
+          "phase": "P5",
+          "name": "subject-arranged",
+          "completed": true,
+          "at": "2026-08-17T00:59:05.317Z",
+          "startedAtMs": 4192.965786,
+          "durationMs": 1720.091539,
+          "observations": [
+            "the subject project runs a real workbench process group",
+            "its project tree content manifest is recorded before the action"
+          ]
+        },
+        {
+          "phase": "P6",
+          "name": "expectations-declared",
+          "completed": true,
+          "at": "2026-08-17T00:59:07.085Z",
+          "startedAtMs": 5961.149566,
+          "durationMs": 169.75478199999998,
+          "observations": [
+            "real proxied connections are held open through the compiled server: 10",
+            "the interruption lands during release and before any confirmation",
+            "no signal reaches the runtime, which stays alive and healthy",
+            "no durable removal is observed and the registration is retained",
+            "the retained project enters the replacement unconfirmed, never closed",
+            "a healthy exactly attributable survivor is adopted and published Running",
+            "the survivor is never reported absent and never published Stopped",
+            "a safe retry then closes the adopted survivor exactly"
+          ]
+        },
+        {
+          "phase": "P7",
+          "name": "action-executed-through-compiled-route",
+          "completed": true,
+          "at": "2026-08-17T00:59:07.255Z",
+          "startedAtMs": 6130.919642,
+          "durationMs": 36.10700999999972,
+          "observations": [
+            "close is requested through the compiled server public route",
+            "the generation was interrupted as its drain severed the first held connection"
+          ]
+        },
+        {
+          "phase": "P8",
+          "name": "settlement-observed",
+          "completed": true,
+          "at": "2026-08-17T00:59:07.291Z",
+          "startedAtMs": 6167.042716,
+          "durationMs": 221.83146599999964,
+          "observations": [
+            "the interrupted generation is absent from the process table",
+            "the runtime survived the interruption alive: true",
+            "the runtime answered its own health surface: true",
+            "the durable registration count is 2",
+            "exactly one attributable candidate carries the subject owner token"
+          ]
+        },
+        {
+          "phase": "P9",
+          "name": "durable-and-published-projection-observed",
+          "completed": true,
+          "at": "2026-08-17T00:59:07.513Z",
+          "startedAtMs": 6388.91691,
+          "durationMs": 2904.058577,
+          "observations": [
+            "the retained project entered the replacement unconfirmed, not closed",
+            "the replacement generation reconciled the surviving runtime",
+            "the replacement generation published the state Running"
+          ]
+        },
+        {
+          "phase": "P10",
+          "name": "live-resource-evidence-before-teardown",
+          "completed": true,
+          "at": "2026-08-17T00:59:10.848Z",
+          "startedAtMs": 9724.081478,
+          "durationMs": 71.46539999999914,
+          "observations": [
+            "live resource evidence is captured while this episode hosts are running",
+            "every live class is counted from the host before any teardown action"
+          ]
+        },
+        {
+          "phase": "P11",
+          "name": "teardown-actions-with-exact-targets",
+          "completed": true,
+          "at": "2026-08-17T00:59:10.920Z",
+          "startedAtMs": 9795.67731,
+          "durationMs": 298.2574230000009,
+          "observations": [
+            "every teardown action names the exact identities it acted on",
+            "each action carries a receipt derived from that action and its targets"
+          ]
+        },
+        {
+          "phase": "P12",
+          "name": "independent-post-teardown-reobservation",
+          "completed": true,
+          "at": "2026-08-17T00:59:11.218Z",
+          "startedAtMs": 10093.947252,
+          "durationMs": 185.5200619999996,
+          "observations": [
+            "a different process re-read the host for every recorded identity",
+            "the re-observation was given identities and paths, never conclusions"
+          ]
+        },
+        {
+          "phase": "P13",
+          "name": "atomic-finalization",
+          "completed": true,
+          "at": "2026-08-17T00:59:11.404Z",
+          "startedAtMs": 10279.974736,
+          "durationMs": 0.1351250000006985,
+          "observations": [
+            "the row is sealed and its receipt derives from its own content",
+            "the row reaches its destinations only through one atomic finalization"
+          ]
+        }
+      ],
+      "generations": [
+        {
+          "generationId": "api-c4fe455274bd80a6",
+          "authenticity": "compiled-entry-point",
+          "entryPoint": "apps/api/dist/server.js",
+          "argumentVectorObserved": true,
+          "listeningSocketAttributed": true,
+          "servedRequests": 1,
+          "persistenceFileObserved": true
+        },
+        {
+          "generationId": "api-ef8e617a41449676",
+          "authenticity": "compiled-entry-point",
+          "entryPoint": "apps/api/dist/server.js",
+          "argumentVectorObserved": true,
+          "listeningSocketAttributed": true,
+          "servedRequests": 1,
+          "persistenceFileObserved": true
+        }
+      ],
+      "settled": true,
+      "observations": [
+        "the interruption landed during release at 6142.355963 milliseconds after this episode origin",
+        "the runtime was never signalled and stayed alive and healthy",
+        "the replacement adopted the survivor and published Running",
+        "a safe retry then closed the adopted survivor with status 200"
+      ],
+      "boundIdentities": [
+        "api-c4fe455274bd80a6",
+        "api-ef8e617a41449676",
+        "workbench-0216d8945fa59b12",
+        "project-11bebf9d14670f98"
+      ],
+      "collections": {
+        "apiProcess": {
+          "collected": true,
+          "collectedBy": "host-process-table",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "compiled server generations alive at collection"
+        },
+        "workbenchProcess": {
+          "collected": true,
+          "collectedBy": "host-process-table",
+          "observed": 0,
+          "expected": 0,
+          "agrees": true,
+          "detail": "the recorded subject workbench root identity"
+        },
+        "workbenchDescendants": {
+          "collected": true,
+          "collectedBy": "host-process-group-scan",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "the subject workbench process group holds descendants: false"
+        },
+        "listener": {
+          "collected": true,
+          "collectedBy": "loopback-socket-probe",
+          "observed": 0,
+          "expected": 0,
+          "agrees": true,
+          "detail": "the recorded subject workbench loopback listener"
+        },
+        "activeRequests": {
+          "collected": true,
+          "collectedBy": "held-connection-probe",
+          "observed": 0,
+          "expected": 0,
+          "agrees": true,
+          "detail": "proxied connections still open through the compiled server"
+        },
+        "databaseRegistration": {
+          "collected": true,
+          "collectedBy": "durable-store-read",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "rows read directly from the episode database file"
+        },
+        "runtimeRecord": {
+          "collected": true,
+          "collectedBy": "compiled-runtime-route",
+          "observed": 0,
+          "expected": 0,
+          "agrees": true,
+          "detail": "a published runtime record for the subject project"
+        },
+        "projectRootImmutability": {
+          "collected": true,
+          "collectedBy": "project-tree-content-digest",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "the subject project tree content is unchanged by close"
+        },
+        "projectRootManifest": {
+          "collected": true,
+          "collectedBy": "project-tree-content-digest",
+          "observed": 3,
+          "expected": 3,
+          "agrees": true,
+          "detail": "the subject project tree member count is unchanged"
+        },
+        "peerSurvival": {
+          "collected": true,
+          "collectedBy": "host-process-table",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "the peer workbench process group is untouched by close"
+        },
+        "logEvents": {
+          "collected": true,
+          "collectedBy": "generation-log-stream",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "project.closed events emitted by the compiled generations"
+        },
+        "publicRouteProjection": {
+          "collected": true,
+          "collectedBy": "compiled-runtime-route",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "the published runtime state is null"
+        },
+        "proxyReleaseReceipts": {
+          "collected": true,
+          "collectedBy": "held-connection-probe",
+          "observed": 10,
+          "expected": 10,
+          "agrees": true,
+          "detail": "proxied connections the compiled server severed on close"
+        },
+        "managerReleaseReceipts": {
+          "collected": true,
+          "collectedBy": "compiled-route-response",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "the settled close disposition is closed"
+        }
+      },
+      "live": {
+        "capturedBeforeTeardown": true,
+        "startedAtMs": 9724.111128,
+        "classes": {
+          "apiProcesses": {
+            "observed": 1
+          },
+          "workbenchProcesses": {
+            "observed": 1
+          },
+          "attributableDescendants": {
+            "observed": 1
+          },
+          "listeners": {
+            "observed": 2
+          },
+          "activeRequests": {
+            "observed": 0
+          },
+          "databaseRegistrations": {
+            "observed": 1
+          },
+          "disposableFixtures": {
+            "observed": 1
+          }
+        },
+        "liveIdentities": [
+          "api-ef8e617a41449676",
+          "workbench-401b9b3d62ba2b60",
+          "fixture-c208b3581414e121"
+        ]
+      },
+      "teardownActions": [
+        {
+          "action": "release-held-connections",
+          "performed": true,
+          "startedAtMs": 9795.753007,
+          "targets": [
+            "connection-2955eb945c1a4f23",
+            "connection-d8e3427676a4656b",
+            "connection-8ae9b3ea21409f0c",
+            "connection-0701a60b6a974dc0",
+            "connection-f103ba584ed95750",
+            "connection-a6afa10d8ee4003a",
+            "connection-1c516f3cf8d4d712",
+            "connection-2f629eeb343d502c",
+            "connection-94345be6e9df6e55",
+            "connection-540ee1ba1f3fd615"
+          ],
+          "receipt": "receipt-f0ed2b35ea51b3891d1a3c0a1301dc07"
+        },
+        {
+          "action": "stop-api-generations",
+          "performed": true,
+          "startedAtMs": 9846.271153,
+          "targets": [
+            "api-c4fe455274bd80a6",
+            "api-ef8e617a41449676"
+          ],
+          "receipt": "receipt-7bc1cc2053341c82fa5450d3858dc9c4"
+        },
+        {
+          "action": "terminate-workbench-groups",
+          "performed": true,
+          "startedAtMs": 9933.904678,
+          "targets": [
+            "workbench-0216d8945fa59b12",
+            "workbench-401b9b3d62ba2b60"
+          ],
+          "receipt": "receipt-cc8a9a068632fe23891a9b4bce9f6664"
+        },
+        {
+          "action": "remove-disposable-fixtures",
+          "performed": true,
+          "startedAtMs": 10081.190985,
+          "targets": [
+            "fixture-c208b3581414e121"
+          ],
+          "receipt": "receipt-2e28749e3b105be5f64070a1481c9a30"
+        }
+      ],
+      "reobservation": {
+        "observer": "separate-process",
+        "observerModule": "apps/api/test/project-close-designated-observer.mjs",
+        "distinctFromExecutor": true,
+        "startedAtMs": 10094.222297,
+        "classes": {
+          "apiProcesses": {
+            "probeCompleted": true,
+            "residual": 0
+          },
+          "workbenchProcesses": {
+            "probeCompleted": true,
+            "residual": 0
+          },
+          "attributableDescendants": {
+            "probeCompleted": true,
+            "residual": 0
+          },
+          "listeners": {
+            "probeCompleted": true,
+            "residual": 0
+          },
+          "activeRequests": {
+            "probeCompleted": true,
+            "residual": 0
+          },
+          "disposableFixtures": {
+            "probeCompleted": true,
+            "residual": 0
+          }
+        },
+        "reobservedIdentities": [
+          "api-c4fe455274bd80a6",
+          "api-ef8e617a41449676",
+          "workbench-0216d8945fa59b12",
+          "workbench-401b9b3d62ba2b60",
+          "fixture-c208b3581414e121"
+        ]
+      },
+      "registrationPresentAfter": true,
+      "durableRemovalObserved": false,
+      "residual": {
+        "selectedRuntimeProcesses": 0,
+        "attributableDescendants": 0,
+        "listeners": 0,
+        "proxyPendingOperations": 0,
+        "proxyHttpRequests": 0,
+        "proxyHttpResponses": 0,
+        "proxyRawSockets": 0,
+        "proxyWebSockets": 0,
+        "ownershipRecords": 0,
+        "pendingAdmissions": 0,
+        "quarantinedIdentities": 0,
+        "closeClaims": 0,
+        "inFlightCloseTasks": 0
+      },
+      "residualProbes": {
+        "selectedRuntimeProcesses": true,
+        "attributableDescendants": true,
+        "listeners": true,
+        "proxyPendingOperations": true,
+        "proxyHttpRequests": true,
+        "proxyHttpResponses": true,
+        "proxyRawSockets": true,
+        "proxyWebSockets": true,
+        "ownershipRecords": true,
+        "pendingAdmissions": true,
+        "quarantinedIdentities": true,
+        "closeClaims": true,
+        "inFlightCloseTasks": true
+      },
+      "statuses": [
+        200
+      ],
+      "projectClosedEmissions": 1,
+      "signalsAfterInterruption": 0,
+      "candidateAttributed": true,
+      "replacementTeardownOrder": [
+        "release",
+        "terminate",
+        "audit",
+        "remove"
+      ],
+      "safeRetrySettled": true,
+      "absenceSurvivesRestart": null,
+      "interruption": {
+        "interruptionPoint": "release-drain-before-confirmation",
+        "survivorIdentity": "workbench-0216d8945fa59b12",
+        "survivorAliveAfterInterruption": true,
+        "survivorHealthyAfterInterruption": true,
+        "survivorExactlyAttributable": true,
+        "retainedStateBeforeReplacement": "Failed",
+        "retainedClassificationBeforeReplacement": "close-release-unconfirmed",
+        "branch": "adopted",
+        "branchDecidedBy": "a healthy exactly attributable survivor proved readiness and identity",
+        "adoptedIdentity": "workbench-0216d8945fa59b12",
+        "replacementPublishedState": "Running",
+        "replacementEntryState": "running",
+        "replacementClassification": null,
+        "replacementReportedAbsent": false,
+        "signalAccounts": {
+          "interruptedClose": 0,
+          "replacementReconcile": 0,
+          "safeRetry": 1
+        },
+        "safeRetryClosedAdoptedSurvivor": true,
+        "safeRetrySurvivorAbsentAfter": true
+      },
+      "repeats": null
+    },
+    {
+      "id": "E-7",
+      "name": "one-success-then-three-repeats",
+      "execution": {
+        "executionId": "exec-68269be1536e67a2",
+        "receipt": "receipt-1e4d58173f497ffcbd872df684518455",
+        "timingOrigin": "episode-start-monotonic",
+        "startedAt": "2026-08-17T00:59:11.407Z",
+        "settledAt": "2026-08-17T00:59:20.919Z",
+        "durationMs": 9490.73822
+      },
+      "declaredExpectations": [
+        "the first close settles as closed with status 200",
+        "each of exactly three repeats is refused as project_not_found with 404",
+        "no repeat creates a runtime, delivers a signal, or mutates the store",
+        "exactly one project.closed event exists after all four requests",
+        "the absence survives a real restart of the compiled server"
+      ],
+      "phases": [
+        {
+          "phase": "P1",
+          "name": "preconditions-observed",
+          "completed": true,
+          "at": "2026-08-17T00:59:11.407Z",
+          "startedAtMs": 0.015351,
+          "durationMs": 1.0202630000000001,
+          "observations": [
+            "the compiled server entry point exists in the repository build output",
+            "the real workbench executable exists on this host",
+            "this episode owns a fresh project home, database file, and port"
+          ]
+        },
+        {
+          "phase": "P2",
+          "name": "compiled-assets-and-sources-hashed",
+          "completed": true,
+          "at": "2026-08-17T00:59:11.408Z",
+          "startedAtMs": 1.050441,
+          "durationMs": 0.05278500000000008,
+          "observations": [
+            "the eighteen frozen source-set members are hashed for this run: 18",
+            "the compiled server and web assets are hashed for this run: 11",
+            "the source-set digest of record is 2894eaeb480e93229fd6cea38965933d13c586dd0f2ef7abfbcc17fb9f0354c7",
+            "the compiled-asset digest of record is ade96afcb1e45e3442055ba8a3b0f919544f417179d80b207c63ebcbfbbadb4f"
+          ]
+        },
+        {
+          "phase": "P3",
+          "name": "real-generation-established",
+          "completed": true,
+          "at": "2026-08-17T00:59:11.447Z",
+          "startedAtMs": 39.192381,
+          "durationMs": 2132.270621,
+          "observations": [
+            "the repository compiled server entry point runs as its own process group",
+            "its loopback listener is attributed to that process by socket inode",
+            "it served a real request over that listener before the episode acted"
+          ]
+        },
+        {
+          "phase": "P4",
+          "name": "fixtures-and-registrations-established",
+          "completed": true,
+          "at": "2026-08-17T00:59:13.579Z",
+          "startedAtMs": 2171.472588,
+          "durationMs": 1827.5686019999998,
+          "observations": [
+            "two real project trees are registered in the real durable store",
+            "the peer project runs a real workbench process group of its own"
+          ]
+        },
+        {
+          "phase": "P5",
+          "name": "subject-arranged",
+          "completed": true,
+          "at": "2026-08-17T00:59:15.406Z",
+          "startedAtMs": 3999.048815,
+          "durationMs": 1561.5345799999996,
+          "observations": [
+            "the subject project runs a real workbench process group",
+            "its project tree content manifest is recorded before the action"
+          ]
+        },
+        {
+          "phase": "P6",
+          "name": "expectations-declared",
+          "completed": true,
+          "at": "2026-08-17T00:59:17.012Z",
+          "startedAtMs": 5604.168157,
+          "durationMs": 1.2199680000003355,
+          "observations": [
+            "the first close settles as closed with status 200",
+            "each of exactly three repeats is refused as project_not_found with 404",
+            "no repeat creates a runtime, delivers a signal, or mutates the store",
+            "exactly one project.closed event exists after all four requests",
+            "the absence survives a real restart of the compiled server"
+          ]
+        },
+        {
+          "phase": "P7",
+          "name": "action-executed-through-compiled-route",
+          "completed": true,
+          "at": "2026-08-17T00:59:17.013Z",
+          "startedAtMs": 5605.40574,
+          "durationMs": 460.036572,
+          "observations": [
+            "close is requested through the compiled server route"
+          ]
+        },
+        {
+          "phase": "P8",
+          "name": "settlement-observed",
+          "completed": true,
+          "at": "2026-08-17T00:59:17.473Z",
+          "startedAtMs": 6065.456217,
+          "durationMs": 117.12751600000047,
+          "observations": [
+            "the first close settled with status 200",
+            "three sequential repeated closes were issued to the same route",
+            "each repeat reported project_not_found, project_not_found, project_not_found",
+            "no attributable candidate exists after the repeats"
+          ]
+        },
+        {
+          "phase": "P9",
+          "name": "durable-and-published-projection-observed",
+          "completed": true,
+          "at": "2026-08-17T00:59:17.617Z",
+          "startedAtMs": 6210.101577,
+          "durationMs": 3280.626794999999,
+          "observations": [
+            "the compiled server is restarted on the same durable store",
+            "the removed project is absent from the replacement projection",
+            "the replacement generation published the state null"
+          ]
+        },
+        {
+          "phase": "P10",
+          "name": "live-resource-evidence-before-teardown",
+          "completed": true,
+          "at": "2026-08-17T00:59:20.921Z",
+          "startedAtMs": 9510.829535,
+          "durationMs": 59.058984999999666,
+          "observations": [
+            "live resource evidence is captured while this episode hosts are running",
+            "every live class is counted from the host before any teardown action"
+          ]
+        },
+        {
+          "phase": "P11",
+          "name": "teardown-actions-with-exact-targets",
+          "completed": true,
+          "at": "2026-08-17T00:59:20.980Z",
+          "startedAtMs": 9570.066392,
+          "durationMs": 318.9045539999988,
+          "observations": [
+            "every teardown action names the exact identities it acted on",
+            "each action carries a receipt derived from that action and its targets"
+          ]
+        },
+        {
+          "phase": "P12",
+          "name": "independent-post-teardown-reobservation",
+          "completed": true,
+          "at": "2026-08-17T00:59:21.299Z",
+          "startedAtMs": 9888.987514,
+          "durationMs": 180.77074899999934,
+          "observations": [
+            "a different process re-read the host for every recorded identity",
+            "the re-observation was given identities and paths, never conclusions"
+          ]
+        },
+        {
+          "phase": "P13",
+          "name": "atomic-finalization",
+          "completed": true,
+          "at": "2026-08-17T00:59:21.480Z",
+          "startedAtMs": 10069.951926,
+          "durationMs": 0.031114999999772408,
+          "observations": [
+            "the row is sealed and its receipt derives from its own content",
+            "the row reaches its destinations only through one atomic finalization"
+          ]
+        }
+      ],
+      "generations": [
+        {
+          "generationId": "api-88c4866b795b8a2b",
+          "authenticity": "compiled-entry-point",
+          "entryPoint": "apps/api/dist/server.js",
+          "argumentVectorObserved": true,
+          "listeningSocketAttributed": true,
+          "servedRequests": 1,
+          "persistenceFileObserved": true
+        },
+        {
+          "generationId": "api-9b4edb6fca2028b1",
+          "authenticity": "compiled-entry-point",
+          "entryPoint": "apps/api/dist/server.js",
+          "argumentVectorObserved": true,
+          "listeningSocketAttributed": true,
+          "servedRequests": 1,
+          "persistenceFileObserved": true
+        }
+      ],
+      "settled": true,
+      "observations": [
+        "one real success was followed by exactly three real repeated closes",
+        "no repeat produced a signal, an event, a runtime, or a mutation",
+        "the absence survived a real restart of the compiled server"
+      ],
+      "boundIdentities": [
+        "api-88c4866b795b8a2b",
+        "api-9b4edb6fca2028b1",
+        "workbench-b10c31ebd8147475",
+        "project-992384cb0acf48cb"
+      ],
+      "collections": {
+        "apiProcess": {
+          "collected": true,
+          "collectedBy": "host-process-table",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "compiled server generations alive at collection"
+        },
+        "workbenchProcess": {
+          "collected": true,
+          "collectedBy": "host-process-table",
+          "observed": 0,
+          "expected": 0,
+          "agrees": true,
+          "detail": "the recorded subject workbench root identity"
+        },
+        "workbenchDescendants": {
+          "collected": true,
+          "collectedBy": "host-process-group-scan",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "the subject workbench process group holds descendants: false"
+        },
+        "listener": {
+          "collected": true,
+          "collectedBy": "loopback-socket-probe",
+          "observed": 0,
+          "expected": 0,
+          "agrees": true,
+          "detail": "the recorded subject workbench loopback listener"
+        },
+        "activeRequests": {
+          "collected": true,
+          "collectedBy": "held-connection-probe",
+          "observed": 0,
+          "expected": 0,
+          "agrees": true,
+          "detail": "proxied connections still open through the compiled server"
+        },
+        "databaseRegistration": {
+          "collected": true,
+          "collectedBy": "durable-store-read",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "rows read directly from the episode database file"
+        },
+        "runtimeRecord": {
+          "collected": true,
+          "collectedBy": "compiled-runtime-route",
+          "observed": 0,
+          "expected": 0,
+          "agrees": true,
+          "detail": "a published runtime record for the subject project"
+        },
+        "projectRootImmutability": {
+          "collected": true,
+          "collectedBy": "project-tree-content-digest",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "the subject project tree content is unchanged by close"
+        },
+        "projectRootManifest": {
+          "collected": true,
+          "collectedBy": "project-tree-content-digest",
+          "observed": 3,
+          "expected": 3,
+          "agrees": true,
+          "detail": "the subject project tree member count is unchanged"
+        },
+        "peerSurvival": {
+          "collected": true,
+          "collectedBy": "host-process-table",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "the peer workbench process group is untouched by close"
+        },
+        "logEvents": {
+          "collected": true,
+          "collectedBy": "generation-log-stream",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "project.closed events emitted by the compiled generations"
+        },
+        "publicRouteProjection": {
+          "collected": true,
+          "collectedBy": "compiled-runtime-route",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "the published runtime state is null"
+        },
+        "proxyReleaseReceipts": {
+          "collected": true,
+          "collectedBy": "held-connection-probe",
+          "observed": 2,
+          "expected": 2,
+          "agrees": true,
+          "detail": "proxied connections the compiled server severed on close"
+        },
+        "managerReleaseReceipts": {
+          "collected": true,
+          "collectedBy": "compiled-route-response",
+          "observed": 1,
+          "expected": 1,
+          "agrees": true,
+          "detail": "the settled close disposition is closed"
+        }
+      },
+      "live": {
+        "capturedBeforeTeardown": true,
+        "startedAtMs": 9510.869803,
+        "classes": {
+          "apiProcesses": {
+            "observed": 1
+          },
+          "workbenchProcesses": {
+            "observed": 1
+          },
+          "attributableDescendants": {
+            "observed": 1
+          },
+          "listeners": {
+            "observed": 2
+          },
+          "activeRequests": {
+            "observed": 0
+          },
+          "databaseRegistrations": {
+            "observed": 1
+          },
+          "disposableFixtures": {
+            "observed": 1
+          }
+        },
+        "liveIdentities": [
+          "api-9b4edb6fca2028b1",
+          "workbench-7c87cbc550cf33ce",
+          "fixture-06449fc5c2c7604e"
+        ]
+      },
+      "teardownActions": [
+        {
+          "action": "release-held-connections",
+          "performed": true,
+          "startedAtMs": 9570.133779,
+          "targets": [
+            "connection-1ae43e3bb31cb974",
+            "connection-05d709a8dd96455d"
+          ],
+          "receipt": "receipt-141f9127d4c237d25ccfdd3099821f43"
+        },
+        {
+          "action": "stop-api-generations",
+          "performed": true,
+          "startedAtMs": 9620.783875,
+          "targets": [
+            "api-88c4866b795b8a2b",
+            "api-9b4edb6fca2028b1"
+          ],
+          "receipt": "receipt-2acd16eb3f008845efdc22c03e49770c"
+        },
+        {
+          "action": "terminate-workbench-groups",
+          "performed": true,
+          "startedAtMs": 9723.769882,
+          "targets": [
+            "workbench-b10c31ebd8147475",
+            "workbench-7c87cbc550cf33ce"
+          ],
+          "receipt": "receipt-75c8fd498a792b3f0f5d73ad61b3ff42"
+        },
+        {
+          "action": "remove-disposable-fixtures",
+          "performed": true,
+          "startedAtMs": 9882.750514,
+          "targets": [
+            "fixture-06449fc5c2c7604e"
+          ],
+          "receipt": "receipt-c8e0680a1f28997e9efa91c82dcdca12"
+        }
+      ],
+      "reobservation": {
+        "observer": "separate-process",
+        "observerModule": "apps/api/test/project-close-designated-observer.mjs",
+        "distinctFromExecutor": true,
+        "startedAtMs": 9889.020096,
+        "classes": {
+          "apiProcesses": {
+            "probeCompleted": true,
+            "residual": 0
+          },
+          "workbenchProcesses": {
+            "probeCompleted": true,
+            "residual": 0
+          },
+          "attributableDescendants": {
+            "probeCompleted": true,
+            "residual": 0
+          },
+          "listeners": {
+            "probeCompleted": true,
+            "residual": 0
+          },
+          "activeRequests": {
+            "probeCompleted": true,
+            "residual": 0
+          },
+          "disposableFixtures": {
+            "probeCompleted": true,
+            "residual": 0
+          }
+        },
+        "reobservedIdentities": [
+          "api-88c4866b795b8a2b",
+          "api-9b4edb6fca2028b1",
+          "workbench-b10c31ebd8147475",
+          "workbench-7c87cbc550cf33ce",
+          "fixture-06449fc5c2c7604e"
+        ]
+      },
+      "registrationPresentAfter": false,
+      "durableRemovalObserved": true,
+      "residual": {
+        "selectedRuntimeProcesses": 0,
+        "attributableDescendants": 0,
+        "listeners": 0,
+        "proxyPendingOperations": 0,
+        "proxyHttpRequests": 0,
+        "proxyHttpResponses": 0,
+        "proxyRawSockets": 0,
+        "proxyWebSockets": 0,
+        "ownershipRecords": 0,
+        "pendingAdmissions": 0,
+        "quarantinedIdentities": 0,
+        "closeClaims": 0,
+        "inFlightCloseTasks": 0
+      },
+      "residualProbes": {
+        "selectedRuntimeProcesses": true,
+        "attributableDescendants": true,
+        "listeners": true,
+        "proxyPendingOperations": true,
+        "proxyHttpRequests": true,
+        "proxyHttpResponses": true,
+        "proxyRawSockets": true,
+        "proxyWebSockets": true,
+        "ownershipRecords": true,
+        "pendingAdmissions": true,
+        "quarantinedIdentities": true,
+        "closeClaims": true,
+        "inFlightCloseTasks": true
+      },
+      "statuses": [
+        200,
+        404,
+        404,
+        404
+      ],
+      "projectClosedEmissions": 1,
+      "signalsAfterInterruption": null,
+      "candidateAttributed": false,
+      "replacementTeardownOrder": null,
+      "safeRetrySettled": null,
+      "absenceSurvivesRestart": true,
+      "interruption": null,
+      "repeats": {
+        "successStatus": 200,
+        "repeatCount": 3,
+        "repeatStatuses": [
+          404,
+          404,
+          404
+        ],
+        "repeatCategories": [
+          "project_not_found",
+          "project_not_found",
+          "project_not_found"
+        ],
+        "runtimeCreationsAfterSuccess": 0,
+        "signalsAfterSuccess": 0,
+        "mutationsAfterSuccess": 0,
+        "eventsAfterSuccess": 0
+      }
+    }
+  ],
+  "teardown": {
+    "apiProcesses": {
+      "probeCompleted": true,
+      "residual": 0
+    },
+    "workbenchProcesses": {
+      "probeCompleted": true,
+      "residual": 0
+    },
+    "attributableDescendants": {
+      "probeCompleted": true,
+      "residual": 0
+    },
+    "listeners": {
+      "probeCompleted": true,
+      "residual": 0
+    },
+    "activeRequests": {
+      "probeCompleted": true,
+      "residual": 0
+    },
+    "disposableFixtures": {
+      "probeCompleted": true,
+      "residual": 0
+    }
+  },
+  "finalized": true,
+  "redaction": {
+    "scanned": true,
+    "scannedBytes": 87504,
+    "hostValuesConsidered": 206,
+    "matches": []
+  },
+  "finalization": {
+    "atomic": true,
+    "method": "staged-write-then-rename",
+    "destinations": [
+      "test-results/bl-020/designated-episode.json",
+      "project/work-items/45-bl-020-close-a-running-or-failed-project/implementation/evidence/designated-episode.json"
+    ],
+    "identicalBytes": true,
+    "bytes": 87504,
+    "sha256": "fda1af50d176ea5254c073026ee542a5445595dac564a9645619da0d9ff305a6",
+    "stagedLeftovers": 0
+  }
+}

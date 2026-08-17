@@ -1,0 +1,61 @@
+{
+  "command": "proof-runtime-close-residual-audit",
+  "status": "ok",
+  "schemaVersion": 1,
+  "observer": {
+    "process": "separate-cli",
+    "source": "apps/api/src/cli/project-close-residual-audit.ts",
+    "methods": {
+      "processes": "pid-start-time",
+      "descendants": "process-group-members",
+      "listeners": "listener-bind-probe",
+      "connections": "proc-net-tcp",
+      "paths": "filesystem-access",
+      "processOwnedState": "api-identity-absence"
+    }
+  },
+  "designatedEpisodeSha256": "5c47b47f9579e634187e07b3fe6dc88a2d1a782b53bfde2553a10c7becc4e537",
+  "evidenceId": "bl-020-residual-audit",
+  "observedIndependently": true,
+  "classes": {
+    "apiProcesses": {
+      "probeCompleted": true,
+      "residual": 0
+    },
+    "workbenchProcesses": {
+      "probeCompleted": true,
+      "residual": 0
+    },
+    "attributableDescendants": {
+      "probeCompleted": true,
+      "residual": 0
+    },
+    "listeners": {
+      "probeCompleted": true,
+      "residual": 0
+    },
+    "proxyConnections": {
+      "probeCompleted": true,
+      "residual": 0
+    },
+    "timers": {
+      "probeCompleted": true,
+      "residual": 0
+    },
+    "inFlightCloseOperations": {
+      "probeCompleted": true,
+      "residual": 0
+    },
+    "databaseSidecars": {
+      "probeCompleted": true,
+      "residual": 0
+    },
+    "disposableFixtures": {
+      "probeCompleted": true,
+      "residual": 0
+    }
+  },
+  "clear": true,
+  "violations": [],
+  "finalizedAtomically": true
+}

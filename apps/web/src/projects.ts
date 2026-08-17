@@ -211,13 +211,28 @@ export function serializeRegistrationPath(path: string): string {
   return JSON.stringify({ path })
 }
 
-export const PROJECT_CLOSE_TIMEOUT_MS = 10_000 as const
+export const PROJECT_CLOSE_TIMEOUT_MS = 45_000 as const
 
 export const CLOSE_FAILURE_MESSAGES = {
   invalid_project_id: 'The project ID is invalid. Retry this project.',
   project_not_found:
     'The project is no longer registered. Refresh projects to reconcile.',
   project_close_failed: 'The project could not be closed. Retry this project.',
+  runtime_start_in_progress:
+    'The workbench is still starting. Retry after startup settles.',
+  runtime_stop_in_progress:
+    'The workbench is stopping. Retry after stop settles.',
+  runtime_restart_in_progress:
+    'The workbench is restarting. Retry after restart settles.',
+  runtime_reconcile_in_progress:
+    'Ascend is still recovering this workbench. Retry after recovery settles.',
+  runtime_reconcile_unresolved:
+    'Ascend could not confirm this workbench after a restart.',
+  runtime_release_unconfirmed:
+    'Ascend could not confirm the workbench release. Retry this project.',
+  runtime_close_ownership_unresolved:
+    'Ascend could not resolve this workbench ownership. Retry this project.',
+  runtime_manager_shutdown: 'Runtime management is shutting down. Retry later.',
 } as const
 
 export type CloseFailureCategory = keyof typeof CLOSE_FAILURE_MESSAGES
@@ -239,11 +254,24 @@ export type CloseTransport = (
   onTransmitted?: () => void
 ) => Promise<CloseTransportResult>
 
-const CLOSE_FAILURE_STATUS: Readonly<Record<CloseFailureCategory, number>> = {
+export const CLOSE_FAILURE_STATUS: Readonly<
+  Record<CloseFailureCategory, number>
+> = Object.freeze({
   invalid_project_id: 400,
   project_not_found: 404,
   project_close_failed: 500,
-}
+  runtime_start_in_progress: 409,
+  runtime_stop_in_progress: 409,
+  runtime_restart_in_progress: 409,
+  runtime_reconcile_in_progress: 409,
+  runtime_reconcile_unresolved: 409,
+  runtime_release_unconfirmed: 500,
+  runtime_close_ownership_unresolved: 500,
+  runtime_manager_shutdown: 503,
+})
+const CLOSE_FAILURE_CATEGORY_SET = new Set<string>(
+  Object.keys(CLOSE_FAILURE_MESSAGES)
+)
 
 export function projectCloseEndpoint(id: string): string {
   return PROJECT_LIST_ENDPOINT + '/' + encodeURIComponent(id)
@@ -270,7 +298,7 @@ export function parseCloseResponse(
     !isRecord(value.error) ||
     !exactKeys(value.error, ['category']) ||
     typeof value.error.category !== 'string' ||
-    !(value.error.category in CLOSE_FAILURE_STATUS)
+    !CLOSE_FAILURE_CATEGORY_SET.has(value.error.category)
   ) {
     throw new Error('Invalid close response')
   }

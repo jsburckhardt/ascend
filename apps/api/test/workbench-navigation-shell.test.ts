@@ -29,6 +29,9 @@ const setup = async () => {
   const runtime: ProjectRuntimeManager = {
     beginReconciliation: async () => undefined,
     start: vi.fn(),
+    close: async () => {
+      throw new Error('navigation shell does not close projects')
+    },
     ownsSnapshot: vi.fn(() => true),
     inspect: vi.fn(),
     lastFailure: vi.fn(),
@@ -46,6 +49,9 @@ const setup = async () => {
       )
     }),
     handleUpgrade: vi.fn(),
+    closeProject: async () => {
+      throw new Error('navigation shell does not close proxy sessions')
+    },
     shutdown: vi.fn(async () => proxy.audit()),
     audit: () => ({
       shuttingDown: false,

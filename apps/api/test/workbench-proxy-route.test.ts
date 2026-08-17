@@ -81,6 +81,9 @@ describe('stable workbench route lifecycle', () => {
     const runtime: ProjectRuntimeManager = {
       beginReconciliation: async () => undefined,
       start: vi.fn(),
+      close: async () => {
+        throw new Error('proxy route shutdown does not close projects')
+      },
       ownsSnapshot: vi.fn(() => true),
       inspect: vi.fn(),
       lastFailure: vi.fn(),
@@ -99,6 +102,9 @@ describe('stable workbench route lifecycle', () => {
         response.end('proxied')
       }),
       handleUpgrade: vi.fn(),
+      closeProject: async () => {
+        throw new Error('proxy route shutdown does not close proxy sessions')
+      },
       shutdown: vi.fn(async () => {
         order.push('proxy')
         return proxy.audit()

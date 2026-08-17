@@ -19,9 +19,26 @@ The issue ceiling is 15,000 ms measured from the replacement API process start t
 | Open/acquire | waits for that project's settlement, then reuses an adopted runtime or launches only after proven absence | refuses before registration, port acquisition, or launch |
 | Stop | 409 `runtime_reconcile_in_progress` | 409 `runtime_reconcile_unresolved` |
 | Restart | 409 `runtime_reconcile_in_progress` | 409 `runtime_reconcile_unresolved` |
+| Close | 409 `runtime_reconcile_in_progress` | 409 `runtime_reconcile_unresolved` |
 | shutdown | aborts observation without claiming absence or signalling an unadopted candidate | performs no recovery launch |
 
 An unresolved project remains blocked for that API process. Resolve the host ambiguity outside Ascend, then restart the API so a fresh pass observes current evidence. There is no per-request retry loop.
+
+## Close across an API restart
+
+Reconciliation itself is unchanged by BL-020: it remains the same one-shot pass with the same three settlements, the same attribution conjunction, the same bounds, and no background monitor. Close consumes it rather than extending it. A close of a project whose entry is still `reconciling` is refused with `reconcile-in-progress`, and a close of a project retaining `reconcile-unconfirmed` is refused with `reconcile-unresolved`; both refusals mutate nothing, deliver no signal, and leave the registration and its four persisted fields unchanged. A close of an adopted survivor proceeds normally and releases that adopted generation through the delivered sequencer.
+
+An API interruption during a close is safe by construction, because durable removal is the last step and is dominated by the close's confirmation region. The three interruption points and their post-boot truth table are:
+
+| Interruption point | Durable removal | Registration on the replacement boot | Settlement of a surviving candidate |
+|---|---|---|---|
+| during release and sweep, strictly before confirmation | never occurred | present, four fields byte-identical | the unchanged conjunction decides: an exactly attributable ready survivor is `adopted` and reports `Running`; a survivor whose attribution or readiness cannot be proven is `unresolved`, retains `reconcile-unconfirmed`, and reports `Failed` |
+| between confirmation and removal | may or may not have committed | present when the transaction did not commit, absent when it did | no candidate remains, because the release was confirmed before the interruption |
+| after removal | committed | absent, and a repeated close is a bounded `404 project_not_found` | no candidate remains |
+
+The interrupted close delivers no signal to a surviving candidate, and `absent` or `Stopped` is unreachable while that candidate is alive, since either would require a positive absence observation the live listener contradicts. A safe Close retry after the boot settles on whichever branch reconciliation produced: it closes an adopted survivor, or it returns the bounded `reconcile-unresolved` refusal with the registration retained and no signal sent. The designated close proof records the branch, the conjunction element that decided it, and each phase's own signal account rather than one aggregate number.
+
+Deployment topology is unchanged by close as it is by reconciliation: one local host, one API process, loopback-only runtimes, no new process, port, service, or host requirement, and no persisted runtime handle, schema field, payload field, feature flag, or environment option.
 
 ## Adopted runtime liveness
 
@@ -45,4 +62,4 @@ just proof-runtime-reconcile
 just proof-runtime-reconcile-residual-audit
 ```
 
-BL-020 running/failed Close, BL-021 automatic lifecycle policy, and BL-022 durable or distributed runtime recovery are not implemented here. Deployment topology is unchanged.
+BL-020 close of a running or failed project is delivered and documented in [project-runtime.md](project-runtime.md); it reuses this pass without changing it. BL-021 automatic lifecycle policy and BL-022 durable or distributed runtime recovery are not implemented here. Deployment topology is unchanged.

@@ -1,5 +1,6 @@
 import { type FastifyPluginAsync, type FastifyReply } from 'fastify'
 import type { Project } from '../project-persistence.js'
+import type { RuntimeCloseOutcome } from '../project-runtime-contract.js'
 import type {
   RegistrationFailureCategory,
   RegistrationResult,
@@ -21,6 +22,33 @@ export const PROJECT_NOT_FOUND = 'project_not_found' as const
 export const PROJECT_CLOSE_FAILED = 'project_close_failed' as const
 export const PROJECT_CLOSED_EVENT = 'project.closed' as const
 export const PROJECT_CLOSE_FAILED_EVENT = 'project.close.failed' as const
+export const PROJECT_CLOSE_ROUTE_ERROR_CATEGORIES = Object.freeze([
+  INVALID_PROJECT_ID,
+  PROJECT_NOT_FOUND,
+  PROJECT_CLOSE_FAILED,
+  'runtime_start_in_progress',
+  'runtime_stop_in_progress',
+  'runtime_restart_in_progress',
+  'runtime_reconcile_in_progress',
+  'runtime_reconcile_unresolved',
+  'runtime_release_unconfirmed',
+  'runtime_close_ownership_unresolved',
+  'runtime_manager_shutdown',
+] as const)
+export type ProjectCloseRouteErrorCategory =
+  (typeof PROJECT_CLOSE_ROUTE_ERROR_CATEGORIES)[number]
+
+const PROJECT_CLOSE_REJECTION_STATUS = Object.freeze({
+  'start-in-progress': [409, 'runtime_start_in_progress'],
+  'stop-in-progress': [409, 'runtime_stop_in_progress'],
+  'restart-in-progress': [409, 'runtime_restart_in_progress'],
+  'reconcile-in-progress': [409, 'runtime_reconcile_in_progress'],
+  'reconcile-unresolved': [409, 'runtime_reconcile_unresolved'],
+  'release-unconfirmed': [500, 'runtime_release_unconfirmed'],
+  'ownership-cardinality-exceeded': [500, 'runtime_close_ownership_unresolved'],
+  'removal-failed': [500, PROJECT_CLOSE_FAILED],
+  'manager-shutdown': [503, 'runtime_manager_shutdown'],
+} as const)
 
 const PROJECT_FIELDS = ['canonicalPath', 'createdAt', 'id', 'name'] as const
 const REGISTRATION_STATUS: Readonly<
@@ -122,6 +150,19 @@ function sendRegistrationResult(
 
 function invalidProjectId(reply: FastifyReply) {
   return reply.code(400).send({ error: { category: INVALID_PROJECT_ID } })
+}
+
+function sendCloseResult(reply: FastifyReply, result: RuntimeCloseOutcome) {
+  if (result.outcome === 'closed') {
+    return reply.code(200).send({ id: result.projectId, disposition: 'closed' })
+  }
+  if (result.outcome === 'already-absent') {
+    return reply.code(404).send({
+      error: { category: PROJECT_NOT_FOUND },
+    })
+  }
+  const [status, category] = PROJECT_CLOSE_REJECTION_STATUS[result.category]
+  return reply.code(status).send({ error: { category } })
 }
 
 const projectsRoute: FastifyPluginAsync = async (fastify): Promise<void> => {
@@ -226,16 +267,16 @@ const projectsRoute: FastifyPluginAsync = async (fastify): Promise<void> => {
       }
       try {
         const result = await fastify.projectClose.closeProject(id)
-        if (result.disposition === 'project_not_found') {
-          return reply.code(404).send({
-            error: { category: PROJECT_NOT_FOUND },
-          })
-        }
-        if (result.disposition !== 'closed' || result.id !== id) {
+        if (result.projectId !== id) {
           throw new Error('Invalid close result')
         }
-        request.log.info({ event: PROJECT_CLOSED_EVENT, disposition: 'closed' })
-        return reply.code(200).send({ id, disposition: 'closed' })
+        if (result.outcome === 'closed') {
+          request.log.info({
+            event: PROJECT_CLOSED_EVENT,
+            disposition: 'closed',
+          })
+        }
+        return sendCloseResult(reply, result)
       } catch (error) {
         if (
           typeof error === 'object' &&

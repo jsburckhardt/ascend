@@ -73,8 +73,9 @@ verify-open-project:
     pnpm exec playwright test tests/e2e/project-home.spec.ts --project=chromium --workers=1 --retries=0
 
 verify-close-project:
-    pnpm exec vitest run apps/api/test/project-close-service.test.ts apps/api/test/project-close-route.test.ts apps/api/test/project-close-non-mutation.test.ts apps/api/test/project-close-documentation.test.ts apps/web/src/project-close-client.test.ts apps/web/src/use-project-close.test.tsx apps/web/src/App.close.test.tsx --reporter=verbose
+    pnpm exec vitest run apps/api/test/project-close-service.test.ts apps/api/test/project-close-route.test.ts apps/api/test/project-close-manager.test.ts apps/api/test/project-close-evidence.test.ts apps/api/test/project-close-matrix.test.ts apps/api/test/project-close-non-mutation.test.ts apps/api/test/project-close-documentation.test.ts apps/web/src/project-close-client.test.ts apps/web/src/use-project-close.test.tsx apps/web/src/App.close.test.tsx apps/web/src/project-close-component-matrix.test.tsx --reporter=verbose
     pnpm exec playwright test tests/e2e/project-home.spec.ts --project=chromium --workers=1 --retries=0
+    if [[ -d test-results/bl-020/fixtures ]]; then find test-results/bl-020/fixtures -depth -type d -empty -delete; fi
 
 verify-project-runtime:
     BL010_ACCEPTANCE=1 pnpm exec vitest run apps/api/test/project-runtime-contract.test.ts apps/api/test/project-runtime-process.test.ts apps/api/test/project-runtime-manager.test.ts apps/api/test/project-runtime-lifecycle.test.ts apps/api/test/project-runtime-acceptance.test.ts --reporter=verbose
@@ -156,6 +157,19 @@ proof-runtime-reconcile:
 proof-runtime-reconcile-residual-audit:
     pnpm --filter @ascend/api exec tsx src/cli/runtime-reconcile-residual-audit.ts
 
+verify-runtime-close:
+    pnpm exec vitest run apps/api/test/project-runtime-contract.test.ts apps/api/test/workbench-proxy-contract.test.ts apps/api/test/project-close-manager.test.ts apps/api/test/project-close-service.test.ts apps/api/test/project-close-route.test.ts apps/api/test/project-close-evidence.test.ts apps/api/test/project-close-matrix-core.test.ts apps/api/test/project-close-matrix-lifecycle.test.ts apps/api/test/project-close-matrix-edge.test.ts apps/api/test/project-close-matrix-web.test.ts apps/api/test/project-close-mutations.test.ts apps/api/test/project-close-matrix.test.ts apps/api/test/project-close-non-mutation.test.ts apps/api/test/project-close-residual-audit.test.ts apps/api/test/project-close-designated-contract.test.ts apps/api/test/project-close-documentation.test.ts apps/web/src/project-close-client.test.ts apps/web/src/use-project-close.test.tsx apps/web/src/App.close.test.tsx apps/web/src/project-close-component-matrix.test.tsx --reporter=verbose
+    pnpm exec playwright test tests/e2e/project-close.spec.ts --project=chromium --workers=1 --retries=0
+    if [[ -d test-results/bl-020/fixtures ]]; then find test-results/bl-020/fixtures -depth -type d -empty -delete; fi
+    if [[ -d test-results/bl-020/browser ]]; then find test-results/bl-020/browser -depth -type d -empty -delete; fi
+
+proof-runtime-close:
+    pnpm --filter @ascend/api build:ts
+    BL020_DESIGNATED=1 pnpm exec vitest run apps/api/test/project-close-designated.test.ts --reporter=verbose
+
+proof-runtime-close-residual-audit:
+    pnpm --filter @ascend/api exec tsx src/cli/project-close-residual-audit.ts
+
 proof-session-switching-residual-audit:
     pnpm --filter @ascend/api exec tsx src/cli/session-switching-residual-audit.ts
 
@@ -194,5 +208,8 @@ verify:
     just verify-runtime-reconcile
     just proof-runtime-reconcile
     just proof-runtime-reconcile-residual-audit
+    just verify-runtime-close
+    just proof-runtime-close
+    just proof-runtime-close-residual-audit
     just verify-mvp-performance
     just proof-mvp-performance-residual-audit

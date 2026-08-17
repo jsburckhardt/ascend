@@ -281,11 +281,12 @@ describe('BL-017 application documentation contract', () => {
       ['runtime_stop_failed', 500, 'unexpected or invariant stop failure'],
       ['runtime_reconcile_in_progress', 409, 'reconciliation is pending'],
       ['runtime_reconcile_unresolved', 409, 'reconciliation is unresolved'],
+      ['runtime_close_in_progress', 409, 'a close is in progress'],
     ]
     expect(rows.map(([category]) => category)).toEqual([
       ...RUNTIME_STOP_ROUTE_ERROR_CATEGORIES,
     ])
-    expect(RUNTIME_STOP_ROUTE_ERROR_CATEGORIES).toHaveLength(12)
+    expect(RUNTIME_STOP_ROUTE_ERROR_CATEGORIES).toHaveLength(13)
     expect(RUNTIME_STOP_BODY_LIMIT_BYTES).toBe(1_024)
 
     await expectDocumented([
@@ -352,7 +353,7 @@ describe('BL-017 application documentation contract', () => {
     expect(RUNTIME_ENTRY_STATES).toHaveLength(7)
     expect(RUNTIME_LIFECYCLE_TARGETS).toHaveLength(7)
     expect(PUBLIC_RUNTIME_STATES).toHaveLength(4)
-    expect(RUNTIME_FAILURE_CATEGORIES).toHaveLength(19)
+    expect(RUNTIME_FAILURE_CATEGORIES).toHaveLength(21)
 
     await expectDocumented([
       [
@@ -730,7 +731,8 @@ describe('BL-017 application documentation contract', () => {
         RUNBOOK,
         [
           'selected Restart by BL-018',
-          'Running/failed Close, persisted runtime handles or state, background monitoring, automatic recovery, auto-sleep, scheduling, quotas, and containers remain deferred.',
+          'Running/failed Close is delivered by BL-020 and specified in the close sections above.',
+          'Ascend still keeps no persisted runtime handles or state, and background monitoring, automatic lifecycle policy, recovery beyond the delivered one-shot API-restart reconciliation, auto-sleep, scheduling, quotas, and containers remain deferred, as do archive, undo, bulk close, and product deletion.',
         ],
       ],
       [
@@ -743,7 +745,8 @@ describe('BL-017 application documentation contract', () => {
       [
         SWITCHING,
         [
-          'Close-on-running behavior, auto-sleep, scheduling, quotas, multi-user, and multi-host operation remain out of scope.',
+          'Auto-sleep, scheduling, quotas, multi-user, and multi-host operation remain out of scope.',
+          'Closing a running or failed project removes that project from Ascend rather than switching among retained ones, so no continuity claim, workflow, socket inventory, or reuse measurement here changes.',
           'Stop and Restart change no SQLite schema or persisted field, environment configuration, deployment topology, or migration requirement.',
         ],
       ],

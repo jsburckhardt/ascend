@@ -1,5 +1,10 @@
 import type { ProjectLibrary } from './project-library.js'
-import type { CloseProjectResult } from './project-persistence.js'
+import {
+  deriveProjectOwnerToken,
+  type RuntimeCloseOutcome,
+} from './project-runtime-contract.js'
+import type { ProjectRuntimeManager } from './project-runtime-manager.js'
+import type { WorkbenchProxyManager } from './workbench-proxy-manager.js'
 
 export const PROJECT_CLOSE_ERROR_CATEGORIES = [
   'invalid_project_id',
@@ -23,33 +28,33 @@ export class ProjectCloseError extends Error {
   }
 }
 
-export interface ProjectCloseRepository {
-  closeProject(id: string): Promise<CloseProjectResult>
-}
-
 export interface ProjectCloseService {
-  closeProject(id: string): Promise<CloseProjectResult>
+  closeProject(id: string): Promise<RuntimeCloseOutcome>
 }
 
-export function createProjectCloseService(
-  repository: ProjectCloseRepository
-): ProjectCloseService {
+export interface ProjectCloseServiceDependencies {
+  readonly library: Pick<ProjectLibrary, 'closeProject'>
+  readonly runtime: Pick<ProjectRuntimeManager, 'close'>
+  readonly proxy: Pick<WorkbenchProxyManager, 'closeProject' | 'audit'>
+}
+
+export function createProjectCloseService({
+  library,
+  runtime,
+  proxy,
+}: ProjectCloseServiceDependencies): ProjectCloseService {
   return {
     async closeProject(id) {
       if (typeof id !== 'string' || id.length === 0) {
         throw new ProjectCloseError('invalid_project_id')
       }
-      try {
-        return await repository.closeProject(id)
-      } catch {
-        throw new ProjectCloseError('project_close_failed')
-      }
+      const projectToken = deriveProjectOwnerToken(id)
+      return runtime.close({
+        projectId: id,
+        drainConnections: (signal) => proxy.closeProject(id, signal),
+        auditConnections: () => proxy.audit(projectToken),
+        commitRemoval: () => library.closeProject(id),
+      })
     },
   }
-}
-
-export function createLibraryProjectCloseService(
-  library: Pick<ProjectLibrary, 'closeProject'>
-): ProjectCloseService {
-  return createProjectCloseService(library)
 }

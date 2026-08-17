@@ -22,6 +22,8 @@ This component applies to API-owned SQLite connection creation, Drizzle migratio
 - The root `justfile` MUST expose migration through a paved command that requires an explicit database path; migration MUST NOT reset or remove existing data.
 - Database tests MUST use unique paths under a repository-defined disposable directory, refuse the documented developer/default database location, close every handle, remove only the selected database and its SQLite sidecars, and verify cleanup.
 
+- **Amended 2026-08-16 (BL-020, Issue #45).** The persisted project record remains exactly `id`, `name`, `canonicalPath`, and `createdAt`. A selected project close introduces **no schema change, no migration, and no new persisted value**: runtime identities, ownership records, close claims, retirement entries, release markers, admissions, and public states remain memory-only and MUST NOT be written to the durable store or inferred from it. Durable removal remains one explicit serialized transaction that deletes exactly one row, rolls back as a unit, and reports either a removal or an already-absent subject; a partial or best-effort removal MUST NOT be exposed. Durable removal MUST be invoked only through the single removal callable that the close-composing service constructs and injects into the lifecycle boundary's close operation, and only after that boundary has positively confirmed every owned resource absent or exactly released. The close-composing service is the **sole construction point** of that callable and is therefore the one component permitted to name durable removal; it MUST NOT invoke it anywhere outside the callable's body. No route handler, browser client, CLI, other service, or lifecycle path may invoke durable removal directly, and no path may invoke it as a repair for an unconfirmed release. A guard phrased as "no service may invoke durable removal" is wrong and MUST NOT be written: it would forbid the only legitimate construction site. A removal that fails MUST leave the registration present exactly once with every field unchanged, and MUST NOT be retried inside the same operation.
+
 ### Interfaces
 - A database resource factory accepts a local SQLite filesystem path and returns a Drizzle database plus explicit close ownership.
 - A migration runner accepts an open database resource and returns an ordered result containing applied migration IDs and the current migration ID.
@@ -71,3 +73,5 @@ try {
 ## Related ADRs
 
 - [ADR-260808-typescript-monorepo](../ADR/ADR-260808-typescript-monorepo.md)
+- [ADR-260816-selected-project-close-control](../ADR/ADR-260816-selected-project-close-control.md)
+- [CORE-COMPONENT-260816-managed-resource-release-ordering](./CORE-COMPONENT-260816-managed-resource-release-ordering.md)

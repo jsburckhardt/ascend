@@ -22,6 +22,7 @@ export const RUNTIME_STOP_ROUTE_ERROR_CATEGORIES = Object.freeze([
   'runtime_stop_failed',
   'runtime_reconcile_in_progress',
   'runtime_reconcile_unresolved',
+  'runtime_close_in_progress',
 ] as const)
 export type RuntimeStopRouteErrorCategory =
   (typeof RUNTIME_STOP_ROUTE_ERROR_CATEGORIES)[number]
@@ -38,6 +39,7 @@ const STOP_REJECTION_STATUS = Object.freeze({
   'restart-in-progress': [409, 'runtime_restart_in_progress'],
   'reconcile-in-progress': [409, 'runtime_reconcile_in_progress'],
   'reconcile-unresolved': [409, 'runtime_reconcile_unresolved'],
+  'close-in-progress': [409, 'runtime_close_in_progress'],
   'failure-retained': [409, 'runtime_failure_retained'],
   'stop-unconfirmed': [500, 'runtime_stop_unconfirmed'],
   'manager-shutdown': [503, 'runtime_manager_shutdown'],

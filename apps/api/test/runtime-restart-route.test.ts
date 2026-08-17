@@ -26,6 +26,9 @@ function runtime(
     start: vi.fn(),
     stop: vi.fn(),
     restart: vi.fn(({ projectId }) => implementation(projectId)),
+    close: async () => {
+      throw new Error('restart routing does not close projects')
+    },
     reportPublicStates: vi.fn(
       (projectIds: readonly string[]): PublicRuntimeReport[] =>
         projectIds.map((projectId) => ({ projectId, state: 'Stopped' }))
@@ -167,9 +170,12 @@ describe('POST /api/projects/:id/runtime/restart', () => {
     }
   })
 
-  it('freezes the exact twelve-category route vocabulary and body bound', () => {
-    expect(RUNTIME_RESTART_ROUTE_ERROR_CATEGORIES).toHaveLength(12)
-    expect(new Set(RUNTIME_RESTART_ROUTE_ERROR_CATEGORIES).size).toBe(12)
+  it('freezes the exact thirteen-category route vocabulary and body bound', () => {
+    expect(RUNTIME_RESTART_ROUTE_ERROR_CATEGORIES).toHaveLength(13)
+    expect(new Set(RUNTIME_RESTART_ROUTE_ERROR_CATEGORIES).size).toBe(13)
+    expect(RUNTIME_RESTART_ROUTE_ERROR_CATEGORIES).toContain(
+      'runtime_close_in_progress'
+    )
     expect(RUNTIME_RESTART_BODY_LIMIT_BYTES).toBe(1_024)
   })
 })

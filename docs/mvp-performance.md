@@ -76,3 +76,5 @@ The deltas below are observed minus retained BL-004 run `853037e6-5dab-43cf-bcf8
 | 10 | 2.513 / 6.667 / +4.154 | 18,467,380 / 18,687,164 / +219,784 | 0.029937 / 0.070212 / +0.040275 | 196,899.640000 / 200,982.520000 / +4,082.880000 |
 
 BL-015 performs no optimization and changes no target, API, migration, configuration default, or deployment topology.
+
+**BL-020 close has no deployment-topology impact on these measurements.** Close runs inside the same single local host with one API process and loopback-only runtimes, and it introduces no new process, port, service, or host requirement, so the cold, warm, continuity, and capacity procedures, targets, and comparability rules above are unchanged. Close is not measured here: it neither starts a runtime nor participates in a navigation timing, and the designated close proof runs under its own recipe.

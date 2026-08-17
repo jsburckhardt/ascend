@@ -334,8 +334,12 @@ test('uses only the keyboard to register, reconcile, correct, and open Workbench
     await page.keyboard.press('Tab')
     await expect(page.getByRole('button', { name: 'Confirm' })).toBeFocused()
     await page.keyboard.press('Enter')
+    await expect(dialog).toBeHidden()
     await expect(secondClose).toBeHidden()
-    await expect(page.getByRole('status')).toContainText('Project closed')
+    await expect(page.locator('#workbench-opening-status')).toContainText(
+      'second <script> project: Project closed.'
+    )
+    await expect(page.locator('[data-close-lane-project-id]')).toHaveCount(0)
     await expect(
       page.getByRole('button', { name: 'Close first project' })
     ).toBeFocused()
@@ -504,13 +508,21 @@ test('recovers from a controlled close persistence fault in real Chromium', asyn
     await page.keyboard.press('Enter')
     await page.keyboard.press('Tab')
     await page.keyboard.press('Enter')
-    const retry = page.getByRole('button', { name: 'Retry' })
-    await expect(retry).toBeFocused()
-    await expect(page.getByRole('dialog')).toContainText(
-      'The project could not be closed. Retry this project.'
-    )
+    await expect(page.getByRole('dialog')).toBeHidden()
+    const lane = page.locator('[data-close-lane-project-id]')
+    await expect(lane).toHaveCount(1)
     await expect(
-      page.getByRole('button', { name: 'Close fault project' })
+      lane.getByRole('status', { name: 'Close status for fault project' })
+    ).toContainText('The project could not be closed. Retry this project.')
+    await expect(page.locator('#workbench-opening-status')).toContainText(
+      'fault project: The project could not be closed. Retry this project.'
+    )
+    const retry = page.getByRole('button', {
+      name: 'Retry close fault project',
+    })
+    await expect(retry).toBeFocused()
+    await expect(
+      page.getByRole('button', { exact: true, name: 'Close fault project' })
     ).toBeVisible()
     summary.knownFailure = true
     await page.keyboard.press('Enter')

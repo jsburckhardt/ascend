@@ -9,7 +9,7 @@
 | Base commit | `2f51f768c2fa8b80b2d8cb0347ee22196e9f9e13` |
 | Implementation commit | `0c01d910a7f87d38a3b77933969b6cbe3804309e` |
 | Pull request | [#46](https://github.com/jsburckhardt/ascend/pull/46) - `feat(projects): close running or failed projects` |
-| Pull request head | `feat/45-close-a-running-or-failed-project` at implementation commit |
+| Pull request implementation handoff | `feat/45-close-a-running-or-failed-project` at the exact implementation commit before verifier-only summary metadata |
 
 ## Exact Handoff and Scope
 

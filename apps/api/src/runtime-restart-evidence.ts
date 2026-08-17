@@ -840,6 +840,7 @@ function validateRestartCallbacks(body: string, violations: string[]): void {
       continuation.includes('recordCleanup(') ||
       continuation.includes('registerOwnership(') ||
       continuation.includes('entries.set(') ||
+      continuation.includes('installEntry(') ||
       continuation.includes('emit(')
     ) {
       violations.push('restart-quarantine-project-keyed')
@@ -892,7 +893,7 @@ function validateRouteSources(
     if (
       start < 0 ||
       end < 0 ||
-      countMatches(source.slice(start, end), /'[a-z_]+'/gu) !== 12
+      countMatches(source.slice(start, end), /'[a-z_]+'/gu) !== 13
     ) {
       violations.push('restart-bound-outside-config')
     }

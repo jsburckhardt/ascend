@@ -21,6 +21,7 @@ This contract applies to bootstrapped repositories, local development, RPIV vali
 - The root `justfile` MUST be the default operating surface for humans and agents.
 - A project MAY adopt a documented command wrapper that delegates to root `justfile` recipes.
 - A standalone verification command config MUST NOT duplicate the root `justfile`.
+- **Amended 2026-08-16 (BL-020, Issue #45).** A new recipe name MUST NOT be a transposition, reordering, or near-homograph of an existing recipe name in the same `justfile`. Two recipes whose names differ only by word order — and which therefore run different gates while reading almost identically in a transcript, a runbook, or a review comment — are a defect in the command interface, not a naming preference. A new gate for an operation that already has a delivered recipe MUST either extend that recipe or take a name that differs by an added or changed word, and every document, gate list, and aggregate recipe MUST use the new name consistently.
 - The development environment MUST provide the `just` command runner.
 
 ### Interfaces

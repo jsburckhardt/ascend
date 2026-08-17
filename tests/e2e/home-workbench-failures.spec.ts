@@ -71,6 +71,9 @@ test('runs exactly four controlled browser failure cases with one recovery actio
     start: async () => {
       throw new Error('Not owned by controlled proxy')
     },
+    close: async () => {
+      throw new Error('home workbench failures do not close projects')
+    },
     inspect: () => undefined,
     lastFailure: () => undefined,
     lastCleanup: () => undefined,
@@ -120,6 +123,9 @@ test('runs exactly four controlled browser failure cases with one recovery actio
       return sendSuccess(response, route.projectId)
     },
     handleUpgrade: async () => undefined,
+    closeProject: async () => {
+      throw new Error('home workbench failures do not close proxy sessions')
+    },
     shutdown: async () => proxy.audit(),
     audit: () => ({
       shuttingDown: false,

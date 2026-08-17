@@ -4,6 +4,7 @@ import type {
   RuntimeTerminationAudit,
   RuntimeTerminationOutcome,
 } from './project-runtime-process.js'
+import type { WorkbenchProxyAudit } from './workbench-proxy-contract.js'
 
 export const RUNTIME_STATES = ['starting', 'running', 'failed'] as const
 export type RuntimeState = (typeof RUNTIME_STATES)[number]
@@ -69,6 +70,7 @@ export const RUNTIME_RESTART_REJECTION_CATEGORIES = Object.freeze([
   'manager-shutdown',
   'reconcile-in-progress',
   'reconcile-unresolved',
+  'close-in-progress',
 ] as const)
 export type RuntimeRestartRejectionCategory =
   (typeof RUNTIME_RESTART_REJECTION_CATEGORIES)[number]
@@ -106,6 +108,69 @@ export class RuntimeRestartInvariantError extends Error {
   }
 }
 
+export const RUNTIME_CLOSE_OUTCOMES = Object.freeze([
+  'closed',
+  'already-absent',
+  'rejected',
+] as const)
+export type RuntimeCloseOutcomeName = (typeof RUNTIME_CLOSE_OUTCOMES)[number]
+
+export const RUNTIME_CLOSE_REJECTION_CATEGORIES = Object.freeze([
+  'start-in-progress',
+  'stop-in-progress',
+  'restart-in-progress',
+  'reconcile-in-progress',
+  'reconcile-unresolved',
+  'release-unconfirmed',
+  'ownership-cardinality-exceeded',
+  'removal-failed',
+  'manager-shutdown',
+] as const)
+export type RuntimeCloseRejectionCategory =
+  (typeof RUNTIME_CLOSE_REJECTION_CATEGORIES)[number]
+
+export type RuntimeCloseOutcome =
+  | Readonly<{
+      outcome: 'closed'
+      projectId: string
+      releasedGenerations: number
+      audits?: readonly RuntimeTerminationAudit[]
+    }>
+  | Readonly<{
+      outcome: 'already-absent'
+      projectId: string
+      released: boolean
+    }>
+  | Readonly<{
+      outcome: 'rejected'
+      projectId: string
+      category: RuntimeCloseRejectionCategory
+      failureCategory?: RuntimeFailureCategory
+      audits?: readonly RuntimeTerminationAudit[]
+    }>
+
+export interface ProjectRuntimeCloseInput {
+  readonly projectId: string
+  readonly drainConnections: (
+    signal: AbortSignal
+  ) => Promise<WorkbenchProxyAudit>
+  readonly auditConnections: () => WorkbenchProxyAudit
+  readonly commitRemoval: () => Promise<
+    Readonly<
+      | { disposition: 'closed'; id: string }
+      | { disposition: 'project_not_found' }
+    >
+  >
+}
+
+export class RuntimeCloseInvariantError extends Error {
+  constructor() {
+    super('Runtime close ownership invariant failed')
+    this.name = 'RuntimeCloseInvariantError'
+    delete this.stack
+  }
+}
+
 export const RUNTIME_FAILURE_CATEGORIES = [
   'unknown-project',
   'canonical-path-invariant',
@@ -126,6 +191,8 @@ export const RUNTIME_FAILURE_CATEGORIES = [
   'runtime-restarting',
   'restart-replacement-unconfirmed',
   'reconcile-unconfirmed',
+  'runtime-closing',
+  'close-release-unconfirmed',
 ] as const
 export type RuntimeFailureCategory = (typeof RUNTIME_FAILURE_CATEGORIES)[number]
 
@@ -194,6 +261,10 @@ export const RUNTIME_FAILURE_MESSAGES: Readonly<
     'Workbench restart could not confirm replacement cleanup; retry after the runtime manager reconciles it.',
   'reconcile-unconfirmed':
     'Workbench recovery could not confirm this runtime; restart Ascend after resolving the workbench.',
+  'runtime-closing':
+    'Workbench is being closed; wait for the close to settle before retrying.',
+  'close-release-unconfirmed':
+    'Workbench release could not be confirmed during close; retry after the runtime manager reconciles it.',
 })
 
 export interface RuntimeFailureDiagnostics {
@@ -348,6 +419,50 @@ export function runtimeRestartOverallBoundMs(
   )
 }
 
+function checkedCloseSweepUnits(
+  config: ProjectRuntimeConfig,
+  sweepUnits: number
+): number {
+  if (
+    !Number.isSafeInteger(sweepUnits) ||
+    sweepUnits < 1 ||
+    sweepUnits > config.closeOwnershipSweepCap
+  ) {
+    throw new Error('Runtime close sweep units are outside the configured cap')
+  }
+  return sweepUnits
+}
+
+export function runtimeCloseReleaseBoundMs(
+  config: ProjectRuntimeConfig,
+  requiresQuarantineResolution: boolean,
+  sweepUnits: number
+): number {
+  const units = checkedCloseSweepUnits(config, sweepUnits)
+  return checkedRuntimeBound(
+    units * runtimeStopOverallBoundMs(config) +
+      (requiresQuarantineResolution
+        ? restartQuarantineReleaseBoundMs(config)
+        : 0)
+  )
+}
+
+export function runtimeCloseOverallBoundMs(
+  config: ProjectRuntimeConfig,
+  requiresQuarantineResolution: boolean,
+  sweepUnits: number
+): number {
+  return checkedRuntimeBound(
+    runtimeCloseReleaseBoundMs(
+      config,
+      requiresQuarantineResolution,
+      sweepUnits
+    ) +
+      config.closeDrainAllowanceMs +
+      config.closeSettlementAllowanceMs
+  )
+}
+
 export const RESTART_ADMISSION_PHASES = Object.freeze([
   'launch-pending',
   'materialized-quarantined',
@@ -464,6 +579,9 @@ export const PROJECT_RUNTIME_DEFAULTS = Object.freeze({
   reconcileSettlementAllowanceMs: 1_000,
   reconcileStartupHeadroomMs: 3_000,
   reconcileResponseAllowanceMs: 1_000,
+  closeDrainAllowanceMs: 5_000,
+  closeSettlementAllowanceMs: 1_000,
+  closeOwnershipSweepCap: 4,
 })
 
 export interface ProjectRuntimeConfig {
@@ -484,6 +602,9 @@ export interface ProjectRuntimeConfig {
   readonly reconcileSettlementAllowanceMs: number
   readonly reconcileStartupHeadroomMs: number
   readonly reconcileResponseAllowanceMs: number
+  readonly closeDrainAllowanceMs: number
+  readonly closeSettlementAllowanceMs: number
+  readonly closeOwnershipSweepCap: number
 }
 
 export function createProjectRuntimeConfig(
@@ -551,6 +672,15 @@ export function createProjectRuntimeConfig(
     reconcileResponseAllowanceMs:
       overrides.reconcileResponseAllowanceMs ??
       PROJECT_RUNTIME_DEFAULTS.reconcileResponseAllowanceMs,
+    closeDrainAllowanceMs:
+      overrides.closeDrainAllowanceMs ??
+      PROJECT_RUNTIME_DEFAULTS.closeDrainAllowanceMs,
+    closeSettlementAllowanceMs:
+      overrides.closeSettlementAllowanceMs ??
+      PROJECT_RUNTIME_DEFAULTS.closeSettlementAllowanceMs,
+    closeOwnershipSweepCap:
+      overrides.closeOwnershipSweepCap ??
+      PROJECT_RUNTIME_DEFAULTS.closeOwnershipSweepCap,
   }
   for (const value of [
     config.collisionAttempts,
@@ -567,6 +697,9 @@ export function createProjectRuntimeConfig(
     config.reconcileSettlementAllowanceMs,
     config.reconcileStartupHeadroomMs,
     config.reconcileResponseAllowanceMs,
+    config.closeDrainAllowanceMs,
+    config.closeSettlementAllowanceMs,
+    config.closeOwnershipSweepCap,
   ]) {
     if (!Number.isSafeInteger(value) || value <= 0) {
       throw new Error('Runtime bounds must be positive integers')
@@ -645,6 +778,7 @@ export const RUNTIME_STOP_REJECTION_CATEGORIES = Object.freeze([
   'manager-shutdown',
   'reconcile-in-progress',
   'reconcile-unresolved',
+  'close-in-progress',
 ] as const)
 export type RuntimeStopRejectionCategory =
   (typeof RUNTIME_STOP_REJECTION_CATEGORIES)[number]

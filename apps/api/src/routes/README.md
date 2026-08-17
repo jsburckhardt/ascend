@@ -36,7 +36,7 @@ The public project registration and list payload remains exactly id, name, canon
 
 ### Read-only runtime state
 
-`GET /api/projects/runtime` is a separate read-only endpoint. It lists authoritative projects in the same `createdAt ASC, id ASC` order as `GET /api/projects`, then performs one synchronous manager projection. HTTP 200 is exactly `{"runtimes":[{"id":"stable-id","state":"Stopped"}]}`. State is one of `Stopped`, `Starting`, `Running`, or `Failed`; an internal reconciling project reports `Starting`, an adopted survivor `Running`, proven absence `Stopped`, and unresolved evidence `Failed/reconcile-unconfirmed`; only `Failed` adds `failureCategory`, and that value is one of the 19 bounded runtime categories. No row includes name, canonical path, process identity, port, authority, stable route, owner token, command, environment, or diagnostic.
+`GET /api/projects/runtime` is a separate read-only endpoint. It lists authoritative projects in the same `createdAt ASC, id ASC` order as `GET /api/projects`, then performs one synchronous manager projection. HTTP 200 is exactly `{"runtimes":[{"id":"stable-id","state":"Stopped"}]}`. State is one of `Stopped`, `Starting`, `Running`, or `Failed`; an internal reconciling project reports `Starting`, an adopted survivor `Running`, proven absence `Stopped`, and unresolved evidence `Failed/reconcile-unconfirmed`; only `Failed` adds `failureCategory`, and that value is one of the 19 bounded runtime categories. Since BL-020 one further projected value exists, `close-release-unconfirmed`, retained on a project whose close could not confirm the runtime release. The other BL-020 category, `runtime-closing`, is an acquisition failure returned to a start or register caller while a close claim is installed; it is never stored on an entry and therefore never appears in this projection. No row includes name, canonical path, process identity, port, authority, stable route, owner token, command, environment, or diagnostic.
 
 If project listing or projection fails, the route logs `project.runtime.state.failed` and returns exactly HTTP 500 `{"error":{"category":"runtime_state_failed"}}`. It never returns a partial list or an empty success-shaped fallback. The four-field `GET /api/projects` response, its validators, `POST /api/projects`, and `DELETE /api/projects/{id}` remain unchanged.
 
@@ -69,8 +69,9 @@ The exact error table is:
 | unexpected or invariant stop failure | 500 | `runtime_stop_failed` |
 | reconciliation is pending | 409 | `runtime_reconcile_in_progress` |
 | reconciliation is unresolved | 409 | `runtime_reconcile_unresolved` |
+| a close is in progress | 409 | `runtime_close_in_progress` |
 
-Errors are exactly `{"error":{"category":"<category>"}}`. The twelve-category route vocabulary is fixed. No response includes public runtime state, release mode, audit, PID, process identity, group membership, port, listener, path, authority, diagnostic, or server message. Expected rejections log `project.runtime.stop.rejected` with only the bounded route category; unexpected faults log the operational record `project.runtime.stop.failed`. The route emits no lifecycle event.
+Errors are exactly `{"error":{"category":"<category>"}}`. The twelve-category route vocabulary is fixed. Since BL-020 the table above carries a thirteenth row, `runtime_close_in_progress`, produced by the manager rejection `rejected`/`close-in-progress` while a close claim owns that project; the vocabulary remains closed at that size. No response includes public runtime state, release mode, audit, PID, process identity, group membership, port, listener, path, authority, diagnostic, or server message. Expected rejections log `project.runtime.stop.rejected` with only the bounded route category; unexpected faults log the operational record `project.runtime.stop.failed`. The route emits no lifecycle event.
 
 `runtime_not_managed` and `already-stopped` are deliberately distinct. A persisted project with no entry before reconciliation returns the former; after API restart, a positively absent project is installed as released and returns `already-stopped`, while pending or unresolved reconciliation returns its distinct 409 category. The latter is available only when this manager retains a released registration installed by a confirmed selected stop. Stop leaves the four persisted project fields and filesystem unchanged. Project Home obtains the resulting public state from one fresh `GET /api/projects/runtime` request rather than from this action response.
 
@@ -78,10 +79,36 @@ Validate the finite contract and fixed 31-scenario matrix with `just verify-runt
 
 ### Selected runtime restart
 
-`POST /api/projects/{id}/runtime/restart` accepts one decoded nonempty stable ID, an absent body or empty JSON object, no query fields, and at most 1,024 body bytes. It delegates exactly once to `ProjectRuntimeManager.restart({ projectId: id })`. Success is exactly `{"id":"stable-id","outcome":"restarted"}`. Its twelve error categories are `invalid_project_id`, `invalid_restart_request`, `project_not_found`, `runtime_not_managed`, `runtime_start_in_progress`, `runtime_stop_in_progress`, `runtime_restart_release_unconfirmed`, `runtime_replacement_failed`, `runtime_manager_shutdown`, `runtime_restart_failed`, `runtime_reconcile_in_progress`, and `runtime_reconcile_unresolved`; both reconciliation categories are HTTP 409.
+`POST /api/projects/{id}/runtime/restart` accepts one decoded nonempty stable ID, an absent body or empty JSON object, no query fields, and at most 1,024 body bytes. It delegates exactly once to `ProjectRuntimeManager.restart({ projectId: id })`. Success is exactly `{"id":"stable-id","outcome":"restarted"}`. Its twelve error categories are `invalid_project_id`, `invalid_restart_request`, `project_not_found`, `runtime_not_managed`, `runtime_start_in_progress`, `runtime_stop_in_progress`, `runtime_restart_release_unconfirmed`, `runtime_replacement_failed`, `runtime_manager_shutdown`, `runtime_restart_failed`, `runtime_reconcile_in_progress`, and `runtime_reconcile_unresolved`; both reconciliation categories are HTTP 409. Since BL-020 a thirteenth restart category exists, HTTP 409 `runtime_close_in_progress`, produced by the manager rejection `rejected`/`close-in-progress`.
 
 The route returns no state, identity, release mode, audit, path, authority, diagnostic, or server message. Expected rejections log `project.runtime.restart.rejected`; unexpected faults log `project.runtime.restart.failed`. Validate with `just verify-runtime-restart`, `just proof-runtime-restart`, and `just proof-runtime-restart-residual-audit`.
 
-The stable /projects/{projectId}/workbench/ HTTP and WebSocket boundary resolves one stable-ID-keyed runtime snapshot per active project. It rejects a snapshot whose ID, canonical path, route, owner token, loopback URL, or port does not match the persisted project and parsed route, and rejects any snapshot that is not the exact running object still owned by ProjectRuntimeManager. Interleaved A/B/C requests, upgrades, and frames remain bound to their matching project token and target. The selected Stop and Restart routes plus global application shutdown are the exposed runtime lifecycle paths; the proxy remains a pure consumer and never invokes them.
+### Selected project close
+
+`DELETE /api/projects/{id}` accepts one decoded nonempty stable ID and closes a project in any authoritative state, including `Running` and `Failed`. It delegates exactly once to the close service, which owns the metadata boundary plus three runtime-manager callables: an ownership probe, the close claim, and one `commitRemoval` callback. The route itself calls no process termination, audit, drain, or project filesystem API. Success is unchanged from BL-009 and is exactly:
+
+```json
+{"id":"stable-id","disposition":"closed"}
+```
+
+The exact error table is:
+
+| Condition | HTTP | Category |
+|---|---:|---|
+| missing, empty, or undecodable ID | 400 | `invalid_project_id` |
+| registration absent, or a losing concurrent contender | 404 | `project_not_found` |
+| start is in progress | 409 | `runtime_start_in_progress` |
+| stop is in progress | 409 | `runtime_stop_in_progress` |
+| restart is in progress | 409 | `runtime_restart_in_progress` |
+| reconciliation is pending | 409 | `runtime_reconcile_in_progress` |
+| reconciliation is unresolved | 409 | `runtime_reconcile_unresolved` |
+| the runtime release cannot be confirmed | 500 | `runtime_release_unconfirmed` |
+| retained ownership exceeds the internal sweep cap | 500 | `runtime_close_ownership_unresolved` |
+| the durable removal failed, or an unexpected close failure | 500 | `project_close_failed` |
+| runtime manager shutdown has begun | 503 | `runtime_manager_shutdown` |
+
+Errors are exactly `{"error":{"category":"<category>"}}`. The eleven-category close vocabulary is fixed and, with the two success statuses, produces twelve published status rows. Exactly one `project.closed` record is written per completed close, so eight concurrent DELETEs for one project yield one 200, seven 404s, and one record; rejections and already-absent results write none. A rejection releases nothing, removes nothing, emits no lifecycle event, and leaves the four persisted project fields and the project filesystem unchanged. Validate with `just verify-close-project`, `just verify-runtime-close`, `just proof-runtime-close`, and `just proof-runtime-close-residual-audit`; the committed matrix is `project/work-items/45-bl-020-close-a-running-or-failed-project/implementation/evidence/close-matrix.json`.
+
+The stable /projects/{projectId}/workbench/ HTTP and WebSocket boundary resolves one stable-ID-keyed runtime snapshot per active project. It rejects a snapshot whose ID, canonical path, route, owner token, loopback URL, or port does not match the persisted project and parsed route, and rejects any snapshot that is not the exact running object still owned by ProjectRuntimeManager. Interleaved A/B/C requests, upgrades, and frames remain bound to their matching project token and target. The selected Stop and Restart routes plus global application shutdown are the exposed runtime lifecycle paths; the proxy remains a pure consumer and never invokes them. Since BL-020 the project close route also releases a runtime, through the same manager sequencer and after the manager drains that project's proxy connections; the proxy still invokes no lifecycle path and only observes the drain through its two published 503 rows.
 
 Use just verify-project-runtime-isolation for the 12-scenario schema-version-2 matrix, its exact 70-record event catalog, 18 pre-forward mismatch rows, six rejected cross-project frame-destination attempts through the production forwarding boundary, persisted-close and measured task-settlement audits, and the Chromium exact-status replacement episode; use just proof-project-runtime-isolation-residual-audit for the independent exact-resource inventory. BL-014 validates switching/session reuse through the stable route. BL-017 adds selected Stop and BL-018 adds selected Restart; the stable proxy payload and target-selection contract remain unchanged.

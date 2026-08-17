@@ -127,6 +127,9 @@ describe('execution-backed Home/workbench API matrix', () => {
         return launched
       }),
       inspect: (id) => running.get(id),
+      close: async () => {
+        throw new Error('home workbench matrix does not close projects')
+      },
       lastFailure: vi.fn(),
       lastCleanup: vi.fn(),
       lastShutdown: vi.fn(),
@@ -153,6 +156,9 @@ describe('execution-backed Home/workbench API matrix', () => {
         )
       },
       handleUpgrade: async () => undefined,
+      closeProject: async () => {
+        throw new Error('home workbench matrix does not close proxy sessions')
+      },
       shutdown: async () => proxy.audit(),
       audit: () => ({
         shuttingDown: false,

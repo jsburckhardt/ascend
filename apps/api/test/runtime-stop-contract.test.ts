@@ -79,8 +79,9 @@ describe('runtime stop contract', () => {
       'manager-shutdown',
       'reconcile-in-progress',
       'reconcile-unresolved',
+      'close-in-progress',
     ])
-    expect(RUNTIME_FAILURE_CATEGORIES).toHaveLength(19)
+    expect(RUNTIME_FAILURE_CATEGORIES).toHaveLength(21)
     expect(Object.isFrozen(RUNTIME_STOP_OUTCOMES)).toBe(true)
     expect(Object.isFrozen(RUNTIME_STOP_REJECTION_CATEGORIES)).toBe(true)
     const config = createProjectRuntimeConfig({

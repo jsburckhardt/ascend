@@ -63,7 +63,7 @@ describe('BL-018 documented restart contract', () => {
     for (const target of RUNTIME_LIFECYCLE_TARGETS)
       expect(runbook).toContain(target)
     for (const state of PUBLIC_RUNTIME_STATES) expect(runbook).toContain(state)
-    expect(RUNTIME_FAILURE_CATEGORIES).toHaveLength(19)
+    expect(RUNTIME_FAILURE_CATEGORIES).toHaveLength(21)
     expect(runbook).toContain('The 19 closed categories')
     for (const category of RUNTIME_FAILURE_CATEGORIES)
       expect(runbook).toContain(category)
@@ -83,8 +83,9 @@ describe('BL-018 documented restart contract', () => {
       'manager-shutdown': 'manager-shutdown',
       'reconcile-in-progress': 'reconcile-in-progress',
       'reconcile-unresolved': 'reconcile-unresolved',
+      'close-in-progress': 'close-in-progress',
     }
-    expect(RUNTIME_RESTART_REJECTION_CATEGORIES).toHaveLength(9)
+    expect(RUNTIME_RESTART_REJECTION_CATEGORIES).toHaveLength(10)
     for (const category of RUNTIME_RESTART_REJECTION_CATEGORIES)
       expect(runbook).toContain(documentedRejection[category])
   })
@@ -96,7 +97,7 @@ describe('BL-018 documented restart contract', () => {
       text(ROUTES_README),
     ])
     expect(RUNTIME_RESTART_BODY_LIMIT_BYTES).toBe(1_024)
-    expect(RUNTIME_RESTART_ROUTE_ERROR_CATEGORIES).toHaveLength(12)
+    expect(RUNTIME_RESTART_ROUTE_ERROR_CATEGORIES).toHaveLength(13)
     expect(runbook).toContain('1,024-byte body limit')
     expect(runbook).toContain('Its twelve client-visible errors')
     expect(readme).toContain('absent or empty body up to 1,024 bytes')

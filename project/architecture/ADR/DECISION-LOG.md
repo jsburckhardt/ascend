@@ -17,6 +17,7 @@ This file is the single registry of all architectural decisions and core-compone
 | ADR-260815-explicit-workbench-restart-control | Replace One Selected Workbench Runtime Through a Manager-Owned Restart Control | Accepted | 2026-08-15 |
 | ADR-260815-per-project-lifecycle-activation | Serialize Project Home Lifecycle Activation Per Project | Accepted | 2026-08-15 |
 | ADR-260815-api-restart-runtime-reconciliation | Reconcile Surviving Workbench Runtimes After an API Restart Through Host-Derived Exact Attribution | Accepted | 2026-08-15 |
+| ADR-260816-selected-project-close-control | Remove One Selected Project Through a Manager-Owned Close Control That Confirms Release Before Durable Removal | Accepted | 2026-08-16 |
 
 ## Core-Components
 
@@ -36,6 +37,7 @@ This file is the single registry of all architectural decisions and core-compone
 | CORE-COMPONENT-260810-sqlite-persistence-lifecycle | SQLite Persistence Lifecycle | Adopted | 2026-08-10 |
 | CORE-COMPONENT-260812-stable-workbench-proxy | Stable Workbench Proxy Boundary | Adopted | 2026-08-12 |
 | CORE-COMPONENT-260815-host-runtime-attribution-evidence | Host Runtime Attribution Evidence | Adopted | 2026-08-15 |
+| CORE-COMPONENT-260816-managed-resource-release-ordering | Managed Resource Release Ordering and Identity Retirement | Adopted | 2026-08-16 |
 
 ## Decisions
 
@@ -344,3 +346,123 @@ Short, actionable statements derived from ADRs and core-components. More than on
 | 299 | Clamp every reconciliation poll gap inside its enclosing bounded window and abandon it on cancellation | ADR-260815-api-restart-runtime-reconciliation | 2026-08-16 |
 | 300 | Permit bounded refusal-reason enum names in trusted inspection and in committed validation evidence | CORE-COMPONENT-260815-host-runtime-attribution-evidence | 2026-08-16 |
 | 301 | Prohibit raw host values from every public surface and from every committed evidence artifact | CORE-COMPONENT-260815-host-runtime-attribution-evidence | 2026-08-16 |
+| 302 | Confirm every Ascend-owned resource absent before removing a project's durable registration | CORE-COMPONENT-260816-managed-resource-release-ordering | 2026-08-16 |
+| 303 | Prohibit an unregistered project from retaining a live or unresolved Ascend-owned runtime resource | CORE-COMPONENT-260816-managed-resource-release-ordering | 2026-08-16 |
+| 304 | Hold one exclusive claim spanning release confirmation and durable removal | CORE-COMPONENT-260816-managed-resource-release-ordering | 2026-08-16 |
+| 305 | Join a concurrent removal request to the winner's settlement and prohibit it reporting success | CORE-COMPONENT-260816-managed-resource-release-ordering | 2026-08-16 |
+| 306 | Retire a removed identity in a non-expiring tombstone consulted by every entry-installing site | CORE-COMPONENT-260816-managed-resource-release-ordering | 2026-08-16 |
+| 307 | Settle late or reordered work for a claimed or retired subject as an explicit bounded non-success | CORE-COMPONENT-260816-managed-resource-release-ordering | 2026-08-16 |
+| 308 | Prohibit a participating boundary from self-timing work performed for a claiming operation | CORE-COMPONENT-260816-managed-resource-release-ordering | 2026-08-16 |
+| 309 | Inject removal and drain effects as callables instead of holding cross-boundary references | CORE-COMPONENT-260816-managed-resource-release-ordering | 2026-08-16 |
+| 310 | Require a client transport bound to exceed the boundary bound it waits on | CORE-COMPONENT-260816-managed-resource-release-ordering | 2026-08-16 |
+| 311 | Add `ProjectRuntimeManager.close` as the single authority for a selected project close | ADR-260816-selected-project-close-control | 2026-08-16 |
+| 312 | Keep `DELETE /api/projects/:id` as the only close route, method, and success body | ADR-260816-selected-project-close-control | 2026-08-16 |
+| 313 | Install the close claim with one synchronous compare-and-set and no intervening await | ADR-260816-selected-project-close-control | 2026-08-16 |
+| 314 | Refuse `start`, `stop`, `restart`, and `register` for a close-claimed project | ADR-260816-selected-project-close-control | 2026-08-16 |
+| 315 | Prohibit a new internal entry state or a fifth public state for close | ADR-260816-selected-project-close-control | 2026-08-16 |
+| 316 | Evaluate close admission in one fixed nine-step order | ADR-260816-selected-project-close-control | 2026-08-16 |
+| 317 | Report a persistently absent project as `already-absent` and preserve the delivered 404 | ADR-260816-selected-project-close-control | 2026-08-16 |
+| 318 | Run close phases as drain, admission resolution, release, ownership sweep, verify, remove, retire | ADR-260816-selected-project-close-control | 2026-08-16 |
+| 319 | Require a zero per-project proxy audit, zero ownership, zero admissions, and confirmed audit triples before removal | ADR-260816-selected-project-close-control | 2026-08-16 |
+| 320 | Send no signal for a project with no owned runtime and never report a release it did not perform | ADR-260816-selected-project-close-control | 2026-08-16 |
+| 321 | Route every close release through the delivered termination sequencer unchanged | ADR-260816-selected-project-close-control | 2026-08-16 |
+| 322 | Add `closeDrainAllowanceMs` and `closeSettlementAllowanceMs` as internal runtime bounds defaulting to 5,000 ms and 1,000 ms | ADR-260816-selected-project-close-control | 2026-08-16 |
+| 323 | Declare the close bound as drain plus release plus settlement, 11,000 ms or 26,000 ms with quarantine resolution | ADR-260816-selected-project-close-control | 2026-08-16 |
+| 324 | Arm every close deadline from the runtime manager's trusted synchronous scheduler | ADR-260816-selected-project-close-control | 2026-08-16 |
+| 325 | Install a retained `close-release-unconfirmed` failure and keep the registration when release cannot be confirmed | ADR-260816-selected-project-close-control | 2026-08-16 |
+| 326 | Install a released `registered` entry reporting `Stopped` when durable removal fails after confirmed release | ADR-260816-selected-project-close-control | 2026-08-16 |
+| 327 | Limit the close outcome vocabulary to `closed`, `already-absent`, and eight bounded rejections | ADR-260816-selected-project-close-control | 2026-08-16 |
+| 328 | Publish ten close route categories with 400, 404, 409, 500, and 503 statuses | ADR-260816-selected-project-close-control | 2026-08-16 |
+| 329 | Emit `project.closed` only for a completed close and emit no stop, restart, start, or reconcile event | ADR-260816-selected-project-close-control | 2026-08-16 |
+| 330 | Permit exactly one truthful `runtime.health.changed` when close installs a retained failure | CORE-COMPONENT-260808-structured-runtime-logging | 2026-08-16 |
+| 331 | Add the `runtime-closing` and `close-release-unconfirmed` bounded runtime failure categories | ADR-260816-selected-project-close-control | 2026-08-16 |
+| 332 | Publish both new categories as 503 `WORKBENCH_FAILURE_TABLE` rows and re-execute the failure matrix | ADR-260812-in-process-workbench-reverse-proxy | 2026-08-16 |
+| 333 | Add `WorkbenchProxyManager.closeProject` as a per-project drain bounded only by its caller's signal | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-16 |
+| 334 | Prohibit the per-project drain from entering global shutdown, resolving targets, or starting runtimes | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-16 |
+| 335 | Scope a pending Close to its own project and keep every peer card's controls admitted | ADR-260815-per-project-lifecycle-activation | 2026-08-16 |
+| 336 | Render a Close, Stop, or Restart control disabled exactly when the controller would refuse it | ADR-260815-per-project-lifecycle-activation | 2026-08-16 |
+| 337 | Request exactly one additional runtime-state read per settled successful Close | ADR-260815-per-project-lifecycle-activation | 2026-08-16 |
+| 338 | Raise `PROJECT_CLOSE_TIMEOUT_MS` to 30,000 ms above the largest declared close bound | ADR-260816-selected-project-close-control | 2026-08-16 |
+| 339 | Add `close-in-progress` to the stop rejection vocabulary and `runtime_close_in_progress` to the stop route | ADR-260815-selected-runtime-stop-control | 2026-08-16 |
+| 340 | Add `close-in-progress` to the restart rejection vocabulary and `runtime_close_in_progress` to the restart route | ADR-260815-explicit-workbench-restart-control | 2026-08-16 |
+| 341 | Refuse a close while that project's reconciliation is pending or unresolved | ADR-260815-api-restart-runtime-reconciliation | 2026-08-16 |
+| 342 | Close an adopted runtime on the same exact-release and registration-removal terms as a launched one | ADR-260815-api-restart-runtime-reconciliation | 2026-08-16 |
+| 343 | Persist no runtime identity, claim, tombstone, or release marker and add no schema change or migration | CORE-COMPONENT-260810-sqlite-persistence-lifecycle | 2026-08-16 |
+| 344 | Invoke durable removal only from the boundary holding the confirmed-release close claim | CORE-COMPONENT-260810-sqlite-persistence-lifecycle | 2026-08-16 |
+| 345 | Prohibit every close path from creating, modifying, deleting, or reading project directory contents | CORE-COMPONENT-260808-filesystem-path-safety | 2026-08-16 |
+| 346 | Establish close resource absence only through the delivered exact-attribution conjunction | CORE-COMPONENT-260815-host-runtime-attribution-evidence | 2026-08-16 |
+| 347 | Require executed close evidence that separates a completed zero-residual observation from an unresolved claim | CORE-COMPONENT-260815-host-runtime-attribution-evidence | 2026-08-16 |
+| 348 | Report a close-claimed project from the entry it already holds and add no public state | ADR-260815-public-runtime-state-projection | 2026-08-16 |
+| 349 | Report `close-release-unconfirmed` as a `Failed` projection carrying that bounded failure category | ADR-260815-public-runtime-state-projection | 2026-08-16 |
+| 350 | Own the whole durable-removal operation inside the runtime-management boundary as one required interface member | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-16 |
+| 351 | Prohibit inferring resource absence from an entry label, entry absence, or an unconfirming prior audit | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-16 |
+| 352 | Leave no close claim installed after settlement and settle an in-flight close explicitly at shutdown | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-16 |
+| 353 | Re-observe every per-subject connection count synchronously immediately before durable removal | CORE-COMPONENT-260816-managed-resource-release-ordering | 2026-08-16 |
+| 354 | Re-evaluate an installed close claim after every await on any acquisition or join seam | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-16 |
+| 355 | Refuse an acquisition that cannot re-confirm the absent claim before returning a runtime snapshot | ADR-260816-selected-project-close-control | 2026-08-16 |
+| 356 | Permit at most two connection drains and two connection audits per admitted close | ADR-260816-selected-project-close-control | 2026-08-16 |
+| 357 | Bound an ownership sweep from a frozen cardinality clamped by a declared cap | CORE-COMPONENT-260816-managed-resource-release-ordering | 2026-08-16 |
+| 358 | Add `closeOwnershipSweepCap` defaulting to four ownership records per close | ADR-260816-selected-project-close-control | 2026-08-16 |
+| 359 | Refuse a close whose frozen ownership cardinality exceeds the cap as `ownership-cardinality-exceeded` | ADR-260816-selected-project-close-control | 2026-08-16 |
+| 360 | Declare 41,000 ms as the caller-visible close ceiling at the cardinality cap with quarantine resolution | ADR-260816-selected-project-close-control | 2026-08-16 |
+| 361 | Raise `PROJECT_CLOSE_TIMEOUT_MS` to 45,000 ms above the caller-visible close ceiling | ADR-260816-selected-project-close-control | 2026-08-16 |
+| 362 | Invoke durable removal only through the removal callable injected into the close operation | CORE-COMPONENT-260810-sqlite-persistence-lifecycle | 2026-08-16 |
+| 363 | Make the close-composing service the sole construction point of the durable-removal callable | CORE-COMPONENT-260810-sqlite-persistence-lifecycle | 2026-08-16 |
+| 364 | Permit own ephemeral runtime-data and database-directory writes while prohibiting registered-project-directory writes | CORE-COMPONENT-260808-filesystem-path-safety | 2026-08-16 |
+| 365 | Prohibit a new write-capable filesystem import in any source changed by a close change set | CORE-COMPONENT-260808-filesystem-path-safety | 2026-08-16 |
+| 366 | Dismiss the Close confirmation dialog at transmission and continue as a per-card pending state | ADR-260815-per-project-lifecycle-activation | 2026-08-16 |
+| 367 | Permit one open Close dialog and any number of concurrent per-project close transports | ADR-260815-per-project-lifecycle-activation | 2026-08-16 |
+| 368 | Attribute every close announcement to its project display name | CORE-COMPONENT-260808-structured-runtime-logging | 2026-08-16 |
+| 369 | Surface `runtime-closing` only as an acquisition failure and never as an installed entry failure | ADR-260815-public-runtime-state-projection | 2026-08-16 |
+| 370 | Keep `close-release-unconfirmed` as the only new retained `Failed` classification | ADR-260815-public-runtime-state-projection | 2026-08-16 |
+| 371 | Record close evidence route-entry and admission instants with an explicit elapsed-origin discriminator | CORE-COMPONENT-260815-host-runtime-attribution-evidence | 2026-08-16 |
+| 372 | Prove interruption safety with a surviving attributable candidate on a real replacement boot | CORE-COMPONENT-260816-managed-resource-release-ordering | 2026-08-16 |
+| 373 | Prohibit a new recipe name that is a transposition of an existing recipe name | CORE-COMPONENT-260806-project-command-interface | 2026-08-16 |
+| 374 | Keep the per-subject proxy audit synchronous and derived from live resource maps at call time | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-16 |
+| 375 | Serialize every list-bearing Project Home action in the single global owner lane | ADR-260815-per-project-lifecycle-activation | 2026-08-16 |
+| 376 | Discard and re-issue a list response superseded by a settled close instead of applying it | ADR-260815-per-project-lifecycle-activation | 2026-08-16 |
+| 377 | Filter every applied project-list response through the client's closed-project identifier set | ADR-260815-per-project-lifecycle-activation | 2026-08-16 |
+| 378 | Discharge the in-flight-work confirmation clause only from subject-keyed lifecycle state | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-16 |
+| 379 | Compare the claimed entry by reference identity, including the absent case, before removal | ADR-260816-selected-project-close-control | 2026-08-16 |
+| 380 | Count only identity-bearing late work against the close confirmation predicate | ADR-260816-selected-project-close-control | 2026-08-16 |
+| 381 | Refuse a late acquisition without letting the refusal block the close that refused it | CORE-COMPONENT-260816-managed-resource-release-ordering | 2026-08-16 |
+| 382 | Report refused late acquisitions on a manager audit counter the predicate never reads | ADR-260816-selected-project-close-control | 2026-08-16 |
+| 383 | Write the runtime entry map from exactly one install helper in the manager | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-16 |
+| 384 | Prohibit emitting, registering ownership, or reporting success after a refused entry install | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-16 |
+| 385 | Seal the close claim across confirmation and durable removal | CORE-COMPONENT-260816-managed-resource-release-ordering | 2026-08-16 |
+| 386 | Quarantine any ownership identity registered while a close claim is sealed | ADR-260816-selected-project-close-control | 2026-08-16 |
+| 387 | Prohibit source guards that count raw entry-map mutation occurrences in an operation body | CORE-COMPONENT-260808-runtime-lifecycle-error-handling | 2026-08-16 |
+| 388 | Permit one fixed non-authoritative observation gap in a per-subject connection release | CORE-COMPONENT-260816-managed-resource-release-ordering | 2026-08-16 |
+| 389 | Prohibit a deadline, clock read, elapsed measurement, attempt budget, or fallback in a participating release boundary | CORE-COMPONENT-260816-managed-resource-release-ordering | 2026-08-16 |
+| 390 | Prohibit a source guard that bans every timer in a per-subject connection release | CORE-COMPONENT-260816-managed-resource-release-ordering | 2026-08-16 |
+| 391 | Cancel every scheduled handle and cancellation listener before a per-subject release settles | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-16 |
+| 392 | Terminate the per-project proxy drain only on zero selected per-token counts or caller abort | ADR-260812-in-process-workbench-reverse-proxy | 2026-08-16 |
+| 393 | Keep the claiming manager's trusted scheduler the only timing authority over a close phase | ADR-260816-selected-project-close-control | 2026-08-16 |
+| 394 | Settle close admission steps one through eight before installing the exclusive claim | ADR-260816-selected-project-close-control | 2026-08-16 |
+| 395 | Enumerate the eight pre-claim close settlement sites as one closed frozen set | ADR-260816-selected-project-close-control | 2026-08-16 |
+| 396 | Discriminate an evidence row's admission instant by settlement site, never by settled classification | CORE-COMPONENT-260815-host-runtime-attribution-evidence | 2026-08-16 |
+| 397 | Capture every evidence witness at the production instant it describes | CORE-COMPONENT-260815-host-runtime-attribution-evidence | 2026-08-16 |
+| 398 | Replace an unreachable proof choreography instead of injecting the coupling it needs | CORE-COMPONENT-260815-host-runtime-attribution-evidence | 2026-08-16 |
+| 399 | Register a per-subject proxy operation before requesting its runtime acquisition | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-16 |
+| 400 | Re-observe per-subject connections before removal because a refused acquisition still registers one | CORE-COMPONENT-260816-managed-resource-release-ordering | 2026-08-16 |
+| 401 | Build a late-arrival proof from the claiming boundary's own registration and refusal ordering | CORE-COMPONENT-260816-managed-resource-release-ordering | 2026-08-16 |
+| 402 | Prove a pre-removal re-observation with two arrivals in disjoint declared roles | CORE-COMPONENT-260816-managed-resource-release-ordering | 2026-08-16 |
+| 403 | Prohibit coupling the refusal witness and the stale-resource witness onto one arrival | CORE-COMPONENT-260816-managed-resource-release-ordering | 2026-08-16 |
+| 404 | Prohibit an aggregate signal claim spanning a whole interruption episode | CORE-COMPONENT-260816-managed-resource-release-ordering | 2026-08-16 |
+| 405 | Release a per-subject proxy registration only when its own operation unwinds | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-16 |
+| 406 | Record each arrival's settlement as the mechanism that actually produced it | CORE-COMPONENT-260812-stable-workbench-proxy | 2026-08-16 |
+| 407 | Attribute every evidence witness to the participant that produced it | CORE-COMPONENT-260815-host-runtime-attribution-evidence | 2026-08-16 |
+| 408 | Reject a recorded settlement the production path never produced | CORE-COMPONENT-260815-host-runtime-attribution-evidence | 2026-08-16 |
+| 409 | Attribute each restart-spanning episode count to the phase that produced it | CORE-COMPONENT-260815-host-runtime-attribution-evidence | 2026-08-16 |
+| 410 | Commit only rows that are executions of the scenario they name | CORE-COMPONENT-260815-host-runtime-attribution-evidence | 2026-08-16 |
+| 411 | Settle an interrupted close's registration through the unchanged reconciliation conjunction | ADR-260815-api-restart-runtime-reconciliation | 2026-08-16 |
+| 412 | Adopt a live exactly attributable survivor left behind by an interrupted close | ADR-260815-api-restart-runtime-reconciliation | 2026-08-16 |
+| 413 | Prohibit any close-interruption proof from requiring a non-adoption recovery outcome | ADR-260816-selected-project-close-control | 2026-08-16 |
+| 414 | Distinguish a claim refusal from a drain cancellation in close evidence | ADR-260816-selected-project-close-control | 2026-08-16 |
+| 415 | Scope the new-write-capable-import prohibition to the executable product's computed import closure | CORE-COMPONENT-260808-filesystem-path-safety | 2026-08-16 |
+| 416 | Measure and report every changed file's filesystem import delta regardless of its role | CORE-COMPONENT-260808-filesystem-path-safety | 2026-08-16 |
+| 417 | Exempt only entry-point-unreachable validation, test, fixture, and evidence modules from the import assertion | CORE-COMPONENT-260808-filesystem-path-safety | 2026-08-16 |
+| 418 | Prohibit any module from declaring its own filesystem-import-capability exemption | CORE-COMPONENT-260808-filesystem-path-safety | 2026-08-16 |
+| 419 | Fail the import-capability guard when an exempt validation module becomes entry-point reachable | CORE-COMPONENT-260808-filesystem-path-safety | 2026-08-16 |
+| 420 | Fail the import-capability guard on a governed scope narrower than the computed closure | CORE-COMPONENT-260808-filesystem-path-safety | 2026-08-16 |
+| 421 | Keep argument-level call observation the authority for registered-project-directory write safety | CORE-COMPONENT-260808-filesystem-path-safety | 2026-08-16 |

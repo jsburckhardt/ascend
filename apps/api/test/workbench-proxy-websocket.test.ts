@@ -203,6 +203,9 @@ const createApi = async (upstreamPort: number) => {
   const runtime: ProjectRuntimeManager = {
     beginReconciliation: async () => undefined,
     start: vi.fn(async () => snapshot),
+    close: async () => {
+      throw new Error('websocket proxying does not close projects')
+    },
     ownsSnapshot: vi.fn(() => true),
     inspect: vi.fn(() => snapshot),
     lastFailure: vi.fn(),

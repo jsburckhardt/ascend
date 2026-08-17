@@ -21,7 +21,7 @@ import {
   type RuntimeRestartTransport,
 } from './runtime-restart'
 import { RUNTIME_STOP_NOTICES, type RuntimeStopTransport } from './runtime-stop'
-import { useProjectHome } from './use-project-home'
+import { useProjectHome, type ProjectCloseState } from './use-project-home'
 import {
   useRuntimeState,
   type ProjectListRevision,
@@ -46,6 +46,19 @@ export interface AppProperties {
 
 export const CLOSE_DIALOG_BODY =
   'Closing removes this project registration from Ascend. The filesystem directory and files will not be deleted.'
+
+function closeStatusText(close: ProjectCloseState): string {
+  if (close.message !== undefined) return close.message
+  if (close.phase === 'refreshing') {
+    return 'Refreshing the authoritative project list…'
+  }
+  if (close.phase === 'pending') {
+    return close.transmitted
+      ? 'Close request sent. Waiting for a safe result…'
+      : 'Preparing the close request…'
+  }
+  return 'Close pending confirmation.'
+}
 
 function runtimeUnavailableMessage(view: RuntimeStateView): string {
   if (view.kind === 'idle') {
@@ -98,10 +111,14 @@ export function App({
   const dialogRef = useRef<HTMLDivElement>(null)
   const projectActions = useRef(new Map<string, HTMLButtonElement>())
   const closeActions = useRef(new Map<string, HTMLButtonElement>())
+  const closeStatusRegions = useRef(new Map<string, HTMLParagraphElement>())
+  const closeRetryActions = useRef(new Map<string, HTMLButtonElement>())
+  const closeRefreshActions = useRef(new Map<string, HTMLButtonElement>())
   const stopActions = useRef(new Map<string, HTMLButtonElement>())
   const restartActions = useRef(new Map<string, HTMLButtonElement>())
   const refreshedStopSettlement = useRef(0)
   const refreshedRestartSettlement = useRef(0)
+  const refreshedCloseSettlement = useRef(0)
   const pendingRestartFocus = useRef<
     | {
         version: number
@@ -131,14 +148,19 @@ export function App({
       return
     }
     if (state.focusProjectId === undefined) return
-    const action =
-      state.focusTarget === 'close'
-        ? closeActions.current.get(state.focusProjectId)
-        : state.focusTarget === 'stop'
-          ? stopActions.current.get(state.focusProjectId)
-          : state.focusTarget === 'restart'
-            ? restartActions.current.get(state.focusProjectId)
-            : projectActions.current.get(state.focusProjectId)
+    const targets: Readonly<Record<string, Map<string, HTMLElement>>> = {
+      close: closeActions.current,
+      'close-status': closeStatusRegions.current,
+      'close-retry': closeRetryActions.current,
+      'close-refresh': closeRefreshActions.current,
+      stop: stopActions.current,
+      restart: restartActions.current,
+    }
+    const action = (
+      state.focusTarget === undefined
+        ? projectActions.current
+        : (targets[state.focusTarget] ?? projectActions.current)
+    ).get(state.focusProjectId)
     action?.scrollIntoView({ block: 'nearest' })
     action?.focus()
   }, [state.focusProjectId, state.focusTarget, state.focusVersion])
@@ -195,18 +217,34 @@ export function App({
     pendingRestartFocus.current = undefined
   }, [runtime.view])
 
+  useEffect(() => {
+    if (
+      state.closeSettlementVersion === 0 ||
+      refreshedCloseSettlement.current === state.closeSettlementVersion
+    ) {
+      return
+    }
+    refreshedCloseSettlement.current = state.closeSettlementVersion
+    runtime.refresh()
+  }, [runtime, state.closeSettlementVersion])
+
+  const dialogRecord =
+    state.closeDialogId === undefined
+      ? undefined
+      : state.closes.get(state.closeDialogId)
   const closeCanCancel =
-    state.close?.phase === 'confirming' ||
-    (state.close?.phase === 'pending' && !state.close.transmitted)
+    dialogRecord?.phase === 'confirming' ||
+    (dialogRecord?.phase === 'pending' && !dialogRecord.transmitted)
+  const dialogOpen = closeCanCancel && dialogRecord !== undefined
 
   useEffect(() => {
-    if (state.close === undefined) return
+    if (!dialogOpen) return
     const dialog = dialogRef.current
     const firstControl = dialog?.querySelector<HTMLButtonElement>(
       'button:not(:disabled)'
     )
     ;(firstControl ?? dialog)?.focus()
-  }, [state.close])
+  }, [dialogOpen, state.closeDialogId])
 
   const trapDialogFocus = (event: KeyboardEvent<HTMLDivElement>): void => {
     if (event.key === 'Escape' && closeCanCancel) {
@@ -462,208 +500,279 @@ export function App({
             </p>
           )}
           <ul aria-label="Registered projects" className="mt-6 grid gap-4">
-            {state.projects.map((project, index) => (
-              <li
-                aria-busy={
-                  (state.stop?.id === project.id &&
-                    state.stop.phase === 'pending') ||
-                  state.restarts.get(project.id)?.phase === 'pending'
-                    ? true
-                    : undefined
-                }
-                className="rounded-xl border bg-white p-6"
-                key={project.id}
-              >
-                <h3 className="text-lg font-semibold">{project.name}</h3>
-                <p
-                  className="mt-2 whitespace-pre-wrap text-sm text-slate-600 [overflow-wrap:anywhere]"
-                  title={project.canonicalPath}
-                >
-                  {project.canonicalPath}
-                </p>
-                {currentRuntimeReports === undefined ? (
-                  <p
-                    className="mt-3 text-sm text-slate-700"
-                    data-runtime-unavailable="true"
-                  >
-                    Runtime state unavailable
-                  </p>
-                ) : (
-                  <div
-                    className="mt-3"
-                    data-runtime-project-id={project.id}
-                    data-runtime-state={currentRuntimeReports[index]!.state}
-                  >
-                    <p>
-                      <span className="font-medium">Runtime state: </span>
-                      <span>{currentRuntimeReports[index]!.state}</span>
-                    </p>
-                    {currentRuntimeReports[index]!.state === 'Failed' ? (
-                      <p
-                        className="mt-1 text-sm text-red-800"
-                        data-runtime-failure={
-                          currentRuntimeReports[index]!.failureCategory
-                        }
-                      >
-                        {
-                          RUNTIME_FAILURE_NOTICES[
-                            currentRuntimeReports[index]!.failureCategory!
-                          ]
-                        }
-                      </p>
-                    ) : null}
-                  </div>
-                )}
-                <button
-                  aria-label={'Open ' + project.name}
-                  className="mt-5 rounded-md bg-slate-950 px-4 py-2 text-sm font-medium text-white focus-visible:outline focus-visible:outline-4 focus-visible:outline-blue-600"
-                  data-project-id={project.id}
-                  aria-describedby={
-                    openingProjectId === project.id
-                      ? 'workbench-opening-status'
+            {state.projects.map((project, index) => {
+              const closeRecord = state.closes.get(project.id)
+              const closeOnCard =
+                closeRecord !== undefined &&
+                !(dialogOpen && state.closeDialogId === project.id)
+              return (
+                <li
+                  aria-busy={
+                    (state.stop?.id === project.id &&
+                      state.stop.phase === 'pending') ||
+                    state.restarts.get(project.id)?.phase === 'pending' ||
+                    (closeOnCard &&
+                      (closeRecord.phase === 'pending' ||
+                        closeRecord.phase === 'refreshing'))
+                      ? true
                       : undefined
                   }
-                  disabled={
-                    (openingProjectId !== undefined &&
-                      openingProjectId !== project.id) ||
-                    state.restarts.get(project.id)?.phase === 'pending'
-                  }
-                  onClick={() => openWorkbench(project.id, project.name)}
-                  ref={(element) => {
-                    if (element === null)
-                      projectActions.current.delete(project.id)
-                    else projectActions.current.set(project.id, element)
-                  }}
-                  type="button"
+                  className="rounded-xl border bg-white p-6"
+                  key={project.id}
                 >
-                  Open
-                </button>
-                <button
-                  aria-describedby="stop-workbench-description"
-                  aria-label={'Stop ' + project.name + ' workbench'}
-                  className="ml-3 mt-5 rounded-md border px-4 py-2 text-sm font-medium"
-                  data-stop-project-id={project.id}
-                  disabled={
-                    state.stop?.phase === 'pending' ||
-                    state.restarts.get(project.id)?.phase === 'pending'
-                  }
-                  onClick={() => {
-                    setOpenAnnouncement('')
-                    home.stop(project.id)
-                  }}
-                  ref={(element) => {
-                    if (element === null) stopActions.current.delete(project.id)
-                    else stopActions.current.set(project.id, element)
-                  }}
-                  type="button"
-                >
-                  Stop
-                </button>
-                {currentRuntimeReports !== undefined &&
-                (currentRuntimeReports[index]!.state === 'Running' ||
-                  currentRuntimeReports[index]!.state === 'Failed') ? (
+                  <h3 className="text-lg font-semibold">{project.name}</h3>
+                  <p
+                    className="mt-2 whitespace-pre-wrap text-sm text-slate-600 [overflow-wrap:anywhere]"
+                    title={project.canonicalPath}
+                  >
+                    {project.canonicalPath}
+                  </p>
+                  {currentRuntimeReports === undefined ? (
+                    <p
+                      className="mt-3 text-sm text-slate-700"
+                      data-runtime-unavailable="true"
+                    >
+                      Runtime state unavailable
+                    </p>
+                  ) : (
+                    <div
+                      className="mt-3"
+                      data-runtime-project-id={project.id}
+                      data-runtime-state={currentRuntimeReports[index]!.state}
+                    >
+                      <p>
+                        <span className="font-medium">Runtime state: </span>
+                        <span>{currentRuntimeReports[index]!.state}</span>
+                      </p>
+                      {currentRuntimeReports[index]!.state === 'Failed' ? (
+                        <p
+                          className="mt-1 text-sm text-red-800"
+                          data-runtime-failure={
+                            currentRuntimeReports[index]!.failureCategory
+                          }
+                        >
+                          {
+                            RUNTIME_FAILURE_NOTICES[
+                              currentRuntimeReports[index]!.failureCategory!
+                            ]
+                          }
+                        </p>
+                      ) : null}
+                    </div>
+                  )}
                   <button
-                    aria-describedby="restart-workbench-description"
-                    aria-label={'Restart ' + project.name + ' workbench'}
-                    className="ml-3 mt-5 rounded-md border px-4 py-2 text-sm font-medium"
-                    data-restart-project-id={project.id}
-                    disabled={
-                      state.restarts.get(project.id)?.phase === 'pending'
+                    aria-label={'Open ' + project.name}
+                    className="mt-5 rounded-md bg-slate-950 px-4 py-2 text-sm font-medium text-white focus-visible:outline focus-visible:outline-4 focus-visible:outline-blue-600"
+                    data-project-id={project.id}
+                    aria-describedby={
+                      openingProjectId === project.id
+                        ? 'workbench-opening-status'
+                        : undefined
                     }
-                    onClick={() => {
-                      setOpenAnnouncement('')
-                      home.restart(project.id)
-                    }}
+                    disabled={
+                      (openingProjectId !== undefined &&
+                        openingProjectId !== project.id) ||
+                      !home.admits('open', project.id)
+                    }
+                    onClick={() => openWorkbench(project.id, project.name)}
                     ref={(element) => {
                       if (element === null)
-                        restartActions.current.delete(project.id)
-                      else restartActions.current.set(project.id, element)
+                        projectActions.current.delete(project.id)
+                      else projectActions.current.set(project.id, element)
                     }}
                     type="button"
                   >
-                    Restart
+                    Open
                   </button>
-                ) : null}
-                <button
-                  aria-label={'Close ' + project.name}
-                  className={
-                    'ml-3 mt-5 rounded-md border border-red-700 px-4 py-2 text-sm font-medium text-red-800'
-                  }
-                  data-close-project-id={project.id}
-                  disabled={state.restarts.get(project.id)?.phase === 'pending'}
-                  onClick={() => {
-                    setOpenAnnouncement('')
-                    home.openClose(project.id)
-                  }}
-                  ref={(element) => {
-                    if (element === null)
-                      closeActions.current.delete(project.id)
-                    else closeActions.current.set(project.id, element)
-                  }}
-                  type={'button'}
-                >
-                  Close
-                </button>
-                {state.stop?.id === project.id &&
-                state.stop.phase === 'retry' &&
-                state.stop.category !== undefined ? (
-                  <div className="mt-4" role="alert">
-                    <p>{RUNTIME_STOP_NOTICES[state.stop.category]}</p>
+                  <button
+                    aria-describedby="stop-workbench-description"
+                    aria-label={'Stop ' + project.name + ' workbench'}
+                    className="ml-3 mt-5 rounded-md border px-4 py-2 text-sm font-medium"
+                    data-stop-project-id={project.id}
+                    disabled={!home.admits('stop', project.id)}
+                    onClick={() => {
+                      setOpenAnnouncement('')
+                      home.stop(project.id)
+                    }}
+                    ref={(element) => {
+                      if (element === null)
+                        stopActions.current.delete(project.id)
+                      else stopActions.current.set(project.id, element)
+                    }}
+                    type="button"
+                  >
+                    Stop
+                  </button>
+                  {currentRuntimeReports !== undefined &&
+                  (currentRuntimeReports[index]!.state === 'Running' ||
+                    currentRuntimeReports[index]!.state === 'Failed') ? (
                     <button
-                      className="mt-2 rounded-md border px-3 py-1 text-sm font-medium"
-                      onClick={() => home.stop(project.id)}
+                      aria-describedby="restart-workbench-description"
+                      aria-label={'Restart ' + project.name + ' workbench'}
+                      className="ml-3 mt-5 rounded-md border px-4 py-2 text-sm font-medium"
+                      data-restart-project-id={project.id}
+                      disabled={!home.admits('restart', project.id)}
+                      onClick={() => {
+                        setOpenAnnouncement('')
+                        home.restart(project.id)
+                      }}
+                      ref={(element) => {
+                        if (element === null)
+                          restartActions.current.delete(project.id)
+                        else restartActions.current.set(project.id, element)
+                      }}
                       type="button"
                     >
-                      Retry stop
+                      Restart
                     </button>
-                  </div>
-                ) : null}
-                {state.restarts.get(project.id)?.phase === 'retry' &&
-                state.restarts.get(project.id)?.category !== undefined ? (
-                  <div className="mt-4" role="alert">
-                    <p>
-                      {
-                        RUNTIME_RESTART_NOTICES[
-                          state.restarts.get(project.id)!.category!
-                        ]
-                      }
-                    </p>
-                    <button
-                      className="mt-2 rounded-md border px-3 py-1 text-sm font-medium"
-                      onClick={() => home.restart(project.id)}
-                      type="button"
+                  ) : null}
+                  <button
+                    aria-label={'Close ' + project.name}
+                    className={
+                      'ml-3 mt-5 rounded-md border border-red-700 px-4 py-2 text-sm font-medium text-red-800'
+                    }
+                    data-close-project-id={project.id}
+                    disabled={!home.admits('close', project.id)}
+                    onClick={() => {
+                      setOpenAnnouncement('')
+                      home.openClose(project.id)
+                    }}
+                    ref={(element) => {
+                      if (element === null)
+                        closeActions.current.delete(project.id)
+                      else closeActions.current.set(project.id, element)
+                    }}
+                    type={'button'}
+                  >
+                    Close
+                  </button>
+                  {closeOnCard ? (
+                    <div
+                      className="mt-4"
+                      data-close-lane-project-id={project.id}
                     >
-                      Retry restart
-                    </button>
-                  </div>
-                ) : null}
-                {state.restarts.get(project.id)?.phase === 'unknown' ? (
-                  <div className="mt-4">
-                    <p>Restart outcome unknown. Refresh the runtime state.</p>
-                    <button
-                      className="mt-2 rounded-md border px-3 py-1 text-sm font-medium"
-                      onClick={runtime.refresh}
-                      type="button"
-                    >
-                      Refresh runtime state
-                    </button>
-                  </div>
-                ) : null}
-                {state.stop?.id === project.id &&
-                state.stop.phase === 'unknown' ? (
-                  <div className="mt-4">
-                    <p>Stop outcome unknown. Refresh the runtime state.</p>
-                    <button
-                      className="mt-2 rounded-md border px-3 py-1 text-sm font-medium"
-                      onClick={runtime.refresh}
-                      type="button"
-                    >
-                      Refresh runtime state
-                    </button>
-                  </div>
-                ) : null}
-              </li>
-            ))}
+                      <p
+                        aria-busy={
+                          closeRecord.phase === 'pending' ||
+                          closeRecord.phase === 'refreshing'
+                            ? true
+                            : undefined
+                        }
+                        aria-label={'Close status for ' + project.name}
+                        data-close-phase={closeRecord.phase}
+                        ref={(element) => {
+                          if (element === null)
+                            closeStatusRegions.current.delete(project.id)
+                          else
+                            closeStatusRegions.current.set(project.id, element)
+                        }}
+                        role="status"
+                        tabIndex={-1}
+                      >
+                        {closeStatusText(closeRecord)}
+                      </p>
+                      {closeRecord.phase === 'retry' ? (
+                        <button
+                          aria-label={'Retry close ' + project.name}
+                          className="mt-2 rounded-md border px-3 py-1 text-sm font-medium"
+                          disabled={!home.admits('retry-close', project.id)}
+                          onClick={() => home.retryClose(project.id)}
+                          ref={(element) => {
+                            if (element === null)
+                              closeRetryActions.current.delete(project.id)
+                            else
+                              closeRetryActions.current.set(project.id, element)
+                          }}
+                          type="button"
+                        >
+                          Retry close
+                        </button>
+                      ) : null}
+                      {closeRecord.phase === 'unknown' ? (
+                        <button
+                          aria-label={
+                            'Refresh close result for ' + project.name
+                          }
+                          className="mt-2 rounded-md border px-3 py-1 text-sm font-medium"
+                          disabled={!home.admits('refresh-close', project.id)}
+                          onClick={() => home.refreshClose(project.id)}
+                          ref={(element) => {
+                            if (element === null)
+                              closeRefreshActions.current.delete(project.id)
+                            else
+                              closeRefreshActions.current.set(
+                                project.id,
+                                element
+                              )
+                          }}
+                          type="button"
+                        >
+                          Refresh close result
+                        </button>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  {state.stop?.id === project.id &&
+                  state.stop.phase === 'retry' &&
+                  state.stop.category !== undefined ? (
+                    <div className="mt-4" role="alert">
+                      <p>{RUNTIME_STOP_NOTICES[state.stop.category]}</p>
+                      <button
+                        className="mt-2 rounded-md border px-3 py-1 text-sm font-medium"
+                        onClick={() => home.stop(project.id)}
+                        type="button"
+                      >
+                        Retry stop
+                      </button>
+                    </div>
+                  ) : null}
+                  {state.restarts.get(project.id)?.phase === 'retry' &&
+                  state.restarts.get(project.id)?.category !== undefined ? (
+                    <div className="mt-4" role="alert">
+                      <p>
+                        {
+                          RUNTIME_RESTART_NOTICES[
+                            state.restarts.get(project.id)!.category!
+                          ]
+                        }
+                      </p>
+                      <button
+                        className="mt-2 rounded-md border px-3 py-1 text-sm font-medium"
+                        onClick={() => home.restart(project.id)}
+                        type="button"
+                      >
+                        Retry restart
+                      </button>
+                    </div>
+                  ) : null}
+                  {state.restarts.get(project.id)?.phase === 'unknown' ? (
+                    <div className="mt-4">
+                      <p>Restart outcome unknown. Refresh the runtime state.</p>
+                      <button
+                        className="mt-2 rounded-md border px-3 py-1 text-sm font-medium"
+                        onClick={runtime.refresh}
+                        type="button"
+                      >
+                        Refresh runtime state
+                      </button>
+                    </div>
+                  ) : null}
+                  {state.stop?.id === project.id &&
+                  state.stop.phase === 'unknown' ? (
+                    <div className="mt-4">
+                      <p>Stop outcome unknown. Refresh the runtime state.</p>
+                      <button
+                        className="mt-2 rounded-md border px-3 py-1 text-sm font-medium"
+                        onClick={runtime.refresh}
+                        type="button"
+                      >
+                        Refresh runtime state
+                      </button>
+                    </div>
+                  ) : null}
+                </li>
+              )
+            })}
           </ul>
           {runtimeSummary === undefined ? (
             <div
@@ -689,19 +798,14 @@ export function App({
           ) : null}
         </section>
       ) : null}
-      {state.close === undefined ? null : (
+      {!dialogOpen || dialogRecord === undefined ? null : (
         <div
           className={
             'fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-6'
           }
         >
           <div
-            aria-busy={
-              state.close.phase === 'pending' ||
-              state.close.phase === 'refreshing'
-                ? true
-                : undefined
-            }
+            aria-busy={dialogRecord.phase === 'pending' ? true : undefined}
             aria-describedby={'close-project-description'}
             aria-labelledby={'close-project-title'}
             aria-modal={true}
@@ -712,7 +816,7 @@ export function App({
             tabIndex={-1}
           >
             <h2 className={'text-xl font-semibold'} id={'close-project-title'}>
-              {'Close ' + state.close.name + '?'}
+              {'Close ' + dialogRecord.name + '?'}
             </h2>
             <p
               className={'mt-3 text-slate-700'}
@@ -720,20 +824,8 @@ export function App({
             >
               {CLOSE_DIALOG_BODY}
             </p>
-            {state.close.message === undefined ? null : (
-              <p className={'mt-4 text-red-800'}>{state.close.message}</p>
-            )}
-            {state.close.phase === 'pending' ? (
-              <p className={'mt-4'}>
-                {state.close.transmitted
-                  ? 'Close request sent. Waiting for a safe result…'
-                  : 'Preparing the close request…'}
-              </p>
-            ) : null}
-            {state.close.phase === 'refreshing' ? (
-              <p className={'mt-4'}>
-                Refreshing the authoritative project list…
-              </p>
+            {dialogRecord.phase === 'pending' ? (
+              <p className={'mt-4'}>Preparing the close request…</p>
             ) : null}
             <div className={'mt-6 flex justify-end gap-3'}>
               {closeCanCancel ? (
@@ -741,7 +833,7 @@ export function App({
                   Cancel
                 </button>
               ) : null}
-              {state.close.phase === 'confirming' ? (
+              {dialogRecord.phase === 'confirming' ? (
                 <button
                   className={
                     'rounded-md bg-red-700 px-4 py-2 font-medium text-white'
@@ -753,19 +845,9 @@ export function App({
                   Confirm
                 </button>
               ) : null}
-              {state.close.phase === 'pending' && !state.close.transmitted ? (
+              {dialogRecord.phase === 'pending' ? (
                 <button disabled type={'button'}>
                   Confirm
-                </button>
-              ) : null}
-              {state.close.phase === 'retry' ? (
-                <button onClick={home.retryClose} type={'button'}>
-                  Retry
-                </button>
-              ) : null}
-              {state.close.phase === 'unknown' ? (
-                <button onClick={home.refreshClose} type={'button'}>
-                  Refresh projects
                 </button>
               ) : null}
             </div>

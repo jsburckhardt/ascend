@@ -263,8 +263,8 @@ describe('BL-018 source guard negative fixtures', () => {
         mutate(
           sources,
           'manager',
-          '          operationSettled = true\n          entries.set(input.projectId, entry)',
-          "          operationSettled = true\n          void { state: 'registered' }\n          entries.set(input.projectId, entry)"
+          '          operationSettled = true\n          if (!installEntry(input.projectId, entry))',
+          "          operationSettled = true\n          void { state: 'registered' }\n          if (!installEntry(input.projectId, entry))"
         ),
       ],
       [

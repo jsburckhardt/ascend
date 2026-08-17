@@ -17,6 +17,9 @@ const runtime = (
   start: vi.fn(),
   stop: vi.fn(async () => stop),
   restart: vi.fn(async () => restart),
+  close: async () => {
+    throw new Error('reconciliation routing does not close projects')
+  },
   reportPublicStates: vi.fn(() => []),
   inspect: vi.fn(),
   ownsSnapshot: vi.fn(() => false),

@@ -97,6 +97,9 @@ const api = async (
   const runtime: ProjectRuntimeManager = {
     beginReconciliation: async () => undefined,
     start: vi.fn(async () => snapshot),
+    close: async () => {
+      throw new Error('proxy http fixture does not close projects')
+    },
     ownsSnapshot: vi.fn(() => true),
     inspect: vi.fn(() => snapshot),
     lastFailure: vi.fn(),
@@ -675,6 +678,9 @@ describe('stable workbench HTTP transport', () => {
           elapsedMs: 0,
         }
       }),
+      close: async () => {
+        throw new Error('proxy http failure matrix does not close projects')
+      },
       ownsSnapshot: vi.fn(() => true),
       inspect: vi.fn(),
       lastFailure: vi.fn(),

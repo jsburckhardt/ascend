@@ -120,9 +120,24 @@ describe('Project Home selected Stop interaction', () => {
       expect(screen.getByRole('status')).toHaveTextContent(
         'Selected project: Stopping workbench.'
       )
+      // BL-020: a pending stop for the selected project refuses only its own
+      // Close; a peer's Close is admitted and opens its own dialog.
+      expect(
+        screen.getByRole('button', { name: 'Close Selected project' })
+      ).toBeDisabled()
       fireEvent.click(
-        screen.getByRole('button', { name: 'Close Peer project' })
+        screen.getByRole('button', { name: 'Close Selected project' })
       )
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      const peerClose = screen.getByRole('button', {
+        name: 'Close Peer project',
+      })
+      expect(peerClose).toBeEnabled()
+      fireEvent.click(peerClose)
+      expect(
+        screen.getByRole('dialog', { name: 'Close Peer project?' })
+      ).toBeVisible()
+      fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 
       await act(async () =>

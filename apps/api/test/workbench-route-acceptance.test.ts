@@ -315,6 +315,9 @@ describe('BL-011 executable acceptance coordinator', () => {
             elapsedMs: 1,
           })
         }),
+        close: async () => {
+          throw new Error('workbench failure matrix does not close projects')
+        },
         ownsSnapshot: vi.fn(() => true),
         inspect: vi.fn(),
         inspectEntries: vi.fn(() => []),
@@ -635,6 +638,9 @@ describe('BL-011 executable acceptance coordinator', () => {
         runtimeInputs.push(canonicalPath)
         return snapshot
       }),
+      close: async () => {
+        throw new Error('workbench route security does not close projects')
+      },
       ownsSnapshot: vi.fn(() => true),
       inspect: vi.fn(() => snapshot),
       inspectEntries: vi.fn(() => []),
@@ -1159,6 +1165,9 @@ describe('BL-011 executable acceptance coordinator', () => {
       beginReconciliation: async () => undefined,
       register: vi.fn(),
       start: vi.fn(async () => snapshot),
+      close: async () => {
+        throw new Error('workbench route acceptance does not close projects')
+      },
       ownsSnapshot: vi.fn(() => true),
       inspect: vi.fn(() => snapshot),
       inspectEntries: vi.fn(() => []),

@@ -117,6 +117,9 @@ const createApi = async (upstreamPort: number, events: unknown[] = []) => {
     beginReconciliation: async () => undefined,
     register: vi.fn(),
     start: vi.fn(async () => snapshot),
+    close: async () => {
+      throw new Error('workbench proof correction does not close projects')
+    },
     ownsSnapshot: vi.fn(() => true),
     inspect: vi.fn(() => snapshot),
     inspectEntries: vi.fn(() => []),

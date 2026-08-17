@@ -62,6 +62,9 @@ function runtime(
     beginReconciliation: async () => undefined,
     register: vi.fn(),
     start: vi.fn(),
+    close: async () => {
+      throw new Error('runtime state routing does not close projects')
+    },
     reportPublicStates: vi.fn(reportPublicStates),
     inspect: vi.fn(),
     ownsSnapshot: vi.fn(() => false),

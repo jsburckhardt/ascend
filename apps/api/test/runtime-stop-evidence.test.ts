@@ -135,8 +135,8 @@ describe('BL-017 selected stop source guards', () => {
         mutate(
           sources,
           'manager',
-          'entries.set(input.projectId, stopping)',
-          'entries.set(input.projectId, stopping)\n    entries.set(input.projectId, stopping)'
+          'installEntry(input.projectId, stopping)',
+          'installEntry(input.projectId, stopping)\n    installEntry(input.projectId, stopping)'
         ),
       ],
       [

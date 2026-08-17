@@ -35,6 +35,9 @@ function runtime(
     start: vi.fn(),
     stop: vi.fn(),
     restart: vi.fn(),
+    close: async () => {
+      throw new Error('reconciliation startup does not close projects')
+    },
     reportPublicStates: vi.fn(() => []),
     inspect: vi.fn(),
     ownsSnapshot: vi.fn(() => false),

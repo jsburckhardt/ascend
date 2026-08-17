@@ -35,7 +35,7 @@ describe('BL-019 application documentation', () => {
       'proven-clear',
       'unproven',
       'residual-present',
-      'BL-020',
+      'BL-020 close of a running or failed project is delivered',
       'BL-021',
       'BL-022',
     ])
@@ -104,12 +104,12 @@ describe('BL-019 application documentation', () => {
   })
 
   it('keeps all public vocabularies and documentation surfaces aligned', async () => {
-    expect(RUNTIME_FAILURE_CATEGORIES).toHaveLength(19)
-    expect(RUNTIME_STOP_REJECTION_CATEGORIES).toHaveLength(9)
-    expect(RUNTIME_RESTART_REJECTION_CATEGORIES).toHaveLength(9)
-    expect(RUNTIME_STOP_ROUTE_ERROR_CATEGORIES).toHaveLength(12)
-    expect(RUNTIME_RESTART_ROUTE_ERROR_CATEGORIES).toHaveLength(12)
-    expect(WORKBENCH_FAILURE_TABLE).toHaveLength(30)
+    expect(RUNTIME_FAILURE_CATEGORIES).toHaveLength(21)
+    expect(RUNTIME_STOP_REJECTION_CATEGORIES).toHaveLength(10)
+    expect(RUNTIME_RESTART_REJECTION_CATEGORIES).toHaveLength(10)
+    expect(RUNTIME_STOP_ROUTE_ERROR_CATEGORIES).toHaveLength(13)
+    expect(RUNTIME_RESTART_ROUTE_ERROR_CATEGORIES).toHaveLength(13)
+    expect(WORKBENCH_FAILURE_TABLE).toHaveLength(32)
     const surfaces = await Promise.all([
       text('README.md'),
       text('docs/README.md'),

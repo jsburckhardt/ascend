@@ -278,14 +278,17 @@ describe('BL-018 scenario 15: home-duplicate-activation-prevented', () => {
 
 describe('BL-018 scenario 16: home-peer-controls-available', () => {
   it(
-    'refuses a programmatic Restart while a peer Close dialog is open',
+    'admits a peer Restart while a Close dialog is open and refuses only the dialog project',
     async () => {
-      const restart = vi.fn<RuntimeRestartTransport>()
+      const request = deferred<RuntimeRestartTransportResult>()
+      const restart = vi.fn<RuntimeRestartTransport>(() => request.promise)
       await renderReady(restart)
       const selectedRestart = screen.getByRole('button', {
         name: 'Restart Selected project workbench',
       })
-      const card = selectedCard()
+      const peerRestart = screen.getByRole('button', {
+        name: 'Restart Peer project workbench',
+      })
 
       fireEvent.click(
         screen.getByRole('button', {
@@ -295,14 +298,30 @@ describe('BL-018 scenario 16: home-peer-controls-available', () => {
       expect(
         screen.getByRole('dialog', { name: `Close ${peer.name}?` })
       ).toBeVisible()
-      fireEvent.click(selectedRestart)
 
+      // Same-project exclusion is preserved: the project whose close is being
+      // confirmed refuses its own Restart, in appearance and in admission.
+      expect(peerRestart).toBeDisabled()
+      fireEvent.click(peerRestart)
       expect(restart).not.toHaveBeenCalled()
+
+      // AC-7: every peer control stays admitted while a close is in flight.
       expect(selectedRestart).toBeEnabled()
-      expect(card).not.toHaveAttribute('aria-busy')
+      fireEvent.click(selectedRestart)
+      expect(restart).toHaveBeenCalledOnce()
+      expect(restart).toHaveBeenCalledWith(selected.id, expect.any(AbortSignal))
+      expect(selectedCard()).toHaveAttribute('aria-busy', 'true')
       expect(
-        screen.queryByText('Selected project: Restarting workbench.')
-      ).toBeNull()
+        screen.getByRole('dialog', { name: `Close ${peer.name}?` })
+      ).toBeVisible()
+
+      await act(async () =>
+        request.resolve({
+          kind: 'success',
+          id: selected.id,
+          outcome: 'restarted',
+        })
+      )
     },
     SCENARIO_TIMEOUT_MS
   )

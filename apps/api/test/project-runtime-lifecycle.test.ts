@@ -69,6 +69,9 @@ describe('project runtime lifecycle integration', () => {
       beginReconciliation: async () => undefined,
       register: vi.fn(),
       start: vi.fn(),
+      close: async () => {
+        throw new Error('lifecycle ordering does not close projects')
+      },
       ownsSnapshot: vi.fn(() => true),
       inspect: vi.fn(),
       inspectEntries: vi.fn(() => []),

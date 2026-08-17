@@ -45,7 +45,10 @@ function Harness({ transport }: { transport: RuntimeRestartTransport }) {
       <output data-testid="focus">
         {home.state.focusProjectId}:{home.state.focusTarget}
       </output>
-      <output data-testid="close">{home.state.close?.id}</output>
+      <output data-testid="close">{home.state.closeDialogId}</output>
+      <output data-testid="close-b-phase">
+        {home.state.closes.get('b')?.phase}
+      </output>
       <button onClick={() => home.restart('a')}>restart-a</button>
       <button onClick={() => home.restart('b')}>restart-b</button>
       <button onClick={() => home.openClose('b')}>close-b</button>
@@ -106,24 +109,23 @@ describe('Project Home per-project restart lane', () => {
     expect(screen.getByTestId('close')).toHaveTextContent('b')
   })
 
-  it('refuses Restart for one project while another project Close dialog is open', async () => {
-    const transport = vi.fn<RuntimeRestartTransport>()
+  it('refuses Restart for the project whose Close dialog is open and admits a peer', async () => {
+    const request = deferred<RuntimeRestartTransportResult>()
+    const transport = vi.fn<RuntimeRestartTransport>(() => request.promise)
     await ready(transport)
     fireEvent.click(screen.getByText('close-b'))
+    expect(screen.getByTestId('close')).toHaveTextContent('b')
+    expect(screen.getByTestId('close-b-phase')).toHaveTextContent('confirming')
 
     const unchanged = {
-      restartA: screen.getByTestId('restart-a').textContent,
       restartB: screen.getByTestId('restart-b').textContent,
       settlement: screen.getByTestId('settlement').textContent,
       announcement: screen.getByTestId('announcement').textContent,
       focus: screen.getByTestId('focus').textContent,
     }
-    fireEvent.click(screen.getByText('restart-a'))
-
+    // Same-project exclusion, preserved from the delivered behaviour.
+    fireEvent.click(screen.getByText('restart-b'))
     expect(transport).not.toHaveBeenCalled()
-    expect(screen.getByTestId('restart-a')).toHaveTextContent(
-      unchanged.restartA ?? ''
-    )
     expect(screen.getByTestId('restart-b')).toHaveTextContent(
       unchanged.restartB ?? ''
     )
@@ -134,7 +136,18 @@ describe('Project Home per-project restart lane', () => {
       unchanged.announcement ?? ''
     )
     expect(screen.getByTestId('focus')).toHaveTextContent(unchanged.focus ?? '')
+
+    // BL-020: a peer's own runtime control is admitted while a close is pending.
+    fireEvent.click(screen.getByText('restart-a'))
+    expect(transport).toHaveBeenCalledOnce()
+    expect(transport).toHaveBeenCalledWith('a', expect.any(AbortSignal))
+    expect(screen.getByTestId('restart-a')).toHaveTextContent('pending')
     expect(screen.getByTestId('close')).toHaveTextContent('b')
+    expect(screen.getByTestId('close-b-phase')).toHaveTextContent('confirming')
+
+    await act(async () =>
+      request.resolve({ kind: 'success', id: 'a', outcome: 'restarted' })
+    )
   })
 
   it('keeps a typed rejection retryable', async () => {

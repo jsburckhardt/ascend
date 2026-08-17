@@ -28,6 +28,9 @@ function runtime(
     register: vi.fn(),
     start: vi.fn(),
     stop: vi.fn(({ projectId }) => implementation(projectId)),
+    close: async () => {
+      throw new Error('stop routing does not close projects')
+    },
     reportPublicStates: vi.fn(
       (projectIds: readonly string[]): PublicRuntimeReport[] =>
         projectIds.map((projectId) => ({ projectId, state: 'Stopped' }))

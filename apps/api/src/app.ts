@@ -6,7 +6,8 @@ import { type FastifyPluginAsync, type FastifyServerOptions } from 'fastify'
 import fastifyPlugin from 'fastify-plugin'
 import { resolveApplicationDatabasePath } from './db/client.js'
 import {
-  createLibraryProjectCloseService,
+  createProjectCloseService,
+  type ProjectCloseServiceDependencies,
   type ProjectCloseService,
 } from './project-close.js'
 import {
@@ -78,7 +79,9 @@ export interface AppOptions
   extends FastifyServerOptions, Partial<AutoloadPluginOptions> {
   createProjectLibrary?: () => Promise<ProjectLibrary>
   createProjectRegistration?: () => Promise<ProjectRegistrationService>
-  createProjectCloseService?: (library: ProjectLibrary) => ProjectCloseService
+  createProjectCloseService?: (
+    dependencies: ProjectCloseServiceDependencies
+  ) => ProjectCloseService
   createWorkbenchProxyManager?: (
     library: ProjectLibrary,
     runtime: ProjectRuntimeManager
@@ -146,8 +149,12 @@ const app: FastifyPluginAsync<AppOptions> = async (
         }))
     )(library, runtimeManager)
     closeService = (
-      opts.createProjectCloseService ?? createLibraryProjectCloseService
-    )(library)
+      opts.createProjectCloseService ?? createProjectCloseService
+    )({
+      library,
+      runtime: runtimeManager,
+      proxy: workbenchProxy,
+    })
     registration = await (
       opts.createProjectRegistration ?? createApplicationProjectRegistration
     )()

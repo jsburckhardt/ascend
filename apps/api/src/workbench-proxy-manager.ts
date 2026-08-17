@@ -34,18 +34,12 @@ import {
   type WorkbenchConnectionRole,
   type WorkbenchEventInput,
   type WorkbenchFailureCategory,
+  type WorkbenchProxyAudit,
   type WorkbenchPublicFailure,
   type WorkbenchSafeEvent,
 } from './workbench-proxy-contract.js'
 
-export interface WorkbenchProxyAudit {
-  readonly shuttingDown: boolean
-  readonly pendingOperations: number
-  readonly upstreamHttpRequests: number
-  readonly upstreamHttpResponses: number
-  readonly rawSockets: number
-  readonly webSockets: number
-}
+export type { WorkbenchProxyAudit } from './workbench-proxy-contract.js'
 
 export interface WorkbenchProxyManager {
   handleHttp(
@@ -59,6 +53,10 @@ export interface WorkbenchProxyManager {
     head: Buffer,
     route: StableWorkbenchRoute
   ): Promise<void>
+  closeProject(
+    projectId: string,
+    signal: AbortSignal
+  ): Promise<WorkbenchProxyAudit>
   shutdown(): Promise<WorkbenchProxyAudit>
   audit(projectToken?: string): WorkbenchProxyAudit
 }
@@ -333,6 +331,64 @@ export function createWorkbenchProxyManager(
       rawSockets: resourceCount(rawSockets, projectToken),
       webSockets: resourceCount(webSockets, projectToken),
     })
+
+  const closeProject = async (
+    projectId: string,
+    signal: AbortSignal
+  ): Promise<WorkbenchProxyAudit> => {
+    const projectToken = deriveProjectOwnerToken(projectId)
+    const selected = <T>(resources: Map<T, string>): readonly T[] =>
+      [...resources.entries()]
+        .filter(([, token]) => token === projectToken)
+        .map(([resource]) => resource)
+
+    for (const controller of selected(pending)) controller.abort()
+    for (const request of selected(httpRequests)) request.destroy()
+    for (const response of selected(httpResponses)) response.destroy()
+    for (const socket of selected(webSockets)) socket.terminate()
+
+    await new Promise<void>((resolve) => {
+      const settled = (): boolean => {
+        const current = audit(projectToken)
+        return (
+          current.pendingOperations === 0 &&
+          current.upstreamHttpRequests === 0 &&
+          current.upstreamHttpResponses === 0 &&
+          current.rawSockets === 0 &&
+          current.webSockets === 0
+        )
+      }
+      let completed = false
+      let pollHandle: ReturnType<typeof setTimeout> | undefined
+      const check = (): void => {
+        if (completed) return
+        if (settled() || signal.aborted) {
+          completed = true
+          if (pollHandle !== undefined) clearTimeout(pollHandle)
+          signal.removeEventListener('abort', check)
+          resolve()
+          return
+        }
+        pollHandle = setTimeout(check, 1)
+      }
+      signal.addEventListener('abort', check, { once: true })
+      check()
+    })
+
+    for (const socket of selected(webSockets)) {
+      socket.terminate()
+      webSockets.delete(socket)
+    }
+    for (const socket of selected(rawSockets)) {
+      socket.destroy()
+      rawSockets.delete(socket)
+    }
+    for (const controller of selected(pending)) pending.delete(controller)
+    for (const request of selected(httpRequests)) httpRequests.delete(request)
+    for (const response of selected(httpResponses))
+      httpResponses.delete(response)
+    return audit(projectToken)
+  }
 
   const emit = (event: WorkbenchEventInput): void =>
     recordEvent(serializeWorkbenchEvent(event))
@@ -936,5 +992,5 @@ export function createWorkbenchProxyManager(
     return shutdownPromise
   }
 
-  return { handleHttp, handleUpgrade, shutdown, audit }
+  return { handleHttp, handleUpgrade, closeProject, shutdown, audit }
 }

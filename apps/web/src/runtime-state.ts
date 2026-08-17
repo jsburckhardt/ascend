@@ -30,6 +30,8 @@ export const RUNTIME_FAILURE_CATEGORIES = [
   'runtime-restarting',
   'restart-replacement-unconfirmed',
   'reconcile-unconfirmed',
+  'runtime-closing',
+  'close-release-unconfirmed',
 ] as const
 export type RuntimeFailureCategory = (typeof RUNTIME_FAILURE_CATEGORIES)[number]
 
@@ -59,6 +61,9 @@ export const RUNTIME_FAILURE_NOTICES: Readonly<
     'Ascend could not confirm replacement workbench cleanup.',
   'reconcile-unconfirmed':
     'Ascend could not confirm this workbench after a restart.',
+  'runtime-closing': 'The workbench is currently being closed.',
+  'close-release-unconfirmed':
+    'Ascend could not confirm the workbench release during close.',
 })
 
 const PUBLIC_STATE_SET = new Set<string>(PUBLIC_RUNTIME_STATES)

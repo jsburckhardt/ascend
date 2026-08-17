@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   createProjectRuntimeConfig,
   deriveProjectOwnerToken,
+  reconciliationOverallBoundMs,
   type RuntimeSafeLifecycleEvent,
 } from '../src/project-runtime-contract.js'
 import { createProjectRuntimeManager } from '../src/project-runtime-manager.js'
@@ -473,6 +474,274 @@ describe('project runtime reconciliation manager', () => {
       outcome: 'unresolved',
       refusalReason: 'launcher-unresolved',
     })
+    await manager.shutdown()
+  })
+})
+
+const heldProject = Object.freeze({
+  id: 'project-reconcile-held',
+  name: 'Reconcile Held',
+  canonicalPath: '/projects/reconcile-held',
+  createdAt: 2,
+})
+const heldPid = 41_101
+const heldPort = 45_778
+
+interface Gate {
+  readonly promise: Promise<void>
+  readonly open: () => void
+}
+
+function gate(): Gate {
+  let open!: () => void
+  const promise = new Promise<void>((resolve) => {
+    open = resolve
+  })
+  return { promise, open }
+}
+
+/** Fires exactly one named deadline on demand so a reconciliation bound can be
+ * reached without also reaching an unrelated close bound armed on the same
+ * scheduler. */
+class SelectiveDeadlines implements RuntimeDeadlineScheduler {
+  private readonly arms: {
+    readonly milliseconds: number
+    readonly callback: () => void
+    cancelled: boolean
+  }[] = []
+
+  now(): number {
+    return 100
+  }
+
+  scheduleDeadline(milliseconds: number, callback: () => void): () => void {
+    const arm = { milliseconds, callback, cancelled: false }
+    this.arms.push(arm)
+    return () => {
+      arm.cancelled = true
+    }
+  }
+
+  /** Fires the earliest still-armed deadline carrying this bound. Bounds are
+   * not unique across subsystems, so callers arm the deadline they mean to
+   * fire before any later one can be armed. */
+  fireEarliest(milliseconds: number): void {
+    const arm = this.arms.find(
+      (candidate) =>
+        candidate.milliseconds === milliseconds && !candidate.cancelled
+    )
+    if (arm === undefined)
+      throw new Error(`no armed ${String(milliseconds)}ms deadline`)
+    arm.cancelled = true
+    arm.callback()
+  }
+}
+
+function argvFor(
+  target: Readonly<{ id: string; canonicalPath: string }>,
+  targetPort: number
+): readonly string[] {
+  const userDataPath = buildRuntimeUserDataPath(
+    deriveProjectOwnerToken(target.id),
+    targetPort
+  )
+  return Object.freeze([
+    ...installed.launcherArgvPrefix,
+    ...buildRuntimeArgv(target.canonicalPath, targetPort, userDataPath),
+  ])
+}
+
+function pairAttribution(): RuntimeAttributionPrimitives {
+  const byPid = new Map([
+    [pid, { project, port }],
+    [heldPid, { project: heldProject, port: heldPort }],
+  ])
+  return {
+    resolveInstalledRuntimeIdentity: vi.fn(async () => installed),
+    listRuntimeCandidatePids: vi.fn(async () => ({
+      pids: [pid, heldPid],
+      complete: true,
+    })),
+    readProcessIdentity: vi.fn(async (candidatePid: number) =>
+      byPid.has(candidatePid)
+        ? {
+            pid: candidatePid,
+            processGroupId: candidatePid,
+            uid: process.getuid?.() ?? 1_000,
+            startTime: `start-${String(candidatePid)}`,
+          }
+        : null
+    ),
+    readProcessCommandLine: vi.fn(async (candidatePid: number) => {
+      const found = byPid.get(candidatePid)
+      return found === undefined ? null : argvFor(found.project, found.port)
+    }),
+    readProcessGroupMemberPids: vi.fn(async (groupId: number) => ({
+      pids: [groupId],
+      complete: true,
+    })),
+    readLoopbackListenerInode: vi.fn(
+      async (listenerPort: number) => `inode-${String(listenerPort)}`
+    ),
+    readProcessSocketInodes: vi.fn(async (candidatePid: number) => {
+      const found = byPid.get(candidatePid)
+      return found === undefined ? [] : [`inode-${String(found.port)}`]
+    }),
+  }
+}
+
+function terminationStub(): RuntimeProcessDependencies['termination'] {
+  return {
+    now: Date.now,
+    scheduleDeadline: () => () => undefined,
+    readProcessStartTime: vi.fn(async () => null),
+    readProcessGroupMembers: vi.fn(async () => []),
+    listenerIsAbsent: vi.fn(async () => true),
+    delay: vi.fn(async () => undefined),
+    signalProcessGroup: vi.fn(() => true),
+  }
+}
+
+const clearAudit = Object.freeze({
+  shuttingDown: false,
+  pendingOperations: 0,
+  upstreamHttpRequests: 0,
+  upstreamHttpResponses: 0,
+  rawSockets: 0,
+  webSockets: 0,
+})
+
+describe('late reconciliation settlement accounting', () => {
+  const config = createProjectRuntimeConfig()
+
+  function pairManager(input: {
+    readonly readiness: Gate
+    readonly scheduler: SelectiveDeadlines
+    readonly events: RuntimeSafeLifecycleEvent[]
+  }) {
+    return createProjectRuntimeManager({
+      findProjectById: vi.fn(async (id: string) =>
+        id === project.id ? project : heldProject
+      ),
+      listProjects: vi.fn(async () => [project, heldProject]),
+      processDependencies: {
+        ...processDependencies(
+          pairAttribution(),
+          vi.fn(async (url: string) => {
+            if (url.includes(String(heldPort))) await input.readiness.promise
+            return {
+              elapsedMs: 1,
+              status: 200,
+              bodyStatus: 'alive',
+              timedOut: false,
+            }
+          }) as never
+        ),
+        termination: terminationStub(),
+      },
+      config,
+      deadlineScheduler: input.scheduler,
+      recordEvent: (event) => input.events.push(event),
+    })
+  }
+
+  it('accounts, without applying, a settlement that arrives after retirement', async () => {
+    const readiness = gate()
+    const scheduler = new SelectiveDeadlines()
+    const events: RuntimeSafeLifecycleEvent[] = []
+    const manager = pairManager({ readiness, scheduler, events })
+    const commitRemoval = vi.fn(async () =>
+      Object.freeze({ disposition: 'closed' as const, id: project.id })
+    )
+
+    await manager.beginReconciliation()
+    await vi.waitFor(() =>
+      expect(manager.inspect(project.id)?.state).toBe('running')
+    )
+
+    const closed = await manager.close({
+      projectId: project.id,
+      drainConnections: async () => clearAudit,
+      auditConnections: () => clearAudit,
+      commitRemoval,
+    })
+    expect(closed).toMatchObject({ outcome: 'closed', projectId: project.id })
+    expect(manager.audit?.().lateCloseSettlements).toBe(0)
+
+    const eventsBefore = events.length
+    const cleanupBefore = manager.lastCleanup(project.id)
+    scheduler.fireEarliest(reconciliationOverallBoundMs(config))
+
+    const audited = manager.audit!()
+    expect(audited.lateCloseSettlements).toBe(1)
+    expect(audited.closeClaims).toEqual([])
+    expect(audited.retiredProjects).toBe(1)
+    expect(
+      events
+        .slice(eventsBefore)
+        .filter((event) => event.projectId === project.id)
+    ).toEqual([])
+    expect(manager.inspect(project.id)).toBeUndefined()
+    expect(manager.lastCleanup(project.id)).toBe(cleanupBefore)
+    expect(commitRemoval).toHaveBeenCalledTimes(1)
+    const inspection = manager.inspectReconciliation!()
+    expect(inspection.projects[0]).toMatchObject({ outcome: 'adopted' })
+    expect(inspection.projects[1]).toMatchObject({
+      outcome: 'unresolved',
+      refusalReason: 'deadline-exceeded',
+    })
+
+    readiness.open()
+    await manager.shutdown()
+  })
+
+  it('charges an in-flight close for a settlement that arrives while it holds the claim', async () => {
+    const readiness = gate()
+    const drainRelease = gate()
+    const scheduler = new SelectiveDeadlines()
+    const events: RuntimeSafeLifecycleEvent[] = []
+    const manager = pairManager({ readiness, scheduler, events })
+    const commitRemoval = vi.fn(async () =>
+      Object.freeze({ disposition: 'closed' as const, id: project.id })
+    )
+    let drains = 0
+
+    await manager.beginReconciliation()
+    await vi.waitFor(() =>
+      expect(manager.inspect(project.id)?.state).toBe('running')
+    )
+
+    const closing = manager.close({
+      projectId: project.id,
+      drainConnections: async () => {
+        drains += 1
+        await drainRelease.promise
+        return clearAudit
+      },
+      auditConnections: () => clearAudit,
+      commitRemoval,
+    })
+    await vi.waitFor(() => expect(drains).toBe(1))
+    expect(manager.audit!().lateCloseSettlements).toBe(0)
+
+    scheduler.fireEarliest(reconciliationOverallBoundMs(config))
+
+    const charged = manager.audit!()
+    expect(charged.lateCloseSettlements).toBe(1)
+    expect(charged.closeClaims).toEqual([
+      expect.objectContaining({ projectId: project.id, lateWork: 1 }),
+    ])
+
+    drainRelease.open()
+    expect(await closing).toMatchObject({
+      outcome: 'rejected',
+      projectId: project.id,
+      category: 'release-unconfirmed',
+    })
+    expect(commitRemoval).not.toHaveBeenCalled()
+    expect(manager.audit!().retiredProjects).toBe(0)
+
+    readiness.open()
     await manager.shutdown()
   })
 })

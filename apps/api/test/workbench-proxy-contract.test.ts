@@ -45,15 +45,15 @@ describe('stable workbench proxy contract', () => {
   })
 
   it('freezes one complete exact failure table', () => {
-    expect(WORKBENCH_FAILURE_TABLE).toHaveLength(30)
+    expect(WORKBENCH_FAILURE_TABLE).toHaveLength(32)
     expect(
       new Set(WORKBENCH_FAILURE_TABLE.map((entry) => entry.category)).size
-    ).toBe(30)
+    ).toBe(32)
     expect(
       WORKBENCH_FAILURE_TABLE.filter(({ category }) =>
         category.startsWith('runtime:')
       )
-    ).toHaveLength(18)
+    ).toHaveLength(20)
     expect(
       WORKBENCH_FAILURE_TABLE.find(
         ({ category }) => category === 'runtime:reconcile-unconfirmed'
